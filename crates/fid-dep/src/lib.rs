@@ -4,10 +4,12 @@
 //! - [`edge`]: dependency edges, cycle rejection and dependency queries (`CORE.DEP.EDGE`).
 //! - [`prop`]: change propagation and recompute mode (`CORE.DEP.PROP`).
 //! - [`recompute`]: deterministic recompute with failure isolation and single-entry commit (`CORE.DEP.RECOMP`).
+//! - [`replace`]: input replacement preserving target identity and metadata (`CORE.DEP.REPL`).
 
 pub mod edge;
 pub mod prop;
 pub mod recompute;
+pub mod replace;
 
 pub use edge::{
     command_def, show_dependencies, Dependencies, EdgeError, EdgeIndex, EdgesSet, EntityId, Op, Output,
@@ -26,4 +28,9 @@ pub use recompute::{
     OverlayView, ProgressReport, RecompError, RecomputeCommitted, RecomputeExecution, RecomputePlan, RecomputeRunner,
     RecomputeScope, RecomputedEntry, RecordedCommand, ReplayOutcome, ELEMENT_STATE_CHANGED_EVENT,
     RECOMPUTE_COMMAND_NAME, RECOMPUTE_COMMITTED_EVENT,
+};
+pub use replace::{
+    apply_recompute_to_elements, command_def as replace_command_def, overlay_from_elements, replace_input,
+    ElementRemoved, InputReplaced, ReplaceError, ReplaceInputParams, ReplaceOutcome, TreeElement,
+    ELEMENT_REMOVED_EVENT, INPUT_REPLACED_EVENT, REPLACE_INPUT, REPLACE_INPUT_NAME,
 };

@@ -199,6 +199,30 @@ impl EdgeIndex {
         self.reverse.keys()
     }
 
+    /// Removes `element` when it has no dependents (`CORE.DEP.REPL` REQ-003).
+    /// Returns `Ok(false)` if `element` still has dependents (leaving the index unchanged),
+    /// `Ok(true)` if removed, or `Err(EdgeError::UnknownElement)` if absent.
+    pub fn remove_leaf(&mut self, element: &EntityId) -> Result<bool, EdgeError> {
+        if !self.reverse.contains_key(element) {
+            return Err(EdgeError::UnknownElement(*element));
+        }
+        if self.forward.get(element).is_some_and(|deps| !deps.is_empty()) {
+            return Ok(false);
+        }
+        if let Some(inputs) = self.reverse.remove(element) {
+            for inp in inputs {
+                if let Some(deps) = self.forward.get_mut(&inp) {
+                    deps.remove(element);
+                    if deps.is_empty() {
+                        self.forward.remove(&inp);
+                    }
+                }
+            }
+        }
+        self.forward.remove(element);
+        Ok(true)
+    }
+
     /// Every edge as `(input, element)`, ascending by input then element.
     pub fn edges(&self) -> impl Iterator<Item = (EntityId, EntityId)> + '_ {
         self.forward.iter().flat_map(|(input, deps)| deps.iter().map(move |d| (*input, *d)))
