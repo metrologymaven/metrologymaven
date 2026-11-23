@@ -18,7 +18,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-align-solve]
+updated: 2026-11-22
 ---
 
 # ALN.BFIT.FEAT.DEV: Per-type feature deviation vectors and angular scaling
