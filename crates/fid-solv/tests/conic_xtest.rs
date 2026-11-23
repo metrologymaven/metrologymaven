@@ -176,14 +176,14 @@ fn cli_binary_run_and_compare_end_to_end() {
     ));
     fs::create_dir_all(&dir).unwrap();
 
-    let bin = env!("CARGO_BIN_EXE_conic-xtest");
+    let cargo = env!("CARGO");
     let fixtures = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/solv/conic-xtest-v1");
     let out_a = dir.join("results_a.json");
     let out_b = dir.join("results_b.json");
     let dig_a = dir.join("digest_a.txt");
 
-    let run_a = Command::new(bin)
-        .args(["run", "--fixtures"])
+    let run_a = Command::new(cargo)
+        .args(["run", "--quiet", "--locked", "-p", "fid-solv", "--example", "conic-xtest", "--", "run", "--fixtures"])
         .arg(&fixtures)
         .arg("--out")
         .arg(&out_a)
@@ -195,7 +195,12 @@ fn cli_binary_run_and_compare_end_to_end() {
     assert_eq!(fs::read_to_string(&dig_a).unwrap().trim(), PINNED_RESULT_DIGEST);
 
     fs::copy(&out_a, &out_b).unwrap();
-    let cmp_ok = Command::new(bin).arg("compare").arg(&out_a).arg(&out_b).output().unwrap();
+    let cmp_ok = Command::new(cargo)
+        .args(["run", "--quiet", "--locked", "-p", "fid-solv", "--example", "conic-xtest", "--", "compare"])
+        .arg(&out_a)
+        .arg(&out_b)
+        .output()
+        .unwrap();
     assert!(cmp_ok.status.success(), "compare ok failed: {}", String::from_utf8_lossy(&cmp_ok.stderr));
 
     // Perturb 1 bit of x[0] on lp-001 and verify compare exits non-zero naming lp-001 and x[0].
@@ -205,7 +210,12 @@ fn cli_binary_run_and_compare_end_to_end() {
     let (bad_bytes, _) = encode_result_list(&results).unwrap();
     fs::write(&out_b, bad_bytes).unwrap();
 
-    let cmp_fail = Command::new(bin).arg("compare").arg(&out_a).arg(&out_b).output().unwrap();
+    let cmp_fail = Command::new(cargo)
+        .args(["run", "--quiet", "--locked", "-p", "fid-solv", "--example", "conic-xtest", "--", "compare"])
+        .arg(&out_a)
+        .arg(&out_b)
+        .output()
+        .unwrap();
     assert!(!cmp_fail.status.success(), "compare must fail on perturbed result");
     let stderr = String::from_utf8_lossy(&cmp_fail.stderr);
     assert!(stderr.contains("lp-001") && stderr.contains("x[0]"), "stderr missing id/field: {stderr}");

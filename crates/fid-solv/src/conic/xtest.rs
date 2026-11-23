@@ -2,7 +2,7 @@
 //! (spec node `KRN.SOLV.CONIC.XTEST`, REQ-KRN.SOLV.CONIC.XTEST-001 to -004).
 //!
 //! Pure KNP-1 library logic: no I/O, no `unsafe`, no `HashMap`, no `f64::min`/`max`
-//! (`fid_num::f::total_max`), no panics. The dev binary `src/bin/conic-xtest.rs` provides the
+//! (`fid_num::f::total_max`), no panics. The dev binary `examples/conic-xtest.rs` provides the
 //! thin filesystem CLI around [`run_suite`] and [`compare_result_bytes`].
 
 use super::{

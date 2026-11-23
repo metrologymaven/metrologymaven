@@ -64,7 +64,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/out"
-          cargo run --release --locked -p fid-solv --bin conic-xtest -- \
+          cargo run --release --locked -p fid-solv --example conic-xtest -- \
             run --fixtures fixtures/solv/conic-xtest-v1 \
             --out "$RUNNER_TEMP/out/results.json" \
             --digest-out "$RUNNER_TEMP/out/digest.txt"
@@ -91,7 +91,7 @@ jobs:
           set -euo pipefail
           test "$(uname -m)" = aarch64
           mkdir -p "$RUNNER_TEMP/out"
-          cargo run --release --locked -p fid-solv --bin conic-xtest -- \
+          cargo run --release --locked -p fid-solv --example conic-xtest -- \
             run --fixtures fixtures/solv/conic-xtest-v1 \
             --out "$RUNNER_TEMP/out/results.json" \
             --digest-out "$RUNNER_TEMP/out/digest.txt"
@@ -132,10 +132,10 @@ jobs:
         run: |
           set -euo pipefail
           wasmtime --version
-          cargo build --release --locked --target wasm32-wasip1 -p fid-solv --bin conic-xtest
+          cargo build --release --locked --target wasm32-wasip1 -p fid-solv --example conic-xtest
           mkdir -p conic-xtest-wasm-out
           wasmtime --dir=. \
-            target/wasm32-wasip1/release/conic-xtest.wasm \
+            target/wasm32-wasip1/release/examples/conic-xtest.wasm \
             run --fixtures fixtures/solv/conic-xtest-v1 \
             --out conic-xtest-wasm-out/results.json \
             --digest-out conic-xtest-wasm-out/digest.txt
@@ -164,8 +164,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cargo build --release --locked -p fid-solv --bin conic-xtest
-          bin=target/release/conic-xtest
+          cargo build --release --locked -p fid-solv --example conic-xtest
+          bin=target/release/examples/conic-xtest
           head -n 5 art/conic-xtest-x86_64/digest.txt art/conic-xtest-arm64/digest.txt art/conic-xtest-wasm32/digest.txt
           "$bin" compare \
             art/conic-xtest-x86_64/results.json \
