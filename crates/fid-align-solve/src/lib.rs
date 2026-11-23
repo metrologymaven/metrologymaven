@@ -26,6 +26,7 @@ pub mod cond;
 pub mod constr;
 pub mod hist;
 pub mod report;
+pub mod stop;
 
 pub use cond::{
     diagnose, diagnose_reduced, AlignmentDiagnostics, Axis, CondError, CondWarning, MotionKind, PivotKind, Threshold,
@@ -45,4 +46,10 @@ pub use report::{
     Disposition, Entry, EntryKind, EntryRef, EntryView, Length, LengthVec, RejectReason, ReportBuilder, ReportError,
     ResidualReport, ResidualStats, Unit, LAYOUT_TAG, LAYOUT_VERSION, MAX_ENTRIES, MAX_ITEM, MAX_REASONS,
     MAX_REASON_BYTES,
+};
+pub use stop::{
+    command_convergence_manifest, AlignmentStopStatus, ConvergedReason, CriterionManifestEntry, StopCriteria,
+    StopError, StopMonitor, StoppedReason, Verdict, BESTFIT_STOP_CRITERIA_MANIFEST, DEFAULT_DIVERGENCE_WINDOW,
+    DEFAULT_MAX_ITERATIONS, DEFAULT_OBJECTIVE_REL_TOL, DEFAULT_ROTATION_TOL, DEFAULT_TRANSLATION_TOL,
+    MAX_ALLOWED_ITERATIONS, OBJECTIVE_DENOM_FLOOR,
 };

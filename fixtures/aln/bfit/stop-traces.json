@@ -1,0 +1,79 @@
+{
+  "format": "fid-aln-bfit-stop-traces@1",
+  "license": "CC-BY-4.0",
+  "traces": [
+    {
+      "name": "converge_by_increment",
+      "initial_objective": 1.0,
+      "steps": [
+        {"iter": 1, "dt": 1e-3, "dr": 1e-4, "objective": 0.25},
+        {"iter": 2, "dt": 1e-6, "dr": 1e-7, "objective": 0.01},
+        {"iter": 3, "dt": 5e-10, "dr": 8e-10, "objective": 0.005}
+      ],
+      "expected_verdict": "converged(increment)",
+      "expected_iteration": 3,
+      "expected_best_iteration": 3,
+      "expected_status": "converged"
+    },
+    {
+      "name": "converge_by_objective_two_consecutive",
+      "initial_objective": 10.0,
+      "steps": [
+        {"iter": 1, "dt": 1e-4, "dr": 1e-4, "objective": 1.0},
+        {"iter": 2, "dt": 1e-5, "dr": 1e-5, "objective": 1.0},
+        {"iter": 3, "dt": 1e-5, "dr": 1e-5, "objective": 1.0}
+      ],
+      "expected_verdict": "converged(objective)",
+      "expected_iteration": 3,
+      "expected_best_iteration": 1,
+      "expected_status": "converged"
+    },
+    {
+      "name": "diverge_five_consecutive_rises",
+      "initial_objective": 1.0,
+      "steps": [
+        {"iter": 1, "dt": 1e-3, "dr": 1e-3, "objective": 1.2},
+        {"iter": 2, "dt": 1e-3, "dr": 1e-3, "objective": 1.5},
+        {"iter": 3, "dt": 1e-3, "dr": 1e-3, "objective": 2.0},
+        {"iter": 4, "dt": 1e-3, "dr": 1e-3, "objective": 3.0},
+        {"iter": 5, "dt": 1e-3, "dr": 1e-3, "objective": 5.0}
+      ],
+      "expected_verdict": "stopped(diverged)",
+      "expected_iteration": 5,
+      "expected_best_iteration": 0,
+      "expected_status": "not_converged"
+    },
+    {
+      "name": "diverge_after_initial_descent",
+      "initial_objective": 5.0,
+      "steps": [
+        {"iter": 1, "dt": 1e-3, "dr": 1e-3, "objective": 2.0},
+        {"iter": 2, "dt": 1e-3, "dr": 1e-3, "objective": 0.5},
+        {"iter": 3, "dt": 1e-3, "dr": 1e-3, "objective": 0.6},
+        {"iter": 4, "dt": 1e-3, "dr": 1e-3, "objective": 0.8},
+        {"iter": 5, "dt": 1e-3, "dr": 1e-3, "objective": 1.1},
+        {"iter": 6, "dt": 1e-3, "dr": 1e-3, "objective": 1.5},
+        {"iter": 7, "dt": 1e-3, "dr": 1e-3, "objective": 2.1}
+      ],
+      "expected_verdict": "stopped(diverged)",
+      "expected_iteration": 7,
+      "expected_best_iteration": 2,
+      "expected_status": "not_converged"
+    },
+    {
+      "name": "oscillating_then_converges_by_increment",
+      "initial_objective": 2.0,
+      "steps": [
+        {"iter": 1, "dt": 1e-3, "dr": 1e-3, "objective": 2.5},
+        {"iter": 2, "dt": 1e-3, "dr": 1e-3, "objective": 1.8},
+        {"iter": 3, "dt": 1e-3, "dr": 1e-3, "objective": 2.1},
+        {"iter": 4, "dt": 1e-3, "dr": 1e-3, "objective": 1.5},
+        {"iter": 5, "dt": 1e-10, "dr": 1e-10, "objective": 1.4}
+      ],
+      "expected_verdict": "converged(increment)",
+      "expected_iteration": 5,
+      "expected_best_iteration": 5,
+      "expected_status": "converged"
+    }
+  ]
+}
