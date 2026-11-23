@@ -43,6 +43,8 @@ pub const SET_TABLE_BLOCK: &str = "report.set_table_block@1";
 pub const SET_TEXT_BLOCK: &str = "report.set_text_block@1";
 /// `report.set_image_block@1` (`RPT.MODEL.BLOCKS.TEXT`).
 pub const SET_IMAGE_BLOCK: &str = "report.set_image_block@1";
+/// `report.set_drawing_balloon@1` (`RPT.BALLOON.BLOCK`).
+pub const SET_DRAWING_BALLOON: &str = "report.set_drawing_balloon@1";
 /// The read-only command; it journals nothing.
 pub const SHOW_REPORT: &str = "report.show_report@1";
 
@@ -102,6 +104,12 @@ pub enum Op {
         block: BlockId,
         payload: CanonicalJson,
     },
+    /// Updates a `drawing` block's payload (`report.set_drawing_balloon@1`, `RPT.BALLOON.BLOCK`).
+    SetDrawingBalloon {
+        report: ReportId,
+        block: BlockId,
+        payload: CanonicalJson,
+    },
 }
 
 impl Op {
@@ -117,6 +125,7 @@ impl Op {
             Op::SetTableBlock { .. } => SET_TABLE_BLOCK,
             Op::SetTextBlock { .. } => SET_TEXT_BLOCK,
             Op::SetImageBlock { .. } => SET_IMAGE_BLOCK,
+            Op::SetDrawingBalloon { .. } => SET_DRAWING_BALLOON,
         }
     }
 
@@ -130,7 +139,8 @@ impl Op {
             | Op::BindBlock { report, .. }
             | Op::SetTableBlock { report, .. }
             | Op::SetTextBlock { report, .. }
-            | Op::SetImageBlock { report, .. } => *report,
+            | Op::SetImageBlock { report, .. }
+            | Op::SetDrawingBalloon { report, .. } => *report,
         }
     }
 
@@ -154,7 +164,7 @@ impl Op {
                 r.insert_block(&page.uuid(), after.map(|a| a.uuid()).as_ref(), b)?;
             }
             Op::RemoveBlock { block, .. } => r.remove_block(&block.uuid())?,
-            Op::BindBlock { block, payload, .. } => {
+            Op::BindBlock { block, payload, .. } | Op::SetDrawingBalloon { block, payload, .. } => {
                 let b = r.block(&block.uuid()).ok_or(ReportError::NotFound(block.uuid()))?;
                 check_block(kinds, b.kind(), b.kind_version(), payload)?;
                 r.set_block_payload(&block.uuid(), payload.clone())?;
@@ -264,7 +274,8 @@ impl ReportEvent {
             Op::BindBlock { block, payload, .. }
             | Op::SetTableBlock { block, payload, .. }
             | Op::SetTextBlock { block, payload, .. }
-            | Op::SetImageBlock { block, payload, .. } => {
+            | Op::SetImageBlock { block, payload, .. }
+            | Op::SetDrawingBalloon { block, payload, .. } => {
                 put("block", id(block.uuid()));
                 put("payload", payload_value(payload));
             }
@@ -295,7 +306,7 @@ impl ReportEvent {
                 &["type", "report", "page", "after", "block", "kind", "kind_version", "payload", "report_digest"]
             }
             REMOVE_BLOCK => &["type", "report", "block", "report_digest"],
-            BIND_BLOCK | SET_TABLE_BLOCK | SET_TEXT_BLOCK | SET_IMAGE_BLOCK => {
+            BIND_BLOCK | SET_TABLE_BLOCK | SET_TEXT_BLOCK | SET_IMAGE_BLOCK | SET_DRAWING_BALLOON => {
                 &["type", "report", "block", "payload", "report_digest"]
             }
             _ => return Err(ReportError::StoreInvalid("unknown event type")),
@@ -348,6 +359,9 @@ impl ReportEvent {
             }
             SET_IMAGE_BLOCK => {
                 Op::SetImageBlock { report, block: block()?, payload: payload_from_value(field(o, "payload")?)? }
+            }
+            SET_DRAWING_BALLOON => {
+                Op::SetDrawingBalloon { report, block: block()?, payload: payload_from_value(field(o, "payload")?)? }
             }
             _ => Op::RemoveBlock { report, block: block()? },
         };
