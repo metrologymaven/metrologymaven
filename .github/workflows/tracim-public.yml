@@ -1,0 +1,80 @@
+name: tracim-public
+# Nightly PTB TraCIM public-test job (spec node UNC.RDL.TRACIM.PUBLIC).
+# Runs the free public test ONLY (`--test-kind public`) using TRACIM_PUBLIC_KEY from CI secrets,
+# publishes `tracim-public-latest.json` (`tracim-public/v1`: verdict, kernel_semver, manifest_digest,
+# reason; no key, no raw test data), and fails its configuration check if any paid-order key secret
+# is reachable. Never orders paid tests.
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/tracim-public.yml"
+      - "tools/rdl/**"
+      - "fixtures/rdl/tracim/mock/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/tracim-public.yml"
+      - "tools/rdl/**"
+      - "fixtures/rdl/tracim/mock/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  config-and-mock-test:
+    name: TraCIM public-test config check and loopback mock tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify workflow never exposes paid-order secrets
+        run: |
+          python3 -m tools.rdl.tracim_public check-config \
+            --workflow .github/workflows/tracim-public.yml
+      - name: Verify loopback mock fixtures are up to date
+        run: python3 fixtures/rdl/tracim/mock/make_fixtures.py --check
+      - name: Run loopback mock acceptance tests (AC-1..AC-3)
+        run: python3 -m unittest discover -s tools/rdl/tests -v
+
+  nightly-public-test:
+    name: Nightly TraCIM public test
+    needs: config-and-mock-test
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build release-candidate fid binary
+        run: cargo build --release --locked -p fid-cli
+      - name: Run public test against configured tracim destination (--test-kind public)
+        env:
+          TRACIM_PUBLIC_KEY: ${{ secrets.TRACIM_PUBLIC_KEY }}
+        run: |
+          # Passes --test-kind public via tools/rdl/tracim_public.py; fails on non-passed verdict
+          # or unreachable service and writes tracim-public-latest.json without key or raw data.
+          python3 -m tools.rdl.tracim_public run \
+            --workflow .github/workflows/tracim-public.yml \
+            --out tracim-public-latest.json \
+            -- target/release/fid
+      - name: Upload tracim-public-latest.json artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tracim-public-latest
+          path: tracim-public-latest.json
+          if-no-files-found: error
