@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-geo-sel]
+updated: 2026-11-23
 ---
 
 # GEO.SEL.QUERY.EVAL: Query evaluation core with point and triangle predicates
