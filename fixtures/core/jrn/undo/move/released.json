@@ -1,0 +1,63 @@
+{
+  "branch": "main",
+  "entries": [
+    {
+      "branch": "main",
+      "class": "W2",
+      "command": "project.create_project",
+      "hash": "sha256:4bdebcb7f66e8dafb535b03ada7c0c538ef0399b71a68c0b4d1c3ec7fd70e143",
+      "logical_parent": null,
+      "major": 1,
+      "name": "s0",
+      "seq": 1,
+      "undoable": false
+    },
+    {
+      "branch": "main",
+      "class": "W2",
+      "command": "feature.fit_plane",
+      "hash": "sha256:e3e1862a1f128ff0f82bc18d6448edfd01103b4d431f2f2fd018ef39d6957f49",
+      "logical_parent": "sha256:4bdebcb7f66e8dafb535b03ada7c0c538ef0399b71a68c0b4d1c3ec7fd70e143",
+      "major": 1,
+      "name": "s1",
+      "seq": 2,
+      "undoable": true
+    },
+    {
+      "branch": "main",
+      "class": "W3",
+      "command": "report.release_record",
+      "hash": "sha256:cf5ec3636564e9f28f42a458e4f5861c84adefb60eb0ff18925f817a60f0e891",
+      "logical_parent": "sha256:e3e1862a1f128ff0f82bc18d6448edfd01103b4d431f2f2fd018ef39d6957f49",
+      "major": 1,
+      "name": "s2",
+      "seq": 3,
+      "undoable": false
+    },
+    {
+      "branch": "main",
+      "class": "W2",
+      "command": "sketch.add_line",
+      "hash": "sha256:140c8ca7ddd7019fb411ea86bed89489167bff6e36bfbcc7e34b113437bd2912",
+      "logical_parent": "sha256:cf5ec3636564e9f28f42a458e4f5861c84adefb60eb0ff18925f817a60f0e891",
+      "major": 1,
+      "name": "s3",
+      "seq": 4,
+      "undoable": true
+    },
+    {
+      "branch": "main",
+      "class": "W2",
+      "command": "journal.lock_step",
+      "hash": "sha256:973cbc3707baec1ed6fbb4764f3a85359ec24e865469f4bd219ee43aa3e89753",
+      "logical_parent": "sha256:140c8ca7ddd7019fb411ea86bed89489167bff6e36bfbcc7e34b113437bd2912",
+      "major": 1,
+      "name": "s4",
+      "seq": 5,
+      "undoable": false
+    }
+  ],
+  "license": "CC-BY-4.0",
+  "schema": "fid-undo-fixture/1",
+  "seed": 2
+}
