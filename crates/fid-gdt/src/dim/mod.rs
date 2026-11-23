@@ -3,4 +3,5 @@
 //!
 //! - [`radial`] (`GDT.DIM.RADIAL`): `check.eval_diameter@1` and `check.eval_radius@1`.
 
+pub mod angle;
 pub mod radial;

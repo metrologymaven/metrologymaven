@@ -1,0 +1,80 @@
+{
+  "format": "fid-gdt-angle-analytic@1",
+  "license": "CC0-1.0",
+  "pairs": [
+    {
+      "id": "deg_0",
+      "a": [1.0, 0.0, 0.0],
+      "b": [1.0, 0.0, 0.0],
+      "expected_full_rad": "0.0",
+      "expected_acute_rad": "0.0"
+    },
+    {
+      "id": "deg_30",
+      "a": [1.0, 0.0, 0.0],
+      "b": [0.8660254037844386, 0.5, 0.0],
+      "expected_full_rad": "0.5235987755982988",
+      "expected_acute_rad": "0.5235987755982988"
+    },
+    {
+      "id": "deg_45",
+      "a": [1.0, 0.0, 0.0],
+      "b": [1.0, 1.0, 0.0],
+      "expected_full_rad": "0.7853981633974483",
+      "expected_acute_rad": "0.7853981633974483"
+    },
+    {
+      "id": "deg_90",
+      "a": [1.0, 0.0, 0.0],
+      "b": [0.0, 1.0, 0.0],
+      "expected_full_rad": "1.5707963267948966",
+      "expected_acute_rad": "1.5707963267948966"
+    },
+    {
+      "id": "deg_135",
+      "a": [1.0, 0.0, 0.0],
+      "b": [-1.0, 1.0, 0.0],
+      "expected_full_rad": "2.356194490192345",
+      "expected_acute_rad": "0.7853981633974483"
+    },
+    {
+      "id": "deg_180",
+      "a": [1.0, 0.0, 0.0],
+      "b": [-1.0, 0.0, 0.0],
+      "expected_full_rad": "3.141592653589793",
+      "expected_acute_rad": "0.0"
+    },
+    {
+      "id": "nearly_parallel_1e_9",
+      "a": [1.0, 0.0, 0.0],
+      "b": [1.0, 1e-9, 0.0],
+      "expected_full_rad": "1e-9",
+      "expected_acute_rad": "1e-9"
+    },
+    {
+      "id": "nearly_antiparallel_1e_9",
+      "a": [1.0, 0.0, 0.0],
+      "b": [-1.0, 1e-9, 0.0],
+      "expected_full_rad": "3.141592652589793",
+      "expected_acute_rad": "1e-9"
+    }
+  ],
+  "projected_cases": [
+    {
+      "id": "xy_minus_30_deg",
+      "a": [1.0, 0.0, 0.25],
+      "b": [0.8660254037844386, -0.5, -0.4],
+      "plane_normal": [0.0, 0.0, 1.0],
+      "expected_rad": "-0.5235987755982988",
+      "expected_deg": "-30.0"
+    },
+    {
+      "id": "xy_plus_180_deg",
+      "a": [1.0, 0.0, 0.0],
+      "b": [-1.0, 0.0, 0.0],
+      "plane_normal": [0.0, 0.0, 1.0],
+      "expected_rad": "3.141592653589793",
+      "expected_deg": "180.0"
+    }
+  ]
+}

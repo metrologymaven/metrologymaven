@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid check eval-angle]
 mcp: [check_eval_angle]
 journal: [check.eval_angle@1]
-updated: 2026-11-16
+built_in: [fid-gps, fid-gdt]
+updated: 2026-11-22
 ---
 
 # GDT.DIM.ANGLE: Angle checks between elements
