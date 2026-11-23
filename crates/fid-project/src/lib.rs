@@ -3,11 +3,18 @@
 pub mod container;
 pub mod id;
 pub mod lifecycle;
+pub mod meta;
 pub mod query;
 pub mod stage;
 pub mod stage_switch;
 pub mod tree;
 pub mod tree_cmds;
+
+pub use meta::{
+    plan_set_metadata, plan_set_tags, run_find_elements_by_tag, validate_meta_value, MetaError, MetaEvent, MetaKey,
+    MetaStore, MetaTarget, Tag, Untrusted, FIND_ELEMENTS_BY_TAG, MAX_KEY_BYTES, MAX_TAGS_PER_TARGET, MAX_TAG_CHARS,
+    MAX_VALUE_BYTES, METADATA_SET, META_KEY_PATTERN, PROJECT_TARGET, SET_METADATA, SET_TAGS, TAGS_SET,
+};
 
 pub use container::{
     create, Container, ContainerError, ContainerKind, ContainerView, CreatedBy, Hierarchy, Label, Part, Plan, Revision,

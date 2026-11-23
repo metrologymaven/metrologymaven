@@ -1,0 +1,71 @@
+{
+  "elements": [
+    {
+      "alias": "e0",
+      "id": "84dbc520-b067-5364-98cd-d250b97716cc",
+      "name": "Feature 0",
+      "type": "geo.plane"
+    },
+    {
+      "alias": "e1",
+      "id": "649cab6e-ddb3-57f7-b2b3-2883828c084f",
+      "name": "Feature 1",
+      "type": "geo.cylinder"
+    },
+    {
+      "alias": "e2",
+      "id": "1f21493b-f269-54f9-a634-ad9c44c02ba9",
+      "name": "Feature 2",
+      "type": "geo.plane"
+    },
+    {
+      "alias": "e3",
+      "id": "214afd1e-3b18-5358-a59c-b3cd2f793634",
+      "name": "Feature 3",
+      "type": "geo.cylinder"
+    },
+    {
+      "alias": "e4",
+      "id": "cbe647a5-3c67-53df-8295-7e9096067007",
+      "name": "Feature 4",
+      "type": "geo.plane"
+    },
+    {
+      "alias": "e5",
+      "id": "1dd2f83f-a3e6-5ac5-96b1-d9240ebd2a1c",
+      "name": "Feature 5",
+      "type": "geo.cylinder"
+    },
+    {
+      "alias": "e6",
+      "id": "c63fc92d-9999-5ef2-b065-469965287893",
+      "name": "Feature 6",
+      "type": "geo.plane"
+    },
+    {
+      "alias": "e7",
+      "id": "0a7112e8-fd63-5712-b887-b98125d46be0",
+      "name": "Feature 7",
+      "type": "geo.cylinder"
+    },
+    {
+      "alias": "e8",
+      "id": "c9074344-a04f-5d93-91ed-61cafa264b15",
+      "name": "Feature 8",
+      "type": "geo.plane"
+    },
+    {
+      "alias": "e9",
+      "id": "2642e7b0-17c2-5269-bbc7-bea6e40068b7",
+      "name": "Feature 9",
+      "type": "geo.cylinder"
+    }
+  ],
+  "license": "CC-BY-4.0",
+  "namespace": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+  "project_id": "c04730cb-55a5-52cf-a730-331b78fa0639",
+  "root_group_id": "55718616-155e-5f57-b3a9-82f5d6e64b27",
+  "schema": "fid-prj-meta-fixture/1",
+  "seed": 42,
+  "stage_id": "5141b10e-676e-540b-96ae-9d2ef0a981a7"
+}

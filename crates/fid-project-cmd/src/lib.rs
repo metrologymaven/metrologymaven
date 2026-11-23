@@ -37,6 +37,7 @@ use fid_registry::{CommandDef, DefError};
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
+pub mod meta;
 pub mod query;
 pub mod stage;
 pub mod stage_switch;
