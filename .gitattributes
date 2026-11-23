@@ -220,3 +220,5 @@ fixtures/core/bus/pol/egress/artifact.bin binary
 fixtures/replay/select/** -text
 # TRUST.PKG.FIXTURE golden packages, pinned digests and index: compared byte for byte by fixtures/pkg/generate --check.
 fixtures/pkg/golden/** -text
+# IO.REG.PLUGIN.DRAW fixtures: PDF, PNG and TIFF drawing fixtures and SHA-256 digests compared byte for byte.
+fixtures/io/reg/plugin/draw/** -text

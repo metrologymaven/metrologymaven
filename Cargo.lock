@@ -1588,6 +1588,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-io-draw"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-io-plugin",
+ "fid-io-reg",
+ "fid-types",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "fid-io-e57"
 version = "0.0.1"
 dependencies = [

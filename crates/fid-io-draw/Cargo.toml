@@ -1,0 +1,18 @@
+[package]
+name = "fid-io-draw"
+description = "Metrology Maven bounded 2D drawing reader for PDF page structure, PNG and TIFF (spec node IO.REG.PLUGIN.DRAW)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-io-plugin = { path = "../fid-io-plugin" }
+fid-io-reg = { path = "../fid-io-reg" }
+fid-types = { path = "../fid-types" }
+sha2 = "0.10"
+
+[lints]
+workspace = true

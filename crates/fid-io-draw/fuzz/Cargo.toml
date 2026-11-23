@@ -1,0 +1,27 @@
+# cargo-fuzz harness for fid-io-draw (IO.REG.PLUGIN.DRAW REQ-007, AC-8). Not a workspace
+# member: it needs nightly and libFuzzer. Run from crates/fid-io-draw:
+#   cargo +nightly fuzz run draw_reader -- -max_total_time=300
+[package]
+name = "fid-io-draw-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "MIT OR Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+fid-io-draw = { path = ".." }
+
+[[bin]]
+name = "draw_reader"
+path = "fuzz_targets/draw_reader.rs"
+test = false
+doc = false
+bench = false
+
+# Keep this crate out of the parent workspace.
+[workspace]
+members = ["."]
