@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid import mesh-stl, fid export mesh-stl]
 mcp: [import_mesh_stl, export_mesh_stl]
 journal: [import.mesh_stl@1, export.mesh_stl@1]
-updated: 2026-11-16
+built_in: [fid-io-mesh]
+updated: 2026-11-22
 ---
 
 # IO.MESH.STL: STL reader and writer
