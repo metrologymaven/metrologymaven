@@ -165,6 +165,18 @@ impl DrawingStore {
         self.journal.push(event);
         Ok(out)
     }
+
+    pub(crate) fn record_carried_from(
+        &mut self,
+        target_rev: DrawingRevId,
+        carried_from: BTreeMap<super::model::BalloonId, super::model::BalloonId>,
+        event: DrawingEvent,
+    ) -> Result<(), SheetError> {
+        let rev = self.revisions.get_mut(&target_rev).ok_or(SheetError::NotFound("to_drawing_rev"))?;
+        rev.carried_from = carried_from;
+        self.journal.push(event);
+        Ok(())
+    }
 }
 
 impl SheetInfo for DrawingStore {
