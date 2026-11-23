@@ -223,6 +223,7 @@ python fixtures/rpt/model/tmpl/ver/make_cases.py --check
 python fixtures/rpt/output/draw/make_fixtures.py --check
 python fixtures/rpt/output/layout/make_fixtures.py --check
 python fixtures/rpt/output/make_meta_fixtures.py --check
+python fixtures/rpt/output/pdf/check_pdf.py
 python fixtures/rpt/output/sheet/make_cell_fixtures.py --check
 python fixtures/rpt/output/text/check_pdf_text.py
 python fixtures/rpt/output/text/make_fixtures.py --check

@@ -15,5 +15,16 @@ fid-num = { path = "../fid-num" }
 # SHA-256 of font files and subset glyph lists; already in the graph through fid-canon.
 sha2 = "0.10"
 
+# Host-only dependencies for `report.export_pdf@1` (W1, `fs_effect = write_root`),
+# writing through `RPT.OUTPUT.META`'s `ExportSink` (cap-std) and registering CLI/MCP schemas.
+# Core layout, painting, and deterministic PDF serialisation remain 100% wasm32-wasip1 portable.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+fid-bus = { path = "../fid-bus" }
+fid-canon = { path = "../fid-canon" }
+fid-io-reg = { path = "../fid-io-reg" }
+fid-registry = { path = "../fid-registry" }
+fid-report = { path = "../fid-report" }
+fid-report-out = { path = "../fid-report-out" }
+
 [lints]
 workspace = true
