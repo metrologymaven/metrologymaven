@@ -1,5 +1,6 @@
-//! 2D drawing ballooning: drawing revision import, sheet coordinates and PDF auto-text
-//! extraction (`RPT.BALLOON`).
+//! 2D drawing ballooning: drawing revision import, sheet coordinates, PDF auto-text
+//! extraction and deterministic engineering callout parsing (`RPT.BALLOON`).
 
+pub mod auto_parse;
 pub mod auto_text;
 pub mod sheet;
