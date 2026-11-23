@@ -17,7 +17,8 @@ determinism: D3
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-gps]
+updated: 2026-11-23
 ---
 
 # GDT.FORM.STRAIGHT.DERIVED: Straightness of a derived median line with optional MMC
