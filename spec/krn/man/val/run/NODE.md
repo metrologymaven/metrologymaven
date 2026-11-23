@@ -18,7 +18,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-val]
+built_pr: 513
+updated: 2026-11-22
 ---
 
 # KRN.MAN.VAL.RUN: Case-to-call mapping and pass criteria as data

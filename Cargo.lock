@@ -2272,6 +2272,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-val"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-kci",
+ "fid-num",
+ "fid-rdl",
+ "fid-types",
+ "toml",
+]
+
+[[package]]
 name = "fid-view"
 version = "0.0.1"
 dependencies = [

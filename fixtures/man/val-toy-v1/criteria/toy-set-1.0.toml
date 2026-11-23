@@ -1,0 +1,10 @@
+# Versioned pass criteria for toy-set 1.0 (CC-BY-4.0; internal toy limits [unverified])
+set = "toy-set"
+version = "1.0"
+
+[limits]
+centre = 1.0e-8
+normal = 1.0e-8
+point = 1.0e-8
+radius = 1.0e-8
+rms = 1.0e-9

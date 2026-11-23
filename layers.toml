@@ -135,6 +135,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-wasm-check" = "tool"
 # Cross-host and cross-artifact bit-identity gate (KRN.MAN.XART): CI tool over fid-kci and fid-canon.
 "fid-xart" = "tool"
+# Kernel validation harness (KRN.MAN.VAL.RUN): CI tool outside the kernel graph over fid-rdl, fid-kci, fid-canon and fid-num.
+"fid-val" = "tool"
 "fid-data" = "tool"
 "fid-knp1-lint" = "tool"
 "fid-manifest-gen" = "tool"
