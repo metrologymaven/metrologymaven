@@ -1,0 +1,74 @@
+{
+  "cases": {
+    "broken-at-5.zip": {
+      "first_failing_index": 5,
+      "results": [
+        {
+          "entry_index": 4,
+          "record_id": "hole-early",
+          "status": "LINKED"
+        },
+        {
+          "entry_index": null,
+          "record_id": "hole-late",
+          "status": "UNLINKED"
+        }
+      ]
+    },
+    "foreign-hash.zip": [
+      {
+        "entry_index": 4,
+        "record_id": "hole-1",
+        "status": "LINKED"
+      },
+      {
+        "entry_index": null,
+        "record_id": "hole-2",
+        "status": "UNLINKED"
+      },
+      {
+        "entry_index": 6,
+        "record_id": "hole-3",
+        "status": "LINKED"
+      }
+    ],
+    "points.zip": [
+      {
+        "entry_index": 4,
+        "record_id": "hole-1",
+        "status": "LINKED"
+      },
+      {
+        "entry_index": 5,
+        "record_id": "hole-2",
+        "status": "LINKED"
+      },
+      {
+        "entry_index": 6,
+        "record_id": "hole-3",
+        "status": "LINKED"
+      }
+    ],
+    "wrong-entry.zip": [
+      {
+        "entry_index": 4,
+        "record_id": "hole-1",
+        "status": "LINKED"
+      },
+      {
+        "entry_index": 1,
+        "reason": "not_result_producing_command",
+        "record_id": "hole-2",
+        "status": "MISLINKED"
+      },
+      {
+        "entry_index": 4,
+        "reason": "input_digest_mismatch",
+        "record_id": "hole-3",
+        "status": "MISLINKED"
+      }
+    ]
+  },
+  "foreign_digest": "sha256:9a924db38f155e94a42c21efc2bf3cd9472c2c3b14c3aa9ad5a4d8be2d0a88b9",
+  "schema": "trust-chain-reslink-expected/v1"
+}

@@ -23,6 +23,7 @@ python fixtures/auto/cli/out/make_cases.py --check
 python fixtures/auto/run/bind/make_cases.py --check
 python fixtures/auto/surf/gen/make_fixtures.py --check
 python fixtures/chain/ckpt/make_fixtures.py --check
+python fixtures/chain/reslink/make_fixtures.py --check
 python fixtures/cons/check_row_schema.py
 python fixtures/cons/make_decl_fixtures.py --check
 python fixtures/core/bus/pipe/stage/make_fixtures.py --check
