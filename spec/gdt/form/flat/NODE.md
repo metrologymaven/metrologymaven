@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid check eval-flatness]
 mcp: [check_eval_flatness]
 journal: [check.eval_flatness@1]
-updated: 2026-11-16
+built_in: [fid-gps, fid-gdt]
+updated: 2026-11-23
 ---
 
 # GDT.FORM.FLAT: Flatness

@@ -45,4 +45,5 @@ pub use chars::interp::{requires_provisional_label, requires_provisional_label_b
 pub mod dim;
 pub mod dmt_flow;
 pub mod drf;
+pub mod form;
 pub mod resolve;
