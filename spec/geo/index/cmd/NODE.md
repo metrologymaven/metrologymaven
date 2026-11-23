@@ -17,7 +17,9 @@ determinism: D0
 cli: [fid geo build-index, fid geo query-knn, fid geo query-radius, fid geo query-box]
 mcp: [geo_build_index, geo_query_knn, geo_query_radius, geo_query_box]
 journal: [geo.build_index@1, geo.query_knn@1, geo.query_radius@1, geo.query_box@1]
-updated: 2026-11-16
+built_in: [fid-geo-cmd]
+built_pr: 476
+updated: 2026-11-22
 ---
 
 # GEO.INDEX.CMD: Index build and neighbour query commands

@@ -1422,6 +1422,8 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-dep",
+ "fid-geo-frame",
+ "fid-geo-index",
  "fid-geo-types",
  "fid-project",
  "fid-registry",
