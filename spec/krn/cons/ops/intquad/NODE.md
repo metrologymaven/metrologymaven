@@ -17,7 +17,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-construct]
+updated: 2026-11-23
 ---
 
 # KRN.CONS.OPS.INTQUAD: Intersections involving circles, spheres, cylinders and cones
