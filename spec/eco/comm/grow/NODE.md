@@ -17,7 +17,9 @@ determinism: N
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+built_in: [tools/]
+built_pr: 517
+updated: 2026-11-22
 ---
 
 # ECO.COMM.GROW: Cross-platform tree-growth driver

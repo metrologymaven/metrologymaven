@@ -25,3 +25,17 @@ jobs:
       - name: Generated reports are up to date (informational, D-042)
         continue-on-error: true
         run: git diff --exit-code --stat -- generated/INDEX.md generated/COVERAGE.md generated/DECISIONS.md generated/EXPERT-QUEUE.md generated/BUILT.md generated/milestones/launch-1.md
+  grow-tests:
+    # ECO.COMM.GROW AC-5: AC-1..AC-4 tests pass on Windows, Linux and macOS in CI.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run ECO.COMM.GROW cross-platform tests
+        run: python -m unittest discover -s tools/tests -p "test_grow.py" -v
