@@ -25,6 +25,7 @@
 pub mod cond;
 pub mod constr;
 pub mod hist;
+pub mod icp_metric;
 pub mod matrix;
 pub mod report;
 pub mod rps321;
@@ -43,6 +44,9 @@ pub use constr::{
 pub use hist::{
     ConvergenceHistory, HistError, HistoryRecorder, IterationRow, Outcome, StoppedBy, MAX_CRITERION_BYTES,
     MAX_ITERATIONS,
+};
+pub use icp_metric::{
+    build_rows, Correspondence, Correspondences, Metric, MetricError, Rows, ALG_POINT_TO_PLANE, ALG_POINT_TO_POINT, P3,
 };
 pub use matrix::{
     solve_matrix, MatrixError, MatrixInput, MatrixOrder, MatrixSolution, RotationInput, TransformDirection, DET_TOL,
