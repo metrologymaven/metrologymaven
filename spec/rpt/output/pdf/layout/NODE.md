@@ -18,7 +18,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-report-pdf]
+updated: 2026-11-23
 ---
 
 # RPT.OUTPUT.PDF.LAYOUT: Page layout engine with page breaks and continuation headers
