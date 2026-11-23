@@ -460,16 +460,23 @@ fn parse_windows_ver(text: &str) -> Option<String> {
 
 #[cfg(target_os = "windows")]
 fn probe_cpu_impl() -> Probed<CpuInfo> {
-    let model = run_powershell("(Get-CimInstance Win32_Processor | Select-Object -First 1 -ExpandProperty Name)")
-        .ok()
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| "unknown".to_string());
-    let cores = run_powershell("(Get-CimInstance Win32_Processor | Measure-Object -Property NumberOfCores -Sum).Sum")
-        .ok()
-        .and_then(|s| s.parse::<u32>().ok())
-        .filter(|&n| n > 0)
-        .or_else(fallback_cores);
-    let Some(physical_cores) = cores else {
+    // Avoid spawning two slow PowerShell/CIM processes that can exceed DEFAULT_DEADLINE
+    // on CI runners: query the registry or PROCESSOR_IDENTIFIER and use available_parallelism.
+    let model = run_stdout(
+        "reg",
+        &["query", r"HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\0", "/v", "ProcessorNameString"],
+    )
+    .ok()
+    .and_then(|out| {
+        out.lines()
+            .find(|l| l.contains("ProcessorNameString"))
+            .and_then(|l| l.split("REG_SZ").nth(1))
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+    })
+    .or_else(|| std::env::var("PROCESSOR_IDENTIFIER").ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()))
+    .unwrap_or_else(|| "unknown".to_string());
+    let Some(physical_cores) = fallback_cores() else {
         return Probed::unknown(UnknownReason::Error, "could not determine physical core count");
     };
     Probed::Known(CpuInfo { model, physical_cores, instruction_set_level: detect_cpu_level() })
