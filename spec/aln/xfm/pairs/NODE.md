@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid align run-point-pairs]
 mcp: [align_run_point_pairs]
 journal: [align.run_point_pairs@1]
-updated: 2026-11-16
+built_in: [fid-align-solve, fid-align]
+updated: 2026-11-23
 ---
 
 # ALN.XFM.PAIRS: Rigid point-pair transform solver

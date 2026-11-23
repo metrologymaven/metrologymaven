@@ -30,6 +30,7 @@ mod error;
 pub mod hier;
 pub mod matrix;
 pub mod model;
+pub mod pairs;
 pub mod residuals;
 pub mod rps321;
 pub mod solver;
@@ -64,6 +65,11 @@ pub use matrix::{
 pub use model::{
     AlignmentModel, CreateRequest, Created, ElementLookup, RecomputeEntry, RecomputeItem, MAX_ALIGNMENTS,
     MAX_RECOMPUTE_NODES,
+};
+pub use pairs::{
+    invoke_point_pairs_cli, invoke_point_pairs_mcp, replay_point_pairs, run_point_pairs, run_point_pairs_command_def,
+    PointPairInput, RunPointPairsCommit, RunPointPairsError, RunPointPairsEvent, RunPointPairsParams,
+    CLI_RUN_POINT_PAIRS, MAX_PAIRS, MAX_PAIRS_EVENT_BYTES, MCP_RUN_POINT_PAIRS, RUN_POINT_PAIRS,
 };
 pub use residuals::{
     get_residuals, ResidualStore, ResidualsParams, CLI_RESIDUALS, DEFAULT_PAGE, GET_RESIDUALS, MAX_PAGE, MCP_RESIDUALS,

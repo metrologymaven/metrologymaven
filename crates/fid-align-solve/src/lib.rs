@@ -28,6 +28,7 @@ pub mod feat_dev;
 pub mod hist;
 pub mod icp_metric;
 pub mod matrix;
+pub mod pairs;
 pub mod report;
 pub mod rps321;
 pub mod stop;
@@ -56,6 +57,10 @@ pub use icp_metric::{
 pub use matrix::{
     solve_matrix, MatrixError, MatrixInput, MatrixOrder, MatrixSolution, RotationInput, TransformDirection, DET_TOL,
     MATRIX_ALGORITHM_ID, ORTHONORMAL_TOL, QUAT_UNIT_TOL,
+};
+pub use pairs::{
+    point_pairs_rigid, PairResidual, PairSolution, PairsError, COLLINEAR_RATIO_MIN, LOCKED_STEP_TOL, MAX_LOCKED_ITERS,
+    PAIRS_ALGORITHM_ID,
 };
 pub use report::{
     Disposition, Entry, EntryKind, EntryRef, EntryView, Length, LengthVec, RejectReason, ReportBuilder, ReportError,
