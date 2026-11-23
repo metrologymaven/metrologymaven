@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid report add-balloon, fid report move-balloon, fid report renumber-balloon, fid report relink-balloon, fid report remove-balloon, fid report list-balloon]
 mcp: [report_add_balloon, report_move_balloon, report_renumber_balloon, report_relink_balloon, report_remove_balloon, report_list_balloon]
 journal: [report.add_balloon@1, report.move_balloon@1, report.renumber_balloon@1, report.relink_balloon@1, report.remove_balloon@1]
-updated: 2026-11-16
+built_in: [fid-report]
+updated: 2026-11-22
 ---
 
 # RPT.BALLOON.REG: Balloon register and renumbering
