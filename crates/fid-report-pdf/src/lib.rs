@@ -7,6 +7,14 @@
 //!   `ResolvedReport` into a canonical `PageLayout` display list with page breaks, continuation
 //!   headers, column groups, designer frames, overflow clipping and page-number fill-in.
 
+//! - [`draw`] (`RPT.OUTPUT.PDF.DRAW`): `Painter` trait, registry, upfront unsupported-block
+//!   check, CAS image verification, bounded PNG/JPEG decoding, vector balloon overlays, and
+//!   painters for `table`, `text`, `header`, `footer`, `image`, `view`, `drawing` and
+//!   `form_field`.
+
+pub mod draw;
+pub(crate) mod flate;
+pub mod image_codec;
 pub(crate) mod int_json;
 pub mod layout;
 pub mod text;
