@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid check eval-scalar, fid check eval-minmax]
 mcp: [check_eval_scalar, check_eval_minmax]
 journal: [check.eval_scalar@1, check.eval_minmax@1]
-updated: 2026-11-16
+built_in: [fid-gps, fid-gdt]
+updated: 2026-11-23
 ---
 
 # GDT.DIM.SCALAR: Scalar property and min/max checks

@@ -8,3 +8,4 @@
 pub mod angle;
 pub mod linear;
 pub mod radial;
+pub mod scalar;
