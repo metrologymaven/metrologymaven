@@ -233,6 +233,7 @@ python fixtures/solv/cert/kkt-far-v1/make_cases.py --check
 python fixtures/solv/cert/kkt-v1/make_cases.py --check
 python fixtures/solv/cert/recomp-floor-v1/make_cases.py --check
 python fixtures/solv/cert/recomp-v1/make_cases.py --check
+python fixtures/solv/conic-xtest-v1/make_fixtures.py --check
 python fixtures/solv/make_mstart_fixtures.py --check
 python fixtures/solv/patch/ldl-order-v1/make_orders.py --check
 python fixtures/solv/patch/upstream-examples-v1/check_objectives.py

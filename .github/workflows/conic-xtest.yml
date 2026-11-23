@@ -1,0 +1,213 @@
+name: conic-xtest
+# KRN.SOLV.CONIC.XTEST: frozen conic test set and cross-target bit-identity check (AC-1..AC-3).
+# Runs the `conic-xtest` runner over `fixtures/solv/conic-xtest-v1` (>= 50 LP, 50 QP, 50 SOCP)
+# on x86-64, ARM64 and wasm32 (under the pinned wasmtime v49.0.6), checks every objective against
+# its offline reference within 1e-8 relative and every infeasible cause, then compares the three
+# canonical IEEE-754 hex result lists bit-for-bit (failing with the first differing problem ID
+# and field on any divergence). Also runs an AC-2 negative control with one perturbed rounding bit.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      run: ${{ steps.diff.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Did the conic solver, kernel numerics or conic-xtest fixtures change?
+        id: diff
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          pattern='^(\.github/workflows/conic-xtest\.yml|Cargo\.lock|crates/fid-(kci|num|solv|types)/|vendor/fid-clarabel/|fixtures/solv/conic-xtest-v1/)'
+          case "$EVENT" in
+            pull_request) base="$PR_BASE" ;;
+            push) base="$PUSH_BEFORE" ;;
+            *) base="" ;;
+          esac
+          run=true
+          if [ -n "$base" ] && [ "$base" != 0000000000000000000000000000000000000000 ] \
+            && git cat-file -e "$base^{commit}" 2> /dev/null; then
+            files=$(git diff --name-only "$base" "$HEAD_SHA")
+            if ! grep -qE "$pattern" <<< "$files"; then run=false; fi
+          fi
+          echo "run=$run" | tee -a "$GITHUB_OUTPUT"
+
+  run-x86_64:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+      - name: Run conic-xtest on x86-64
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/out"
+          cargo run --release --locked -p fid-solv --example conic-xtest -- \
+            run --fixtures fixtures/solv/conic-xtest-v1 \
+            --out "$RUNNER_TEMP/out/results.json" \
+            --digest-out "$RUNNER_TEMP/out/digest.txt"
+          cat "$RUNNER_TEMP/out/digest.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conic-xtest-x86_64
+          path: ${{ runner.temp }}/out/
+          if-no-files-found: error
+
+  run-arm64:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+      - name: Run conic-xtest on ARM64
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = aarch64
+          mkdir -p "$RUNNER_TEMP/out"
+          cargo run --release --locked -p fid-solv --example conic-xtest -- \
+            run --fixtures fixtures/solv/conic-xtest-v1 \
+            --out "$RUNNER_TEMP/out/results.json" \
+            --digest-out "$RUNNER_TEMP/out/digest.txt"
+          cat "$RUNNER_TEMP/out/digest.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conic-xtest-arm64
+          path: ${{ runner.temp }}/out/
+          if-no-files-found: error
+
+  run-wasm32:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+          targets: wasm32-wasip1
+      - name: Install wasmtime v49.0.6 (tarball SHA-256 pinned and verified before use)
+        shell: bash
+        env:
+          WASMTIME_TARBALL: wasmtime-v49.0.6-x86_64-linux.tar.xz
+          WASMTIME_SHA256: 15625b129e54534793dc77965d6912a5307db8e8e90ee114f52ef62ce6e4f918
+        run: |
+          set -euo pipefail
+          d="$RUNNER_TEMP/wasmtime"
+          mkdir -p "$d"
+          curl --proto '=https' --tlsv1.2 -fsSL --retry 5 -o "$d/$WASMTIME_TARBALL" \
+            "https://github.com/bytecodealliance/wasmtime/releases/download/v49.0.6/$WASMTIME_TARBALL"
+          echo "$WASMTIME_SHA256  $d/$WASMTIME_TARBALL" | sha256sum --check --strict -
+          tar -xJf "$d/$WASMTIME_TARBALL" -C "$d"
+          echo "$d/wasmtime-v49.0.6-x86_64-linux" >> "$GITHUB_PATH"
+      - name: Build and run conic-xtest on wasm32-wasip1 under pinned wasmtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          wasmtime --version
+          cargo build --release --locked --target wasm32-wasip1 -p fid-solv --example conic-xtest
+          mkdir -p conic-xtest-wasm-out
+          wasmtime --dir=. \
+            target/wasm32-wasip1/release/examples/conic-xtest.wasm \
+            run --fixtures fixtures/solv/conic-xtest-v1 \
+            --out conic-xtest-wasm-out/results.json \
+            --digest-out conic-xtest-wasm-out/digest.txt
+          mv conic-xtest-wasm-out "$RUNNER_TEMP/out"
+          cat "$RUNNER_TEMP/out/digest.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conic-xtest-wasm32
+          path: ${{ runner.temp }}/out/
+          if-no-files-found: error
+
+  compare:
+    needs: [changes, run-x86_64, run-arm64, run-wasm32]
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+      - uses: actions/download-artifact@v4
+        with:
+          path: art
+      - name: Compare x86-64, ARM64 and wasm32 canonical result lists bit-for-bit (AC-1, AC-2)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --release --locked -p fid-solv --example conic-xtest
+          bin=target/release/examples/conic-xtest
+          head -n 5 art/conic-xtest-x86_64/digest.txt art/conic-xtest-arm64/digest.txt art/conic-xtest-wasm32/digest.txt
+          "$bin" compare \
+            art/conic-xtest-x86_64/results.json \
+            art/conic-xtest-arm64/results.json \
+            art/conic-xtest-wasm32/results.json
+          # AC-2 negative control: flip 1 LSB of x[0] on lp-001 and verify compare fails naming lp-001 and x[0].
+          python3 -c '
+          import json, pathlib
+          p = pathlib.Path("art/conic-xtest-x86_64/results.json")
+          data = json.loads(p.read_text(encoding="utf-8"))
+          orig = int(data[0]["x"][0], 16)
+          data[0]["x"][0] = f"{orig ^ 1:016x}"
+          out = pathlib.Path("art/perturbed.json")
+          out.write_text(json.dumps(data, separators=(",", ":"), sort_keys=True), encoding="utf-8")
+          '
+          set +e
+          msg=$("$bin" compare art/conic-xtest-x86_64/results.json art/perturbed.json 2>&1)
+          code=$?
+          set -e
+          echo "AC-2 control output: $msg"
+          test "$code" = 1
+          grep -q 'problem lp-001 field x\[0\]' <<< "$msg"
+
+  result:
+    needs: [changes, compare]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Conic cross-target bit-identity verdict
+        shell: bash
+        env:
+          SHOULD_RUN: ${{ needs.changes.outputs.run }}
+          COMPARE_RESULT: ${{ needs.compare.result }}
+        run: |
+          set -euo pipefail
+          if [ "$SHOULD_RUN" != "true" ]; then
+            echo "conic-xtest skipped: no solver or fixture changes"
+            exit 0
+          fi
+          if [ "$COMPARE_RESULT" != "success" ]; then
+            echo "::error::conic-xtest compare failed ($COMPARE_RESULT)"
+            exit 1
+          fi
+          echo "conic-xtest passed across x86-64, ARM64 and wasm32"
