@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid import mesh-obj, fid export mesh-obj]
 mcp: [import_mesh_obj, export_mesh_obj]
 journal: [import.mesh_obj@1, export.mesh_obj@1]
-updated: 2026-11-16
+built_in: [fid-io-mesh]
+updated: 2026-11-22
 ---
 
 # IO.MESH.OBJ: OBJ geometry reader and writer
