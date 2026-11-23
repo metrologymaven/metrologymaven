@@ -25,6 +25,7 @@
 pub mod cond;
 pub mod constr;
 pub mod hist;
+pub mod pairs;
 pub mod report;
 
 pub use cond::{
@@ -40,6 +41,10 @@ pub use constr::{
 pub use hist::{
     ConvergenceHistory, HistError, HistoryRecorder, IterationRow, Outcome, StoppedBy, MAX_CRITERION_BYTES,
     MAX_ITERATIONS,
+};
+pub use pairs::{
+    point_pairs_rigid, PairResidual, PairSolution, PairsError, COLLINEAR_RATIO_MIN, LOCKED_STEP_TOL, MAX_LOCKED_ITERS,
+    PAIRS_ALGORITHM_ID,
 };
 pub use report::{
     Disposition, Entry, EntryKind, EntryRef, EntryView, Length, LengthVec, RejectReason, ReportBuilder, ReportError,
