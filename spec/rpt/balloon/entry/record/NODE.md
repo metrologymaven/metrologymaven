@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid report enter-reading, fid report void-reading, fid report list-reading]
 mcp: [report_enter_reading, report_void_reading, report_list_reading]
 journal: [report.enter_reading@1, report.void_reading@1, report.list_reading@1]
-updated: 2026-11-17
+built_in: [fid-report]
+updated: 2026-11-22
 ---
 
 # RPT.BALLOON.ENTRY.RECORD: Single manual reading entry, voiding and listing

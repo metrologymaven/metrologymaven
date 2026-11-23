@@ -45,6 +45,9 @@ fid-io-draw = { path = "../fid-io-draw" }
 # decoded raster blobs by SHA-256 digest (RPT.BALLOON.SHEET.IMPORT). Layer model; already in
 # this crate's transitive tree through fid-io-reg.
 fid-store = { path = "../fid-store" }
+# Authored-literal unit normalisation (CORE.BUS.UNIT) and schema validation: engine layer,
+# below services; already in this crate's tree through fid-gdt.
+fid-bus = { path = "../fid-bus" }
 
 [features]
 # Test-only block kinds `text` and `image` (module `doc::stub`), and `table` with its resolver
@@ -62,10 +65,6 @@ test-interpretation = []
 
 [dev-dependencies]
 fid-report = { path = ".", features = ["test-kinds", "test-formatter", "test-interpretation"] }
-# `fid_bus::validate::Compiled`: the template commands' params and results are checked
-# against their registered schemas in tests (tmpl_ver.rs). Engine layer, below services;
-# already in this crate's tree through fid-gdt.
-fid-bus = { path = "../fid-bus" }
 
 [lints]
 workspace = true
