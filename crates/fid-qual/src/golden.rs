@@ -813,6 +813,7 @@ pub fn build_register_golden_entry(
             on_behalf_of: None,
         },
         ai_assistance: AiAssistance::None,
+        agent_coedited: false,
         manifests: Manifests {
             registry: registry_manifest,
             kernel: CanonDigest(golden.kernel_manifest_digest.to_bytes()),
@@ -827,6 +828,7 @@ pub fn build_register_golden_entry(
             seed: 0,
             args: CValue::Obj(args),
             events: vec![golden.to_value()],
+            event_sources: Vec::new(),
             inputs: Vec::new(),
             consumed_r1: Vec::new(),
             outputs: vec![OutputDigest {
