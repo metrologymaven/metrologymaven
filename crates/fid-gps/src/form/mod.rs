@@ -6,6 +6,7 @@
 //! NaN rejected as an error.
 
 pub mod flat;
+pub mod round;
 
 use crate::dmt::{OperatorChain, OperatorKind, Param};
 use core::cmp::Ordering;

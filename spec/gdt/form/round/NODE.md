@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid check eval-roundness]
 mcp: [check_eval_roundness]
 journal: [check.eval_roundness@1]
-updated: 2026-11-16
+built_in: [fid-gps, fid-gdt]
+updated: 2026-11-23
 ---
 
 # GDT.FORM.ROUND: Roundness (circularity) with cross-section extraction
