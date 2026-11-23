@@ -1,0 +1,129 @@
+{
+  "schema": "fid-geo-sel-eval-cases/1",
+  "license": "CC-BY-4.0",
+  "seed": 41,
+  "point_count": 100000,
+  "point_queries": [
+    {
+      "name": "all",
+      "query": { "domain": "points", "v": 1, "where": { "all": {} } }
+    },
+    {
+      "name": "ids_subset",
+      "query": { "domain": "points", "v": 1, "where": { "ids": { "ids": [0, 42, 99999, 12345] } } }
+    },
+    {
+      "name": "intensity_and_scanner",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "and": [
+            { "attr_range": { "channel": "intensity", "min": 0.25, "max": 0.75 } },
+            { "attr_range": { "channel": "scanner_id", "min": 1, "max": 2 } }
+          ]
+        }
+      }
+    },
+    {
+      "name": "quality_and_normal_cone",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "and": [
+            { "quality_flags": { "all_of": 1, "none_of": 4 } },
+            { "normal_cone": { "axis": [0, 0, 1], "half_angle": { "text": "30", "unit": "deg" } } }
+          ]
+        }
+      }
+    },
+    {
+      "name": "box_or_sphere_not_high_ts",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "and": [
+            {
+              "or": [
+                {
+                  "in_box": {
+                    "min": [
+                      { "text": "-0.2", "unit": "m" },
+                      { "text": "-0.2", "unit": "m" },
+                      { "text": "0", "unit": "m" }
+                    ],
+                    "max": [
+                      { "text": "0.2", "unit": "m" },
+                      { "text": "0.2", "unit": "m" },
+                      { "text": "0.5", "unit": "m" }
+                    ]
+                  }
+                },
+                {
+                  "in_sphere": {
+                    "centre": [
+                      { "text": "0.4", "unit": "m" },
+                      { "text": "0.4", "unit": "m" },
+                      { "text": "0.4", "unit": "m" }
+                    ],
+                    "radius": { "text": "0.25", "unit": "m" }
+                  }
+                }
+              ]
+            },
+            {
+              "not": { "attr_range": { "channel": "timestamp_ns", "min": 50000000 } }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "triangle_queries": [
+    {
+      "name": "cap_normal_cone_and_box",
+      "query": {
+        "domain": "triangles",
+        "v": 1,
+        "where": {
+          "and": [
+            { "normal_cone": { "axis": [0, 0, 1], "half_angle": { "text": "45", "unit": "deg" } } },
+            {
+              "in_box": {
+                "min": [
+                  { "text": "-0.8", "unit": "m" },
+                  { "text": "-0.8", "unit": "m" },
+                  { "text": "0.5", "unit": "m" }
+                ],
+                "max": [
+                  { "text": "0.8", "unit": "m" },
+                  { "text": "0.8", "unit": "m" },
+                  { "text": "1.1", "unit": "m" }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "sphere_around_north_pole",
+      "query": {
+        "domain": "triangles",
+        "v": 1,
+        "where": {
+          "in_sphere": {
+            "centre": [
+              { "text": "0", "unit": "m" },
+              { "text": "0", "unit": "m" },
+              { "text": "1", "unit": "m" }
+            ],
+            "radius": { "text": "0.5", "unit": "m" }
+          }
+        }
+      }
+    }
+  ]
+}
