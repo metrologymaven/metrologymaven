@@ -382,8 +382,9 @@ fn ac4_mcp_matches_cli_json_byte_for_byte() {
     assert_eq!(mcp_signed.as_slice(), cli_signed.stdout.trim_ascii_end());
 
     // MCP rejects raw paths not in HandleTable, unknown tools, and unknown params.
-    let err_raw = invoke_mcp(&handles, MCP_CHECK_CHAIN, format!(r#"{{"package":"{}"}}"#, points.display()).as_bytes())
-        .unwrap_err();
+    let raw_path_escaped = points.display().to_string().replace('\\', "\\\\").replace('"', "\\\"");
+    let err_raw =
+        invoke_mcp(&handles, MCP_CHECK_CHAIN, format!(r#"{{"package":"{raw_path_escaped}"}}"#).as_bytes()).unwrap_err();
     let err_val = canon_parse(&err_raw).unwrap();
     assert_eq!(as_str(field(field(&err_val, "error").unwrap(), "code").unwrap()), "pkg.io");
 
