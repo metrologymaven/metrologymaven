@@ -64,7 +64,7 @@ Run the tree checker from `tools/scope.py`. It checks every node's front matter,
 python tools/scope.py check
 ```
 
-It exits 0 when there are no errors; warnings never fail it. Fix every error in the files you touched and leave errors in other files alone, because someone else may be working there (`prompts/expand-node.md`, step 5). Commit the regenerated files under `generated/` with your change, since CI fails when they are stale.
+It exits 0 when there are no errors; warnings never fail it. Fix every error in the files you touched and leave errors in other files alone, because someone else may be working there (`prompts/expand-node.md`, step 5). Per `decisions/D-042-generated-reports-refreshed-on-main.md`, do not commit the regenerated files under `generated/` in your pull request; they are refreshed on `main` in dedicated regeneration pull requests.
 
 An unknown subcommand is an error and exits non-zero:
 

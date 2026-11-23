@@ -1,16 +1,12 @@
-# Licence (decided in D-001)
+# Licence (decided in D-001 and D-039)
 
-See [decisions/D-001-license.md](decisions/D-001-license.md).
+See [decisions/D-001-license.md](decisions/D-001-license.md) and [decisions/D-039-metrology-maven-name-and-public-home.md](decisions/D-039-metrology-maven-name-and-public-home.md).
 
-| What | Licence |
-|---|---|
-| Code and tooling (`tools/`, `prompts/`, `templates/`, and all implementation repositories) | MIT OR Apache-2.0, at your option |
-| Specification text (`spec/`, `seeds/`, `decisions/`, `research/`, docs) | Creative Commons Attribution 4.0 (CC-BY-4.0) |
-| Reference datasets | The source's own licence, or CC-BY-4.0 for project-made data |
-| Project name and logos | **Not licensed.** Trademarks are excluded from all of the above |
+| What | Licence | Full text |
+|---|---|---|
+| Code and tooling (`crates/`, `site/`, `tools/`, `prompts/`, `templates/`) | MIT OR Apache-2.0, at your option | [LICENSE-MIT](LICENSE-MIT), [LICENSE-APACHE](LICENSE-APACHE) |
+| Specification text and documentation (`spec/`, `seeds/`, `decisions/`, `research/`, `docs/`) | Creative Commons Attribution 4.0 (CC-BY-4.0) | [LICENSE-CC-BY-4.0](LICENSE-CC-BY-4.0) |
+| Reference datasets | The source's own licence, or CC-BY-4.0 for project-made data | See `datasets.toml` and `ATTRIBUTION.md` |
+| Project name ("Metrology Maven") and logos | **Not licensed.** Trademarks are excluded from all of the above | See `brand/guidelines/name-and-logo.md` |
 
-Before the first public push:
-1. **Counsel review** of the patent (provisional application) question, per D-001's conditions.
-2. **A cleared name** (D-002). Until then, "Fiducial" and `fid` are internal working names.
-
-Full licence texts (`LICENSE-MIT`, `LICENSE-APACHE`, `LICENSE-CC-BY-4.0`) will be added when the repository is published.
+The public repository launched on 2026-11-18 under [D-039](decisions/D-039-metrology-maven-name-and-public-home.md). The technical command and crate prefix `fid` (from *fiducial*, a generic metrology term) is retained as a technical identifier and is not trademark use. Third-party assets and clean-room exceptions are listed in [ATTRIBUTION.md](ATTRIBUTION.md).

@@ -4,27 +4,23 @@ This file applies to every coding agent working in this repository (Claude Code,
 
 ## What this repository is
 
-A **specification tree** for an open-source dimensional metrology platform. **Do not write implementation code here.** The output is requirements, interfaces, design notes, acceptance criteria and build prompts. Implementation happens later, in a separate repository, from the leaf build prompts.
+The **Metrology Maven public monorepo** ([D-039](decisions/D-039-metrology-maven-name-and-public-home.md)): the specification tree (`spec/`, `seeds/`, `decisions/`), the Rust workspace (`crates/`, `fixtures/`, `tools/`), and the static website (`site/`).
 
-## The one job
+## The two jobs
 
-You are usually given **one target node** (`spec/.../NODE.md`). Follow [prompts/expand-node.md](prompts/expand-node.md) exactly. In short: read the context, then do exactly one of these:
+Never mix a spec expansion and a code implementation in the same PR.
 
-1. **Split** the node into 2–9 children (3–7 is typical);
-2. **Finish** it as a leaf; or
-3. **Block** it on a decision.
-
-Then run `python tools/scope.py check` and fix any error in files you touched.
+- **Spec expansion** (given an `open` node `spec/.../NODE.md`): follow [prompts/expand-node.md](prompts/expand-node.md) exactly and write **no implementation code**. Do exactly one of:
+  1. **Split** the node into 2–9 children (3–7 is typical);
+  2. **Finish** it as a leaf; or
+  3. **Block** it on a decision.
+- **Leaf implementation** (given a `leaf` node's Build prompt): implement it in its named crate (`crates/`) or tool path (`tools/`), obey [CONSTITUTION §8](spec/CONSTITUTION.md#8-engineering-rules-binding-on-implementation-specs-must-not-contradict-them) (no panics, no `unsafe` outside named exceptions, layer rules in `layers.toml`), add `built_in:` and `built_pr:` to the leaf's frontmatter, and run `cargo test`, `cargo clippy -- -D warnings`, `cargo fmt --check`, and `python tools/scope.py check` (do not commit regenerated `generated/` files; see D-042).
 
 ## Hard rules
 
-1. **Stay in your lane.** Write only:
-   - the target node;
-   - its new child folders;
-   - the `## Children` section of the target;
-   - new files under `decisions/`.
-
-   Never edit sibling, ancestor or unrelated nodes. If a sibling or ancestor is wrong, write the problem in the target's `## Open questions` or open a decision.
+1. **Stay in your lane.**
+   - In a **spec expansion**, write only the target node, its new child folders, the target's `## Children` section, and new files under `decisions/`. Never edit sibling, ancestor or unrelated nodes; record problems in the target's `## Open questions` or open a decision.
+   - In a **leaf implementation**, change only the crates/tools/fixtures needed for that leaf plus the leaf's `built_in:`/`built_pr:` frontmatter (and `layers.toml`/`Cargo.lock` if adding a crate).
 2. **The constitution wins.** [spec/CONSTITUTION.md](spec/CONSTITUTION.md) defines naming, side-effect classes, determinism, units and the data model. Never contradict it. If it blocks you, open a decision.
 3. **Requirements are testable.** One `shall` per requirement, in EARS style ("When <trigger>, the system shall <response>"). No implementation detail above the leaf level unless the constitution mandates it.
 4. **Trace everything.**
@@ -32,14 +28,14 @@ Then run `python tools/scope.py check` and fix any error in files you touched.
    - Every competitor feature the parent covers (`covers:`) must be covered by at least one child.
 5. **Never paste standards text.** ISO, ASME and VDA text is copyrighted. Cite designators and clause numbers only, and paraphrase in your own words. Don't send standards text to any external service.
 6. **Mark uncertainty.** Claims about competitor behaviour, standards details or performance numbers you haven't verified get a trailing `[unverified]`.
-7. **No invented decisions.** If a choice belongs to the maintainers (licensing, naming, phase moves, dropping a competitor feature), open `decisions/D-NNN-*.md` and set the node to `status: decision`.
-8. **Review gates (D-037 P2).** Splits at levels 1 and 2, every `frozen` transition, the constitution and decision records need human review in a PR. Level 3 and deeper may be approved by an **independent agent reviewer**: a different model or a fresh session without the author's context, which must run `scope.py check`. An agent never reviews its own work.
+7. **Record architecture decisions (D-052).** Architectural, solver, UI, rendering, spec-structure and milestone choices are authorized to proceed autonomously under [D-052](decisions/D-052-autonomous-zero-human-bottlenecks.md): record non-local choices in `decisions/D-NNN-*.md` and never stall on external expert or legal outreach. Only external account/credential/financial/licence changes stay outside code commits.
+8. **Review gates (D-037 P2 as amended by D-052).** All spec splits, leaves, architectural decisions and implementation PRs are reviewed by an **independent agent reviewer** (a different model or a fresh session without the author's context, which must run `scope.py check`) plus required CI gates. An agent never reviews its own work.
 9. **Keep files small and regular.** Use the templates in [templates/](templates/). Frontmatter lists are single-line `[a, b, c]`, and list items must not contain commas.
 
-10. **Research-risk nodes (D-036 rule 4).** Nodes under KRN.MAN.VAL, UNC.PROP, UNC.MODEL.SUBST, UNC.ORS, TRUST.REPLAY and AGENT.REDTEAM state acceptance criteria as **measurable hypotheses against public reference data**: "H-n: method X achieves ≤ Y against reference set Z, measured by W".
+10. **Research-risk nodes (D-036 rule 4, D-049).** Nodes under KRN.MAN.VAL, UNC.PROP, UNC.MODEL.SUBST, UNC.ORS, TRUST.REPLAY, AGENT.REDTEAM and CMM.STRAT.PROC state acceptance criteria as **measurable hypotheses against project-authored or public mathematical reference data**: "H-n: method X achieves ≤ Y against reference set Z, measured by W".
 11. **Paid-service boundary (D-036 rule 3).** Never move a capability the open apps need behind a paid service. Nodes that define a paid service say `service` in their Purpose.
 12. **Optional private context.** If `../docs/funding-strategy.md` exists, read it for context before expanding ECO, TRUST, QUAL, OUTR, KRN, GDT, UNC or AGENT nodes. Never copy its contents into this repository. Public contributors won't have it, and that's fine.
-13. **Expert nodes (D-039 pipeline).** Never expand a node that has `needs_expert:` set; `scope.py open` already skips them. You may draft a PR from an expert's written review on its issue, naming the expert as reviewer. Add `needs_expert: <area>` (areas in `tools/scope.py`) to an open node only when getting it wrong would make measurements wrong and no public reference settles it.
+13. **Domain-critical nodes & provisional honesty (D-045, D-052).** Do not add `needs_expert:` blocks or wait on external expert outreach. Agents expand and implement GD&T, uncertainty and CNC nodes autonomously using clean-room mathematics, standard clause citations (never pasted standards text) and independent arbitrary-precision oracles, while marking any unreviewed interpretation `interpretation: provisional` (or `[unverified]`) so unverified rules are never presented as settled.
 14. **Shared types (code).** Crates use `fid-types` for determinism classes, side-effect classes, `sha256:` digests and command IDs (`name@major`) and never redefine them. Add a concept there only when two or more crates need it. Known exception: `fid-canon`'s `Digest` until it converts.
 
 ## Working rules (adapted from the Craft family's house rules)
