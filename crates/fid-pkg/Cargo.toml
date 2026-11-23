@@ -1,11 +1,15 @@
 [package]
 name = "fid-pkg"
-description = "Metrology Maven Result Package format: container layout, manifest and in-toto statement (spec node TRUST.PKG.MANIFEST), and the bounded package reader with verify.inspect_package (TRUST.PKG.READER)"
+description = "Metrology Maven Result Package format: container layout, manifest and in-toto statement (spec node TRUST.PKG.MANIFEST), bounded package reader with verify.inspect_package (TRUST.PKG.READER), and evidence-tier point-set and interpretation-register gathering (TRUST.PKG.CONTENT.EVID)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+
+[features]
+# Package export content assembly (TRUST.PKG.CONTENT.*).
+export = []
 
 [dependencies]
 fid-canon = { path = "../fid-canon" }
