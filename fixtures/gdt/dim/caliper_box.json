@@ -1,0 +1,19 @@
+{
+  "schema": "fid-gdt-dim-caliper-fixture/1",
+  "license": "CC0-1.0",
+  "direction": [1.0, 0.0, 0.0],
+  "expected_value_si": 0.02,
+  "expected_value_mm": 20.0,
+  "expected_min_index": 0,
+  "expected_max_index": 4,
+  "points": [
+    [0.0, 0.0, 0.0],
+    [0.0, 0.01, 0.0],
+    [0.0, 0.0, 0.005],
+    [0.0, 0.01, 0.005],
+    [0.02, 0.0, 0.0],
+    [0.02, 0.01, 0.0],
+    [0.02, 0.0, 0.005],
+    [0.02, 0.01, 0.005]
+  ]
+}

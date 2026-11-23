@@ -1,0 +1,41 @@
+{
+  "schema": "fid-gdt-dim-linear-fixture/1",
+  "license": "CC0-1.0",
+  "cases": [
+    {
+      "name": "point_point_3d",
+      "a": { "kind": "point", "position": [0.0, 0.0, 0.0], "raw_point": true },
+      "b": { "kind": "point", "position": [0.003, 0.004, 0.0], "raw_point": true },
+      "measurand": { "kind": "3d" },
+      "unit": "mm"
+    },
+    {
+      "name": "point_line_3d",
+      "a": { "kind": "point", "position": [0.0, 0.005, 0.0], "raw_point": false },
+      "b": { "kind": "line", "point": [0.0, 0.0, 0.0], "direction": [1.0, 0.0, 0.0] },
+      "measurand": { "kind": "3d" },
+      "unit": "mm"
+    },
+    {
+      "name": "point_plane_3d",
+      "a": { "kind": "point", "position": [0.002, -0.003, 0.007], "raw_point": false },
+      "b": { "kind": "plane", "centroid": [0.0, 0.0, 0.0], "normal": [0.0, 0.0, 1.0] },
+      "measurand": { "kind": "3d" },
+      "unit": "mm"
+    },
+    {
+      "name": "skew_lines_shortest",
+      "a": { "kind": "line", "point": [0.0, 0.0, 0.0], "direction": [1.0, 0.0, 0.0] },
+      "b": { "kind": "line", "point": [0.0, 0.0, 0.012], "direction": [0.0, 1.0, 0.0] },
+      "measurand": { "kind": "3d" },
+      "unit": "mm"
+    },
+    {
+      "name": "parallel_planes_10mm",
+      "a": { "kind": "plane", "centroid": [0.0, 0.0, 0.0], "normal": [1.0, 0.0, 0.0] },
+      "b": { "kind": "plane", "centroid": [0.01, 0.0, 0.0], "normal": [1.0, 0.0, 0.0] },
+      "measurand": { "kind": "3d" },
+      "unit": "mm"
+    }
+  ]
+}

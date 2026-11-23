@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid check eval-distance, fid check eval-caliper]
 mcp: [check_eval_distance, check_eval_caliper]
 journal: [check.eval_distance@1, check.eval_caliper@1]
-updated: 2026-11-16
+built_in: [fid-gps, fid-gdt]
+updated: 2026-11-23
 ---
 
 # GDT.DIM.LINEAR: Distance and caliper checks
