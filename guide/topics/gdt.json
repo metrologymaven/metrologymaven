@@ -1,0 +1,257 @@
+{
+  "schema": "guide-topic/v1",
+  "slug": "gdt",
+  "order": 2,
+  "title": "GD&T Fundamentals: Tolerance Zones, Datums & Dialects",
+  "subtitle": "How tolerance zones turn 3D point deviations into full-width or diametral zone usage, why the driving point decides conformance, and why ASME vs. ISO must stay explicit.",
+  "phase": "P1a",
+  "status": "live-kernel",
+  "provisional": true,
+  "crates": [
+    "fid-gps",
+    "fid-gdt",
+    "fid-fit"
+  ],
+  "spec_nodes": [
+    "GDT.ZONE.ZTYPE",
+    "GDT.DRF.BUILD",
+    "GDT.RES.SCHEMA",
+    "GDT.RES.RESOLVE"
+  ],
+  "standards": [
+    {
+      "designator": "ASME Y14.5-2018",
+      "topic": "Tolerance zones, Rule #1 envelope default, datum reference frames"
+    },
+    {
+      "designator": "ISO 1101:2017",
+      "topic": "Geometrical tolerancing zone shapes and feature specification"
+    },
+    {
+      "designator": "ISO 8015:2011",
+      "topic": "Independency principle (size vs. form default)"
+    },
+    {
+      "designator": "ISO 17450-2:2012",
+      "topic": "Specification operator vocabulary"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Zones are full widths or diameters, never half-widths",
+      "paragraphs": [
+        "Every geometric tolerance defines an ideal 2D or 3D region—two parallel planes, a cylinder, a circle, a sphere, or a uniform offset surface—that must simultaneously contain all points of the toleranced feature. In `fid-gps` (`GDT.ZONE.ZTYPE`), zone usage is always reported as the full width or diameter `2 * max(d_i)` in SI metres, paired with the exact index of the driving point that attains the maximum.",
+        "This convention prevents a frequent shop-floor mistake: a hole axis shifted 0.04 mm radially from true position uses 0.08 mm of diametral position tolerance, not 0.04 mm."
+      ]
+    },
+    {
+      "heading": "Explicit Dialect Mapping Table (ASME vs. ISO)",
+      "paragraphs": [
+        "ASME Y14.5-2018 and ISO GPS share symbols on drawings yet differ on defaults—most famously the envelope principle (ASME Rule #1) versus the independency principle (ISO 8015:2011), plus concentricity/symmetry definitions and datum-simulator association. Metrology Maven never guesses a drawing's dialect: every characteristic resolves through a versioned Dialect Mapping Table (DMT) that records exact operator chains and digests.",
+        "Under Decision D-045, every rule authored without independent credentialed sign-off stays visibly marked `interpretation: provisional` in API payloads, reports and this guide."
+      ]
+    }
+  ],
+  "lab": {
+    "widget_kind": "gdt-zone-lab",
+    "op": "gdt.zone_eval",
+    "secondary_ops": [],
+    "instructions": "Select a tolerance zone preset (cylindrical position zone, parallel-plane flatness/orientation zone, or unequally disposed profile offset zone), drag points on the canvas or slide the tolerance callout, and inspect the exact driving point and utilization computed live by fid-gps.",
+    "presets": [
+      {
+        "id": "zone-cylinder-pos",
+        "label": "Cylindrical Position Zone (Ø 0.10 mm)",
+        "op": "gdt.zone_eval",
+        "description": "Three axis sample points evaluated against a Ø 0.10 mm cylindrical tolerance zone along Z. Point #2 at (-0.04, 0.03) has radial distance 0.05 mm -> exactly Ø 0.10 mm usage (100% utilized).",
+        "request": {
+          "op": "gdt.zone_eval",
+          "params": {
+            "unit": "mm",
+            "shape": "cylinder",
+            "dialect": "ASME Y14.5-2018",
+            "tolerance": 0.1,
+            "origin": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "points": [
+              [
+                0.01,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.03,
+                5.0
+              ],
+              [
+                -0.04,
+                0.03,
+                10.0
+              ]
+            ]
+          }
+        },
+        "expected_digest": "sha256:cdd204f00c4d62a8d79e3e2fd6b53cb5e4b6f453465f257d56902a2d0af0b6ee",
+        "expected_result": {
+          "contains": true,
+          "dialect": "ASME Y14.5-2018",
+          "driving_index": 2,
+          "interpretation_status": "provisional",
+          "margin": 0,
+          "shape": "cylinder",
+          "standards_ref": "ASME Y14.5-2018; ISO 1101:2017",
+          "tolerance": 0.1,
+          "unit": "mm",
+          "usage_size": 0.1,
+          "usage_size_m": 0.0001,
+          "utilization_pct": 100
+        }
+      },
+      {
+        "id": "zone-two-planes",
+        "label": "Parallel-Plane Zone (0.08 mm)",
+        "op": "gdt.zone_eval",
+        "description": "Five surface points evaluated against a symmetric 0.08 mm two-plane zone (normal +Z). Point #3 at z = -0.055 mm drives usage to 0.110 mm, exceeding tolerance.",
+        "request": {
+          "op": "gdt.zone_eval",
+          "params": {
+            "unit": "mm",
+            "shape": "two_planes",
+            "dialect": "ISO 1101:2017",
+            "tolerance": 0.08,
+            "origin": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "points": [
+              [
+                0.0,
+                0.0,
+                0.015
+              ],
+              [
+                20.0,
+                0.0,
+                -0.02
+              ],
+              [
+                20.0,
+                20.0,
+                0.032
+              ],
+              [
+                0.0,
+                20.0,
+                -0.055
+              ],
+              [
+                10.0,
+                10.0,
+                0.01
+              ]
+            ]
+          }
+        },
+        "expected_digest": "sha256:513f2824f844bae460e6286261cd4deb24fe48ad3e410e364357a8488b2d328d",
+        "expected_result": {
+          "contains": false,
+          "dialect": "ISO 1101:2017",
+          "driving_index": 3,
+          "interpretation_status": "provisional",
+          "margin": -0.03,
+          "shape": "two_planes",
+          "standards_ref": "ASME Y14.5-2018; ISO 1101:2017",
+          "tolerance": 0.08,
+          "unit": "mm",
+          "usage_size": 0.11,
+          "usage_size_m": 0.00011,
+          "utilization_pct": 137.5
+        }
+      },
+      {
+        "id": "zone-offset-profile",
+        "label": "Unequally Disposed Profile Offset Zone (0.20 mm, UZ +0.05)",
+        "op": "gdt.zone_eval",
+        "description": "Four profile deviations evaluated with mid-surface shifted +0.05 mm toward material (unequal bilateral profile zone of total width 0.20 mm).",
+        "request": {
+          "op": "gdt.zone_eval",
+          "params": {
+            "unit": "mm",
+            "shape": "offset",
+            "dialect": "ISO 1101:2017",
+            "tolerance": 0.2,
+            "disposition_shift": 0.05,
+            "origin": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "direction": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "points": [
+              [
+                0,
+                0,
+                0
+              ],
+              [
+                10,
+                0,
+                0
+              ],
+              [
+                20,
+                0,
+                0
+              ],
+              [
+                30,
+                0,
+                0
+              ]
+            ],
+            "deviations": [
+              0.12,
+              0.04,
+              -0.03,
+              0.14
+            ]
+          }
+        },
+        "expected_digest": "sha256:e60eb8f63f9404e0ceb22d712c6f17e35c2aca7032007b563ed335d8a6955ca5",
+        "expected_result": {
+          "contains": true,
+          "dialect": "ISO 1101:2017",
+          "driving_index": 3,
+          "interpretation_status": "provisional",
+          "margin": 0.01999999999999999,
+          "shape": "offset",
+          "standards_ref": "ASME Y14.5-2018; ISO 1101:2017",
+          "tolerance": 0.2,
+          "unit": "mm",
+          "usage_size": 0.18000000000000002,
+          "usage_size_m": 0.00018000000000000004,
+          "utilization_pct": 90
+        }
+      }
+    ]
+  },
+  "cli_example": "echo '{\"op\":\"gdt.zone_eval\",\"params\":{\"unit\":\"mm\",\"shape\":\"cylinder\",\"tolerance\":0.10,\"points\":[[0.01,0,0],[0,0.03,5],[-0.04,0.03,10]]}}' | cargo run -q -p fid-guide-wasm"
+}

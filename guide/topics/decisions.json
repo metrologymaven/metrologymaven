@@ -1,0 +1,215 @@
+{
+  "schema": "guide-topic/v1",
+  "slug": "decisions",
+  "order": 4,
+  "title": "Conformance Decision Rules: ISO 14253-1 & JCGM 106",
+  "subtitle": "How measurement uncertainty shrinks the acceptance zone, trades off consumer risk against producer risk, and refuses to pass parts when uncertainty is missing (UEC-0).",
+  "phase": "P1a",
+  "status": "live-kernel",
+  "provisional": true,
+  "crates": [
+    "fid-kdec",
+    "fid-kunc",
+    "fid-num"
+  ],
+  "spec_nodes": [
+    "UNC.DEC.TYPE",
+    "UNC.DEC.EVAL",
+    "UNC.DEC.RISK"
+  ],
+  "standards": [
+    {
+      "designator": "ISO 14253-1:2017",
+      "topic": "Decision rules for verifying conformity or nonconformity with specifications"
+    },
+    {
+      "designator": "JCGM 106:2012",
+      "topic": "Guard banding, acceptance zones, specific and global consumer/producer risk"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Why measured values near a tolerance limit are ambiguous",
+      "paragraphs": [
+        "When a shaft diameter measures 10.045 mm against an upper specification limit of 10.050 mm, and expanded measurement uncertainty is U = 0.010 mm (u_std = 0.005 mm, k = 2), a substantial tail of the true-value probability distribution lies outside specification. A decision rule defines explicitly how that uncertainty governs the pass/fail verdict.",
+        "Simple acceptance (`dr:simple-acceptance@1`, shared risk) accepts whenever y lies inside [LSL, USL], exposing the customer to up to 50% specific consumer risk right at the limit. Guard-banded acceptance (`dr:guard-band(r=1)@1`) shrinks the acceptance zone inward by w = r * U, bounding consumer risk while increasing producer false-rejection risk. ISO 14253-1:2017 default (`dr:iso14253-1:2017/default@1`) requires at least 95% conformance probability to declare CONFORMS, marking the boundary band INDETERMINATE."
+      ]
+    },
+    {
+      "heading": "Fail-closed handling of UEC-0 (missing uncertainty)",
+      "paragraphs": [
+        "`fid-kdec` never silently treats missing uncertainty as zero. When an uncertainty statement is UEC-0, every decision rule other than `dr:as-reported-by-source@1` returns `NOT_DECIDABLE(u_missing)` instead of fabricating a conforming verdict."
+      ]
+    }
+  ],
+  "lab": {
+    "widget_kind": "decision-lab",
+    "op": "dec.evaluate",
+    "secondary_ops": [],
+    "instructions": "Slide the measured value y across the tolerance band [9.950 mm, 10.050 mm], adjust standard uncertainty u_std, or switch decision rules (Simple Acceptance, ISO 14253-1 Default, Guard Band r=1, UEC-0) to watch fid-kdec compute outcomes, acceptance zones, and specific/global risk live in WebAssembly.",
+    "presets": [
+      {
+        "id": "dec-boundary-simple",
+        "label": "Near USL: Simple Acceptance (Shared Risk)",
+        "op": "dec.evaluate",
+        "description": "Measured y = 10.045 mm vs. [9.950, 10.050] mm with u_std = 0.005 mm (U = 0.010 mm). Simple acceptance passes the part even though ~15.9% specific consumer risk remains.",
+        "request": {
+          "op": "dec.evaluate",
+          "params": {
+            "value": 0.010045,
+            "lsl": "0.009950",
+            "usl": "0.010050",
+            "u_std": 5e-06,
+            "k": 2.0,
+            "rule_ref": "dr:simple-acceptance@1",
+            "prior_mu": 0.01,
+            "prior_sigma": 1.8e-05
+          }
+        },
+        "expected_digest": "sha256:6c5feb52d02d71e0e8a860f515c9d0e14af18b01349d71bc2482f03094036efe",
+        "expected_result": {
+          "acceptance_high": 0.01005,
+          "acceptance_low": 0.00995,
+          "evidence_class": "UEC-1",
+          "expanded_u": 1e-05,
+          "flags": [
+            "provisional_uncertainty",
+            "declared_input",
+            "uncharacterized_input"
+          ],
+          "global_consumer_risk": 0.001216271098437562,
+          "global_producer_risk": 0.003183986516693128,
+          "interpretation_status": "provisional",
+          "lsl": "0.009950",
+          "outcome": "CONFORMS",
+          "p_conformance": 0.8413447460685377,
+          "p_high": 0.8413447460685467,
+          "p_low": 0.8413447460685285,
+          "rule_ref": "dr:simple-acceptance@1",
+          "specific_consumer_risk": 0.1586552539314623,
+          "standards_ref": "ISO 14253-1:2017; JCGM 106:2012",
+          "usl": "0.010050",
+          "value": 0.010045
+        }
+      },
+      {
+        "id": "dec-boundary-iso14253",
+        "label": "Near USL: ISO 14253-1 Default (95% Conformance)",
+        "op": "dec.evaluate",
+        "description": "The exact same measurement evaluated under ISO 14253-1:2017 default (p_min = 0.95): conformance probability is ~84.1%, so the verdict becomes INDETERMINATE.",
+        "request": {
+          "op": "dec.evaluate",
+          "params": {
+            "value": 0.010045,
+            "lsl": "0.009950",
+            "usl": "0.010050",
+            "u_std": 5e-06,
+            "k": 2.0,
+            "rule_ref": "dr:iso14253-1:2017/default@1",
+            "prior_mu": 0.01,
+            "prior_sigma": 1.8e-05
+          }
+        },
+        "expected_digest": "sha256:07625d46a8dd0dce635efe82bd1f88cda1c70a91927b7758995be248dabeea8b",
+        "expected_result": {
+          "acceptance_high": 0.010041775731865241,
+          "acceptance_low": 0.009958224268134759,
+          "evidence_class": "UEC-1",
+          "expanded_u": 1e-05,
+          "flags": [
+            "provisional_uncertainty",
+            "declared_input",
+            "uncharacterized_input"
+          ],
+          "global_consumer_risk": 7.501960310667785e-05,
+          "global_producer_risk": 0.019940249763742104,
+          "interpretation_status": "provisional",
+          "lsl": "0.009950",
+          "outcome": "INDETERMINATE",
+          "p_conformance": 0.8413447460685377,
+          "p_high": 0.8413447460685467,
+          "p_low": 0.8413447460685285,
+          "rule_ref": "dr:iso14253-1:2017/default@1",
+          "specific_consumer_risk": 0.1586552539314623,
+          "specific_producer_risk": 0.8413447460685377,
+          "standards_ref": "ISO 14253-1:2017; JCGM 106:2012",
+          "usl": "0.010050",
+          "value": 0.010045
+        }
+      },
+      {
+        "id": "dec-boundary-guardband",
+        "label": "Near USL: Strict Guard Band (r = 1.0)",
+        "op": "dec.evaluate",
+        "description": "The exact same measurement under a full 1*U guard band (acceptance zone shrunk to [9.960, 10.040] mm): y = 10.045 mm lies outside the acceptance zone -> NONCONFORMS.",
+        "request": {
+          "op": "dec.evaluate",
+          "params": {
+            "value": 0.010045,
+            "lsl": "0.009950",
+            "usl": "0.010050",
+            "u_std": 5e-06,
+            "k": 2.0,
+            "rule_ref": "dr:guard-band(r=1)@1",
+            "prior_mu": 0.01,
+            "prior_sigma": 1.8e-05
+          }
+        },
+        "expected_digest": "sha256:64a10355c4d48a61790fa0cf3d8b00536633a92cb2f8aff535deb566b279e93e",
+        "expected_result": {
+          "acceptance_high": 0.01004,
+          "acceptance_low": 0.00996,
+          "evidence_class": "UEC-1",
+          "expanded_u": 1e-05,
+          "flags": [
+            "provisional_uncertainty",
+            "declared_input",
+            "uncharacterized_input"
+          ],
+          "global_consumer_risk": 3.119456841098994e-05,
+          "global_producer_risk": 0.026819861268219457,
+          "interpretation_status": "provisional",
+          "lsl": "0.009950",
+          "outcome": "NONCONFORMS",
+          "p_conformance": 0.8413447460685377,
+          "p_high": 0.8413447460685467,
+          "p_low": 0.8413447460685285,
+          "rule_ref": "dr:guard-band(r=1)@1",
+          "specific_producer_risk": 0.8413447460685377,
+          "standards_ref": "ISO 14253-1:2017; JCGM 106:2012",
+          "usl": "0.010050",
+          "value": 0.010045
+        }
+      },
+      {
+        "id": "dec-uec0-refusal",
+        "label": "Nominal Value with UEC-0 (Missing Uncertainty)",
+        "op": "dec.evaluate",
+        "description": "Even dead-center at y = 10.000 mm, when uncertainty is UEC-0 (not evaluated), fid-kdec refuses to fabricate conformance and emits NOT_DECIDABLE(u_missing).",
+        "request": {
+          "op": "dec.evaluate",
+          "params": {
+            "value": 0.01,
+            "lsl": "0.009950",
+            "usl": "0.010050",
+            "uec0": true,
+            "rule_ref": "dr:iso14253-1:2017/default@1"
+          }
+        },
+        "expected_digest": "sha256:d0c3232aa666eec203910e34eb1663d9530deb889ebd1e12f41dbf66cae2f249",
+        "expected_result": {
+          "evidence_class": "UEC-0",
+          "flags": [],
+          "interpretation_status": "provisional",
+          "lsl": "0.009950",
+          "outcome": "NOT_DECIDABLE(u_missing)",
+          "rule_ref": "dr:iso14253-1:2017/default@1",
+          "standards_ref": "ISO 14253-1:2017; JCGM 106:2012",
+          "usl": "0.010050",
+          "value": 0.01
+        }
+      }
+    ]
+  },
+  "cli_example": "echo '{\"op\":\"dec.evaluate\",\"params\":{\"value\":0.010045,\"lsl\":\"0.009950\",\"usl\":\"0.010050\",\"u_std\":0.000005,\"k\":2.0,\"rule_ref\":\"dr:iso14253-1:2017/default@1\"}}' | cargo run -q -p fid-guide-wasm"
+}

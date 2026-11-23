@@ -1,0 +1,107 @@
+{
+  "schema": "guide-topic/v1",
+  "slug": "numerics-replay",
+  "order": 5,
+  "title": "Determinism, Units & Cryptographic Replay (KNP-1 & RFC 8785)",
+  "subtitle": "How fixed-order IEEE-754 arithmetic, SI-metre internals, and RFC 8785 canonical JSON let any independent verifier re-check a dimensional report bit for bit.",
+  "phase": "P0",
+  "status": "live-kernel",
+  "provisional": false,
+  "crates": [
+    "fid-canon",
+    "fid-num",
+    "fid-cli"
+  ],
+  "spec_nodes": [
+    "KRN.NUM",
+    "CORE.JRN.CANON",
+    "TRUST.CHAIN",
+    "TRUST.VERIFY"
+  ],
+  "standards": [
+    {
+      "designator": "RFC 8785",
+      "topic": "JSON Canonicalization Scheme (JCS) for deterministic hashing"
+    },
+    {
+      "designator": "IEEE 754-2019",
+      "topic": "Binary64 rounding rules (no FMA contraction in KNP-1)"
+    },
+    {
+      "designator": "ISO 23952:2020 (QIF 3.0)",
+      "topic": "Native measurement model and persistent identifiers"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Why ordinary floating-point code fails audit replay",
+      "paragraphs": [
+        "Two machines running the same metrology algorithm can produce different last-bit numbers if one uses fused multiply-add (FMA), different SIMD reduction order, platform `libm` transcendentals, or randomized hash-map iteration order. Near a tolerance limit, a single ULP drift can flip a conformance verdict.",
+        "Metrology Maven enforces the KNP-1 numeric profile (CONSTITUTION §4): pure-Rust `f64` on the CPU, no FMA, fixed-order reductions, total-order min/max, deterministic counter-based RNG, no `std::collections::HashMap`, and `fid-num` wrappers for every transcendental. That is why the WebAssembly kernel running inside your browser right now produces the exact same SHA-256 digests as the native x86-64 and ARM64 binaries."
+      ]
+    },
+    {
+      "heading": "RFC 8785 Canonical JSON & hash-chained journals",
+      "paragraphs": [
+        "Every command committed to a Metrology Maven journal is serialized under RFC 8785 (keys sorted lexicographically, minimal whitespace, normalized numbers) and hashed with SHA-256 (`fid-canon`). Reordering keys or formatting whitespace preserves an `IDENTICAL` digest, while altering even one tolerance digit produces a `DIVERGENT` digest immediately caught by `fid-verify`."
+      ]
+    }
+  ],
+  "lab": {
+    "widget_kind": "canon-lab",
+    "op": "canon.digest",
+    "secondary_ops": [],
+    "instructions": "Edit Document A and Document B below—reorder keys, insert whitespace, change 25.0 to 25, or nudge a measured value by 1e-6—to watch fid-canon produce exact RFC 8785 canonical bytes, SHA-256 digests, and an IDENTICAL or DIVERGENT replay verdict live in WebAssembly.",
+    "presets": [
+      {
+        "id": "canon-identical-reordered",
+        "label": "Reordered Keys & Equivalent Numerals (IDENTICAL)",
+        "op": "canon.digest",
+        "description": "Two differently formatted JSON records representing the exact same characteristic result. RFC 8785 canonicalization reduces both to identical bytes and identical SHA-256 digests.",
+        "request": {
+          "op": "canon.digest",
+          "params": {
+            "json_a": "{\"unit\": \"mm\", \"value\": 25.0, \"characteristic\": \"Bore_D1\", \"outcome\": \"CONFORMS\"}",
+            "json_b": "{\"characteristic\":\"Bore_D1\",\"outcome\":\"CONFORMS\",\"unit\":\"mm\",\"value\":25}"
+          }
+        },
+        "expected_digest": "sha256:c17462acf96d8239ccd637489181b062f35bab545e538d73aaaa50157edcb04f",
+        "expected_result": {
+          "byte_length_a": 72,
+          "byte_length_b": 72,
+          "canonical_a": "{\"characteristic\":\"Bore_D1\",\"outcome\":\"CONFORMS\",\"unit\":\"mm\",\"value\":25}",
+          "canonical_b": "{\"characteristic\":\"Bore_D1\",\"outcome\":\"CONFORMS\",\"unit\":\"mm\",\"value\":25}",
+          "digest_a": "sha256:6402a6c665df6f855b5a1554d4e1d75c56c07abff4efae69efeb6ffdb17d063c",
+          "digest_b": "sha256:6402a6c665df6f855b5a1554d4e1d75c56c07abff4efae69efeb6ffdb17d063c",
+          "replay_verdict": "IDENTICAL",
+          "standards_ref": "RFC 8785 (JCS); CONSTITUTION §4 & §6"
+        }
+      },
+      {
+        "id": "canon-divergent-tampered",
+        "label": "One-Micrometre Edit (DIVERGENT)",
+        "op": "canon.digest",
+        "description": "Altering the measured value from 25.000 to 25.001 mm changes the canonical bytes and completely changes the SHA-256 journal digest -> DIVERGENT.",
+        "request": {
+          "op": "canon.digest",
+          "params": {
+            "json_a": "{\"characteristic\":\"Bore_D1\",\"outcome\":\"CONFORMS\",\"unit\":\"mm\",\"value\":25.000}",
+            "json_b": "{\"characteristic\":\"Bore_D1\",\"outcome\":\"CONFORMS\",\"unit\":\"mm\",\"value\":25.001}"
+          }
+        },
+        "expected_digest": "sha256:fde172c648d40272fdbba9ddf3805539300aa15d15d2cee7e1a9b745727a97b3",
+        "expected_result": {
+          "byte_length_a": 72,
+          "byte_length_b": 76,
+          "canonical_a": "{\"characteristic\":\"Bore_D1\",\"outcome\":\"CONFORMS\",\"unit\":\"mm\",\"value\":25}",
+          "canonical_b": "{\"characteristic\":\"Bore_D1\",\"outcome\":\"CONFORMS\",\"unit\":\"mm\",\"value\":25.001}",
+          "digest_a": "sha256:6402a6c665df6f855b5a1554d4e1d75c56c07abff4efae69efeb6ffdb17d063c",
+          "digest_b": "sha256:174464367c02211ae270658253d6fa88014259622e5c49f18e091e17f075d46b",
+          "replay_verdict": "DIVERGENT",
+          "standards_ref": "RFC 8785 (JCS); CONSTITUTION §4 & §6"
+        }
+      }
+    ]
+  },
+  "cli_example": "echo '{\"b\": 1.0, \"a\": [2, 3]}' | cargo run -q -p fid-cli -- canon --json"
+}

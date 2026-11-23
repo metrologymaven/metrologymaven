@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [guide/map]
+built_pr: 566
 satisfies: [REQ-OUTR.DOCS.GUIDE-002]
 covers: []
 depends_on: []

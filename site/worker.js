@@ -28,7 +28,9 @@ export default {
     const out = new Response(res.body, res);
     out.headers.set("X-Content-Type-Options", "nosniff");
     out.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-    out.headers.set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'none'; frame-ancestors 'none'; base-uri 'none'");
+    const isGuide = url.pathname === "/guide" || url.pathname.startsWith("/guide/");
+    const scriptSrc = isGuide ? "'self' 'wasm-unsafe-eval'" : "'none'";
+    out.headers.set("Content-Security-Policy", `default-src 'self'; img-src 'self' data:; style-src 'self'; script-src ${scriptSrc}; frame-ancestors 'none'; base-uri 'none'`);
     return out;
   },
 };
