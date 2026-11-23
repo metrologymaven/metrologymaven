@@ -18,7 +18,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-vocab]
+built_pr: 515
+updated: 2026-11-22
 ---
 
 # ECO.RULES.VOCAB.RULESET: Product rule set, incumbent list and fixtures

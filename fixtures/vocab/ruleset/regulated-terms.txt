@@ -1,0 +1,14 @@
+# Regulated claim terms and inflections (QUAL.MATRIX fixture, CC-BY-4.0).
+certify
+certifies
+certified
+certifying
+certification
+compliant
+conformant
+validate
+validates
+validated
+validating
+traceable
+traceability

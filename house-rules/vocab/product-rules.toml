@@ -1,0 +1,108 @@
+# Product vocabulary lint rules for Metrology Maven (spec node ECO.RULES.VOCAB.RULESET).
+# Format: fid-vocab-rules/1. Incumbent names appear in nominative examples only.
+format = "fid-vocab-rules/1"
+version = "product-1"
+
+[[rule]]
+id = "VC001"
+kind = "claim"
+severity = "error"
+message = "Regulated claim wording requires a cited standard designator in the same sentence."
+words = [
+    "certify",
+    "certifies",
+    "certified",
+    "certifying",
+    "certification",
+    "compliant",
+    "conformant",
+    "validate",
+    "validates",
+    "validated",
+    "validating",
+    "traceable",
+    "traceability",
+]
+qualifiers = ["designator"]
+scope = "sentence"
+examples.pass = [
+    "Conforms (rule ISO 14253-1:2017 default).",
+    "Nonconforms under the decision rule.",
+    "Measurement conformance summary and compliance notes.",
+    "Probing uncertainty is traceable to calibration records under ISO 15530-3:2011.",
+    "Algorithm outputs were validated against the reference suite per ISO 10360-6:2001.",
+]
+examples.fail = [
+    "This inspection workflow is fully certified.",
+    "Our reports are compliant out of the box.",
+    "Results are automatically traceable.",
+    "This solver is validated for all industries.",
+]
+
+[[rule]]
+id = "VC002"
+kind = "name"
+severity = "error"
+message = "Name external metrology products only in import, export, or migration strings."
+names_file = "incumbents.txt"
+allow_id_prefixes = ["io.import_", "io.export_", "mig."]
+examples.pass = [
+    { id = "io.import_pcdmis.title", text = "Import PC-DMIS measurement program" },
+    { id = "io.export_polyworks.label", text = "Export results for PolyWorks" },
+    { id = "mig.gom.step", text = "Migrate GOM Inspect project metadata" },
+    { id = "ui.home.tagline", text = "Open dimensional metrology workspace." },
+]
+examples.fail = [
+    { id = "ui.home.tagline", text = "Built as an alternative to PC-DMIS." },
+    { id = "ui.about.summary", text = "Works like PolyWorks on your desktop." },
+]
+
+[[rule]]
+id = "VC003"
+kind = "cooccur"
+severity = "error"
+message = "Do not compare Metrology Maven against named external products in product strings."
+names_file = "incumbents.txt"
+comparison_words = [
+    "better",
+    "faster",
+    "more accurate",
+    "superior",
+    "outperforms",
+    "equivalent to",
+    "as good as",
+    "drop-in replacement",
+    "replaces",
+]
+link_prefixes = []
+examples.pass = [
+    { id = "io.import_sa.title", text = "Import SpatialAnalyzer station file." },
+    { id = "ui.status.speed", text = "Faster mesh rendering enabled." },
+]
+examples.fail = [
+    { id = "ui.home.banner", text = "Faster than PC-DMIS for point cloud alignment.", links = ["https://metrologymaven.org/bench/align"] },
+    { id = "ui.home.sub", text = "A drop-in replacement for PolyWorks workflows." },
+]
+
+[[rule]]
+id = "VC004"
+kind = "preferred"
+severity = "warn"
+message = "Use the preferred project term 'Dialect Mapping Table' (D-009)."
+phrases = [
+    "dialect map",
+    "DMT table",
+    "translation table",
+    "dialect table",
+    "GD&T mapping table",
+]
+preferred = "Dialect Mapping Table"
+examples.pass = [
+    "Inspect the active Dialect Mapping Table.",
+    "Export the Dialect Mapping Table (DMT) digest.",
+]
+examples.fail = [
+    "Open the DMT table for this drawing.",
+    "Edit the dialect map before running GD&T.",
+    "Check the translation table settings.",
+]

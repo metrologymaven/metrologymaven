@@ -1,0 +1,3 @@
+{"file": "ui/import.ftl", "id": "io.import_pcdmis.title", "line": 10, "links": [], "text": "Import PC-DMIS program format"}
+{"file": "ui/home.ftl", "id": "ui.home.tagline", "line": 4, "links": [], "text": "Open PC-DMIS files without conversion"}
+{"file": "ui/gdt.ftl", "id": "gdt.decision.conforms", "line": 22, "links": [], "text": "Conforms (rule ISO 14253-1:2017 default)"}
