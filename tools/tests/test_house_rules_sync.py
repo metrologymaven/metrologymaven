@@ -58,7 +58,8 @@ class SyncTest(unittest.TestCase):
         agents = (target / "AGENTS.md").read_text(encoding="utf-8")
         lines = agents.splitlines()
         self.assertEqual(lines[0], "# Sample repo")
-        self.assertTrue(lines[1].startswith("<!-- house-rules:begin block=core "))
+        self.assertEqual(lines[1], "")
+        self.assertTrue(lines[2].startswith("<!-- house-rules:begin block=core "))
 
         blocks = find_blocks(agents)
         self.assertEqual([b.id for b in blocks], ["core", "rust"])
@@ -145,8 +146,8 @@ class SyncTest(unittest.TestCase):
         )
         self.assertEqual(code, 0, out + err)
         raw = agents_path.read_bytes()
-        self.assertTrue(raw.startswith(b"# CRLF repo\r\n<!-- house-rules:begin block=core "))
-        self.assertTrue(raw.endswith(b"\r\nKeep CRLF outside blocks.\r\nSecond line.\r\n"))
+        self.assertTrue(raw.startswith(b"# CRLF repo\r\n\r\n<!-- house-rules:begin block=core "))
+        self.assertTrue(raw.endswith(b"\nKeep CRLF outside blocks.\r\nSecond line.\r\n"))
         # Running again is idempotent.
         code2, out2, _ = run_cli(
             "--source", str(SRC), "--source-rev", REV, "--repo-id", "repo-rust", "--target", str(target)

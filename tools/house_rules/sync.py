@@ -180,7 +180,7 @@ def load_sync_manifest(source_dir: Path) -> tuple[list[BlockSpec], str, set[str]
         if not isinstance(rel_file, str) or not rel_file or rel_file.startswith("/") or ".." in Path(rel_file).parts:
             raise SyncError("SYNC-SOURCE", f"block {bid} has invalid file path {rel_file!r}")
         if not isinstance(repos, list) or not all(isinstance(r, str) and is_valid_repo_id(r) for r in repos):
-            raise SyncError("SYNC-SOURCE", f"block {bid} has invalid repos list")
+            raise SyncError("SYNC-SOURCE", f"block {bid}: repos must be a list of valid repository IDs")
         seen_ids.add(bid)
         known_repos.update(repos)
         specs.append(BlockSpec(id=bid, file=rel_file, repos=tuple(repos)))
@@ -263,6 +263,12 @@ def _splice_agents(
             stripped = raw_line.rstrip("\r\n")
             if _HEADING_RE.match(stripped):
                 insert_after = idx
+                if (
+                    idx + 1 < len(lines)
+                    and (idx + 1) not in blocked_indices
+                    and lines[idx + 1] in ("\n", "\r\n")
+                ):
+                    insert_after = idx + 1
                 break
 
     actions: list[str] = []
