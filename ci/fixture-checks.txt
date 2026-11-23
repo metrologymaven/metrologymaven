@@ -7,6 +7,7 @@
 bash crates/fid-catalog/tests/offline.sh
 bash crates/fid-store/tests/offline.sh
 cargo run -q -p fid-design -- color-check --root design --baseline fixtures/ux/tokens/check/palette-baseline.json
+cargo run -q -p fid-design -- space-check --root design
 cargo xtask convergence-doc --manifest fixtures/aln/qa/hist-manifest/fixed.json --check fixtures/aln/qa/hist-manifest/expected-fragment.md
 python -m unittest discover -s tools/house_rules/tests -v
 python -m unittest discover -s tools/repo_template/tests -v
@@ -284,6 +285,7 @@ python fixtures/ux/tokens/color/make_fixtures.py --check
 python fixtures/ux/tokens/color/make_tokens.py --check
 python fixtures/ux/tokens/datapal/make_fixtures.py --check
 python fixtures/ux/tokens/datapal/make_palettes.py --check
+python fixtures/ux/tokens/space/make_fixtures.py --check
 python fixtures/ux/tokens/status/make_fixtures.py --check
 python fixtures/viz/golden-cube/make_fixtures.py --check
 python fixtures/viz/labels/make_part20.py --check

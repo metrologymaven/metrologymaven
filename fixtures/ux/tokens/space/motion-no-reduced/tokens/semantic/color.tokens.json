@@ -1,0 +1,24 @@
+{
+  "sem": {
+    "$type": "color",
+    "border": {
+      "strong": {
+        "$value": "{prim.color.neutral.600}"
+      },
+      "subtle": {
+        "$value": "{prim.color.neutral.200}"
+      }
+    },
+    "surface": {
+      "base": {
+        "$value": "{prim.color.neutral.0}"
+      },
+      "raised": {
+        "$value": "{prim.color.neutral.50}"
+      },
+      "sunken": {
+        "$value": "{prim.color.neutral.100}"
+      }
+    }
+  }
+}
