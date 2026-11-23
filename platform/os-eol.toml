@@ -10,15 +10,15 @@ schema_version = 1
 
 [[entry]]
 os = "ubuntu"
-version = "26.04"
-eol = "2031-04-30"
+version = "24.04"
+eol = "2029-05-31"
 source = "https://ubuntu.com/about/release-cycle"
 
 [[entry]]
-os = "windows"
-version = "10.0.26100"
-eol = "2029-10-09"
-source = "https://learn.microsoft.com/en-us/lifecycle/products/windows-server-2025"
+os = "ubuntu"
+version = "26.04"
+eol = "2031-04-30"
+source = "https://ubuntu.com/about/release-cycle"
 
 [[entry]]
 os = "windows"
@@ -28,7 +28,19 @@ extended_until = "2028-10-10"
 source = "https://learn.microsoft.com/en-us/lifecycle/products/windows-10-enterprise-and-education"
 
 [[entry]]
+os = "windows"
+version = "10.0.22000"
+eol = "2029-10-09"
+source = "https://learn.microsoft.com/en-us/lifecycle/products/windows-11-enterprise-and-education"
+
+[[entry]]
 os = "macos"
-version = "26.7"
+version = "15"
+eol = "2027-09-30"
+source = "https://support.apple.com/en-us/100100"
+
+[[entry]]
+os = "macos"
+version = "26"
 eol = "2029-09-30"
 source = "https://support.apple.com/en-us/100100"

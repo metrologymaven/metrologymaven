@@ -1,23 +1,40 @@
-# Metrology Maven support matrix (spec node PLAT.MATRIX.FILE; schema in crates/fid-platform, module matrix).
-# Validate with:  cargo xtask plat-matrix validate platform/support-matrix.toml
+# Metrology Maven support matrix (spec nodes PLAT.MATRIX.FILE, PLAT.MATRIX.POLICY.ROWS; decision D-010).
+# Validate with:
+#   cargo xtask plat-matrix validate platform/support-matrix.toml
+#   cargo xtask plat-matrix window-check --phase P1a
+#   cargo xtask plat-matrix eol-check --today <YYYY-MM-DD>
 #
-# Scope of this first version: every row states only what the repository's CI
-# (.github/workflows/rust.yml) runs today, read from the runner logs of the main-branch
-# run of 2026-11-18. GitHub's "-latest" runner labels move to new images over time, so
-# each range covers only the OS version CI ran then. Which rows exist and which tier
-# each gets is PLAT.MATRIX.POLICY's call. No row claims a tier now: Tier 1 starts at P1a
-# and needs two passing release candidates (REQ-PLAT.MATRIX.POLICY-007), so each row is
-# tier1 with since_phase = "P1a", which lookup reports as planned(tier1, P1a) before P1a.
-# The tiers stay [unverified] until POLICY and decision D-010 settle them. No row is claimed for Linux ARM64, Windows ARM64,
-# macOS x86-64 or desktop Windows 10/11: CI does not run them.
-#
-# Facts about CI that the schema has no row for (schema 1 has no wasm or toolchain fields):
-# - wasm32-wasip1: the `wasm32` job runs `cargo test --target wasm32-wasip1` for fid-num,
-#   fid-canon, fid-kci, fid-replay, fid-surface, fid-types and fid-sign-core under wasmtime v49.0.6, on
-#   ubuntu-latest. Browser rows belong to PLAT.WEB.BROWSERS through a schema bump.
-# - MSRV: the `msrv` job runs `cargo check --workspace --all-targets` with Rust 1.89 on
-#   ubuntu-latest (x86_64-unknown-linux-gnu). The `test` jobs use the stable toolchain.
+# All tiers start at phase P1a (REQ-PLAT.MATRIX.POLICY-007); before P1a, lookup reports
+# planned(<tier>, P1a). Exact OS release versions stay [unverified] until P1a ships; the
+# rolling window rule in platform/tier1-window.toml is binding per D-010.
 schema_version = 1
+
+[[row]]
+os = "windows"
+version_min = "10.0.19041"
+version_max = "10.0.22000"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "Windows 10 x86-64 Tier 1 per D-010 while enterprise extended security updates last; exact version range at P1a release [unverified]."
+
+[[row]]
+os = "windows"
+version_min = "10.0.22000"
+version_max = "10.0.27000"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "Windows 11 x86-64 Tier 1 per D-010 (covers CI runner windows-latest build 10.0.26100); exact version range at P1a release [unverified]."
+
+[[row]]
+os = "ubuntu"
+version_min = "24.04"
+version_max = "24.05"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "Ubuntu 24.04 LTS x86-64 Tier 1 (second newest LTS per D-010 window of 2); exact version at P1a release [unverified]."
 
 [[row]]
 os = "ubuntu"
@@ -26,22 +43,49 @@ version_max = "26.05"
 arch = "x86_64"
 tier = "tier1"
 since_phase = "P1a"
-notes = "CI runner ubuntu-latest (image ubuntu-26.04, Ubuntu 26.04.1 LTS, host x86_64-unknown-linux-gnu): rustfmt, clippy -D warnings and cargo test --workspace on every pull request and push to main; also the MSRV 1.89 check, cargo-deny and the wasm32-wasip1 job. Planned tier [unverified] pending PLAT.MATRIX.POLICY."
-
-[[row]]
-os = "windows"
-version_min = "10.0.26100"
-version_max = "10.0.26101"
-arch = "x86_64"
-tier = "tier1"
-since_phase = "P1a"
-notes = "CI runner windows-latest (image windows-2025-vs2026, Windows Server 2025 Datacenter build 10.0.26100, host x86_64-pc-windows-msvc): clippy -D warnings and cargo test --workspace on every pull request and push to main. Build 10.0.26100 is also Windows 11 24H2 desktop, which CI does NOT run; schema 1 has no edition field, so this row cannot tell Server from desktop (open question in PLAT.MATRIX.FILE). Planned tier [unverified] pending PLAT.MATRIX.POLICY."
+notes = "Ubuntu 26.04 LTS x86-64 Tier 1 (newest LTS per D-010 window of 2; CI runner ubuntu-latest runs Ubuntu 26.04.1 LTS); exact version at P1a release [unverified]."
 
 [[row]]
 os = "macos"
-version_min = "26.7"
-version_max = "26.8"
+version_min = "15"
+version_max = "16"
 arch = "aarch64"
 tier = "tier1"
 since_phase = "P1a"
-notes = "CI runner macos-latest (image macos-26-arm64, macOS 26.7.2, host aarch64-apple-darwin): clippy -D warnings and cargo test --workspace on every pull request and push to main. Planned tier [unverified] pending PLAT.MATRIX.POLICY."
+notes = "macOS 15 aarch64 Tier 1 (second newest macOS major per D-010 window of 2); exact version at P1a release [unverified]."
+
+[[row]]
+os = "macos"
+version_min = "26"
+version_max = "27"
+arch = "aarch64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "macOS 26 aarch64 Tier 1 (newest macOS major per D-010 window of 2; CI runner macos-latest runs macOS 26.7.2); exact version at P1a release [unverified]."
+
+[[row]]
+os = "ubuntu"
+version_min = "24.04"
+version_max = "24.05"
+arch = "aarch64"
+tier = "tier2"
+since_phase = "P1a"
+notes = "Ubuntu 24.04 LTS aarch64 Tier 2 per D-010; exact version at P1a release [unverified]."
+
+[[row]]
+os = "ubuntu"
+version_min = "26.04"
+version_max = "26.05"
+arch = "aarch64"
+tier = "tier2"
+since_phase = "P1a"
+notes = "Ubuntu 26.04 LTS aarch64 Tier 2 per D-010; exact version at P1a release [unverified]."
+
+[[row]]
+os = "windows"
+version_min = "10.0.22000"
+version_max = "10.0.27000"
+arch = "aarch64"
+tier = "tier3"
+since_phase = "P1a"
+notes = "Windows 11 aarch64 Tier 3 per D-010; exact version range at P1a release [unverified]."

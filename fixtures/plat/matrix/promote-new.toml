@@ -1,0 +1,91 @@
+# Metrology Maven support matrix (spec nodes PLAT.MATRIX.FILE, PLAT.MATRIX.POLICY.ROWS; decision D-010).
+# Validate with:
+#   cargo xtask plat-matrix validate platform/support-matrix.toml
+#   cargo xtask plat-matrix window-check --phase P1a
+#   cargo xtask plat-matrix eol-check --today <YYYY-MM-DD>
+#
+# All tiers start at phase P1a (REQ-PLAT.MATRIX.POLICY-007); before P1a, lookup reports
+# planned(<tier>, P1a). Exact OS release versions stay [unverified] until P1a ships; the
+# rolling window rule in platform/tier1-window.toml is binding per D-010.
+schema_version = 1
+
+[[row]]
+os = "windows"
+version_min = "10.0.19041"
+version_max = "10.0.22000"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "Windows 10 x86-64 Tier 1 per D-010 while enterprise extended security updates last; exact version range at P1a release [unverified]."
+
+[[row]]
+os = "windows"
+version_min = "10.0.22000"
+version_max = "10.0.27000"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "Windows 11 x86-64 Tier 1 per D-010 (covers CI runner windows-latest build 10.0.26100); exact version range at P1a release [unverified]."
+
+[[row]]
+os = "ubuntu"
+version_min = "24.04"
+version_max = "24.05"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "Ubuntu 24.04 LTS x86-64 Tier 1 (second newest LTS per D-010 window of 2); exact version at P1a release [unverified]."
+
+[[row]]
+os = "ubuntu"
+version_min = "26.04"
+version_max = "26.05"
+arch = "x86_64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "Ubuntu 26.04 LTS x86-64 Tier 1 (newest LTS per D-010 window of 2; CI runner ubuntu-latest runs Ubuntu 26.04.1 LTS); exact version at P1a release [unverified]."
+
+[[row]]
+os = "macos"
+version_min = "15"
+version_max = "16"
+arch = "aarch64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "macOS 15 aarch64 Tier 1 (second newest macOS major per D-010 window of 2); exact version at P1a release [unverified]."
+
+[[row]]
+os = "macos"
+version_min = "26"
+version_max = "27"
+arch = "aarch64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "macOS 26 aarch64 Tier 1 (newest macOS major per D-010 window of 2; CI runner macos-latest runs macOS 26.7.2); exact version at P1a release [unverified]."
+
+[[row]]
+os = "ubuntu"
+version_min = "24.04"
+version_max = "24.05"
+arch = "aarch64"
+tier = "tier2"
+since_phase = "P1a"
+notes = "Ubuntu 24.04 LTS aarch64 Tier 2 per D-010; exact version at P1a release [unverified]."
+
+[[row]]
+os = "ubuntu"
+version_min = "26.04"
+version_max = "26.05"
+arch = "aarch64"
+tier = "tier1"
+since_phase = "P1a"
+notes = "Ubuntu 26.04 LTS aarch64 Tier 2 per D-010; exact version at P1a release [unverified]."
+
+[[row]]
+os = "windows"
+version_min = "10.0.22000"
+version_max = "10.0.27000"
+arch = "aarch64"
+tier = "tier3"
+since_phase = "P1a"
+notes = "Windows 11 aarch64 Tier 3 per D-010; exact version range at P1a release [unverified]."
