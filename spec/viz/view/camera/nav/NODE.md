@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-view]
+built_pr: 495
 satisfies: [REQ-VIZ.VIEW.CAMERA-001, REQ-VIZ.VIEW.CAMERA-005, REQ-VIZ.VIEW.CAMERA-006]
 covers: []
 depends_on: [VIZ.VIEW.STATE, VIZ.RENDER.SCENE.PROJ, GEO.FRAME.TREE]
