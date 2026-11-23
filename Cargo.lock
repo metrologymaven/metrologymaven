@@ -2071,6 +2071,7 @@ dependencies = [
 name = "fid-render"
 version = "0.0.1"
 dependencies = [
+ "fid-canon",
  "fid-geo-frame",
  "fid-geo-types",
  "fid-kci",
@@ -2354,6 +2355,19 @@ dependencies = [
  "fid-replay",
  "fid-types",
  "fid-uuid",
+]
+
+[[package]]
+name = "fid-view-cmd"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-journal",
+ "fid-registry",
+ "fid-render",
+ "fid-types",
+ "wgpu",
 ]
 
 [[package]]

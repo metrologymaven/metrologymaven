@@ -1,0 +1,225 @@
+{
+  "adapters": [
+    {
+      "adapter": "Reference Vulkan Discrete GPU",
+      "backend": "vulkan",
+      "driver": "Mesa RADV 25.0.0",
+      "expected_point_raster": "compute64",
+      "expected_tier": "T0",
+      "expected_transparency": "wboit",
+      "features": {
+        "compute_shaders": true,
+        "shader_int64_atomic_all_ops": false,
+        "shader_int64_atomic_min_max": true
+      },
+      "headless_server": false,
+      "id": "vulkan-discrete-atomic64-minmax",
+      "limits": {
+        "max_buffer_size": 1073741824,
+        "max_compute_workgroups_per_dimension": 65535,
+        "max_storage_buffers_per_shader_stage": 8
+      }
+    },
+    {
+      "adapter": "Reference DX12 Discrete GPU",
+      "backend": "dx12",
+      "driver": "WDDM 3.2 (32.0.15.6000)",
+      "expected_point_raster": "compute64",
+      "expected_tier": "T0",
+      "expected_transparency": "wboit",
+      "features": {
+        "compute_shaders": true,
+        "shader_int64_atomic_all_ops": true,
+        "shader_int64_atomic_min_max": false
+      },
+      "headless_server": false,
+      "id": "dx12-discrete-atomic64-all",
+      "limits": {
+        "max_buffer_size": 1073741824,
+        "max_compute_workgroups_per_dimension": 65535,
+        "max_storage_buffers_per_shader_stage": 8
+      }
+    },
+    {
+      "adapter": "Reference Apple Integrated GPU",
+      "backend": "metal",
+      "driver": "Metal 3.2",
+      "expected_point_raster": "twopass32",
+      "expected_tier": "T1",
+      "expected_transparency": "wboit",
+      "features": {
+        "compute_shaders": true,
+        "shader_int64_atomic_all_ops": false,
+        "shader_int64_atomic_min_max": false
+      },
+      "headless_server": false,
+      "id": "metal-integrated-compute-no-atomic64",
+      "limits": {
+        "max_buffer_size": 536870912,
+        "max_compute_workgroups_per_dimension": 65535,
+        "max_storage_buffers_per_shader_stage": 8
+      }
+    },
+    {
+      "adapter": "Reference WebGPU Adapter",
+      "backend": "webgpu",
+      "driver": "WebGPU 1.0",
+      "expected_point_raster": "twopass32",
+      "expected_tier": "T1",
+      "expected_transparency": "wboit",
+      "features": {
+        "compute_shaders": true,
+        "shader_int64_atomic_all_ops": false,
+        "shader_int64_atomic_min_max": false
+      },
+      "headless_server": false,
+      "id": "webgpu-browser-compute-only",
+      "limits": {
+        "max_buffer_size": 268435456,
+        "max_compute_workgroups_per_dimension": 65535,
+        "max_storage_buffers_per_shader_stage": 8
+      }
+    },
+    {
+      "adapter": "Microsoft Basic Render Driver",
+      "backend": "software",
+      "driver": "WARP 10.0",
+      "expected_point_raster": "twopass32",
+      "expected_tier": "T1",
+      "expected_transparency": "wboit",
+      "features": {
+        "compute_shaders": true,
+        "shader_int64_atomic_all_ops": false,
+        "shader_int64_atomic_min_max": false
+      },
+      "headless_server": false,
+      "id": "software-warp-compute-no-atomic64",
+      "limits": {
+        "max_buffer_size": 268435456,
+        "max_compute_workgroups_per_dimension": 65535,
+        "max_storage_buffers_per_shader_stage": 8
+      }
+    },
+    {
+      "adapter": "llvmpipe (LLVM 19.1, 256 bits)",
+      "backend": "software",
+      "driver": "Mesa 25.0.0 (LLVM 19.1)",
+      "expected_point_raster": "compute64",
+      "expected_tier": "T0",
+      "expected_transparency": "wboit",
+      "features": {
+        "compute_shaders": true,
+        "shader_int64_atomic_all_ops": false,
+        "shader_int64_atomic_min_max": true
+      },
+      "headless_server": false,
+      "id": "software-lavapipe-atomic64",
+      "limits": {
+        "max_buffer_size": 268435456,
+        "max_compute_workgroups_per_dimension": 65535,
+        "max_storage_buffers_per_shader_stage": 8
+      }
+    },
+    {
+      "adapter": "Reference WebGL2 / GLES 3.0 Adapter",
+      "backend": "gl",
+      "driver": "OpenGL ES 3.0",
+      "expected_point_raster": "sprites",
+      "expected_tier": "T2",
+      "expected_transparency": "sorted",
+      "features": {
+        "compute_shaders": false,
+        "shader_int64_atomic_all_ops": false,
+        "shader_int64_atomic_min_max": false
+      },
+      "headless_server": false,
+      "id": "gl-webgl2-no-compute",
+      "limits": {
+        "max_buffer_size": 134217728,
+        "max_compute_workgroups_per_dimension": 0,
+        "max_storage_buffers_per_shader_stage": 0
+      }
+    },
+    {
+      "adapter": "Reference GL With Zero Compute Workgroups",
+      "backend": "gl",
+      "driver": "OpenGL 4.1",
+      "expected_point_raster": "sprites",
+      "expected_tier": "T2",
+      "expected_transparency": "sorted",
+      "features": {
+        "compute_shaders": true,
+        "shader_int64_atomic_all_ops": false,
+        "shader_int64_atomic_min_max": false
+      },
+      "headless_server": false,
+      "id": "gl-zero-workgroups-demoted-to-t2",
+      "limits": {
+        "max_buffer_size": 134217728,
+        "max_compute_workgroups_per_dimension": 0,
+        "max_storage_buffers_per_shader_stage": 4
+      }
+    },
+    {
+      "adapter": "Reference Adapter Without Compute Shaders",
+      "backend": "vulkan",
+      "driver": "Synthetic 1.0",
+      "expected_point_raster": "sprites",
+      "expected_tier": "T2",
+      "expected_transparency": "sorted",
+      "features": {
+        "compute_shaders": false,
+        "shader_int64_atomic_all_ops": false,
+        "shader_int64_atomic_min_max": true
+      },
+      "headless_server": false,
+      "id": "atomic64-without-compute-demoted-to-t2",
+      "limits": {
+        "max_buffer_size": 134217728,
+        "max_compute_workgroups_per_dimension": 0,
+        "max_storage_buffers_per_shader_stage": 0
+      }
+    },
+    {
+      "adapter": "Reference Server GPU (Headless Stills)",
+      "backend": "vulkan",
+      "driver": "Mesa RADV 25.0.0",
+      "expected_point_raster": "sprites",
+      "expected_tier": "T3",
+      "expected_transparency": "peel",
+      "features": {
+        "compute_shaders": true,
+        "shader_int64_atomic_all_ops": false,
+        "shader_int64_atomic_min_max": true
+      },
+      "headless_server": true,
+      "id": "headless-server-stills-vulkan",
+      "limits": {
+        "max_buffer_size": 1073741824,
+        "max_compute_workgroups_per_dimension": 65535,
+        "max_storage_buffers_per_shader_stage": 8
+      }
+    },
+    {
+      "adapter": "llvmpipe Headless Stills",
+      "backend": "software",
+      "driver": "Mesa 25.0.0",
+      "expected_point_raster": "sprites",
+      "expected_tier": "T3",
+      "expected_transparency": "peel",
+      "features": {
+        "compute_shaders": true,
+        "shader_int64_atomic_all_ops": false,
+        "shader_int64_atomic_min_max": false
+      },
+      "headless_server": true,
+      "id": "headless-server-stills-software",
+      "limits": {
+        "max_buffer_size": 268435456,
+        "max_compute_workgroups_per_dimension": 65535,
+        "max_storage_buffers_per_shader_stage": 8
+      }
+    }
+  ],
+  "schema_version": 1
+}

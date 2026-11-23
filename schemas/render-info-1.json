@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/metrologymaven/metrologymaven/schemas/render-info-1.json",
+  "title": "Render info snapshot, schema version 1 (VIZ.RENDER.FRAME.TIER, view.get_render_info@1)",
+  "description": "Renderer capability tier, active backend, adapter, driver, point-raster path, transparency path, frame-time and GPU memory budgets, and displayed/total point and triangle counts of the last presented frame. Serialised as RFC 8785 canonical JSON.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "adapter",
+    "backend",
+    "driver",
+    "frame_budget_ms",
+    "mem_budget_bytes",
+    "point_raster",
+    "points",
+    "tier",
+    "transparency",
+    "triangles"
+  ],
+  "properties": {
+    "tier": {
+      "type": "string",
+      "enum": ["T0", "T1", "T2", "T3"],
+      "description": "Capability tier: T0 (64-bit atomics + compute), T1 (compute without 64-bit atomics), T2 (no compute), T3 (headless server stills)."
+    },
+    "backend": {
+      "type": "string",
+      "enum": ["vulkan", "metal", "dx12", "gl", "webgpu", "software"],
+      "description": "Active graphics backend."
+    },
+    "adapter": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Adapter name reported by the graphics backend."
+    },
+    "driver": {
+      "type": "string",
+      "description": "Driver name and version info reported by the graphics backend."
+    },
+    "point_raster": {
+      "type": "string",
+      "enum": ["compute64", "twopass32", "sprites"],
+      "description": "Active point-cloud rasterisation path."
+    },
+    "transparency": {
+      "type": "string",
+      "enum": ["wboit", "peel", "sorted"],
+      "description": "Active transparency compositing path."
+    },
+    "frame_budget_ms": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Frame-time budget in milliseconds."
+    },
+    "mem_budget_bytes": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "GPU memory budget in bytes."
+    },
+    "points": {
+      "$ref": "#/$defs/primitive_counts",
+      "description": "Displayed and total point counts of the last presented frame."
+    },
+    "triangles": {
+      "$ref": "#/$defs/primitive_counts",
+      "description": "Displayed and total triangle counts of the last presented frame."
+    }
+  },
+  "$defs": {
+    "primitive_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["displayed", "total"],
+      "properties": {
+        "displayed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

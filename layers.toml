@@ -179,6 +179,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-inbox" = "viewer"
 # View state model (VIZ.VIEW.STATE): ViewState, its canonical form and digest.
 "fid-view" = "viewer"
+# View and render commands on the bus (VIZ.RENDER.FRAME.TIER: view.get_render_info@1).
+"fid-view-cmd" = "viewer"
 "fid-eval-harness" = "tool"
 "fid-eval-redteam" = "tool"
 "fid-testkit" = "test-support"
