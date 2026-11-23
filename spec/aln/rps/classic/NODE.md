@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid align run-321]
 mcp: [align_run_321]
 journal: [align.run_321@1]
-updated: 2026-11-16
+built_in: [fid-align-solve, fid-align]
+updated: 2026-11-23
 ---
 
 # ALN.RPS.CLASSIC: Classic 3-2-1 alignment and frame from geometry

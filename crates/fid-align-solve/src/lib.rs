@@ -26,6 +26,7 @@ pub mod cond;
 pub mod constr;
 pub mod hist;
 pub mod report;
+pub mod rps321;
 
 pub use cond::{
     diagnose, diagnose_reduced, AlignmentDiagnostics, Axis, CondError, CondWarning, MotionKind, PivotKind, Threshold,
@@ -45,4 +46,9 @@ pub use report::{
     Disposition, Entry, EntryKind, EntryRef, EntryView, Length, LengthVec, RejectReason, ReportBuilder, ReportError,
     ResidualReport, ResidualStats, Unit, LAYOUT_TAG, LAYOUT_VERSION, MAX_ENTRIES, MAX_ITEM, MAX_REASONS,
     MAX_REASON_BYTES,
+};
+pub use rps321::{
+    solve_321_elements, solve_321_three_points, DirectionSource, Locus, Rps321Error, Rps321Solution, Rps321Tolerances,
+    RpsElement, SignedAxis, DEFAULT_COLLINEAR_TOL_M, DEFAULT_PARALLEL_TOL_RAD, DEFAULT_TERTIARY_TOL_M,
+    RPS321_ALGORITHM_ID,
 };
