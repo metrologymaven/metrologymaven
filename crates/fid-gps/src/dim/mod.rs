@@ -5,4 +5,5 @@
 //!   sphere fitted by `fid-fit`, after checking the feature's fit against the association the
 //!   resolved operator chain names.
 
+pub mod ptdev;
 pub mod radial;

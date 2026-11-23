@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid check eval-deviation]
 mcp: [check_eval_deviation]
 journal: [check.eval_deviation@1]
-updated: 2026-11-16
+built_in: [fid-gps, fid-gdt]
+updated: 2026-11-23
 ---
 
 # GDT.DIM.PTDEV: Point deviations and feature-versus-nominal checks
