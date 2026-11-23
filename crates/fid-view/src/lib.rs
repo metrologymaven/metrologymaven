@@ -10,5 +10,10 @@
 //! The crate is side-effect class R0 and determinism class D0 for end cameras: no I/O, no clock,
 //! no randomness, no hash maps. Nothing here panics (CONSTITUTION §8).
 
+//! - [`camera`] (spec leaf `VIZ.VIEW.CAMERA.SET`): `view.set_camera@1` (W2) and
+//!   `view.fly_to@1` (R1) registry commands, proposal tag for agent principals, Activity Log
+//!   records and exact replay.
+
+pub mod camera;
 pub mod nav;
 pub mod state;

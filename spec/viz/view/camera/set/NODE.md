@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid view set-camera, fid view fly-to]
 mcp: [view_set_camera, view_fly_to]
 journal: [view.set_camera@1, view.fly_to@1]
-updated: 2026-11-17
+built_in: [fid-view]
+updated: 2026-11-22
 ---
 
 # VIZ.VIEW.CAMERA.SET: Set-camera and fly-to commands
