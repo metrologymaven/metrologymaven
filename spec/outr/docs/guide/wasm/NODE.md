@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-guide-wasm]
+built_pr: 565
 satisfies: [REQ-OUTR.DOCS.GUIDE-001]
 covers: []
 depends_on: [KRN.LSQ.RND, KRN.LSQ.LIN, KRN.ENV.TAN.PLANE, KRN.ENV.MCC.CYL, GDT.ZONE.ZTYPE, UNC.DEC.EVAL, UNC.DEC.RISK, UNC.PROP.MCM.INTVL, UNC.PROP.VALID, CORE.JRN.CANON]

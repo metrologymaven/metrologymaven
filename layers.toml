@@ -191,3 +191,5 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-testkit" = "test-support"
 # VIZ.SHELL.SPKTREE throwaway toolkit spike; never a dependency of product crates.
 "fid-spike-ui" = "viewer"
+# OUTR.DOCS.GUIDE.WASM: safe-Rust WASM/CLI Field Guide runner linking pure L0/model crates only.
+"fid-guide-wasm" = "tool"
