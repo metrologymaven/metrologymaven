@@ -5,6 +5,7 @@ level: 2
 parent: IND
 kind: subsystem
 status: split
+commercial_repo: metrologymaven-enterprise
 phase: P3
 size: L
 owners: []
@@ -15,12 +16,14 @@ depends_on: [IND.CONTRACT, GDT, SCAN]
 cli: [fid pack *-pattern*]
 mcp: [pack_*_pattern*]
 journal: [pack.*_pattern*]
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # IND.PATTERN: Feature-pattern pack
 
 ## Purpose
+
+> **Commercial boundary (D-053):** Implemented commercially against the public `IND.CONTRACT` extension point in `metrologymaven/metrologymaven-enterprise`. Do not expand or build `IND.PATTERN.*` in this public repository.
 
 Bulk work on repeated features: recognise patterns of like features (holes, studs, slots, nuts) on nominal geometry, instantiate their inspection elements and characteristics in one step, and summarise results per pattern. Parts with hundreds of holes are common in sheet metal and aerostructures, and creating them one by one is the workflow incumbents remove.
 

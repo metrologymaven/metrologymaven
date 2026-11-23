@@ -5,6 +5,7 @@ level: 2
 parent: IND
 kind: subsystem
 status: split
+commercial_repo: metrologymaven-enterprise
 phase: P3
 size: L
 owners: []
@@ -15,14 +16,16 @@ depends_on: [IND.CONTRACT, KRN, GDT, CMM]
 cli: [fid pack *-gear*]
 mcp: [pack_*_gear*]
 journal: [pack.*_gear*]
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # IND.GEAR: Gear pack
 
 ## Purpose
 
-Analytical inspection of cylindrical involute gears measured on a CMM or from dense scans: profile, helix and pitch deviations, runout and size over balls or pins, evaluated against a declared gear accuracy standard. Gear metrology has its own vocabulary and evaluation ranges, so it ships as a pack owned by gear experts.
+> **Commercial boundary (D-053):** Implemented commercially against the public `IND.CONTRACT` extension point in `metrologymaven/metrologymaven-enterprise`. Do not expand or build `IND.GEAR.*` in this public repository.
+
+Analytical inspection of cylindrical involute gears measured on a CMM or from dense scans: profile, helix and pitch deviations, runout and size over balls or pins, evaluated against a declared gear accuracy standard. Gear metrology has its own vocabulary and evaluation ranges, so it ships as a commercial pack built strictly on `IND.CONTRACT`.
 
 ## Scope
 

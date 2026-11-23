@@ -5,6 +5,7 @@ level: 2
 parent: IND
 kind: subsystem
 status: split
+commercial_repo: metrologymaven-enterprise
 phase: P3
 size: L
 owners: []
@@ -15,14 +16,16 @@ depends_on: [IND.CONTRACT, KRN, SCAN, ALN]
 cli: [fid pack *-tube*]
 mcp: [pack_*_tube*]
 journal: [pack.*_tube*]
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # IND.TUBE: Pipe and tube pack
 
 ## Purpose
 
-Inspection of bent tubes and pipes: reconstruct the measured centreline from scan or tactile data, express it as bend data, compare it with nominal, and produce bend corrections for the bending machine operator. Tube shops expect this as a dedicated workflow, so it ships as a pack.
+> **Commercial boundary (D-053):** Implemented commercially against the public `IND.CONTRACT` extension point in `metrologymaven/metrologymaven-enterprise`. Do not expand or build `IND.TUBE.*` in this public repository.
+
+Inspection of bent tubes and pipes: reconstruct the measured centreline from scan or tactile data, express it as bend data, compare it with nominal, and produce bend corrections for the bending machine operator. Tube shops expect this as a dedicated workflow, so it ships as a commercial pack built strictly on `IND.CONTRACT`.
 
 ## Scope
 

@@ -5,6 +5,7 @@ level: 2
 parent: IND
 kind: subsystem
 status: split
+commercial_repo: metrologymaven-enterprise
 phase: P3
 size: L
 owners: []
@@ -15,14 +16,16 @@ depends_on: [IND.CONTRACT, KRN, GDT, SCAN]
 cli: [fid pack *-airfoil*]
 mcp: [pack_*_airfoil*]
 journal: [pack.*_airfoil*]
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # IND.AIRFOIL: Airfoil and blade pack
 
 ## Purpose
 
-Gauging of turbine and compressor blades and other airfoil sections: from measured 2D section curves (scan sections or tactile scans) and their nominals, derive the airfoil parameters customers tolerance (chord, thicknesses, edge radii, camber, angles, section position and twist) and evaluate them. Shipped as a reference pack so turbomachinery experts can own the methods.
+> **Commercial boundary (D-053):** Implemented commercially against the public `IND.CONTRACT` extension point in `metrologymaven/metrologymaven-enterprise`. Do not expand or build `IND.AIRFOIL.*` in this public repository.
+
+Gauging of turbine and compressor blades and other airfoil sections: from measured 2D section curves (scan sections or tactile scans) and their nominals, derive the airfoil parameters customers tolerance (chord, thicknesses, edge radii, camber, angles, section position and twist) and evaluate them. Shipped as a commercial pack built strictly on `IND.CONTRACT`.
 
 ## Scope
 

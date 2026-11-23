@@ -5,6 +5,7 @@ level: 2
 parent: IND
 kind: subsystem
 status: split
+commercial_repo: metrologymaven-enterprise
 phase: P3
 size: L
 owners: []
@@ -15,12 +16,14 @@ depends_on: [IND.CONTRACT, SCAN, HAL]
 cli: [fid pack *-gapflush*]
 mcp: [pack_*_gapflush*]
 journal: [pack.*_gapflush*]
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # IND.GAPFL: Gap and flush pack
 
 ## Purpose
+
+> **Commercial boundary (D-053):** Implemented commercially against the public `IND.CONTRACT` extension point in `metrologymaven/metrologymaven-enterprise`. Do not expand or build `IND.GAPFL.*` in this public repository.
 
 Measurement of gap (the opening between two adjacent panels) and flush (their step height) along a joint, as used in automotive closures and aerospace skin panels. Values come from sections through scan data or from profile-sensor (gap-gun style) readings, using an explicitly chosen gap and flush definition.
 

@@ -40,6 +40,6 @@ Any existing maintainer or the steering group can nominate. The nomination passe
 
 ## Keeping it self-sustaining
 
-- The tree is the backlog. No private roadmap exists outside `spec/` and `decisions/`.
-- CI (`tools/scope.py check`) enforces traceability, so reviewers can focus on judgement rather than bookkeeping.
+- The tree is the open-core backlog. Every open-source feature lives in `spec/` and `decisions/`. Commercial enterprise, vertical pack, AI fleet, hosted verification, and regulated LTS products live separately in the private `metrologymaven-enterprise` repository under [D-053](decisions/D-053-open-core-commercial-boundary.md).
+- CI (`tools/scope.py check`) enforces traceability and the `D-053` commercial boundary, so reviewers can focus on judgement rather than bookkeeping.
 - Every level-1 domain should get at least two maintainers before implementation starts in that domain.

@@ -15,14 +15,16 @@ depends_on: [GDT, SCAN, ECO]
 cli: [fid pack *]
 mcp: [pack_*]
 journal: [pack.*]
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # IND: Industry analysis packs
 
 ## Purpose
 
-Industry-specific analyses that ship as installable packs on public extension points, so domain experts in the community can own them:
+> **Commercial boundary (D-053):** The public pack contract and extension SDK (`IND.CONTRACT`) remain `MIT OR Apache-2.0` in this repository so third parties and the community can author open or proprietary packs without forking. The seven first-party vertical packs (`IND.AIRFOIL`, `IND.GEAR`, `IND.SHEET`, `IND.GAPFL`, `IND.TUBE`, `IND.PATTERN`, `IND.PORT`) are implemented commercially in the private repository `metrologymaven/metrologymaven-enterprise`.
+
+Industry-specific analyses that ship as installable packs on public extension points:
 - airfoil and blade;
 - gear;
 - sheet metal (holes, trim, springback, hem);
