@@ -18,7 +18,8 @@ determinism: D0
 cli: [fid fit mz-circle2d]
 mcp: [fit_mz_circle2d]
 journal: [fit.mz_circle2d@1]
-updated: 2026-11-17
+built_in: [fid-fit]
+updated: 2026-11-23
 ---
 
 # KRN.MZ.RND.CIRC: Minimum-zone 2D circle and Voronoi agreement job
