@@ -1,0 +1,16 @@
+{
+  "schema": "fid-gdt-dim-ptdev-plane-fixture/1",
+  "license": "CC0-1.0",
+  "frame_id": "rot30_z",
+  "frame_rotation_z_deg": 30.0,
+  "plane_normal": [1.0, 0.0, 0.0],
+  "points": [
+    [0.00005, 0.0, 0.0],
+    [-0.00002, 0.01, 0.0]
+  ],
+  "nominals": [
+    { "point": [0.0, 0.0, 0.0], "normal": [1.0, 0.0, 0.0] },
+    { "point": [0.0, 0.01, 0.0], "normal": [1.0, 0.0, 0.0] }
+  ],
+  "expected_dn_si": [0.00005, -0.00002]
+}
