@@ -97,6 +97,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-report" = "services"
 # FAI and PPAP forms (RPT.FORMS): header, accountability data and form assembly.
 "fid-report-forms" = "services"
+# Report export envelope and tabular writers (RPT.OUTPUT.META, RPT.OUTPUT.SHEET).
+"fid-report-out" = "services"
 # Results catalog (RPT.CATALOG.STORE.SCHEMA first): local SQLite index across projects; over
 # fid-store and fid-project (model). Services, below the registry build step that collects its setting.
 "fid-catalog" = "services"

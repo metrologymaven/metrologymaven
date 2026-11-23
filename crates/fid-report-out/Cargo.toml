@@ -1,0 +1,20 @@
+[package]
+name = "fid-report-out"
+description = "Metrology Maven report export envelope: canonical metadata, local export-root writes, and tabular exports (spec node RPT.OUTPUT.META)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-io-reg = { path = "../fid-io-reg" }
+fid-project = { path = "../fid-project" }
+fid-report = { path = "../fid-report" }
+fid-types = { path = "../fid-types" }
+cap-std = "3.4"
+sha2 = "0.10"
+
+[lints]
+workspace = true

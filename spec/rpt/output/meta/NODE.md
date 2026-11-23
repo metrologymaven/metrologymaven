@@ -18,7 +18,8 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+built_in: [fid-report-out]
+updated: 2026-11-22
 ---
 
 # RPT.OUTPUT.META: Export envelope: metadata and export-root writes
