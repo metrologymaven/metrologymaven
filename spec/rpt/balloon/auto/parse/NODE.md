@@ -17,6 +17,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
+built_in: [fid-report]
 updated: 2026-11-22
 ---
 
