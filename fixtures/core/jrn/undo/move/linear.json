@@ -1,0 +1,74 @@
+{
+  "branch": "main",
+  "entries": [
+    {
+      "branch": "main",
+      "class": "W2",
+      "command": "project.create_project",
+      "hash": "sha256:ed95853dfae88cacabb2815ecb47f6fffa7d9d65c598b41e78ea95e3e7bae92d",
+      "logical_parent": null,
+      "major": 1,
+      "name": "s0",
+      "seq": 1,
+      "undoable": false
+    },
+    {
+      "branch": "main",
+      "class": "W2",
+      "command": "sketch.add_line",
+      "hash": "sha256:d3ebba96930a5f930c7b6c8f966a4d3313a8ed2e99de7ca4f33a23742bd7a776",
+      "logical_parent": "sha256:ed95853dfae88cacabb2815ecb47f6fffa7d9d65c598b41e78ea95e3e7bae92d",
+      "major": 1,
+      "name": "s1",
+      "seq": 2,
+      "undoable": true
+    },
+    {
+      "branch": "main",
+      "class": "W2",
+      "command": "sketch.add_circle",
+      "hash": "sha256:16e567113410bac0cc221a71fcb9dbe7a971a77970bdd21631ff037e23199d74",
+      "logical_parent": "sha256:d3ebba96930a5f930c7b6c8f966a4d3313a8ed2e99de7ca4f33a23742bd7a776",
+      "major": 1,
+      "name": "s2",
+      "seq": 3,
+      "undoable": true
+    },
+    {
+      "branch": "main",
+      "class": "W2",
+      "command": "feature.fit_plane",
+      "hash": "sha256:f6cf61accda86eb11267adf331b82f7b61f670e153b65a47c4cb37283a700536",
+      "logical_parent": "sha256:16e567113410bac0cc221a71fcb9dbe7a971a77970bdd21631ff037e23199d74",
+      "major": 1,
+      "name": "s3",
+      "seq": 4,
+      "undoable": true
+    },
+    {
+      "branch": "main",
+      "class": "W2",
+      "command": "feature.fit_cylinder",
+      "hash": "sha256:3fc8ce820e53d8056d1350de98e16d34619aaf86aaf52acf212aec0ca9ac03ca",
+      "logical_parent": "sha256:f6cf61accda86eb11267adf331b82f7b61f670e153b65a47c4cb37283a700536",
+      "major": 1,
+      "name": "s4",
+      "seq": 5,
+      "undoable": true
+    },
+    {
+      "branch": "main",
+      "class": "W2",
+      "command": "check.eval_distance",
+      "hash": "sha256:8082291663548008f4f9ea6e18408c5b5f759c43c170f32d85bd790500ae9ffc",
+      "logical_parent": "sha256:3fc8ce820e53d8056d1350de98e16d34619aaf86aaf52acf212aec0ca9ac03ca",
+      "major": 1,
+      "name": "s5",
+      "seq": 6,
+      "undoable": true
+    }
+  ],
+  "license": "CC-BY-4.0",
+  "schema": "fid-undo-fixture/1",
+  "seed": 1
+}

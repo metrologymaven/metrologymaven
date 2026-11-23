@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid journal undo, fid journal redo, fid journal show-undo-tree]
 mcp: [journal_undo, journal_redo, journal_show_undo_tree]
 journal: [journal.undo@1, journal.redo@1, journal.show_undo_tree@1]
-updated: 2026-11-17
+built_in: [fid-journal, fid-journal-cmd]
+updated: 2026-11-23
 ---
 
 # CORE.JRN.UNDO.MOVE: Undo, redo, undo tree and barriers

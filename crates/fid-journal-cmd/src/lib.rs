@@ -53,12 +53,14 @@ use std::sync::Arc;
 
 mod promote;
 mod supersede;
+mod undo;
 
 pub use promote::{parse_params, promote_bus_error, register_promote, run_promote, PromoteHandler, PromoteWiring};
 pub use supersede::{
     entry_for_call, parse_supersede, register_supersede, run_supersede, supersede_bus_error, SupersedeHandler,
     SupersedeSource,
 };
+pub use undo::{register_undo, run_undo, undo_bus_error, UndoHandler, UndoOp, UndoSource};
 
 /// Where the handlers read the branch table. The bus wiring implements it over the journal.
 ///
