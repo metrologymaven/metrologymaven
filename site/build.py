@@ -407,13 +407,13 @@ def company(d):
     body = f"""
 <section class="hero">{fcf("M", "COMPANY")}
 <h1>Metrology Maven, the company</h1>
-<p class="lead">Metrology Maven stewards the open-source project and funds its infrastructure. The open-source software is free. The company earns from enterprise services and regulated evidence packages.</p></section>
-<section class="sheet">{fcf("1", "OPEN BOUNDARY")}<div class="two">
-<div class="col free"><h3>Free forever</h3><ul class="clean"><li>All four apps, the deterministic math kernel and QIF-native formats</li><li>The CLI and MCP servers</li><li>The independent verifier (<code>fid-verify</code>)</li><li>Evidence templates and open test runners</li></ul></div>
-<div class="col"><h3>Commercial services (planned)</h3><ul class="clean"><li>Pre-built regulated release dossiers for aerospace, medical and accredited labs</li><li>Support agreements and long-term-support releases</li><li>Hosted verification and evidence archive</li><li>On-premises private machine-adapter fine-tuning and fleet drift monitoring (D-049)</li><li>Instrument-maker integration testing</li></ul></div>
+<p class="lead">Metrology Maven stewards the open-source core platform and funds its infrastructure. The four base apps, deterministic kernel and verifier are free and open source. The company builds commercial enterprise, industry-pack, AI-fleet and regulated-assurance products on top.</p></section>
+<section class="sheet">{fcf("1", "OPEN-CORE BOUNDARY")}<div class="two">
+<div class="col free"><h3>Open core (MIT OR Apache-2.0)</h3><ul class="clean"><li>All four base apps (Report, Inspect, Probe, Network), the deterministic math kernel and QIF/STEP/DMIS formats</li><li>The CLI, MCP servers, Python scripting and vendor-neutral HAL</li><li>The independent verifier (<code>fid-verify</code>)</li><li>Open validation templates (<code>QUAL.VAP</code>), IQ/OQ runner and the <code>IND.CONTRACT</code> plugin SDK</li></ul></div>
+<div class="col"><h3>Commercial products &amp; services (D-053)</h3><ul class="clean"><li>Multi-site Enterprise server: SSO/SAML, RBAC, sync, cross-site dashboards and PLM/MES/ERP connectors (<code>ENT</code>)</li><li>Commercial industry packs built on <code>IND.CONTRACT</code> (airfoil, gear, sheet metal, gap &amp; flush, tube, pattern, portable)</li><li>Hosted verification, evidence archive and OEM supplier quality verification portal</li><li>On-premises private machine-adapter LoRA fine-tuning, fleet drift monitoring and autonomous AI auto-programming (D-049)</li><li>Pre-built certified regulated LTS builds, release dossiers, support SLAs and OEM hardware integration packs</li></ul></div>
 </div>
-<p>No feature of the open apps will ever be moved behind a paid service (<a href="{REPO}/blob/main/decisions/D-036-funding-alignment.md">D-036</a>).</p></section>"""
-    return page("/company/", "Company", "Metrology Maven stewards the open-source metrology platform and defines a clear free-forever open boundary.", body, d)
+<p>No feature of the four open base apps will ever be moved behind a licence check (<a href="{REPO}/blob/main/decisions/D-036-funding-alignment.md">D-036</a>, <a href="{REPO}/blob/main/decisions/D-053-open-core-commercial-boundary.md">D-053</a>).</p></section>"""
+    return page("/company/", "Company", "Metrology Maven stewards the open-source metrology platform and defines a clear open-core and commercial boundary (D-053).", body, d)
 
 
 def not_found(d):

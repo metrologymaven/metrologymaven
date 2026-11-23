@@ -5,6 +5,7 @@ level: 2
 parent: IND
 kind: subsystem
 status: split
+commercial_repo: metrologymaven-enterprise
 phase: P3
 size: L
 owners: []
@@ -15,12 +16,14 @@ depends_on: [IND.CONTRACT, HAL, KRN, ALN, GDT]
 cli: [fid pack *-portable*]
 mcp: [pack_*_portable*]
 journal: [pack.*_portable*]
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # IND.PORT: Portable-device workflow pack
 
 ## Purpose
+
+> **Commercial boundary (D-053):** Implemented commercially against the public `IND.CONTRACT` extension point in `metrologymaven/metrologymaven-enterprise`. Do not expand or build `IND.PORT.*` in this public repository.
 
 Operator-guided measurement routines for portable instruments (articulated arms, laser trackers, handheld scanners): a step list with prompts and images, automatic feature recognition from the points the operator takes, and in-routine checks that tell the operator what to do next. It turns a live device session into a repeatable shop-floor procedure without the operator needing to program.
 

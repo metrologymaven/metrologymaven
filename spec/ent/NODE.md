@@ -5,6 +5,7 @@ level: 1
 parent: FID
 kind: domain
 status: split
+commercial_repo: metrologymaven-enterprise
 phase: P1b
 size: XXL
 owners: []
@@ -15,20 +16,22 @@ depends_on: [CORE, RPT, TRUST, AUTO]
 cli: [fid server *, fid integrate *]
 mcp: [server_*, integrate_*]
 journal: [server.*, integrate.*]
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # ENT: Enterprise
 
 ## Purpose
 
+> **Commercial boundary (D-053):** This domain is specified at high level here for traceability (`REQ-FID-028`), while all detailed leaf specifications, build prompts and implementation crates live in the private commercial repository `metrologymaven/metrologymaven-enterprise` (proprietary commercial licence). Do not expand or build `ENT.*` nodes in this public MIT/Apache-2.0 repository.
+
 What factories and multi-site companies need beyond a single desktop:
-- a self-hostable **results and program server** (the open alternative to central data-management add-ons);
+- a self-hostable **results and program server** (the commercial enterprise alternative to central data-management add-ons);
 - users, roles and single sign-on;
 - shared program and template libraries;
 - integrations with MES, QMS, ERP, PLM and SPC systems.
 
-Everything stays local-first: the server is optional and self-hosted, and the desktop works fully without it.
+Everything in the open apps stays local-first: the commercial enterprise server is optional and self-hosted, and the open desktop apps work fully without it.
 
 ## Scope
 
