@@ -56,6 +56,8 @@ pub fn to_bus_error(e: &TreeError) -> BusError {
         TreeError::BadOrder(_) | TreeError::AmbiguousStage(_) => BusError::Validation(ValidationReason::BadStage, d),
         TreeError::StageNotFound(_) => BusError::NotFound(NotFoundReason::UnknownEntity, d),
         TreeError::StageActive(_) => BusError::Precondition(PreconditionReason::StageActive, d),
+        TreeError::BadToken(_) => BusError::Validation(ValidationReason::BadToken, d),
+        TreeError::StaleToken(_) => BusError::Validation(ValidationReason::StaleToken, d),
         TreeError::DuplicateType(_)
         | TreeError::DuplicateEvent(_)
         | TreeError::UnknownEvent(_)
@@ -101,7 +103,7 @@ impl TreeState {
         let mut ids = BTreeMap::new();
         let stages: Vec<Uuid> = tree.stage_records().map(|s| s.id()).collect();
         let all = tree.groups().map(|g| g.id()).chain(tree.elements().map(|e| e.id())).chain(stages);
-        for id in all.chain([tree.stage_list_id(), tree.group_list_id()]) {
+        for id in all.chain([tree.stage_list_id(), tree.group_list_id(), tree.tree_index_id()]) {
             ids.insert(id, entity_id(&id)?);
         }
         Ok(TreeState { tree, ids, head, settings: BTreeMap::new() })

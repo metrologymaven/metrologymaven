@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.io/schemas/element-list.schema.json",
+  "title": "ElementList",
+  "description": "Result payload of project.list_elements@1 (spec node CORE.PRJ.TREE.QUERY).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["elements", "next"],
+  "properties": {
+    "elements": {
+      "type": "array",
+      "maxItems": 5000,
+      "description": "Matching elements in tree order.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "parent", "stage", "state", "type", "visible"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "description": "Element ID."
+          },
+          "name": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["text", "untrusted"],
+            "description": "Element display name (untrusted text).",
+            "properties": {
+              "text": {
+                "type": "string",
+                "x-untrusted": true
+              },
+              "untrusted": {
+                "type": "boolean",
+                "const": true
+              }
+            }
+          },
+          "parent": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "description": "Parent group ID."
+          },
+          "stage": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "description": "Stage ID in which `state` was evaluated."
+          },
+          "state": {
+            "type": "string",
+            "enum": ["not_computed", "current", "outdated", "failed"],
+            "description": "Element slot state in `stage`."
+          },
+          "type": {
+            "type": "string",
+            "description": "Registered element type ID."
+          },
+          "visible": {
+            "type": "boolean",
+            "description": "Saved element visibility."
+          }
+        }
+      }
+    },
+    "next": {
+      "type": ["string", "null"],
+      "description": "Head-bound continuation token, or null on the last page."
+    }
+  }
+}

@@ -37,6 +37,7 @@ use fid_registry::{CommandDef, DefError};
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
+pub mod query;
 pub mod stage;
 pub mod stage_switch;
 pub mod tree;
@@ -152,14 +153,16 @@ impl Handler for CreateHandler {
     }
 }
 
-/// Registers all thirteen handlers of this crate: the four container commands
-/// ([`register_containers`]), the five stage commands ([`stage::register`]), and the four tree
-/// group commands ([`tree_cmds::register`]), each with its definition from [`command_defs`]. A
-/// handler already in `set` is `internal/invariant_violated`.
+/// Registers all fifteen handlers of this crate: the four container commands
+/// ([`register_containers`]), the five stage commands ([`stage::register`]), the four tree
+/// group commands ([`tree_cmds::register`]), and the two tree query commands
+/// ([`query::register`]), each with its definition from [`command_defs`]. A handler already in
+/// `set` is `internal/invariant_violated`.
 pub fn register(set: &mut HandlerSet, namespace: Uuid, source: &SharedSource) -> Result<(), BusError> {
     register_containers(set, namespace, source)?;
     stage::register(set, namespace, source)?;
-    tree_cmds::register(set, namespace, source)
+    tree_cmds::register(set, namespace, source)?;
+    query::register(set, namespace)
 }
 
 /// Registers the four container create handlers only, each with its definition from
@@ -211,12 +214,14 @@ fn object(required: &[&str], properties: CValue) -> CValue {
 const IMPORTED: &str = "Imported ID, kept unchanged; omit it to get a new UUIDv7.";
 
 /// Every command definition of this crate: the four container commands in
-/// [`ContainerKind::ALL`] order, the five stage commands ([`stage::command_defs`]), and the
-/// four tree group commands ([`tree_cmds::command_defs`]).
+/// [`ContainerKind::ALL`] order, the five stage commands ([`stage::command_defs`]), the four
+/// tree group commands ([`tree_cmds::command_defs`]), and the two tree query commands
+/// ([`query::command_defs`]).
 pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
     let mut defs = container_defs()?;
     defs.extend(stage::command_defs()?);
     defs.extend(tree_cmds::command_defs()?);
+    defs.extend(query::command_defs()?);
     Ok(defs)
 }
 
