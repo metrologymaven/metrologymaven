@@ -1,0 +1,27 @@
+{
+  "assumptions": [
+    "Scan temperature is 20 C within lab calibration tolerance.",
+    "Outlier points > 3 sigma on edge chamfer excluded by selector."
+  ],
+  "claimed_characteristics": [
+    "00000000-0000-7000-8000-000000000101",
+    "00000000-0000-7000-8000-000000000102"
+  ],
+  "client": "antigravity-cli",
+  "confidence": "medium",
+  "confidence_reasons": [
+    "Datum A RMS residual is 0.004 mm across 12,400 points.",
+    "Dowel B partial arc covers 210 degrees; confirm coverage visually."
+  ],
+  "goal": "Align housing datum A-B-C and evaluate primary flatness and bolt-hole positions.",
+  "model": "gemini-reference",
+  "rationale": [
+    "Fitted datum plane A on top flange face points using L2 least-squares.",
+    "Constrained secondary datum B on dowel cylinder axis.",
+    "Evaluated flatness and true-position characteristics against ISO 1101."
+  ],
+  "skills_used": [
+    "skill.align.datum_abc@1",
+    "recipe.fai.housing@1"
+  ]
+}

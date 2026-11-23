@@ -150,7 +150,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-rdl-gen" = "tool"
 # Surface generator (AUTO.SURF.GEN): build-time xtask library over fid-surface (services).
 "fid-surface-gen" = "tool"
-"fid-agent" = "tool"
+# Agent experience CI checks and L3 proposal brief command (AGENT.SKILLS.*, AGENT.PROPOSE.BRIEF).
+"fid-agent" = "services"
 "fid-timeline" = "tool"
 "fid-outreach" = "tool"
 "fid-platform" = "tool"

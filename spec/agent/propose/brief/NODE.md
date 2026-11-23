@@ -18,7 +18,9 @@ determinism: D0
 cli: [fid agent attach-brief]
 mcp: [agent_attach_brief]
 journal: [agent.attach_brief@1]
-updated: 2026-11-17
+built_in: [fid-agent]
+built_pr: 512
+updated: 2026-11-22
 ---
 
 # AGENT.PROPOSE.BRIEF: Proposal brief schema and attach command

@@ -1,6 +1,6 @@
 [package]
 name = "fid-agent"
-description = "Metrology Maven agent-experience CI checks: workflow catalog per MCP server profile and guide content linter (spec nodes AGENT.SKILLS.CATALOG and AGENT.SKILLS.STYLE)"
+description = "Metrology Maven agent experience: workflow catalog check, guide style linter, and proposal brief schema & attach command (spec nodes AGENT.SKILLS.CATALOG, AGENT.SKILLS.STYLE, AGENT.PROPOSE.BRIEF)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -17,10 +17,22 @@ name = "agent-style-lint"
 path = "src/bin/agent-style-lint.rs"
 
 [dependencies]
-# RFC 8785 canonical JSON, bounded parsing and SHA-256 (catalog versions, manifest digest).
+# RFC 8785 canonical JSON, bounded parsing and SHA-256 (catalog versions, manifest digest, brief payloads).
 fid-canon = { path = "../fid-canon" }
-# Shared `sha256:` digest type (AGENTS.md rule 14).
+# Storage-free branch names, ownership and table model (CORE.JRN.BR). Layer model.
+fid-journal = { path = "../fid-journal", default-features = false }
+# Command definitions and x-untrusted schema rules (CORE.REG.DEF). Layer model.
+fid-registry = { path = "../fid-registry" }
+# Shared `sha256:` digest type (AGENTS.md rule 14). Layer num.
 fid-types = { path = "../fid-types" }
+# Canonical entity and entry UUIDs (CONSTITUTION §5). Layer model.
+fid-uuid = { path = "../fid-uuid" }
+
+[dev-dependencies]
+# Schema validation check in tests (`fid_bus::validate::Compiled`). Layer engine.
+fid-bus = { path = "../fid-bus" }
+# MCP untrusted text taint rendering check in AC-4 (`AUTO.MCP.TAINT`). Layer services.
+fid-mcp = { path = "../fid-mcp" }
 
 [lints]
 workspace = true
