@@ -8,6 +8,7 @@
 pub mod cyl;
 pub mod flat;
 pub mod round;
+pub mod straightness;
 
 use crate::dmt::{OperatorChain, OperatorKind, Param};
 use core::cmp::Ordering;

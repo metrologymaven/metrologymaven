@@ -117,6 +117,7 @@ python fixtures/gdt/drf/measured/make_cases.py --check
 python fixtures/gdt/form/make_cyl_fixture.py --check
 python fixtures/gdt/form/make_flat_fixture.py --check
 python fixtures/gdt/form/make_round_fixtures.py --check
+python fixtures/gdt/form/make_straight_lineel_fixture.py --check
 python fixtures/gdt/ident/make_fixtures.py --check
 python fixtures/gdt/interp/make_cases.py --check
 python fixtures/gdt/record/make_cases.py --check
