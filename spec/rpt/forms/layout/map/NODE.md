@@ -18,7 +18,8 @@ determinism: D0
 cli: [fid report show-layout-fai, fid report show-layout-ppap]
 mcp: [report_show_layout_fai, report_show_layout_ppap]
 journal: [report.show_layout_fai@1, report.show_layout_ppap@1]
-updated: 2026-11-17
+built_in: [fid-report-forms]
+updated: 2026-11-22
 ---
 
 # RPT.FORMS.LAYOUT.MAP: Form field maps, form_field block kind, locking and clearance

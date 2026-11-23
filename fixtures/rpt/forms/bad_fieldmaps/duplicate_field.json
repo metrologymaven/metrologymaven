@@ -1,0 +1,22 @@
+{
+  "schema_version": "1",
+  "form": "fai_form_1",
+  "fields": [
+    {
+      "field_id": "part_name",
+      "label_key": "report.forms.hdr.part_name",
+      "source": "fai.header.part_name",
+      "citation": {
+        "designator": "AS9102",
+        "revision": "Rev C",
+        "clause": "Form 1, Field 2"
+      }
+    },
+    {
+      "field_id": "part_name",
+      "label_key": "report.forms.hdr.part_name_dup",
+      "source": "fai.header.part_name",
+      "citation": null
+    }
+  ]
+}

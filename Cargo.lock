@@ -2097,6 +2097,9 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-gdt",
+ "fid-io-reg",
+ "fid-kdec",
+ "fid-num",
  "fid-project",
  "fid-registry",
  "fid-replay",

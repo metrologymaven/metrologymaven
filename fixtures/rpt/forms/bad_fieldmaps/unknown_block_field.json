@@ -1,0 +1,35 @@
+{
+  "clearance": {
+    "state": "pending"
+  },
+  "locked": true,
+  "media_type": "application/vnd.fid.report-template+json",
+  "pages": [
+    {
+      "blocks": [
+        {
+          "continuation_block": null,
+          "id": "019a9f10-bad1-7000-8000-000000000101",
+          "kind": "form_field",
+          "kind_version": "1",
+          "payload": {
+            "untrusted": true,
+            "value": {
+              "field_id": "unmapped_ghost_field",
+              "show_label": true
+            }
+          },
+          "repeat_header_rows": "0",
+          "slot": null
+        }
+      ],
+      "id": "019a9f10-bad1-7000-8000-000000000011"
+    }
+  ],
+  "schema_version": "1",
+  "template_id": "019a9f10-bad1-7000-8000-000000000001",
+  "title": {
+    "text": "report.forms.bad.unknown_field",
+    "untrusted": true
+  }
+}
