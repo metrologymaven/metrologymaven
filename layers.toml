@@ -109,6 +109,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-io-reg" = "services"
 # Format-plugin contract, version negotiation and fid-io-reg adapters (IO.REG.PLUGIN.ABI).
 "fid-io-plugin" = "services"
+# Bounded 2D drawing reader for PDF page structure, PNG and TIFF (IO.REG.PLUGIN.DRAW).
+"fid-io-draw" = "services"
 "fid-io-dmis" = "services"
 "fid-io-e57" = "services"
 "fid-io-las" = "services"
