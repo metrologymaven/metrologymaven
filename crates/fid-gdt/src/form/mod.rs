@@ -4,5 +4,6 @@
 //! - [`flat`] (`GDT.FORM.FLAT`): `check.eval_flatness@1` (`fid check eval-flatness` /
 //!   `check_eval_flatness`).
 
+pub mod cyl;
 pub mod flat;
 pub mod round;

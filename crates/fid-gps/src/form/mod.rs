@@ -5,6 +5,7 @@
 //! `fid_num::f` for square roots, `f64::total_cmp` for max/min with lowest-index tie breaking,
 //! NaN rejected as an error.
 
+pub mod cyl;
 pub mod flat;
 pub mod round;
 
