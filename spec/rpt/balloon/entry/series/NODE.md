@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid report enter-series-reading]
 mcp: [report_enter_series_reading]
 journal: [report.enter_series_reading@1]
-updated: 2026-11-17
+built_in: [fid-report]
+updated: 2026-11-22
 ---
 
 # RPT.BALLOON.ENTRY.SERIES: Multi-part reading series entry
