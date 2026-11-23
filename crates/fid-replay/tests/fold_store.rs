@@ -113,6 +113,7 @@ fn make_real_entry(
         manifests: manifests(),
         reason: None,
         human_assertion: None,
+        agent_coedited: false,
         body: DraftBody::Command(CommandDraft {
             id: "doc.set_kv".to_string(),
             major: 1,
@@ -125,6 +126,7 @@ fn make_real_entry(
             consumed_r1: Vec::new(),
             outputs: Vec::new(),
             algorithms: Vec::new(),
+            event_sources: Vec::new(),
         }),
     };
     let mut salt_map = BTreeMap::new();

@@ -160,6 +160,7 @@ impl SnapshotWarning {
             manifests,
             reason: Some(self.code().to_string()),
             human_assertion: None,
+            agent_coedited: false,
             body: DraftBody::Command(CommandDraft {
                 id: ACTIVITY_WARNING_COMMAND.to_string(),
                 major: 1,
@@ -175,6 +176,7 @@ impl SnapshotWarning {
                     digest: fid_canon::Digest(entry_hash.to_bytes()),
                 }],
                 algorithms: Vec::new(),
+                event_sources: Vec::new(),
             }),
         }
     }
