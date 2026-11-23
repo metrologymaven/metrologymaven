@@ -18,6 +18,7 @@ cli: [fid verify check-chain]
 mcp: [verify_check_chain]
 journal: [verify.check_chain@1]
 built_in: [fid-chain]
+built_pr: 532
 updated: 2026-11-22
 ---
 
