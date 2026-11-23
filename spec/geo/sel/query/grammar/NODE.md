@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-geo-sel]
+built_pr: 511
+updated: 2026-11-22
 ---
 
 # GEO.SEL.QUERY.GRAMMAR: JSON AST grammar, bounded parser, canonical form and digest

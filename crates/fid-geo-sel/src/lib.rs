@@ -16,10 +16,14 @@
 //!   pixel picks and lasso polygons given explicit [`Camera`] parameters, in `Through` and
 //!   `Visible` (CPU scanline depth buffer) modes, across point, triangle and face domains.
 //!
-//! Query language and evaluation (`GEO.SEL.QUERY`) and commands (`GEO.SEL.CMD`) are other leaves.
+//! - `GEO.SEL.QUERY.GRAMMAR` (see [`query`]): closed v1 JSON AST grammar, bounded iterative
+//!   parser, canonical form and SHA-256 digest (`QueryDigest`).
+//!
+//! Query evaluation (`GEO.SEL.QUERY.EVAL`, `NEAR`, `CAD`) and commands (`GEO.SEL.CMD`) are other leaves.
 
 pub mod algebra;
 pub mod model;
+pub mod query;
 pub mod raster;
 pub mod resolve;
 

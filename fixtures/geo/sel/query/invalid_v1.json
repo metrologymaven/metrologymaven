@@ -1,0 +1,1365 @@
+{
+  "cases": [
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "",
+      "name": "top_not_object_arr",
+      "query": []
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "",
+      "name": "top_not_object_str",
+      "query": "points"
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/extra",
+      "name": "top_unknown_key",
+      "query": {
+        "domain": "points",
+        "extra": 1,
+        "v": 1,
+        "where": {
+          "all": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/ignore previous instructions",
+      "name": "top_prompt_key",
+      "query": {
+        "domain": "points",
+        "ignore previous instructions": {},
+        "v": 1,
+        "where": {
+          "all": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/v",
+      "name": "missing_v",
+      "query": {
+        "domain": "points",
+        "where": {
+          "all": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/v",
+      "name": "version_2",
+      "query": {
+        "domain": "points",
+        "v": 2,
+        "where": {
+          "all": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/v",
+      "name": "version_0",
+      "query": {
+        "domain": "points",
+        "v": 0,
+        "where": {
+          "all": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/v",
+      "name": "version_string",
+      "query": {
+        "domain": "points",
+        "v": "1",
+        "where": {
+          "all": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/v",
+      "name": "version_float",
+      "query": {
+        "domain": "points",
+        "v": 1.5,
+        "where": {
+          "all": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/domain",
+      "name": "missing_domain",
+      "query": {
+        "v": 1,
+        "where": {
+          "all": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/domain",
+      "name": "unknown_domain",
+      "query": {
+        "domain": "voxels",
+        "v": 1,
+        "where": {
+          "all": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/domain",
+      "name": "domain_int",
+      "query": {
+        "domain": 1,
+        "v": 1,
+        "where": {
+          "all": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where",
+      "name": "missing_where",
+      "query": {
+        "domain": "points",
+        "v": 1
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where",
+      "name": "where_not_obj",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": []
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where",
+      "name": "where_empty_obj",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {}
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where",
+      "name": "where_two_preds",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "all": {},
+          "ids": {
+            "ids": [
+              1
+            ]
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/sql_eval",
+      "name": "where_unknown_pred",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "sql_eval": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/run shell rm -rf",
+      "name": "where_prompt_pred_key",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "run shell rm -rf": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/and",
+      "name": "and_not_array",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "and": {
+            "all": {}
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/and",
+      "name": "and_empty",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "and": []
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/and/0",
+      "name": "and_elem_two_keys",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "and": [
+            {
+              "all": {},
+              "not": {
+                "all": {}
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/or",
+      "name": "or_not_array",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "or": 123
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/or",
+      "name": "or_empty",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "or": []
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/or/1/bogus",
+      "name": "or_bad_second",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "or": [
+            {
+              "all": {}
+            },
+            {
+              "bogus": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/not",
+      "name": "not_not_obj",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "not": "all"
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/not",
+      "name": "not_empty_obj",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "not": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/all/x",
+      "name": "all_extra_key",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "all": {
+            "x": 1
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/all",
+      "name": "all_not_obj",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "all": true
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/ids/ids",
+      "name": "ids_missing_ids",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "ids": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/ids/extra",
+      "name": "ids_extra_key",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "ids": {
+            "extra": 2,
+            "ids": [
+              1
+            ]
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/ids/ids",
+      "name": "ids_not_array",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "ids": {
+            "ids": 1
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/ids/ids/0",
+      "name": "ids_string_elem",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "ids": {
+            "ids": [
+              "1"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/ids/ids/1",
+      "name": "ids_negative_elem",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "ids": {
+            "ids": [
+              1,
+              -2
+            ]
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/ids/ids/0",
+      "name": "ids_float_elem",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "ids": {
+            "ids": [
+              1.5
+            ]
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/attr_range/channel",
+      "name": "attr_missing_channel",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "attr_range": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/attr_range/channel",
+      "name": "attr_bad_channel",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "attr_range": {
+            "channel": "rgb",
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/attr_range",
+      "name": "attr_no_bounds",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "attr_range": {
+            "channel": "intensity"
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/attr_range/min",
+      "name": "attr_min_str",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "attr_range": {
+            "channel": "intensity",
+            "min": "0"
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/attr_range/max",
+      "name": "attr_max_bool",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "attr_range": {
+            "channel": "intensity",
+            "max": false
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/attr_range/max",
+      "name": "attr_min_gt_max",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "attr_range": {
+            "channel": "intensity",
+            "max": 2,
+            "min": 5
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/attr_range/step",
+      "name": "attr_unknown_key",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "attr_range": {
+            "channel": "intensity",
+            "min": 0,
+            "step": 1
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/quality_flags",
+      "name": "qflags_empty",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "quality_flags": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/quality_flags/all_of",
+      "name": "qflags_all_of_neg",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "quality_flags": {
+            "all_of": -1
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/quality_flags/all_of",
+      "name": "qflags_all_of_overflow",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "quality_flags": {
+            "all_of": 65536
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/quality_flags/none_of",
+      "name": "qflags_none_of_str",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "quality_flags": {
+            "none_of": "1"
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/quality_flags/any_of",
+      "name": "qflags_unknown_key",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "quality_flags": {
+            "all_of": 1,
+            "any_of": 2
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/normal_cone/axis",
+      "name": "ncone_missing_axis",
+      "query": {
+        "domain": "triangles",
+        "v": 1,
+        "where": {
+          "normal_cone": {
+            "half_angle": {
+              "text": "10",
+              "unit": "deg"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/normal_cone/axis",
+      "name": "ncone_axis_len_2",
+      "query": {
+        "domain": "triangles",
+        "v": 1,
+        "where": {
+          "normal_cone": {
+            "axis": [
+              0,
+              1
+            ],
+            "half_angle": {
+              "text": "10",
+              "unit": "deg"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/normal_cone/axis/1",
+      "name": "ncone_axis_str",
+      "query": {
+        "domain": "triangles",
+        "v": 1,
+        "where": {
+          "normal_cone": {
+            "axis": [
+              0,
+              "1",
+              0
+            ],
+            "half_angle": {
+              "text": "10",
+              "unit": "deg"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/normal_cone/axis",
+      "name": "ncone_axis_zero",
+      "query": {
+        "domain": "triangles",
+        "v": 1,
+        "where": {
+          "normal_cone": {
+            "axis": [
+              0,
+              0,
+              0
+            ],
+            "half_angle": {
+              "text": "10",
+              "unit": "deg"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/normal_cone/half_angle/unit",
+      "name": "ncone_length_unit",
+      "query": {
+        "domain": "triangles",
+        "v": 1,
+        "where": {
+          "normal_cone": {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "half_angle": {
+              "text": "10",
+              "unit": "mm"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/normal_cone/half_angle",
+      "name": "ncone_neg_angle",
+      "query": {
+        "domain": "triangles",
+        "v": 1,
+        "where": {
+          "normal_cone": {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "half_angle": {
+              "text": "-5",
+              "unit": "deg"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/normal_cone/half_angle",
+      "name": "ncone_gt_pi",
+      "query": {
+        "domain": "triangles",
+        "v": 1,
+        "where": {
+          "normal_cone": {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "half_angle": {
+              "text": "181",
+              "unit": "deg"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_quantity",
+      "expected_pointer": "/where/normal_cone/half_angle",
+      "name": "ncone_bad_qty_text",
+      "query": {
+        "domain": "triangles",
+        "v": 1,
+        "where": {
+          "normal_cone": {
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "half_angle": {
+              "text": "NaN",
+              "unit": "deg"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/in_box/max",
+      "name": "inbox_missing_max",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "in_box": {
+            "min": [
+              {
+                "text": "0",
+                "unit": "mm"
+              },
+              {
+                "text": "0",
+                "unit": "mm"
+              },
+              {
+                "text": "0",
+                "unit": "mm"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/in_box/min",
+      "name": "inbox_len_2",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "in_box": {
+            "max": [
+              {
+                "text": "1",
+                "unit": "mm"
+              },
+              {
+                "text": "1",
+                "unit": "mm"
+              },
+              {
+                "text": "1",
+                "unit": "mm"
+              }
+            ],
+            "min": [
+              {
+                "text": "0",
+                "unit": "mm"
+              },
+              {
+                "text": "0",
+                "unit": "mm"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/in_box/min/1/unit",
+      "name": "inbox_angle_unit",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "in_box": {
+            "max": [
+              {
+                "text": "1",
+                "unit": "mm"
+              },
+              {
+                "text": "1",
+                "unit": "mm"
+              },
+              {
+                "text": "1",
+                "unit": "mm"
+              }
+            ],
+            "min": [
+              {
+                "text": "0",
+                "unit": "mm"
+              },
+              {
+                "text": "1",
+                "unit": "deg"
+              },
+              {
+                "text": "0",
+                "unit": "mm"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/in_box/max/2",
+      "name": "inbox_min_gt_max",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "in_box": {
+            "max": [
+              {
+                "text": "1",
+                "unit": "mm"
+              },
+              {
+                "text": "1",
+                "unit": "mm"
+              },
+              {
+                "text": "2",
+                "unit": "mm"
+              }
+            ],
+            "min": [
+              {
+                "text": "0",
+                "unit": "mm"
+              },
+              {
+                "text": "0",
+                "unit": "mm"
+              },
+              {
+                "text": "5",
+                "unit": "mm"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/in_box/min/0/si",
+      "name": "inbox_bad_si_bits",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "in_box": {
+            "max": [
+              {
+                "text": "2",
+                "unit": "mm"
+              },
+              {
+                "text": "1",
+                "unit": "mm"
+              },
+              {
+                "text": "1",
+                "unit": "mm"
+              }
+            ],
+            "min": [
+              {
+                "si": "0x0000000000000000",
+                "text": "1",
+                "unit": "mm"
+              },
+              {
+                "text": "0",
+                "unit": "mm"
+              },
+              {
+                "text": "0",
+                "unit": "mm"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/in_sphere/radius",
+      "name": "insphere_neg_radius",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "in_sphere": {
+            "centre": [
+              {
+                "text": "0",
+                "unit": "mm"
+              },
+              {
+                "text": "0",
+                "unit": "mm"
+              },
+              {
+                "text": "0",
+                "unit": "mm"
+              }
+            ],
+            "radius": {
+              "text": "-1",
+              "unit": "mm"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/in_sphere/radius/unit",
+      "name": "insphere_unknown_unit",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "in_sphere": {
+            "centre": [
+              {
+                "text": "0",
+                "unit": "mm"
+              },
+              {
+                "text": "0",
+                "unit": "mm"
+              },
+              {
+                "text": "0",
+                "unit": "mm"
+              }
+            ],
+            "radius": {
+              "text": "1",
+              "unit": "furlongs"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/in_sphere/radius/raw",
+      "name": "insphere_qty_extra_key",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "in_sphere": {
+            "centre": [
+              {
+                "text": "0",
+                "unit": "mm"
+              },
+              {
+                "text": "0",
+                "unit": "mm"
+              },
+              {
+                "text": "0",
+                "unit": "mm"
+              }
+            ],
+            "radius": {
+              "raw": 1,
+              "text": "1",
+              "unit": "mm"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/near/of",
+      "name": "near_of_empty",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "near": {
+            "distance": {
+              "text": "1",
+              "unit": "mm"
+            },
+            "of": {}
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/near/of",
+      "name": "near_of_two_keys",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "near": {
+            "distance": {
+              "text": "1",
+              "unit": "mm"
+            },
+            "of": {
+              "element": "00000000-0000-7000-8000-000000000001",
+              "selection": "00000000-0000-7000-8000-000000000002"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/near/of/cloud",
+      "name": "near_of_unknown",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "near": {
+            "distance": {
+              "text": "1",
+              "unit": "mm"
+            },
+            "of": {
+              "cloud": "00000000-0000-7000-8000-000000000001"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/near/of/element",
+      "name": "near_bad_uuid_upper",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "near": {
+            "distance": {
+              "text": "1",
+              "unit": "mm"
+            },
+            "of": {
+              "element": "00000000-0000-7000-8000-00000000000A"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/near/of/selection",
+      "name": "near_nil_uuid",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "near": {
+            "distance": {
+              "text": "1",
+              "unit": "mm"
+            },
+            "of": {
+              "selection": "00000000-0000-0000-0000-000000000000"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/near/of/face/id",
+      "name": "near_face_empty_id",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "near": {
+            "distance": {
+              "text": "1",
+              "unit": "mm"
+            },
+            "of": {
+              "face": {
+                "body": "00000000-0000-7000-8000-000000000001",
+                "id": ""
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/near/distance",
+      "name": "near_neg_dist",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "near": {
+            "distance": {
+              "text": "-0.1",
+              "unit": "mm"
+            },
+            "of": {
+              "element": "00000000-0000-7000-8000-000000000001"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/face_ids/ids/0",
+      "name": "face_ids_too_long_topo",
+      "query": {
+        "domain": "faces",
+        "v": 1,
+        "where": {
+          "face_ids": {
+            "body": "00000000-0000-7000-8000-000000000001",
+            "ids": [
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/face_ids/ids/0",
+      "name": "face_ids_int_topo",
+      "query": {
+        "domain": "faces",
+        "v": 1,
+        "where": {
+          "face_ids": {
+            "body": "00000000-0000-7000-8000-000000000001",
+            "ids": [
+              123
+            ]
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/in_group/group",
+      "name": "in_group_bad_uuid",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "in_group": {
+            "group": "not-a-uuid"
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/in_layer/layer",
+      "name": "in_layer_max_uuid",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "in_layer": {
+            "layer": "ffffffff-ffff-ffff-ffff-ffffffffffff"
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/in_body/body",
+      "name": "in_body_missing",
+      "query": {
+        "domain": "points",
+        "v": 1,
+        "where": {
+          "in_body": {}
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/tangent_grow/seed",
+      "name": "tgrow_missing_seed",
+      "query": {
+        "domain": "faces",
+        "v": 1,
+        "where": {
+          "tangent_grow": {
+            "angle": {
+              "text": "5",
+              "unit": "deg"
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/tangent_grow/angle",
+      "name": "tgrow_missing_angle",
+      "query": {
+        "domain": "faces",
+        "v": 1,
+        "where": {
+          "tangent_grow": {
+            "seed": {
+              "all": {}
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/tangent_grow/seed/bad",
+      "name": "tgrow_bad_seed",
+      "query": {
+        "domain": "faces",
+        "v": 1,
+        "where": {
+          "tangent_grow": {
+            "angle": {
+              "text": "5",
+              "unit": "deg"
+            },
+            "seed": {
+              "bad": {}
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/where/tangent_grow/angle",
+      "name": "tgrow_neg_angle",
+      "query": {
+        "domain": "faces",
+        "v": 1,
+        "where": {
+          "tangent_grow": {
+            "angle": {
+              "text": "-1",
+              "unit": "deg"
+            },
+            "seed": {
+              "all": {}
+            }
+          }
+        }
+      }
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "/v",
+      "name": "dup_top_key",
+      "raw": "{\"v\":1,\"v\":1,\"domain\":\"points\",\"where\":{\"all\":{}}}"
+    },
+    {
+      "expected_code": "bad_query",
+      "expected_pointer": "",
+      "name": "trailing_garbage",
+      "raw": "{\"v\":1,\"domain\":\"points\",\"where\":{\"all\":{}}} trailing"
+    }
+  ],
+  "license": "CC-BY-4.0",
+  "schema": "geo-sel-query-invalid/v1"
+}
