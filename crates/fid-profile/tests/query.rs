@@ -5,7 +5,9 @@
 
 use std::fs;
 use std::path::PathBuf;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::{Arc, Barrier};
+#[cfg(not(target_arch = "wasm32"))]
 use std::thread;
 
 use fid_profile::query::{GateSwitch, GuiGates, ProfileQuery, SelectionSlot, StoredSelection, CONFIG_KEY};
@@ -94,6 +96,7 @@ fn ac2_unset_selection_defaults_to_lean_with_pinned_digest() {
 
 /// AC-3: Given a snapshot held while another thread sets Regulated, the held snapshot still
 /// reports Lean and a new `active()` reports Regulated.
+#[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn ac3_held_snapshot_is_immutable_across_concurrent_profile_change() {
     let slot = SelectionSlot::unset();
