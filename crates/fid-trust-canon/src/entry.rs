@@ -10,7 +10,7 @@
 //! of the IEEE 754 bits), so a raw number there is `canon.convention`.
 
 use crate::parse::parse;
-use crate::write::{digest_canonical, serialize};
+use crate::write::{digest_canonical, serialize_object_without};
 use crate::{CanonError, InvalidKind, Value, MAX_DEPTH};
 use fid_types::Digest;
 
@@ -55,10 +55,9 @@ pub fn entry_hash_value(header: &Value) -> Result<Digest, CanonError> {
     let Value::Object(members) = header else {
         return Err(CanonError::Convention { path: String::new(), rule: ConventionRule::HeaderNotObject });
     };
-    let mut path = String::new();
+    let mut path = String::with_capacity(64);
     check(header, 0, &mut path)?;
-    let without_hash: Vec<(String, Value)> = members.iter().filter(|(k, _)| k != "hash").cloned().collect();
-    Ok(digest_canonical(&serialize(&Value::Object(without_hash))?))
+    Ok(digest_canonical(&serialize_object_without(members, "hash")?))
 }
 
 fn convention(path: &str, rule: ConventionRule) -> CanonError {
@@ -68,6 +67,21 @@ fn convention(path: &str, rule: ConventionRule) -> CanonError {
 fn is_u64_decimal(s: &str) -> bool {
     let plain = !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()) && (s == "0" || !s.starts_with('0'));
     plain && s.parse::<u64>().is_ok()
+}
+
+fn push_pointer_segment(path: &mut String, name: &str) {
+    path.push('/');
+    if !name.bytes().any(|b| b == b'~' || b == b'/') {
+        path.push_str(name);
+        return;
+    }
+    for ch in name.chars() {
+        match ch {
+            '~' => path.push_str("~0"),
+            '/' => path.push_str("~1"),
+            other => path.push(other),
+        }
+    }
 }
 
 /// Walks the header in document order; reports the first violation. The top-level
@@ -93,7 +107,8 @@ fn check(v: &Value, depth: usize, path: &mut String) -> Result<(), CanonError> {
             for (i, item) in items.iter().enumerate() {
                 let len = path.len();
                 path.push('/');
-                path.push_str(&i.to_string());
+                use std::fmt::Write as _;
+                let _ = write!(path, "{i}");
                 check(item, depth + 1, path)?;
                 path.truncate(len);
             }
@@ -107,9 +122,7 @@ fn check(v: &Value, depth: usize, path: &mut String) -> Result<(), CanonError> {
                     continue;
                 }
                 let len = path.len();
-                path.push('/');
-                // RFC 6901 escaping.
-                path.push_str(&name.replace('~', "~0").replace('/', "~1"));
+                push_pointer_segment(path, name);
                 check(item, depth + 1, path)?;
                 path.truncate(len);
             }

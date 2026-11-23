@@ -1208,6 +1208,7 @@ version = "0.0.1"
 dependencies = [
  "fid-journal",
  "fid-pkg",
+ "fid-registry",
  "fid-sign-core",
  "fid-trust-canon",
  "fid-types",
