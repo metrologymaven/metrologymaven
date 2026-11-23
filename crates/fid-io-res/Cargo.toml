@@ -1,6 +1,6 @@
 [package]
 name = "fid-io-res"
-description = "Metrology Maven result exchange: versioned CSV column maps and table dialect (IO.RES.CSV.MAP); result table export (IO.RES.CSV.OUT); transcription record model (IO.RES.TRANS.MODEL)"
+description = "Metrology Maven result exchange: versioned CSV column maps and table dialect (IO.RES.CSV.MAP); result table export (IO.RES.CSV.OUT); transcription record model (IO.RES.TRANS.MODEL); report-file export envelope (IO.RES.REPORT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,17 +11,21 @@ publish = false
 [dependencies]
 # RFC 8785 canonical JSON parser and writer plus SHA-256 (CORE.JRN.CANON): the map digest.
 fid-canon = { path = "../fid-canon" }
-# Reader harness (IO.REG.LIMITS): 1 MiB bounded read of user maps, IoError, UntrustedText.
+# Reader harness (IO.REG.LIMITS): 1 MiB bounded read of user maps, IoError, UntrustedText, AtomicWriter.
 fid-io-reg = { path = "../fid-io-reg" }
+# Registry command definition for export.results_report@1 (IO.RES.REPORT).
+fid-registry = { path = "../fid-registry" }
 # Shared `sha256:` digest type (AGENTS.md rule 14).
 fid-types = { path = "../fid-types" }
-# Replay outcome classes (CORE.RPL.CLASS) for replaying an export event (IO.RES.CSV.OUT AC-6).
+# Replay outcome classes (CORE.RPL.CLASS) for replaying an export event (IO.RES.CSV.OUT AC-6, IO.RES.REPORT AC-6).
 fid-replay = { path = "../fid-replay" }
 # Entity ID service (CORE.PRJ.CONT.ID): UUIDv5 IDs of transcription records and results.
 fid-project = { path = "../fid-project" }
 # Uncertainty statement (UNC.UEC.STMT, layer kernel): the UEC-0 statement every transcribed
 # result carries, built and written by fid-kunc itself.
 fid-kunc = { path = "../fid-kunc" }
+# Streaming SHA-256 verification on dry-run report export (already in the lockfile via fid-canon).
+sha2 = "0.10"
 
 [lints]
 workspace = true

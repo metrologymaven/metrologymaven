@@ -1633,8 +1633,10 @@ dependencies = [
  "fid-io-reg",
  "fid-kunc",
  "fid-project",
+ "fid-registry",
  "fid-replay",
  "fid-types",
+ "sha2 0.10.9",
 ]
 
 [[package]]

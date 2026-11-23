@@ -17,7 +17,9 @@ determinism: D0
 cli: [fid export results-report]
 mcp: [export_results_report]
 journal: [export.results_report@1]
-updated: 2026-11-16
+built_in: [fid-io-res]
+built_pr: 518
+updated: 2026-11-22
 ---
 
 # IO.RES.REPORT: Report-file export envelope
