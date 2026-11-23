@@ -22,6 +22,7 @@ HERE = Path(__file__).resolve().parent
 MANIFEST = ROOT / "fixtures" / "manifest" / "min-classes.json"
 MCP_TOOLS = ROOT / "fixtures" / "mcp" / "min-classes.tools.json"
 DOCS_FIXTURES = ROOT / "fixtures" / "docs"
+CLI_TREE = ROOT / "fixtures" / "cli" / "min-classes.tree.json"
 
 NON_MCP_CLASSES = {"M1", "S1", "A0"}
 
@@ -59,6 +60,7 @@ def build_trees() -> dict[Path, bytes]:
     manifest = json.loads(manifest_raw.decode("utf-8"))
     mcp_tools_raw = MCP_TOOLS.read_bytes()
     docs_files = docs_generated_files()
+    cli_tree_raw = CLI_TREE.read_bytes()
 
     all_cmds: list[tuple[str, int]] = []
     mcp_cmds: list[tuple[str, int]] = []
@@ -82,6 +84,7 @@ def build_trees() -> dict[Path, bytes]:
     ) -> dict[Path, bytes]:
         base = HERE / name
         tree = {
+            base / "cli" / "cli-tree.json": cli_tree_raw,
             base / "cli" / "surface-index.json": index_bytes(manifest_digest, "cli", cli_cmds),
             base / "py" / "surface-index.json": index_bytes(manifest_digest, "py", py_cmds),
             base / "docs" / "surface-index.json": index_bytes(manifest_digest, "docs", docs_cmds),

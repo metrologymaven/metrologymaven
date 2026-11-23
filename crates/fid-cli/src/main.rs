@@ -8,67 +8,123 @@
 //! under `--json` every result, including usage and input errors, is one envelope on stdout.
 
 use fid_canon::CValue;
-use fid_cli::{ExitCode as Fx, Output, CLI_COMMAND_ID};
+use fid_cli::{embedded_tree, resolve_args, ExitCode as Fx, Output, ResolveOutcome, CLI_COMMAND_ID};
 use fid_surface::{Envelope, ErrorCode};
 use std::collections::BTreeMap;
 use std::io::{Read, Write};
 use std::process::ExitCode;
 
-const USAGE: &str = "\
-fid: Metrology Maven command line (pre-alpha)
+const CANON: &str = "canon.canonicalize@1";
+const MCP_HELP: &str = "\
+fid mcp: Model Context Protocol host subcommand (AUTO.MCP)
 
 USAGE:
-    fid canon [FILE] [--digest]   Print RFC 8785 canonical JSON of FILE (or stdin);
-                                  with --digest print only its sha256 digest
-    fid canon [FILE] --json       Print a result envelope (schema/envelope-v1.json)
-                                  with the canonical value and its digest
-{CTRL}
-    fid --version                 Print the version
-    fid --help                    Print this help
-
-With --json, stdout holds exactly one result envelope, also for usage and input errors.
-
-EXIT CODES (docs/cli/exit-codes.md):";
-
-const CANON: &str = "canon.canonicalize@1";
+    fid mcp --help    Print this help
+";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let json = args.iter().any(|a| a == "--json");
-    match args.first().map(String::as_str) {
-        Some("--version" | "-V") => {
-            println!("fid {}", env!("CARGO_PKG_VERSION"));
+    if args.first().map(String::as_str) == Some("canon") {
+        return canon(&args[1..]);
+    }
+    let tree = match embedded_tree() {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("error: embedded CLI tree is invalid: {e}");
+            return Fx::Internal.into();
+        }
+    };
+    let version = env!("CARGO_PKG_VERSION");
+    match resolve_args(&tree, &args) {
+        ResolveOutcome::Version => {
+            println!("{}", tree.render_version(version));
             ExitCode::SUCCESS
         }
-        None | Some("--help" | "-h" | "help") => {
-            println!("{}", help());
-            ExitCode::SUCCESS
-        }
-        Some("canon") => canon(&args[1..]),
-        Some("ctrl") => {
-            let env = |k: &str| std::env::var(k).ok();
-            let mut stdout = std::io::stdout().lock();
-            let mut stderr = std::io::stderr().lock();
-            fid_cli::ctrl::run(&args[1..], &env, &mut stdout, &mut stderr).into()
-        }
-        Some(other) => {
-            let msg = format!("unknown command `{other}`");
-            if !json {
-                eprintln!("error: {msg}\n\n{}", help());
-                return Fx::Usage.into();
+        ResolveOutcome::RootHelp { json: true } => match tree.help_json(version) {
+            Ok(bytes) => {
+                let mut stdout = std::io::stdout().lock();
+                if stdout.write_all(&bytes).is_err() {
+                    return Fx::Internal.into();
+                }
+                ExitCode::SUCCESS
             }
-            emit(true, &Envelope::failed(CLI_COMMAND_ID, ErrorCode::UsageError, &msg, None))
+            Err(e) => {
+                eprintln!("error: {e}");
+                Fx::Internal.into()
+            }
+        },
+        ResolveOutcome::RootHelp { json: false } => {
+            print!("{}", tree.render_root_help(version));
+            ExitCode::SUCCESS
+        }
+        ResolveOutcome::DomainHelp { domain } => match tree.render_domain_help(&domain) {
+            Some(text) => {
+                print!("{text}");
+                ExitCode::SUCCESS
+            }
+            None => {
+                eprintln!("error: unknown domain `{domain}`");
+                Fx::Usage.into()
+            }
+        },
+        ResolveOutcome::CommandHelp { domain, verb, major } => {
+            if let Some(cmd) = tree.find(&domain, &verb) {
+                if let Some(maj) = cmd.major(major) {
+                    print!("{}", tree.render_command_help(cmd, maj));
+                    return ExitCode::SUCCESS;
+                }
+            }
+            eprintln!("error: unknown command `{domain} {verb}`");
+            Fx::Usage.into()
+        }
+        ResolveOutcome::HostSubcommand { name, rest } => match name.as_str() {
+            "ctrl" => {
+                let env = |k: &str| std::env::var(k).ok();
+                let mut stdout = std::io::stdout().lock();
+                let mut stderr = std::io::stderr().lock();
+                fid_cli::ctrl::run(&rest, &env, &mut stdout, &mut stderr).into()
+            }
+            "mcp" => {
+                if rest.is_empty() || matches!(rest.first().map(String::as_str), Some("--help" | "-h")) {
+                    print!("{MCP_HELP}");
+                    ExitCode::SUCCESS
+                } else {
+                    let msg = format!("unknown mcp option `{}`", rest[0]);
+                    if rest.iter().any(|a| a == "--json") {
+                        emit(true, &Envelope::failed(CLI_COMMAND_ID, ErrorCode::UsageError, &msg, None))
+                    } else {
+                        eprintln!("error: {msg}");
+                        Fx::Usage.into()
+                    }
+                }
+            }
+            other => {
+                eprintln!("error: unknown host subcommand `{other}`");
+                Fx::Usage.into()
+            }
+        },
+        ResolveOutcome::Invoke { command_id, json, .. } => {
+            let msg = format!(
+                "command `{}` resolved from embedded CLI tree; runtime bus dispatch is provided by AUTO.CLI.DISPATCH",
+                command_id.as_str()
+            );
+            let env = Envelope::failed(command_id.as_str(), ErrorCode::PreconditionFailed, &msg, None);
+            if json {
+                emit(true, &env)
+            } else {
+                eprintln!("error: {msg}");
+                Fx::from_envelope(&env).into()
+            }
+        }
+        ResolveOutcome::UsageError { message, json, .. } => {
+            if json {
+                emit(true, &Envelope::failed(CLI_COMMAND_ID, ErrorCode::UsageError, &message, None))
+            } else {
+                eprintln!("error: {message}");
+                Fx::Usage.into()
+            }
         }
     }
-}
-
-/// The usage text followed by the exit-code table, generated from [`fid_cli::ExitCode`].
-fn help() -> String {
-    let mut s = USAGE.replace("{CTRL}", fid_cli::ctrl::USAGE);
-    for c in Fx::ALL {
-        s.push_str(&format!("\n    {}  {:<15} {}", c.code(), c.name(), c.meaning()));
-    }
-    s
 }
 
 /// Writes the final envelope through the single output sink.

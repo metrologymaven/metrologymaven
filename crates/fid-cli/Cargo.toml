@@ -16,6 +16,7 @@ fid-canon = { path = "../fid-canon" }
 # AUTO.CTRL.CLIENT: the control-channel client behind `fid ctrl status` and `fid ctrl ping`.
 fid-ctrl = { path = "../fid-ctrl" }
 fid-surface = { path = "../fid-surface" }
+fid-types = { path = "../fid-types" }
 
 [lints]
 workspace = true

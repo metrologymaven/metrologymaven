@@ -1228,6 +1228,7 @@ dependencies = [
  "fid-canon",
  "fid-ctrl",
  "fid-surface",
+ "fid-types",
 ]
 
 [[package]]
@@ -2276,6 +2277,7 @@ name = "fid-surface-gen"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-cli",
  "fid-mcp",
  "fid-surface",
  "fid-types",
