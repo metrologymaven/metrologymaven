@@ -1,0 +1,237 @@
+{
+  "schema": "hal-health-transitions/v1",
+  "license": "CC-BY-4.0",
+  "states": [
+    "OFFLINE",
+    "CONNECTING",
+    "INITIALIZING",
+    "WARMING_UP",
+    "READY",
+    "BUSY",
+    "FAULT",
+    "SAFETY_STOPPED",
+    "MAINTENANCE",
+    "INTERRUPTED"
+  ],
+  "actors": [
+    "Device",
+    "Runtime"
+  ],
+  "allowed": [
+    {
+      "from": "OFFLINE",
+      "to": "CONNECTING",
+      "by": "Runtime"
+    },
+    {
+      "from": "OFFLINE",
+      "to": "MAINTENANCE",
+      "by": "Device"
+    },
+    {
+      "from": "OFFLINE",
+      "to": "MAINTENANCE",
+      "by": "Runtime"
+    },
+    {
+      "from": "CONNECTING",
+      "to": "OFFLINE",
+      "by": "Runtime"
+    },
+    {
+      "from": "CONNECTING",
+      "to": "INITIALIZING",
+      "by": "Device"
+    },
+    {
+      "from": "CONNECTING",
+      "to": "FAULT",
+      "by": "Device"
+    },
+    {
+      "from": "CONNECTING",
+      "to": "FAULT",
+      "by": "Runtime"
+    },
+    {
+      "from": "CONNECTING",
+      "to": "MAINTENANCE",
+      "by": "Device"
+    },
+    {
+      "from": "CONNECTING",
+      "to": "INTERRUPTED",
+      "by": "Runtime"
+    },
+    {
+      "from": "INITIALIZING",
+      "to": "WARMING_UP",
+      "by": "Device"
+    },
+    {
+      "from": "INITIALIZING",
+      "to": "READY",
+      "by": "Device"
+    },
+    {
+      "from": "INITIALIZING",
+      "to": "FAULT",
+      "by": "Device"
+    },
+    {
+      "from": "INITIALIZING",
+      "to": "FAULT",
+      "by": "Runtime"
+    },
+    {
+      "from": "INITIALIZING",
+      "to": "SAFETY_STOPPED",
+      "by": "Device"
+    },
+    {
+      "from": "INITIALIZING",
+      "to": "MAINTENANCE",
+      "by": "Device"
+    },
+    {
+      "from": "INITIALIZING",
+      "to": "INTERRUPTED",
+      "by": "Runtime"
+    },
+    {
+      "from": "WARMING_UP",
+      "to": "READY",
+      "by": "Device"
+    },
+    {
+      "from": "WARMING_UP",
+      "to": "FAULT",
+      "by": "Device"
+    },
+    {
+      "from": "WARMING_UP",
+      "to": "FAULT",
+      "by": "Runtime"
+    },
+    {
+      "from": "WARMING_UP",
+      "to": "SAFETY_STOPPED",
+      "by": "Device"
+    },
+    {
+      "from": "WARMING_UP",
+      "to": "MAINTENANCE",
+      "by": "Device"
+    },
+    {
+      "from": "WARMING_UP",
+      "to": "INTERRUPTED",
+      "by": "Runtime"
+    },
+    {
+      "from": "READY",
+      "to": "OFFLINE",
+      "by": "Runtime"
+    },
+    {
+      "from": "READY",
+      "to": "BUSY",
+      "by": "Device"
+    },
+    {
+      "from": "READY",
+      "to": "FAULT",
+      "by": "Device"
+    },
+    {
+      "from": "READY",
+      "to": "FAULT",
+      "by": "Runtime"
+    },
+    {
+      "from": "READY",
+      "to": "SAFETY_STOPPED",
+      "by": "Device"
+    },
+    {
+      "from": "READY",
+      "to": "MAINTENANCE",
+      "by": "Device"
+    },
+    {
+      "from": "READY",
+      "to": "INTERRUPTED",
+      "by": "Runtime"
+    },
+    {
+      "from": "BUSY",
+      "to": "READY",
+      "by": "Device"
+    },
+    {
+      "from": "BUSY",
+      "to": "FAULT",
+      "by": "Device"
+    },
+    {
+      "from": "BUSY",
+      "to": "FAULT",
+      "by": "Runtime"
+    },
+    {
+      "from": "BUSY",
+      "to": "SAFETY_STOPPED",
+      "by": "Device"
+    },
+    {
+      "from": "BUSY",
+      "to": "INTERRUPTED",
+      "by": "Runtime"
+    },
+    {
+      "from": "FAULT",
+      "to": "OFFLINE",
+      "by": "Runtime"
+    },
+    {
+      "from": "FAULT",
+      "to": "SAFETY_STOPPED",
+      "by": "Device"
+    },
+    {
+      "from": "FAULT",
+      "to": "MAINTENANCE",
+      "by": "Device"
+    },
+    {
+      "from": "SAFETY_STOPPED",
+      "to": "INITIALIZING",
+      "by": "Device"
+    },
+    {
+      "from": "MAINTENANCE",
+      "to": "OFFLINE",
+      "by": "Device"
+    },
+    {
+      "from": "MAINTENANCE",
+      "to": "OFFLINE",
+      "by": "Runtime"
+    },
+    {
+      "from": "MAINTENANCE",
+      "to": "SAFETY_STOPPED",
+      "by": "Device"
+    },
+    {
+      "from": "INTERRUPTED",
+      "to": "OFFLINE",
+      "by": "Runtime"
+    },
+    {
+      "from": "INTERRUPTED",
+      "to": "CONNECTING",
+      "by": "Runtime"
+    }
+  ]
+}
