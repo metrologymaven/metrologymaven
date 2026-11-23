@@ -8,8 +8,10 @@
 //!   only place where a value of record becomes text.
 //! - [`tmpl`]: report templates; the template file format (`RPT.MODEL.TMPL.FORMAT`) and
 //!   the slot language (`RPT.MODEL.TMPL.SLOT`), and template versions and commands
-//!   (`RPT.MODEL.TMPL.VER`).
+//! - [`balloon`]: 2D drawing revision import, sheet coordinates and ballooning
+//!   (`RPT.BALLOON`).
 
+pub mod balloon;
 pub mod bind;
 pub mod doc;
 pub mod fmt;

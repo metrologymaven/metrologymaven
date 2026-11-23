@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid report add-drawing-balloon, fid report list-drawing-balloon, fid report set-size-drawing-balloon]
 mcp: [report_add_drawing_balloon, report_list_drawing_balloon, report_set_size_drawing_balloon]
 journal: [report.add_drawing_balloon@1, report.list_drawing_balloon@1, report.set_size_drawing_balloon@1]
-updated: 2026-11-17
+built_in: [fid-report]
+updated: 2026-11-22
 ---
 
 # RPT.BALLOON.SHEET.IMPORT: Drawing revision import and sheet coordinates

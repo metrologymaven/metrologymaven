@@ -38,6 +38,13 @@ fid-types = { path = "../fid-types" }
 # (RPT.MODEL.TMPL.VER REQ-007). Layer services; already in this crate's tree through
 # fid-gdt and fid-io-res, so no new crate in the lock.
 fid-io-reg = { path = "../fid-io-reg" }
+# Bounded 2D drawing reader for PDF page structure, PNG and TIFF (IO.REG.PLUGIN.DRAW):
+# used by RPT.BALLOON.SHEET.IMPORT without parsing PDF or images inside RPT. Layer services.
+fid-io-draw = { path = "../fid-io-draw" }
+# Content-addressed blob store (CORE.STO.CAS): stores imported drawing source bytes and
+# decoded raster blobs by SHA-256 digest (RPT.BALLOON.SHEET.IMPORT). Layer model; already in
+# this crate's transitive tree through fid-io-reg.
+fid-store = { path = "../fid-store" }
 
 [features]
 # Test-only block kinds `text` and `image` (module `doc::stub`), and `table` with its resolver
