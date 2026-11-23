@@ -28,6 +28,7 @@ pub mod diagnostics;
 pub mod element;
 mod error;
 pub mod hier;
+pub mod matrix;
 pub mod model;
 pub mod residuals;
 pub mod rps321;
@@ -54,6 +55,11 @@ pub use hier::{
     AlignmentHierarchy, HierError, MirrorFrame, ParentTarget, SetParentCommit, SetParentEvent, SetParentParams,
     SetParentResult, TransformUpdated, CLI_SET_PARENT, MAX_EVENT_BYTES, MAX_HIERARCHY_DEPTH, MCP_SET_PARENT,
     SET_PARENT,
+};
+pub use matrix::{
+    invoke_set_matrix_cli, invoke_set_matrix_mcp, replay_set_matrix, set_matrix, set_matrix_command_def,
+    ConversionRecord, SetMatrixCommit, SetMatrixError, SetMatrixEvent, SetMatrixForm, SetMatrixParams, TrsRotationSpec,
+    CLI_SET_MATRIX, MAX_MATRIX_EVENT_BYTES, MAX_SOURCE_CHARS, MCP_SET_MATRIX, SET_MATRIX,
 };
 pub use model::{
     AlignmentModel, CreateRequest, Created, ElementLookup, RecomputeEntry, RecomputeItem, MAX_ALIGNMENTS,

@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid align set-matrix]
 mcp: [align_set_matrix]
 journal: [align.set_matrix@1]
-updated: 2026-11-16
+built_in: [fid-align-solve, fid-align]
+updated: 2026-11-23
 ---
 
 # ALN.XFM.MATRIX: Known-matrix transform entry and validation
