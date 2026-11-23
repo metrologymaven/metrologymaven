@@ -167,6 +167,126 @@ pub fn fmt_requirement(ch: &Characteristic, ctx: &FmtContext<'_>) -> Result<Valu
     finish(cid, rep, side, Vec::new(), Vec::new(), Vec::new(), ctx)
 }
 
+/// Formatted uncertainty cell text from [`fmt_uncertainty`] (`RPT.MODEL.BLOCKS.TABLE`).
+#[derive(Debug, Clone, PartialEq)]
+pub enum UncertaintyText {
+    /// UEC-0: fixed catalog text `"not evaluated"`, never a number (REQ-RPT.MODEL.FMT-011).
+    NotEvaluated(String),
+    /// UEC-1..3 with an expanded uncertainty `U`, formatted by the kernel formatter.
+    Expanded {
+        /// Formatted expanded uncertainty value with its `FormatterId`.
+        value: ValueText,
+        /// Evidence class wire label (e.g. `"UEC-1"`).
+        class_label: String,
+    },
+    /// UEC-1..3 without an expanded uncertainty `U`.
+    ClassOnly(String),
+}
+
+impl UncertaintyText {
+    /// Display string of this uncertainty cell.
+    pub fn display(&self) -> &str {
+        match self {
+            UncertaintyText::NotEvaluated(s) | UncertaintyText::ClassOnly(s) => s.as_str(),
+            UncertaintyText::Expanded { value, .. } => value.display.as_str(),
+        }
+    }
+
+    /// Underlying formatted [`ValueText`], when an expanded uncertainty number was formatted.
+    pub fn value_text(&self) -> Option<&ValueText> {
+        match self {
+            UncertaintyText::Expanded { value, .. } => Some(value),
+            UncertaintyText::NotEvaluated(_) | UncertaintyText::ClassOnly(_) => None,
+        }
+    }
+}
+
+/// Formats a specification limit (`lower` or `upper`) of `ch` through the kernel formatter
+/// (`RPT.MODEL.BLOCKS.TABLE`, REQ-005).
+pub fn fmt_limit(
+    ch: &Characteristic,
+    limit: fid_num::kdec::Decimal,
+    limit_unit: LimitUnit,
+    ctx: &FmtContext<'_>,
+) -> Result<ValueText, FmtError> {
+    let cid = ch.id.as_str();
+    let kind = ch.kind.ok_or_else(|| unformattable(cid, "no_formatter_kind"))?;
+    let unit = display_unit(cid, kind, ch, ctx)?;
+    let decimals = precision(cid, ch, unit, ctx)?;
+    #[allow(clippy::disallowed_methods)]
+    let raw = limit.to_f64().map_err(|_| unformattable(cid, "non_finite"))?;
+    let si = match (kind, limit_unit) {
+        (ValueKind::Angle, LimitUnit::Deg) => raw * (core::f64::consts::PI / 180.0),
+        (_, LimitUnit::Si) => raw,
+        (_, LimitUnit::Deg) => return Err(unformattable(cid, "limit_unit_mismatch")),
+    };
+    if !si.is_finite() {
+        return Err(unformattable(cid, "non_finite"));
+    }
+    let spec = FormatSpec { formatter: kind.formatter(), unit, precision: Precision::Decimals(decimals), limits: None };
+    let rep = call(cid, &kfmt::format, si, &spec)?;
+    let side = side_of(rep.side);
+    finish(cid, rep, side, Vec::new(), Vec::new(), Vec::new(), ctx)
+}
+
+/// Formats the signed deviation (`measured - nominal`) of `record` against `ch` through
+/// the kernel formatter (`RPT.MODEL.BLOCKS.TABLE`, REQ-005).
+pub fn fmt_deviation(
+    record: &ValueRecord<'_>,
+    ch: &Characteristic,
+    ctx: &FmtContext<'_>,
+) -> Result<ValueText, FmtError> {
+    let rid = record.id.as_str();
+    let kind = ch.kind.ok_or_else(|| unformattable(rid, "no_formatter_kind"))?;
+    let nominal = ch.nominal.ok_or_else(|| unformattable(rid, "no_nominal"))?.get();
+    let value = record.value.get();
+    if !(value.is_finite() && nominal.is_finite()) {
+        return Err(unformattable(rid, "non_finite"));
+    }
+    let deviation = value - nominal;
+    if !deviation.is_finite() {
+        return Err(unformattable(rid, "non_finite"));
+    }
+    let lbls = labels(record)?;
+    let unit = display_unit(rid, kind, ch, ctx)?;
+    let decimals = precision(rid, ch, unit, ctx)?;
+    let spec = FormatSpec { formatter: kind.formatter(), unit, precision: Precision::Decimals(decimals), limits: None };
+    let rep = call(rid, &kfmt::format, deviation, &spec)?;
+    let side = side_of(rep.side);
+    finish(rid, rep, side, Vec::new(), lbls, Vec::new(), ctx)
+}
+
+/// Formats the uncertainty status of `record`: UEC-0 renders as `"not evaluated"` from the
+/// message catalog (never a number); UEC-1..3 formats expanded uncertainty `U` through the
+/// kernel formatter when present, or returns the evidence class label otherwise.
+pub fn fmt_uncertainty(
+    record: &ValueRecord<'_>,
+    ch: &Characteristic,
+    ctx: &FmtContext<'_>,
+) -> Result<UncertaintyText, FmtError> {
+    let rid = record.id.as_str();
+    let lbls = labels(record)?;
+    let class = record.statement.class();
+    if class == fid_kunc::EvidenceClass::Uec0 {
+        return Ok(UncertaintyText::NotEvaluated(Label::Uec(fid_kunc::EvidenceClass::Uec0).text(ctx.catalog)));
+    }
+    let class_label = Label::Uec(class).text(ctx.catalog);
+    let Some(exp) = record.statement.expanded() else {
+        return Ok(UncertaintyText::ClassOnly(class_label));
+    };
+    let kind = ch.kind.ok_or_else(|| unformattable(rid, "no_formatter_kind"))?;
+    if !exp.value.is_finite() {
+        return Err(unformattable(rid, "non_finite"));
+    }
+    let unit = display_unit(rid, kind, ch, ctx)?;
+    let decimals = precision(rid, ch, unit, ctx)?;
+    let spec = FormatSpec { formatter: kind.formatter(), unit, precision: Precision::Decimals(decimals), limits: None };
+    let rep = call(rid, &kfmt::format, exp.value, &spec)?;
+    let side = side_of(rep.side);
+    let value = finish(rid, rep, side, Vec::new(), lbls, Vec::new(), ctx)?;
+    Ok(UncertaintyText::Expanded { value, class_label })
+}
+
 /// The decision outcome and rule ID of a value of record as text (REQ-RPT.MODEL.FMT-007),
 /// with the provisional label when the record's interpretation is provisional
 /// (REQ-RPT.MODEL.FMT-015). Fails with `report.unformattable`
