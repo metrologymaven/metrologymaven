@@ -1,0 +1,17 @@
+# Spec card (UNC.PROP.VALID). Cite designators and clause numbers only; never paste standards text.
+id = "unc.prop.validate_lpu@1.0.0"
+title = "Validation of LPU against Monte Carlo"
+method = "Compares an LPU coverage interval [y - U_p, y + U_p] against a Monte Carlo coverage interval [y_low, y_high] at the same coverage probability p following JCGM 101:2008. Expresses the Monte Carlo standard uncertainty u_mcm rounded to n_dig significant decimal digits (default 2) as c * 10^l via exact integer/decimal extraction (prop::mcm::adapt::tolerance, no log10 and no target-dependent power loops), setting delta = 0.5 * 10^l. Computes d_low = |(y - U_p) - y_low| and d_high = |(y + U_p) - y_high| with plain IEEE-754 binary64 subtraction (no FMA) and returns validated = true iff both d_low <= delta and d_high <= delta compared exactly against 0.5 * 10^l. Refuses non-finite inputs, mismatched or out-of-range coverage probabilities, negative u_mcm, invalid n_dig, or empty/reversed intervals with incomparable{reason}."
+applicability = "An LPU estimate y and positive expanded uncertainty U_p paired with an MCM coverage interval [y_low, y_high] and non-negative standard uncertainty u_mcm at the same coverage probability p in (0, 1)."
+references = [
+  "JCGM 101:2008, clause 8 (validation of the GUM uncertainty framework using a Monte Carlo method) [unverified: clause numbering]",
+]
+determinism = "D0"
+input_arity = "8"
+failure_modes = [
+  "Any non-finite input returns incomparable{non_finite}.",
+  "Mismatched coverage probabilities p_lpu != p_mcm return incomparable{coverage_probability_mismatch}.",
+  "An empty or reversed LPU or MCM interval returns incomparable{empty_or_reversed_lpu_interval|empty_or_reversed_mcm_interval}.",
+  "n_dig outside 1..=17 returns incomparable{invalid_n_dig}.",
+]
+validation = "Validates fixtures/unc/valid/linear_sum.json (Y = X1 + X2, seed 0xA11CE), rejects fixtures/unc/valid/square_near_zero.json (Y = X^2), reproduces exact delta on every row of fixtures/unc/valid/delta_cases.csv, rejects mismatched coverage probabilities with incomparable, and produces bit-identical canonical JSON digests across x86-64, ARM64 and wasm32."

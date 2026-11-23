@@ -1,0 +1,35 @@
+{
+  "title": "UNC.PROP.VALID AC-1: linear additive model Y = X1 + X2 (both normal, seed 0xA11CE)",
+  "license": "CC-BY-4.0",
+  "model": "Y = X1 + X2; X1 ~ N(10.0, 0.3), X2 ~ N(5.0, 0.4)",
+  "seed": "0xA11CE",
+  "trials": 200000,
+  "input": {
+    "y": 15.0,
+    "y_hex": "402e000000000000",
+    "u_p": 0.9799819922700268,
+    "u_p_hex": "3fef5c0331eeff82",
+    "p_lpu": 0.95,
+    "p_lpu_hex": "3fee666666666666",
+    "y_low": 14.021835991238891,
+    "y_low_hex": "402c0b2e16487e5a",
+    "y_high": 15.978647760293631,
+    "y_high_hex": "402ff51151b98793",
+    "p_mcm": 0.95,
+    "p_mcm_hex": "3fee666666666666",
+    "u_mcm": 0.4983761408987924,
+    "u_mcm_hex": "3fdfe5650a91168d",
+    "y_mcm_mean": 14.998807037503374,
+    "n_dig": 2
+  },
+  "expected": {
+    "validated": true,
+    "d_low": 0.0018179835089178198,
+    "d_low_hex": "3f5dc92cedca4000",
+    "d_high": 0.0013342319763953725,
+    "d_high_hex": "3f55dc2cad0ca000",
+    "delta": 0.005,
+    "delta_hex": "3f747ae147ae147b",
+    "exp10": -2
+  }
+}

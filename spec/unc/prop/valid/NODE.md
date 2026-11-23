@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-kunc]
+built_pr: 522
+updated: 2026-11-22
 ---
 
 # UNC.PROP.VALID: Validation of LPU against Monte Carlo
