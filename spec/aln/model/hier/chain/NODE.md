@@ -17,7 +17,9 @@ determinism: D0
 cli: [fid align set-parent]
 mcp: [align_set_parent]
 journal: [align.set_parent@1]
-updated: 2026-11-17
+built_in: [fid-align]
+built_pr: 508
+updated: 2026-11-22
 ---
 
 # ALN.MODEL.HIER.CHAIN: Alignment parent chain, composition to root and invalidation

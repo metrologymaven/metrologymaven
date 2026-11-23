@@ -160,6 +160,17 @@ impl AlignmentModel {
         Ok(())
     }
 
+    /// Replaces an existing alignment in place (crate-internal; caller has validated all
+    /// hierarchy, dependency and state invariants first).
+    pub(crate) fn replace_alignment(&mut self, alignment: Alignment) -> Result<(), AlignError> {
+        let id = alignment.id();
+        if !self.alignments.contains_key(&id) {
+            return Err(AlignError::NotFound(id));
+        }
+        self.alignments.insert(id, alignment);
+        Ok(())
+    }
+
     fn digest_of(&self, world: &dyn ElementLookup, id: &Uuid) -> Option<Digest> {
         match self.alignments.get(id) {
             Some(a) => Some(a.digest()),
@@ -172,11 +183,11 @@ impl AlignmentModel {
     /// Order: budget; provenance; inputs (no repeats, each known to `world` and to `edges`,
     /// else `input_missing`); solver for exactly `req.algorithm` (else `method_unavailable`);
     /// parent (an alignment of this model, else `not_found`; status `ok`, else
-    /// `parent_unusable`; an input that is an alignment must be `ok` too, else
-    /// `parent_unusable`); solve (a solver error is returned unchanged); then a fresh UUIDv7
-    /// from `ids` (the only step after the solve that draws an observation), the digest, one
-    /// edge from each input and the parent, and insertion. A refusal before the ID is drawn
-    /// draws nothing.
+    /// `parent_unusable`; depth at most 64 alignments, else `hierarchy_too_deep`; an input that
+    /// is an alignment must be `ok` too, else `parent_unusable`); solve (a solver error is
+    /// returned unchanged); then a fresh UUIDv7 from `ids` (the only step after the solve that
+    /// draws an observation), the digest, one edge from each input and the parent, and
+    /// insertion. A refusal before the ID is drawn draws nothing.
     pub fn create(
         &mut self,
         req: &CreateRequest,
@@ -217,6 +228,14 @@ impl AlignmentModel {
                 }
                 if p.status() != AlignmentStatus::Ok {
                     return Err(AlignError::ParentUnusable(pid));
+                }
+                let next_depth = crate::hier::chain_depth(self, pid).map_err(|e| match e {
+                    crate::hier::HierError::HierarchyTooDeep { depth } => AlignError::HierarchyTooDeep(depth),
+                    crate::hier::HierError::NotFound(id) => AlignError::NotFound(id),
+                    _ => AlignError::Internal("parent hierarchy invalid"),
+                })? + 1;
+                if next_depth > crate::hier::MAX_HIERARCHY_DEPTH {
+                    return Err(AlignError::HierarchyTooDeep(next_depth));
                 }
                 (Some(ParentRef { id: pid, digest: p.digest() }), Some(*p.transform()))
             }

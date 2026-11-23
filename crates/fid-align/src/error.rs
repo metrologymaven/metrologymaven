@@ -60,6 +60,8 @@ pub enum AlignError {
     ReportChanged,
     /// A residual page after the first (`offset > 0`) without the report `digest` it pages.
     CursorUnpinned,
+    /// Resulting alignment chain from an alignment to the root would exceed 64 alignments.
+    HierarchyTooDeep(usize),
     /// A fault that cannot be the caller's mistake.
     Internal(&'static str),
 }
@@ -91,6 +93,7 @@ impl AlignError {
             AlignError::InvalidCursor { .. } => "invalid_cursor",
             AlignError::ReportChanged => "report_changed",
             AlignError::CursorUnpinned => "cursor_unpinned",
+            AlignError::HierarchyTooDeep(_) => "hierarchy_too_deep",
             AlignError::Internal(_) => "internal",
         }
     }
@@ -128,6 +131,7 @@ impl fmt::Display for AlignError {
             AlignError::Id(e) => write!(f, ": {e}"),
             AlignError::PageTooLarge(n) => write!(f, ": limit {n}"),
             AlignError::InvalidCursor { offset, len } => write!(f, ": offset {offset} past {len} entries"),
+            AlignError::HierarchyTooDeep(d) => write!(f, ": depth {d}"),
             AlignError::Solver(_)
             | AlignError::DigestMismatch
             | AlignError::ReportChanged

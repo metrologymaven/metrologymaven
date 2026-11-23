@@ -310,8 +310,8 @@ fn def(
 }
 
 /// The registry definitions of `align.get_alignment@1`, `align.get_diagnostics@1`,
-/// `align.get_residuals@1` and `align.list_alignments@1`, in that (ascending) order, built through
-/// [`CommandDef::from_value`].
+/// `align.get_residuals@1`, `align.list_alignments@1` and `align.set_parent@1`, in that
+/// (ascending) order, built through [`CommandDef::from_value`].
 pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
     let get_params = obj([
         ("type", text("object")),
@@ -414,5 +414,6 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
             list_params,
             list_result,
         )?,
+        crate::hier::set_parent_command_def()?,
     ])
 }

@@ -1,0 +1,1966 @@
+{
+  "alignments": [
+    {
+      "depth": 1,
+      "id": "00000000-0000-7000-8000-000000000101",
+      "parent": null,
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feffdc4c78c4f53",
+            "0x3f972f225e83dd11",
+            "0xbf7733254de99074"
+          ],
+          [
+            "0xbf972846fe08a079",
+            "0x3feffdd115b5ff2c",
+            "0x3f7301bcff9e4ff1"
+          ],
+          [
+            "0x3f779fba0eadd5f8",
+            "0xbf727a1a055ca405",
+            "0x3fefffc7c7fed035"
+          ]
+        ],
+        "t": [
+          "0xbfaedd00ed697f17",
+          "0xbf873549d6f8a268",
+          "0x3f2f858d9179ac00"
+        ]
+      }
+    },
+    {
+      "depth": 2,
+      "id": "00000000-0000-7000-8000-000000000102",
+      "parent": "00000000-0000-7000-8000-000000000101",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefcf229e272f1d",
+            "0xbfb34bf01e369168",
+            "0xbfb42d85d4111293"
+          ],
+          [
+            "0x3fb7e2a60d51aeb2",
+            "0x3feec878a46616e3",
+            "0x3fd06e1b7ac76b41"
+          ],
+          [
+            "0x3face9ce709a676a",
+            "0xbfd0cd81ba157437",
+            "0x3feed313fcec17d4"
+          ]
+        ],
+        "t": [
+          "0xbfa0935477bdf42e",
+          "0x3fa18affedf47880",
+          "0x3fb608495b65c2c8"
+        ]
+      }
+    },
+    {
+      "depth": 3,
+      "id": "00000000-0000-7000-8000-000000000103",
+      "parent": "00000000-0000-7000-8000-000000000102",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefecc3bf33caaf",
+            "0xbf9090ac41fb36a6",
+            "0xbfb1096f08c02f74"
+          ],
+          [
+            "0x3f812597e823e32f",
+            "0x3fefc87c667ae7b1",
+            "0xbfbdacde3ed56bcb"
+          ],
+          [
+            "0x3fb166c587bda358",
+            "0x3fbd76839f93bca7",
+            "0x3fefb67d8e86a4f8"
+          ]
+        ],
+        "t": [
+          "0xbfb2a6f088d7d0ad",
+          "0xbfb1da0bacd7e95d",
+          "0xbf8bc918d92a1600"
+        ]
+      }
+    },
+    {
+      "depth": 4,
+      "id": "00000000-0000-7000-8000-000000000104",
+      "parent": "00000000-0000-7000-8000-000000000103",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feffb66bbc5cf1b",
+            "0xbfa0d88b18bb6fea",
+            "0xbf79dca62cad0f26"
+          ],
+          [
+            "0x3fa0dba2f6df080a",
+            "0x3feffb80cab4ddfc",
+            "0x3f6e124aba3526f4"
+          ],
+          [
+            "0x3f795a5eacc01ce2",
+            "0xbf6fc1f304cfc904",
+            "0x3fefffc81139a907"
+          ]
+        ],
+        "t": [
+          "0x3f7ec32349a84f00",
+          "0x3f8907afe2b64080",
+          "0xbf6d0796105aee00"
+        ]
+      }
+    },
+    {
+      "depth": 5,
+      "id": "00000000-0000-7000-8000-000000000105",
+      "parent": "00000000-0000-7000-8000-000000000104",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef8cad6364f235",
+            "0x3fc0b96b1b7e8df4",
+            "0x3fbab57dc5698a42"
+          ],
+          [
+            "0xbfc3034b7f27310a",
+            "0x3fef11c9365f2c61",
+            "0x3fc8081025e4555b"
+          ],
+          [
+            "0xbfb3a706a37a4964",
+            "0xbfc9ad457827260b",
+            "0x3fef40ce1c993c66"
+          ]
+        ],
+        "t": [
+          "0xbf5ee6a22c53e680",
+          "0x3fb6e6353d2960be",
+          "0x3fa466d63adacf50"
+        ]
+      }
+    },
+    {
+      "depth": 6,
+      "id": "00000000-0000-7000-8000-000000000106",
+      "parent": "00000000-0000-7000-8000-000000000105",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefd2310cdbf2f4",
+            "0xbf98d3c50c9f2321",
+            "0x3fba50103a67999d"
+          ],
+          [
+            "0x3f9d0eb145c11df3",
+            "0x3feff67dce44117e",
+            "0xbfa3ed7c5a184fd9"
+          ],
+          [
+            "0xbfba0a66b01a8661",
+            "0x3fa54f3fbb030833",
+            "0x3fefce5f4be51bcc"
+          ]
+        ],
+        "t": [
+          "0x3fb0669055eae580",
+          "0x3fb29ae86a43298a",
+          "0x3fa33b11e785d444"
+        ]
+      }
+    },
+    {
+      "depth": 7,
+      "id": "00000000-0000-7000-8000-000000000107",
+      "parent": "00000000-0000-7000-8000-000000000106",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef3fd5c5f9a633",
+            "0xbf90e650b0a733f8",
+            "0x3fcb7b06c4f2f1e7"
+          ],
+          [
+            "0x3fa840be74e1280a",
+            "0x3fefa6b202232505",
+            "0xbfc1d8c8dd34ac36"
+          ],
+          [
+            "0xbfcae2eee37e2d15",
+            "0x3fc2bada8622d116",
+            "0x3feeef0788c5d06e"
+          ]
+        ],
+        "t": [
+          "0x3fb90bd315dc2560",
+          "0x3faa424286d1c834",
+          "0xbfb94155914d0014"
+        ]
+      }
+    },
+    {
+      "depth": 8,
+      "id": "00000000-0000-7000-8000-000000000108",
+      "parent": "00000000-0000-7000-8000-000000000107",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feffb9b46e722b5",
+            "0x3f9ed2587cc815af",
+            "0x3f8a6a678d973f18"
+          ],
+          [
+            "0xbf9ec4ae00b9d37f",
+            "0x3feffc3a724bfde9",
+            "0xbf71458589aec9af"
+          ],
+          [
+            "0xbf8aa9d5549ad8d2",
+            "0x3f6f598969642bc2",
+            "0x3fefff3ee67eddfa"
+          ]
+        ],
+        "t": [
+          "0xbfa67f36e1e86774",
+          "0xbfafe5a92977c3d7",
+          "0xbfb8567270ecf445"
+        ]
+      }
+    },
+    {
+      "depth": 9,
+      "id": "00000000-0000-7000-8000-000000000109",
+      "parent": "00000000-0000-7000-8000-000000000108",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feef568e922351e",
+            "0xbfc9beabd2e3083f",
+            "0xbfc3a6ffa7f46ce3"
+          ],
+          [
+            "0x3fcd72acbbd8b049",
+            "0x3fee753d35369d7f",
+            "0x3fc9f53d4d6b7407"
+          ],
+          [
+            "0x3fbaf7fe056d0a47",
+            "0xbfcda26d5d0fdb83",
+            "0x3feef28fb8a351f5"
+          ]
+        ],
+        "t": [
+          "0xbfb1b5b4af8145a8",
+          "0xbf839dd93c1ddc28",
+          "0xbf819b1b728dd150"
+        ]
+      }
+    },
+    {
+      "depth": 10,
+      "id": "00000000-0000-7000-8000-00000000010a",
+      "parent": "00000000-0000-7000-8000-000000000109",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef98335c9345a2",
+            "0x3faca9766cc634e0",
+            "0xbfc3018022d28100"
+          ],
+          [
+            "0xbf91550ebdc9eb31",
+            "0x3feef5efa3d917a3",
+            "0x3fd0246579d1d251"
+          ],
+          [
+            "0x3fc432248a288c8e",
+            "0xbfcf8db7aaf337d2",
+            "0x3fee994525ac4f37"
+          ]
+        ],
+        "t": [
+          "0xbfaaece6b3c818e4",
+          "0x3f723e07b7a8ab80",
+          "0xbf935e63654f3708"
+        ]
+      }
+    },
+    {
+      "depth": 11,
+      "id": "00000000-0000-7000-8000-00000000010b",
+      "parent": "00000000-0000-7000-8000-00000000010a",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef413d8fd21fc6",
+            "0x3f9ca4ebb8113aa1",
+            "0xbfcb3a39ed3ec437"
+          ],
+          [
+            "0xbfb334404ba8da4a",
+            "0x3fef262b6ebc4ff4",
+            "0xbfcbb457e87eef0a"
+          ],
+          [
+            "0x3fc9ba7d8d07000d",
+            "0x3fcd1a11bf10f978",
+            "0x3fee7dac39c32904"
+          ]
+        ],
+        "t": [
+          "0xbfb1e4d0a1f12112",
+          "0x3fb95ae99ca6ae56",
+          "0x3f8b4ec8c807fed0"
+        ]
+      }
+    },
+    {
+      "depth": 12,
+      "id": "00000000-0000-7000-8000-00000000010c",
+      "parent": "00000000-0000-7000-8000-00000000010b",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefee66745615b2",
+            "0x3fa5724ab62d1502",
+            "0xbfa9cabf06aa47d2"
+          ],
+          [
+            "0xbfa50993f4c2587e",
+            "0x3feff7ed0600b685",
+            "0x3f9131e930df6d99"
+          ],
+          [
+            "0x3faa206e633ec8dc",
+            "0xbf8e13b6eded670e",
+            "0x3feff471577f3631"
+          ]
+        ],
+        "t": [
+          "0xbfb3fec2fa25367f",
+          "0xbfb0e69b39dcdaf4",
+          "0x3fb7313d535985da"
+        ]
+      }
+    },
+    {
+      "depth": 13,
+      "id": "00000000-0000-7000-8000-00000000010d",
+      "parent": "00000000-0000-7000-8000-00000000010c",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef7169205ae775",
+            "0x3fc79a02b6e40e73",
+            "0x3f9720c5b6120ffc"
+          ],
+          [
+            "0xbfc7c5573d1f178d",
+            "0x3fef1ae13bad2b89",
+            "0x3fc266c02cc09bc9"
+          ],
+          [
+            "0x3f72a69d9a762a82",
+            "0xbfc29e32ed049ac5",
+            "0x3fefa8cb33902304"
+          ]
+        ],
+        "t": [
+          "0x3fb3d378b7a32086",
+          "0xbfa1e890e86fcc3a",
+          "0x3fa42fc762ab0948"
+        ]
+      }
+    },
+    {
+      "depth": 14,
+      "id": "00000000-0000-7000-8000-00000000010e",
+      "parent": "00000000-0000-7000-8000-00000000010d",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feffdfa2fe4ce2d",
+            "0xbf78cdbb0fd192ed",
+            "0x3f95e493116d90e8"
+          ],
+          [
+            "0x3f78b089b2616cc5",
+            "0x3fefffd7f180fbc7",
+            "0x3f56630f8b6b78c6"
+          ],
+          [
+            "0xbf95e6a2f0ef17f2",
+            "0xbf54451e940f3066",
+            "0x3feffe1eb07827ac"
+          ]
+        ],
+        "t": [
+          "0x3fb8e76db038f1f8",
+          "0x3faf767e6f06d51c",
+          "0xbf71995b91a324d0"
+        ]
+      }
+    },
+    {
+      "depth": 15,
+      "id": "00000000-0000-7000-8000-00000000010f",
+      "parent": "00000000-0000-7000-8000-00000000010e",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefe55f21db7a0c",
+            "0xbfb40ce1c9005d3a",
+            "0x3f9353c7734f7433"
+          ],
+          [
+            "0x3fb4524fe91af146",
+            "0x3fefd53cd3a54c4a",
+            "0xbfb06a34d2a67b15"
+          ],
+          [
+            "0xbf8c2aea8f17b5a1",
+            "0x3fb0bebc9f95ea81",
+            "0x3fefedae0bd5c624"
+          ]
+        ],
+        "t": [
+          "0xbfa1ac72d8c2a736",
+          "0x3fa94cc2d788d4b8",
+          "0x3fb82a7de36cd186"
+        ]
+      }
+    },
+    {
+      "depth": 16,
+      "id": "00000000-0000-7000-8000-000000000110",
+      "parent": "00000000-0000-7000-8000-00000000010f",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef7af78501b693",
+            "0x3fc6ce647a36e80c",
+            "0x3f962e8ee272f2ef"
+          ],
+          [
+            "0xbfc563303078f782",
+            "0x3fee809719542846",
+            "0xbfd0208618d00fab"
+          ],
+          [
+            "0xbfb0c7926ecf1f3f",
+            "0x3fcf445ad105c462",
+            "0x3feef5aabce383d5"
+          ]
+        ],
+        "t": [
+          "0xbf7c6f4a26ee8a80",
+          "0xbfb434a909e02730",
+          "0xbf899c88aeaae9d0"
+        ]
+      }
+    },
+    {
+      "depth": 17,
+      "id": "00000000-0000-7000-8000-000000000111",
+      "parent": "00000000-0000-7000-8000-000000000110",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feee8a96a8bf983",
+            "0x3fb4a07786e432f0",
+            "0x3fcf7eb97e40b20d"
+          ],
+          [
+            "0xbfc0a55345eed5a3",
+            "0x3fef20c08db820d5",
+            "0x3fc8923603dcf25c"
+          ],
+          [
+            "0xbfcca82cdca844cf",
+            "0xbfcbd43dc97e68ce",
+            "0x3fee66dd2c4605e2"
+          ]
+        ],
+        "t": [
+          "0xbfa3ed1fcf50de6d",
+          "0x3fb80f6858edabbc",
+          "0x3fa60d7cbdc1fa3c"
+        ]
+      }
+    },
+    {
+      "depth": 18,
+      "id": "00000000-0000-7000-8000-000000000112",
+      "parent": "00000000-0000-7000-8000-000000000111",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefca0bb903d3dc",
+            "0x3fbc2ff609b45126",
+            "0x3fa03c4a2161d562"
+          ],
+          [
+            "0xbfbc17739e770a78",
+            "0x3fefcdccb86ac29b",
+            "0xbf8b40e64c349544"
+          ],
+          [
+            "0xbfa0e2defc26ec5c",
+            "0x3f83f29f55ae9264",
+            "0x3feffb2793f89db4"
+          ]
+        ],
+        "t": [
+          "0xbf9fdfd88d18517c",
+          "0xbfabcdfa5aa05dcd",
+          "0xbf9d5c7ab7170c7c"
+        ]
+      }
+    },
+    {
+      "depth": 19,
+      "id": "00000000-0000-7000-8000-000000000113",
+      "parent": "00000000-0000-7000-8000-000000000112",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fee897d47b1a715",
+            "0x3f68f5d1dd84255f",
+            "0xbfd320faa05fed2f"
+          ],
+          [
+            "0xbf8045c1091ec5cb",
+            "0x3feffecc49e8814f",
+            "0xbf8f147597b0fb28"
+          ],
+          [
+            "0x3fd31f80be5c86d9",
+            "0x3f9142e7b5d7931c",
+            "0x3fee888a68298eff"
+          ]
+        ],
+        "t": [
+          "0x3f8e1f821d04ce18",
+          "0xbfae70ed09e03a7d",
+          "0xbfb260c5e5e1f190"
+        ]
+      }
+    },
+    {
+      "depth": 20,
+      "id": "00000000-0000-7000-8000-000000000114",
+      "parent": "00000000-0000-7000-8000-000000000113",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefff0bbc49c8d2",
+            "0xbf8e991949cbbde4",
+            "0x3f6989a759fbcdf9"
+          ],
+          [
+            "0x3f8e850f160c0d00",
+            "0x3feffe8183da43a1",
+            "0x3f8876095aef5e23"
+          ],
+          [
+            "0xbf6afeb123143e1f",
+            "0xbf885cf3661792e3",
+            "0x3fefff6037b2da8f"
+          ]
+        ],
+        "t": [
+          "0xbf9ab937933fc34c",
+          "0xbfaf2515a225a000",
+          "0xbfb86c1ff7d5b6a7"
+        ]
+      }
+    },
+    {
+      "depth": 21,
+      "id": "00000000-0000-7000-8000-000000000115",
+      "parent": "00000000-0000-7000-8000-000000000114",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef21cee8a3032f",
+            "0x3fa9157515c4a541",
+            "0x3fccf00b9c173aa3"
+          ],
+          [
+            "0xbf90d5fefb6b345e",
+            "0x3fefa9e365dcaf5d",
+            "0xbfc263f2c85ca796"
+          ],
+          [
+            "0xbfcd88d348534eb5",
+            "0x3fc16a74dc154678",
+            "0x3feed4a175a682d0"
+          ]
+        ],
+        "t": [
+          "0x3fb797dd31103456",
+          "0xbfa665d35fce3307",
+          "0xbfb1e77094c61e12"
+        ]
+      }
+    },
+    {
+      "depth": 22,
+      "id": "00000000-0000-7000-8000-000000000116",
+      "parent": "00000000-0000-7000-8000-000000000115",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefea16f632e05c",
+            "0xbfa6286146bdea77",
+            "0x3fae28156f7c05e8"
+          ],
+          [
+            "0x3fa6ca916320fc1d",
+            "0x3feff6432501994d",
+            "0xbf94565641a4e5a8"
+          ],
+          [
+            "0xbfadae400738f77e",
+            "0x3f96f7b8170b4586",
+            "0x3feff028cc80945f"
+          ]
+        ],
+        "t": [
+          "0x3f990e55345d14c0",
+          "0xbfb23f82a729c982",
+          "0xbfaa8f414031249a"
+        ]
+      }
+    },
+    {
+      "depth": 23,
+      "id": "00000000-0000-7000-8000-000000000117",
+      "parent": "00000000-0000-7000-8000-000000000116",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefd3089e768e99",
+            "0x3f991cacbd05defd",
+            "0x3fba0a332381dff5"
+          ],
+          [
+            "0xbf98ded0ed551323",
+            "0x3feffd8818956c86",
+            "0xbf6d255aa50bd07d"
+          ],
+          [
+            "0xbfba0de8c1466d8d",
+            "0x3f517eddacd3c67e",
+            "0x3fefd575461b6763"
+          ]
+        ],
+        "t": [
+          "0x3fa0f512fe0363b0",
+          "0x3fab8bdf184074c0",
+          "0xbf903cef6af1e798"
+        ]
+      }
+    },
+    {
+      "depth": 24,
+      "id": "00000000-0000-7000-8000-000000000118",
+      "parent": "00000000-0000-7000-8000-000000000117",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef97aa4fc47412",
+            "0xbfaeb1bb1c277ad4",
+            "0x3fc2dcd3435705df"
+          ],
+          [
+            "0x3fafd2cd7404c958",
+            "0x3fefefb774e943e0",
+            "0xbf854e04627b0bf6"
+          ],
+          [
+            "0xbfc2beca9ea62a37",
+            "0x3f93e55e5b2ec4cf",
+            "0x3fefa61d3cbd2f20"
+          ]
+        ],
+        "t": [
+          "0xbf8d0911d6d63140",
+          "0x3fb16f5768837398",
+          "0x3f898390a5269ab0"
+        ]
+      }
+    },
+    {
+      "depth": 25,
+      "id": "00000000-0000-7000-8000-000000000119",
+      "parent": "00000000-0000-7000-8000-000000000118",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef4e7fd971d2e4",
+            "0xbfc007daf2875d94",
+            "0x3fc51a500f3b05f3"
+          ],
+          [
+            "0x3fbc5e1bd81883ed",
+            "0x3fefa9099c96c69e",
+            "0x3fb811891c9edca6"
+          ],
+          [
+            "0xbfc662cc7e819c8b",
+            "0xbfb2dec24dc6eb40",
+            "0x3fef6b1bf9f2d372"
+          ]
+        ],
+        "t": [
+          "0xbfa9f86bd4ecbe80",
+          "0x3f9bc429744588e8",
+          "0xbfb594ad2b199352"
+        ]
+      }
+    },
+    {
+      "depth": 26,
+      "id": "00000000-0000-7000-8000-00000000011a",
+      "parent": "00000000-0000-7000-8000-000000000119",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feeff708f9e3e53",
+            "0x3fcfb52033f6ad03",
+            "0x3f9188df3f8efa9c"
+          ],
+          [
+            "0xbfcfbfcfafea023d",
+            "0x3feefe3169fe5264",
+            "0x3f9524e6fc5d18ce"
+          ],
+          [
+            "0xbf877d7eb37481f6",
+            "0xbf98d4cdbf47e896",
+            "0x3feffd0d5331708b"
+          ]
+        ],
+        "t": [
+          "0x3fa1c9545addf5f8",
+          "0x3f8ae4cc9796de30",
+          "0xbfb56a94a008a514"
+        ]
+      }
+    },
+    {
+      "depth": 27,
+      "id": "00000000-0000-7000-8000-00000000011b",
+      "parent": "00000000-0000-7000-8000-00000000011a",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefffff71d2659b",
+            "0x3f1881bbcc40131a",
+            "0xbf47a66e8c915d87"
+          ],
+          [
+            "0xbf1871b41af194a0",
+            "0x3fefffffe0424284",
+            "0x3f35b0fb3d258d08"
+          ],
+          [
+            "0x3f47a6b0e7d0a4c7",
+            "0xbf35afd9cf098a7a",
+            "0x3fefffff56c2c0e5"
+          ]
+        ],
+        "t": [
+          "0x3fb6be77809c7182",
+          "0x3fb06c71f816e2fe",
+          "0x3faa6e3f984c86d4"
+        ]
+      }
+    },
+    {
+      "depth": 28,
+      "id": "00000000-0000-7000-8000-00000000011c",
+      "parent": "00000000-0000-7000-8000-00000000011b",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef45442ca85513",
+            "0x3fba253254227504",
+            "0xbfc7d2a56e47e67a"
+          ],
+          [
+            "0xbfae7418ca30d440",
+            "0x3fef251c50133ba2",
+            "0x3fcc6368f1aa63c6"
+          ],
+          [
+            "0x3fca15e981800586",
+            "0xbfca5301ed09da6a",
+            "0x3feea121417f256f"
+          ]
+        ],
+        "t": [
+          "0xbfaa9862818e0b3a",
+          "0xbf93820dfa3e5114",
+          "0x3fb56ec56627d802"
+        ]
+      }
+    },
+    {
+      "depth": 29,
+      "id": "00000000-0000-7000-8000-00000000011d",
+      "parent": "00000000-0000-7000-8000-00000000011c",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefb587afa24d7d",
+            "0x3fbd55c7cbcaad3a",
+            "0x3fb20b0edf0af6d2"
+          ],
+          [
+            "0xbfbfc315349dc7a0",
+            "0x3fef63f12d8ab0d9",
+            "0x3fc32218b6f99936"
+          ],
+          [
+            "0xbfaaa108ff671e98",
+            "0xbfc4141d49e26df4",
+            "0x3fef8f5bc911063a"
+          ]
+        ],
+        "t": [
+          "0x3fb94d38a8cf12f6",
+          "0x3fa393b5fdaedee8",
+          "0xbfb1bc98963fe52f"
+        ]
+      }
+    },
+    {
+      "depth": 30,
+      "id": "00000000-0000-7000-8000-00000000011e",
+      "parent": "00000000-0000-7000-8000-00000000011d",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef115057422123",
+            "0x3fcc4fbdb2e757b8",
+            "0x3fb79accf4ec86b8"
+          ],
+          [
+            "0xbfcdabbed81c17ca",
+            "0x3feedc48d75a4e6d",
+            "0x3fc04d12d195d24b"
+          ],
+          [
+            "0xbfaf1b2ce380a214",
+            "0xbfc28fdb51a2795f",
+            "0x3fef9a1c80369c7e"
+          ]
+        ],
+        "t": [
+          "0x3f735508cf6d6aa0",
+          "0x3f98922c19861894",
+          "0x3fb595d6ae796aae"
+        ]
+      }
+    },
+    {
+      "depth": 31,
+      "id": "00000000-0000-7000-8000-00000000011f",
+      "parent": "00000000-0000-7000-8000-00000000011e",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef73bae9d831a7",
+            "0xbfc226407972ee9e",
+            "0x3fbe1fec39ea6fae"
+          ],
+          [
+            "0x3fbaf419c4a76e67",
+            "0x3fee99d058d6a5e4",
+            "0x3fd1767aba1f0129"
+          ],
+          [
+            "0xbfc35b1f924653b3",
+            "0xbfd05ef0d0ce1c89",
+            "0x3fee8df98dd6a3ab"
+          ]
+        ],
+        "t": [
+          "0xbf881e84b6c35c68",
+          "0xbf9eee668a1268fc",
+          "0x3fb7d971c5f8e086"
+        ]
+      }
+    },
+    {
+      "depth": 32,
+      "id": "00000000-0000-7000-8000-000000000120",
+      "parent": "00000000-0000-7000-8000-00000000011f",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feffffa172f2a67",
+            "0xbf636d860c97000c",
+            "0x3f1bf3809366e6f1"
+          ],
+          [
+            "0x3f636d2b2074d7f0",
+            "0x3feffff78c0dc861",
+            "0x3f5994c6be1d9c10"
+          ],
+          [
+            "0xbf1cebf7702eabeb",
+            "0xbf5993b285c9eb22",
+            "0x3feffffd6e8d595a"
+          ]
+        ],
+        "t": [
+          "0xbfb1b8f2a5eafedc",
+          "0x3fa73332cbf4c998",
+          "0x3fb91add80a91078"
+        ]
+      }
+    },
+    {
+      "depth": 33,
+      "id": "00000000-0000-7000-8000-000000000121",
+      "parent": "00000000-0000-7000-8000-000000000120",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef6eb2f1d151ec",
+            "0xbfb9d9b2885f500f",
+            "0xbfc43935d9262b59"
+          ],
+          [
+            "0x3fb882e31e6bb601",
+            "0x3fefd3a550212808",
+            "0xbfa4aec86f76234a"
+          ],
+          [
+            "0x3fc4a2d7e8e3ac3d",
+            "0x3f99241cf451cbe4",
+            "0x3fef9255aebeff8b"
+          ]
+        ],
+        "t": [
+          "0xbfb4bb98ceb06a82",
+          "0xbfb47d86118a8677",
+          "0x3fa37ecf51930580"
+        ]
+      }
+    },
+    {
+      "depth": 34,
+      "id": "00000000-0000-7000-8000-000000000122",
+      "parent": "00000000-0000-7000-8000-000000000121",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feebf6e386c2ee5",
+            "0x3fc962bab5e4875d",
+            "0xbfc8c1016998c0d0"
+          ],
+          [
+            "0xbfc9fb7d8e2a4b4d",
+            "0x3fef555f79bc4b8e",
+            "0xbf71fd99ae8f4b6c"
+          ],
+          [
+            "0x3fc82078a1d57248",
+            "0x3fa64280148773c0",
+            "0x3fef65453ec78e7b"
+          ]
+        ],
+        "t": [
+          "0x3fa2e8b51a9ba3b8",
+          "0xbfa14c66e0460a36",
+          "0xbfb6ba56e816a9ba"
+        ]
+      }
+    },
+    {
+      "depth": 35,
+      "id": "00000000-0000-7000-8000-000000000123",
+      "parent": "00000000-0000-7000-8000-000000000122",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feffce92e13ab13",
+            "0x3f91afa55b12030f",
+            "0x3f95dc3bcfb15dbb"
+          ],
+          [
+            "0xbf91ed506f4b2149",
+            "0x3feffe4266127888",
+            "0x3f864971405bbcf0"
+          ],
+          [
+            "0xbf95a9c6040bc3ad",
+            "0xbf870b3c564a678c",
+            "0x3feffda5dd75c1f4"
+          ]
+        ],
+        "t": [
+          "0x3fb311d900be0df0",
+          "0x3f8735915e7a12a8",
+          "0x3fa1333381947974"
+        ]
+      }
+    },
+    {
+      "depth": 36,
+      "id": "00000000-0000-7000-8000-000000000124",
+      "parent": "00000000-0000-7000-8000-000000000123",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef70d1dc2701cd",
+            "0x3fbd0666c7d42aee",
+            "0xbfc2e5ad2ca3420b"
+          ],
+          [
+            "0xbfb6a03f127e7f78",
+            "0x3fef6dbdd6eefea5",
+            "0x3fc54198d708c1f6"
+          ],
+          [
+            "0x3fc4f844973da5f9",
+            "0xbfc336ebf7f73296",
+            "0x3fef33351d231e68"
+          ]
+        ],
+        "t": [
+          "0x3fb1d12a7c0fcf4e",
+          "0x3fb2947bcd13ae74",
+          "0x3f1066b076bc1400"
+        ]
+      }
+    },
+    {
+      "depth": 37,
+      "id": "00000000-0000-7000-8000-000000000125",
+      "parent": "00000000-0000-7000-8000-000000000124",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefbefa870045fc",
+            "0x3fb7130a12802392",
+            "0xbfb671f82a2cd253"
+          ],
+          [
+            "0xbfad6ed8b99fe3a8",
+            "0x3fee3f65f968c2c9",
+            "0x3fd48fca6a6e6512"
+          ],
+          [
+            "0x3fbca11b39852243",
+            "0xbfd4136eb053ecd0",
+            "0x3fee2c6263b241ba"
+          ]
+        ],
+        "t": [
+          "0x3fa00b51f27d88cc",
+          "0xbfa71dd567422c70",
+          "0x3fb8ec277e0af316"
+        ]
+      }
+    },
+    {
+      "depth": 38,
+      "id": "00000000-0000-7000-8000-000000000126",
+      "parent": "00000000-0000-7000-8000-000000000125",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fee7749cb625384",
+            "0xbfd0f1881f803eae",
+            "0xbfc39e398151dfc0"
+          ],
+          [
+            "0x3fceae38a5ccb0b8",
+            "0x3fee9ef1bc484872",
+            "0xbfc4fceb9e7bc901"
+          ],
+          [
+            "0x3fc854374ae33be6",
+            "0x3fbe8f213014c955",
+            "0x3fef2efe2eb33abc"
+          ]
+        ],
+        "t": [
+          "0x3f8cbd51cfe314f0",
+          "0xbfb8244953eccf4d",
+          "0xbfa3c17b7131f0a0"
+        ]
+      }
+    },
+    {
+      "depth": 39,
+      "id": "00000000-0000-7000-8000-000000000127",
+      "parent": "00000000-0000-7000-8000-000000000126",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fee79dde5d075c3",
+            "0x3f9704458e3bfe69",
+            "0x3fd3764d54811a3c"
+          ],
+          [
+            "0xbfa3ae4b8080e3f0",
+            "0x3feff109a277d4a7",
+            "0x3fa7dc9948ee63ef"
+          ],
+          [
+            "0xbfd35c09feb9b79e",
+            "0xbfacb5cedbe67bd5",
+            "0x3fee72b1e638c4ad"
+          ]
+        ],
+        "t": [
+          "0x3f81e5204c1d4a90",
+          "0xbfafb44d6bbd97f0",
+          "0xbf806e488815cfd0"
+        ]
+      }
+    },
+    {
+      "depth": 40,
+      "id": "00000000-0000-7000-8000-000000000128",
+      "parent": "00000000-0000-7000-8000-000000000127",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feff7a0c65b72f9",
+            "0x3fa0049e119b81f6",
+            "0xbfa0b3b2b95c7b74"
+          ],
+          [
+            "0xbfa05f83265b6316",
+            "0x3feffa028e8dfb0e",
+            "0xbf9575fc87b67d6c"
+          ],
+          [
+            "0x3fa05aa1a54e193c",
+            "0x3f9681d59504008e",
+            "0x3feff9d7047d29eb"
+          ]
+        ],
+        "t": [
+          "0xbf96b00bb0de7da0",
+          "0xbf9361eac2a80d54",
+          "0xbfb1558f00bda8c5"
+        ]
+      }
+    },
+    {
+      "depth": 41,
+      "id": "00000000-0000-7000-8000-000000000129",
+      "parent": "00000000-0000-7000-8000-000000000128",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefbf277092f43e",
+            "0x3fb8ba78f39cbd03",
+            "0xbfb48a81bb8d0943"
+          ],
+          [
+            "0xbfb5d55f91bbdc05",
+            "0x3fef97eff7e7697a",
+            "0x3fc128b465ca3641"
+          ],
+          [
+            "0x3fb798567b837509",
+            "0xbfc025b1169eef23",
+            "0x3fef9b675285d636"
+          ]
+        ],
+        "t": [
+          "0xbf5aeb9b6e37b280",
+          "0xbfa0b6fc1020fb50",
+          "0x3fb2643898e1d668"
+        ]
+      }
+    },
+    {
+      "depth": 42,
+      "id": "00000000-0000-7000-8000-00000000012a",
+      "parent": "00000000-0000-7000-8000-000000000129",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefe4e565194a1b",
+            "0x3faa9cff1c89157c",
+            "0x3faffe0ff31bbbeb"
+          ],
+          [
+            "0xbfa5aff2eb8204c8",
+            "0x3fefa03252e633a0",
+            "0xbfc2c018d472bb50"
+          ],
+          [
+            "0xbfb1c2264db32736",
+            "0x3fc2597c9db966d2",
+            "0x3fef977239356d0b"
+          ]
+        ],
+        "t": [
+          "0x3faadd3426bbad54",
+          "0x3fa1b7783f6f92f8",
+          "0x3fb394e3426e6c32"
+        ]
+      }
+    },
+    {
+      "depth": 43,
+      "id": "00000000-0000-7000-8000-00000000012b",
+      "parent": "00000000-0000-7000-8000-00000000012a",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef96085f62ecba",
+            "0xbfc25504b7cb3ffe",
+            "0xbfb2721e9e8a191a"
+          ],
+          [
+            "0x3fbe7beccea08773",
+            "0x3fee964c1022c1e2",
+            "0xbfd131b1d6f1b31f"
+          ],
+          [
+            "0x3fbb7b420ec0f802",
+            "0x3fd06c2e5aae58c9",
+            "0x3feebcb7cbebabb5"
+          ]
+        ],
+        "t": [
+          "0xbfb162bbf7eb4802",
+          "0x3fb0fa2f0d52f71c",
+          "0x3fb961751de23918"
+        ]
+      }
+    },
+    {
+      "depth": 44,
+      "id": "00000000-0000-7000-8000-00000000012c",
+      "parent": "00000000-0000-7000-8000-00000000012b",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef2ef7439ff2dc",
+            "0x3fccba73d08238dc",
+            "0xbf68ef10bfb16170"
+          ],
+          [
+            "0xbfcc4894a52ee738",
+            "0x3fee9e639fcba0dd",
+            "0xbfc82a4cb246338f"
+          ],
+          [
+            "0xbfa43417d3da1d49",
+            "0x3fc7a27b90e56e49",
+            "0x3fef6ca5ae2341ad"
+          ]
+        ],
+        "t": [
+          "0xbfa1a2e7c34e089a",
+          "0xbf9189fb104c9320",
+          "0x3fa31a3503faf4cc"
+        ]
+      }
+    },
+    {
+      "depth": 45,
+      "id": "00000000-0000-7000-8000-00000000012d",
+      "parent": "00000000-0000-7000-8000-00000000012c",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feff9ef7269384a",
+            "0xbfa3af41144562ab",
+            "0x3f56e3aa662384ae"
+          ],
+          [
+            "0x3fa3b1f9f63fc15d",
+            "0x3fefeef4340ee7b4",
+            "0xbfaa7e5e866a7b39"
+          ],
+          [
+            "0x3f43819251e7022b",
+            "0x3faa80645de7c7b9",
+            "0x3feff5046b46ddac"
+          ]
+        ],
+        "t": [
+          "0xbfb7f2693221c91f",
+          "0xbfa95979dcf87650",
+          "0x3fb9821d9d049886"
+        ]
+      }
+    },
+    {
+      "depth": 46,
+      "id": "00000000-0000-7000-8000-00000000012e",
+      "parent": "00000000-0000-7000-8000-00000000012d",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefffd8b6feac1b",
+            "0x3f75bdd4acf6dbd5",
+            "0x3f68f81191311cad"
+          ],
+          [
+            "0xbf75b383159b64f3",
+            "0x3fefffd7a4548e29",
+            "0xbf6a70de88850602"
+          ],
+          [
+            "0xbf691bdfec6123d1",
+            "0x3f6a4ee057bf5a78",
+            "0x3fefffeb55aec1e9"
+          ]
+        ],
+        "t": [
+          "0x3fb811ff8863fcf4",
+          "0xbf9eb6251e2db5a0",
+          "0xbfa185b50faf0c96"
+        ]
+      }
+    },
+    {
+      "depth": 47,
+      "id": "00000000-0000-7000-8000-00000000012f",
+      "parent": "00000000-0000-7000-8000-00000000012e",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feecf3290efcafe",
+            "0xbfd1442d84bce06d",
+            "0x3f900cc318ed7ff7"
+          ],
+          [
+            "0x3fd13e03ba18717b",
+            "0x3feecef07a02bfdb",
+            "0x3f971b4611475f2c"
+          ],
+          [
+            "0xbf95af9db25b6b95",
+            "0xbf91ec3d81d47200",
+            "0x3feffce8573a7c16"
+          ]
+        ],
+        "t": [
+          "0xbfa94052ef6dc29a",
+          "0x3fa0d9d9a7730b9c",
+          "0x3fb310530b7c657e"
+        ]
+      }
+    },
+    {
+      "depth": 48,
+      "id": "00000000-0000-7000-8000-000000000130",
+      "parent": "00000000-0000-7000-8000-00000000012f",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef59871cecd2a5",
+            "0x3fc442ea955e8860",
+            "0xbfbf88b71fb7cce3"
+          ],
+          [
+            "0xbfc50966b16784b6",
+            "0x3fef89c17d678b35",
+            "0xbfa4cac7f6580202"
+          ],
+          [
+            "0x3fbd6eea6e95874b",
+            "0x3faebc1b668708d8",
+            "0x3fefbacd99e54812"
+          ]
+        ],
+        "t": [
+          "0x3f9d4688637b7000",
+          "0x3f9fe20893c496f0",
+          "0xbfb945ece661bb50"
+        ]
+      }
+    },
+    {
+      "depth": 49,
+      "id": "00000000-0000-7000-8000-000000000131",
+      "parent": "00000000-0000-7000-8000-000000000130",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feff73d4a3a7fa1",
+            "0x3f9ecf58978340df",
+            "0xbfa1f957cb967863"
+          ],
+          [
+            "0xbfa112ad2d2de3c5",
+            "0x3fefd565613994f8",
+            "0xbfb8a344f505af9f"
+          ],
+          [
+            "0x3fa065de5f1f73c7",
+            "0x3fb8e93ddb5a3edb",
+            "0x3fefd4e6668e8f21"
+          ]
+        ],
+        "t": [
+          "0x3f9ad9253687df50",
+          "0x3faae41c7d596a1c",
+          "0xbfad78fd7d3d9d9a"
+        ]
+      }
+    },
+    {
+      "depth": 50,
+      "id": "00000000-0000-7000-8000-000000000132",
+      "parent": "00000000-0000-7000-8000-000000000131",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefb169af46461c",
+            "0xbfa74296d635fb80",
+            "0x3fc0b43ea6ded416"
+          ],
+          [
+            "0x3fb02665d677adb0",
+            "0x3fefa512cc8dbbce",
+            "0xbfc137fa1547daae"
+          ],
+          [
+            "0xbfbf790dbe2541a7",
+            "0x3fc21b7612b5bc98",
+            "0x3fef6ed632273dd6"
+          ]
+        ],
+        "t": [
+          "0xbfab19bbe06fa727",
+          "0xbf80ab7617acf310",
+          "0xbfaf38b3efd62020"
+        ]
+      }
+    },
+    {
+      "depth": 51,
+      "id": "00000000-0000-7000-8000-000000000133",
+      "parent": "00000000-0000-7000-8000-000000000132",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef42f751bbb432",
+            "0x3fcaf2f72100316b",
+            "0xbfa2663aa2a8f4dc"
+          ],
+          [
+            "0xbfcb4f9b62c49705",
+            "0x3fee8a9ed4555ee6",
+            "0xbfcab6921b98ec79"
+          ],
+          [
+            "0xbf83be7a2fb5b6ae",
+            "0x3fcb140500a70cab",
+            "0x3fef4634846467ed"
+          ]
+        ],
+        "t": [
+          "0xbfb125a79e5fb29a",
+          "0xbfb5bd57b5952938",
+          "0x3fb6eb0402e34468"
+        ]
+      }
+    },
+    {
+      "depth": 52,
+      "id": "00000000-0000-7000-8000-000000000134",
+      "parent": "00000000-0000-7000-8000-000000000133",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feef17d05527f6f",
+            "0xbfc9a4474f412cd0",
+            "0xbfc42a9942978010"
+          ],
+          [
+            "0x3fcb39b823c44da4",
+            "0x3fef32563ffcdb46",
+            "0x3fb0dd38ac4156ab"
+          ],
+          [
+            "0x3fc1f8906f15e86c",
+            "0xbfb8e2d1b596f841",
+            "0x3fef87ab9cd29d4d"
+          ]
+        ],
+        "t": [
+          "0x3fab3ab81d828c68",
+          "0xbf8652300deb9bc0",
+          "0xbfadf864997f6e2a"
+        ]
+      }
+    },
+    {
+      "depth": 53,
+      "id": "00000000-0000-7000-8000-000000000135",
+      "parent": "00000000-0000-7000-8000-000000000134",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefbce55ce9261d",
+            "0x3fb3105cfb14bd4a",
+            "0x3fba914a92bdd00a"
+          ],
+          [
+            "0xbfb1cf9c71842c54",
+            "0x3fefe1df502f800f",
+            "0xbfa99b4f32f37814"
+          ],
+          [
+            "0xbfbb6c5c2ae6897c",
+            "0x3fa5b3395db5f218",
+            "0x3fefc9755c65e198"
+          ]
+        ],
+        "t": [
+          "0xbfb778f351866168",
+          "0xbf914230fc7f9a78",
+          "0x3fb0e93820cc491e"
+        ]
+      }
+    },
+    {
+      "depth": 54,
+      "id": "00000000-0000-7000-8000-000000000136",
+      "parent": "00000000-0000-7000-8000-000000000135",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feff92e1e4b7f53",
+            "0x3fa2b3a08717296d",
+            "0xbf929ae01c552024"
+          ],
+          [
+            "0xbfa302ca9bf961e7",
+            "0x3feff5958ff757dc",
+            "0xbfa1752b91c33bcf"
+          ],
+          [
+            "0x3f914e54e3fa8fae",
+            "0x3fa1c9dfbd8a5507",
+            "0x3feff9e22f7bc703"
+          ]
+        ],
+        "t": [
+          "0xbfb8fe317978af55",
+          "0x3f9b18213be33ac0",
+          "0xbf943479afcff2ec"
+        ]
+      }
+    },
+    {
+      "depth": 55,
+      "id": "00000000-0000-7000-8000-000000000137",
+      "parent": "00000000-0000-7000-8000-000000000136",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef4892a56f3481",
+            "0x3fc7eabf6ed93244",
+            "0xbfb8c6db9c3aeeca"
+          ],
+          [
+            "0xbfca2795091bcfc8",
+            "0x3fee7d952752569a",
+            "0xbfccb9b644c94433"
+          ],
+          [
+            "0x3fa9bf1f7323753c",
+            "0x3fce9d15168109dd",
+            "0x3fef0793d8bddb15"
+          ]
+        ],
+        "t": [
+          "0xbfa15f4db3cea2e6",
+          "0x3f82bbe2c6d2a4c0",
+          "0xbfb05b8a20169a32"
+        ]
+      }
+    },
+    {
+      "depth": 56,
+      "id": "00000000-0000-7000-8000-000000000138",
+      "parent": "00000000-0000-7000-8000-000000000137",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fee8c68c24ee51e",
+            "0x3fc4dc8135d3018b",
+            "0xbfcfe5c8b5704196"
+          ],
+          [
+            "0xbfc03970b0f8f6ed",
+            "0x3fef59df87003fd2",
+            "0x3fc3dcee43b3f2a9"
+          ],
+          [
+            "0x3fd13e76ab7c4583",
+            "0xbfbdd67af2965cb3",
+            "0x3fee970c9076c572"
+          ]
+        ],
+        "t": [
+          "0x3fac70a92fda0558",
+          "0xbfb6d81c190a1557",
+          "0xbfaa8a541a84da57"
+        ]
+      }
+    },
+    {
+      "depth": 57,
+      "id": "00000000-0000-7000-8000-000000000139",
+      "parent": "00000000-0000-7000-8000-000000000138",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef1504272ebc71",
+            "0x3fc5b300f20bddbe",
+            "0xbfc558405af2bbbc"
+          ],
+          [
+            "0xbfc8876260b527ec",
+            "0x3fef24c962360e53",
+            "0xbfc03b3a81f69e2f"
+          ],
+          [
+            "0x3fc2059d68825520",
+            "0x3fc3db29343281eb",
+            "0x3fef4a382f7d1bd8"
+          ]
+        ],
+        "t": [
+          "0x3fb18b6d272af80a",
+          "0x3f8a8d8873497d98",
+          "0x3f817d0e05902d68"
+        ]
+      }
+    },
+    {
+      "depth": 58,
+      "id": "00000000-0000-7000-8000-00000000013a",
+      "parent": "00000000-0000-7000-8000-000000000139",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feffba8fc4a20da",
+            "0x3f9860e26bf7e8a0",
+            "0xbf96b984b571d470"
+          ],
+          [
+            "0xbf987f0aa82188e4",
+            "0x3feffd8e5340a3fc",
+            "0xbf743474a2181868"
+          ],
+          [
+            "0x3f9698ff5bc0969e",
+            "0x3f765e628e9393e6",
+            "0x3feffde201022fce"
+          ]
+        ],
+        "t": [
+          "0x3fa4e913cdaaacf8",
+          "0xbfb574bd78f04ce7",
+          "0x3fa92924b359bf98"
+        ]
+      }
+    },
+    {
+      "depth": 59,
+      "id": "00000000-0000-7000-8000-00000000013b",
+      "parent": "00000000-0000-7000-8000-00000000013a",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef0ec9ee143a36",
+            "0x3fca88d6aa3d8a09",
+            "0xbfbf6786697ff0d4"
+          ],
+          [
+            "0xbfc8b82976c73ecb",
+            "0x3fef2b5c44770944",
+            "0x3fbe3b051029ce71"
+          ],
+          [
+            "0x3fc26d932798008a",
+            "0xbfb7468d4c346c33",
+            "0x3fef885e6e302346"
+          ]
+        ],
+        "t": [
+          "0xbfa8b9da9b627d2d",
+          "0x3f74f88259d6e3a0",
+          "0x3fb123a99e02bed6"
+        ]
+      }
+    },
+    {
+      "depth": 60,
+      "id": "00000000-0000-7000-8000-00000000013c",
+      "parent": "00000000-0000-7000-8000-00000000013b",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef11d974057f32",
+            "0x3fcdb7c923dbb444",
+            "0x3fadd396fd300786"
+          ],
+          [
+            "0xbfcbae05a8712c00",
+            "0x3fee9066549ab401",
+            "0xbfc9e886f65199d0"
+          ],
+          [
+            "0xbfba463e015fe567",
+            "0x3fc78aeaa20968c2",
+            "0x3fef483a6f2b0d6d"
+          ]
+        ],
+        "t": [
+          "0x3fa5a86248e215e8",
+          "0xbf9eb297456abba0",
+          "0xbf8d928dde7290a8"
+        ]
+      }
+    },
+    {
+      "depth": 61,
+      "id": "00000000-0000-7000-8000-00000000013d",
+      "parent": "00000000-0000-7000-8000-00000000013c",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefff41b98b8f06",
+            "0x3f8b6a485854cf59",
+            "0xbf58a00ada30c3c9"
+          ],
+          [
+            "0xbf8b5fe4bcb96d8f",
+            "0x3feffea0cdbac546",
+            "0x3f89994cccab38c5"
+          ],
+          [
+            "0x3f5b5cc8675ff7a3",
+            "0xbf898e2c2befcee3",
+            "0x3fefff59ccb7180b"
+          ]
+        ],
+        "t": [
+          "0x3fb13f706f41f438",
+          "0x3f9ff396f2b3f5b0",
+          "0x3fb8b64d707a1756"
+        ]
+      }
+    },
+    {
+      "depth": 62,
+      "id": "00000000-0000-7000-8000-00000000013e",
+      "parent": "00000000-0000-7000-8000-00000000013d",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3feec5a292963a96",
+            "0x3fbc646b37457406",
+            "0x3fd00f934048a7e9"
+          ],
+          [
+            "0xbfc313313796d0a9",
+            "0x3fef54defa8a7998",
+            "0x3fc1b4cdbd90d672"
+          ],
+          [
+            "0xbfcd7ca659b933ac",
+            "0xbfc5d04c9969070c",
+            "0x3feea877ec63e078"
+          ]
+        ],
+        "t": [
+          "0x3f959c1bab4784c0",
+          "0xbf9ff07028b41ffc",
+          "0xbf8f15b1637b5528"
+        ]
+      }
+    },
+    {
+      "depth": 63,
+      "id": "00000000-0000-7000-8000-00000000013f",
+      "parent": "00000000-0000-7000-8000-00000000013e",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fefffd960033c00",
+            "0x3f734bd8941199eb",
+            "0x3f6f58a5f06a8569"
+          ],
+          [
+            "0xbf734114122821b7",
+            "0x3fefffe14082071f",
+            "0xbf660594dd638aa5"
+          ],
+          [
+            "0xbf6f7316d6c2491f",
+            "0x3f65dfc184271415",
+            "0x3fefffe911c56905"
+          ]
+        ],
+        "t": [
+          "0x3f7990e974e58000",
+          "0x3fb8b90f88b0a4c4",
+          "0xbfb8a033a761ba87"
+        ]
+      }
+    },
+    {
+      "depth": 64,
+      "id": "00000000-0000-7000-8000-000000000140",
+      "parent": "00000000-0000-7000-8000-00000000013f",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fef70a9e174e011",
+            "0xbf81fb4797384220",
+            "0xbfc7d02b50366e22"
+          ],
+          [
+            "0xbf977adcaf04ca82",
+            "0x3fef89eda65cf7c9",
+            "0xbfc574318883272b"
+          ],
+          [
+            "0x3fc7a886cf82eec4",
+            "0x3fc59fe0f66b4f41",
+            "0x3feefb0232e57b16"
+          ]
+        ],
+        "t": [
+          "0x3fb47af27b91183a",
+          "0xbfb2a75e51a0cfd4",
+          "0x3f92f141d7b25a60"
+        ]
+      }
+    }
+  ],
+  "description": "64-deep alignment chain with seeded rigid transforms and 65th alignment candidate (ALN.MODEL.HIER.CHAIN AC-3).",
+  "expected_deepest_probe_root": [
+    "0xc010aade16c5b588",
+    "0x3fc5210f06c71f58",
+    "0x3ff8ccdec9c1361b"
+  ],
+  "extra_65th": {
+    "id": "00000000-0000-7000-8000-000000000141",
+    "transform": {
+      "kind": "rigid",
+      "r": [
+        [
+          "0x3fef01549f7deea1",
+          "0x0000000000000000",
+          "0x3fcfaaeed4f31577"
+        ],
+        [
+          "0x0000000000000000",
+          "0x3ff0000000000000",
+          "0x0000000000000000"
+        ],
+        [
+          "0xbfcfaaeed4f31577",
+          "0x0000000000000000",
+          "0x3fef01549f7deea1"
+        ]
+      ],
+      "t": [
+        "0x3fa999999999999a",
+        "0xbfa999999999999a",
+        "0x3fa999999999999a"
+      ]
+    }
+  },
+  "input_element": "00000000-0000-7000-8000-000000000200",
+  "license": "CC0-1.0",
+  "probe_point": [
+    "0x3ff8000000000000",
+    "0xc002000000000000",
+    "0x4009000000000000"
+  ],
+  "schema": "fidproj-aln-hier-chain64/v1"
+}

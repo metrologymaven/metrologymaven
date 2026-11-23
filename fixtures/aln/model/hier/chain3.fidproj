@@ -1,0 +1,318 @@
+{
+  "alignments": [
+    {
+      "id": "00000000-0000-7000-8000-000000000001",
+      "label": "A",
+      "parent": null,
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3c91a62633145c07",
+            "0xbff0000000000000",
+            "0x0000000000000000"
+          ],
+          [
+            "0x3ff0000000000000",
+            "0x3c91a62633145c07",
+            "0x0000000000000000"
+          ],
+          [
+            "0x0000000000000000",
+            "0x0000000000000000",
+            "0x3ff0000000000000"
+          ]
+        ],
+        "t": [
+          "0x3ff4000000000000",
+          "0xbfe0000000000000",
+          "0x3fe8000000000000"
+        ]
+      }
+    },
+    {
+      "id": "00000000-0000-7000-8000-000000000002",
+      "label": "B",
+      "parent": "00000000-0000-7000-8000-000000000001",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3ff0000000000000",
+            "0x0000000000000000",
+            "0x0000000000000000"
+          ],
+          [
+            "0x0000000000000000",
+            "0x3fe0000000000001",
+            "0xbfebb67ae8584caa"
+          ],
+          [
+            "0x0000000000000000",
+            "0x3febb67ae8584caa",
+            "0x3fe0000000000001"
+          ]
+        ],
+        "t": [
+          "0xbfd999999999999a",
+          "0x4000cccccccccccd",
+          "0x3fd3333333333333"
+        ]
+      }
+    },
+    {
+      "id": "00000000-0000-7000-8000-000000000003",
+      "label": "C",
+      "parent": "00000000-0000-7000-8000-000000000002",
+      "transform": {
+        "kind": "rigid",
+        "r": [
+          [
+            "0x3fe94ab8ea75ad43",
+            "0x3fdb98c21b3e028e",
+            "0x3fdbd9f95cef9516"
+          ],
+          [
+            "0xbfd302a48f07d616",
+            "0x3fec8303ff09fdf0",
+            "0xbfd5f9b861ea943b"
+          ],
+          [
+            "0xbfe12547c30c1b38",
+            "0x3fc231181f32a310",
+            "0x3feaa22d885e2436"
+          ]
+        ],
+        "t": [
+          "0x3fe4cccccccccccd",
+          "0xbff2666666666666",
+          "0x3feccccccccccccd"
+        ]
+      }
+    }
+  ],
+  "dependent_result": "00000000-0000-7000-8000-000000000020",
+  "description": "3-deep alignment chain A -> B -> C with known transforms and test points (ALN.MODEL.HIER.CHAIN AC-1..AC-5).",
+  "expected_c_to_root": {
+    "kind": "rigid",
+    "r": [
+      [
+        "0xbfd4312297298b93",
+        "0xbfd4a26f45a6dcf2",
+        "0x3fec8f2532308ada"
+      ],
+      [
+        "0x3fe94ab8ea75ad43",
+        "0x3fdb98c21b3e028e",
+        "0x3fdbd9f95cef9515"
+      ],
+      [
+        "0xbfe0cdf553e199cc",
+        "0x3feaf7450c551162",
+        "0x3fbe68a515d4fe18"
+      ]
+    ],
+    "t": [
+      "0x3fe0243b6ab5de9a",
+      "0xbfd0000000000000",
+      "0x3fe021590e674172"
+    ]
+  },
+  "input_element": "00000000-0000-7000-8000-000000000010",
+  "license": "CC0-1.0",
+  "schema": "fidproj-aln-hier-chain/v1",
+  "test_points": [
+    {
+      "expected_root": [
+        "0x3fe0243b6ab5de9a",
+        "0xbfd0000000000000",
+        "0x3fe021590e674172"
+      ],
+      "point": [
+        "0x0000000000000000",
+        "0x0000000000000000",
+        "0x0000000000000000"
+      ]
+    },
+    {
+      "expected_root": [
+        "0xbff12b4d8798ff2b",
+        "0x400d9d6725131894",
+        "0xc000f91c65402fe2"
+      ],
+      "point": [
+        "0x4014000000000000",
+        "0x0000000000000000",
+        "0x0000000000000000"
+      ]
+    },
+    {
+      "expected_root": [
+        "0x400382e24eea9d5c",
+        "0xc006b291946e81ea",
+        "0xc0123548a772e4dc"
+      ],
+      "point": [
+        "0x0000000000000000",
+        "0xc018000000000000",
+        "0x0000000000000000"
+      ]
+    },
+    {
+      "expected_root": [
+        "0x401ccaba4c643dff",
+        "0x40081c59c7209bc4",
+        "0x3ff651b9e96f77d4"
+      ],
+      "point": [
+        "0x0000000000000000",
+        "0x0000000000000000",
+        "0x401e000000000000"
+      ]
+    },
+    {
+      "expected_root": [
+        "0xc001bd8f0b3b65e2",
+        "0xc0017d749cf8d206",
+        "0x401546767c5a28b0"
+      ],
+      "point": [
+        "0xc00999999999999a",
+        "0x4010666666666666",
+        "0xc00599999999999a"
+      ]
+    },
+    {
+      "expected_root": [
+        "0x40109c4b87b38988",
+        "0x4005beb51bcde1ac",
+        "0xc0172898581a3dbe"
+      ],
+      "point": [
+        "0x4012000000000000",
+        "0xc014cccccccccccd",
+        "0x400e666666666666"
+      ]
+    },
+    {
+      "expected_root": [
+        "0xbfcd9c884baa5a54",
+        "0x401fe6806d595494",
+        "0xc00f0048a69af2b0"
+      ],
+      "point": [
+        "0x402210c099f4c7a6",
+        "0x3fb7f4e930ad5f80",
+        "0x400338721f4ec85c"
+      ]
+    },
+    {
+      "expected_root": [
+        "0x3fe5184a2b6a8925",
+        "0x3ff9b7a269d2a671",
+        "0xc01f320bc7f4e008"
+      ],
+      "point": [
+        "0x40171e11ef2a8be2",
+        "0xc018fbafed59d33e",
+        "0xbfa465bd57272700"
+      ]
+    },
+    {
+      "expected_root": [
+        "0xc00d46eb16d959ba",
+        "0xbfee67db3a9f7c3d",
+        "0x4001dd24fa4d013c"
+      ],
+      "point": [
+        "0xbfc2e3893b0a4580",
+        "0x4003fb0018e207dc",
+        "0xc00e866f336d66e4"
+      ]
+    },
+    {
+      "expected_root": [
+        "0x3ff18d9431b5ee05",
+        "0x4015e171d86a4593",
+        "0x401eee611ef57eb8"
+      ],
+      "point": [
+        "0x3fe13711fbe01950",
+        "0x4020bbe4b5c95b08",
+        "0x400f03d49b4fb430"
+      ]
+    },
+    {
+      "expected_root": [
+        "0xc013740f5677b035",
+        "0x3fffe78fd1b8121c",
+        "0x4019e6a0f590bb16"
+      ],
+      "point": [
+        "0x3fd536616fad23c0",
+        "0x401eeb95d42fce3c",
+        "0xc008d6883e635d3e"
+      ]
+    },
+    {
+      "expected_root": [
+        "0xbfe6a32daf6e8888",
+        "0x40120fc5c11f6903",
+        "0xc013680a86b22c51"
+      ],
+      "point": [
+        "0x401bd854367081c4",
+        "0xc0008a6d79a02d0c",
+        "0x3fd6ca497ebc5800"
+      ]
+    },
+    {
+      "expected_root": [
+        "0xbfeee14686c07b12",
+        "0xbff2b1c701930d6b",
+        "0x4012f953ad804ab4"
+      ],
+      "point": [
+        "0xc003e896d681d73c",
+        "0x400d33ae674e6898",
+        "0xbff351fb574212f0"
+      ]
+    },
+    {
+      "expected_root": [
+        "0xc00361438a568114",
+        "0xc0148245f0c8faa4",
+        "0x40138fd0a8b441ce"
+      ],
+      "point": [
+        "0xc014f07a9da945c8",
+        "0x40044bafee88d984",
+        "0xc010dac10076db65"
+      ]
+    },
+    {
+      "expected_root": [
+        "0xc0055f3088529552",
+        "0xc01b84a468932f66",
+        "0x4004bf250f45599a"
+      ],
+      "point": [
+        "0xc01556ff107a8fc1",
+        "0xbfb2f85437edb600",
+        "0xc015e29535b45538"
+      ]
+    },
+    {
+      "expected_root": [
+        "0xc00c5da278430a48",
+        "0xc01376cc8a8e0d47",
+        "0xc00189d0f8601ed0"
+      ],
+      "point": [
+        "0xbfee8be6667d3a50",
+        "0xc007a77bbb4cf706",
+        "0xc017c65fd7443376"
+      ]
+    }
+  ]
+}

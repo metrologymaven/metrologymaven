@@ -709,11 +709,13 @@ fn command_definitions_are_r0_and_d0() {
             GET_ALIGNMENT.to_string(),
             GET_DIAGNOSTICS.to_string(),
             GET_RESIDUALS.to_string(),
-            LIST_ALIGNMENTS.to_string()
+            LIST_ALIGNMENTS.to_string(),
+            fid_align::SET_PARENT.to_string(),
         ]
     );
     for d in &defs {
-        assert_eq!(d.side_effect.as_str(), "R0");
+        let expected_se = if format!("{}@{}", d.id, d.major) == fid_align::SET_PARENT { "W2" } else { "R0" };
+        assert_eq!(d.side_effect.as_str(), expected_se);
         assert_eq!(d.determinism.as_str(), "D0");
     }
 }

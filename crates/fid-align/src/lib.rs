@@ -16,6 +16,8 @@
 //! - [`diagnostics`]: `align.get_diagnostics@1` (R0, spec node `ALN.QA.COND`), the read of the
 //!   conditioning diagnostics (computed by `fid_align_solve::diagnose`) and convergence history
 //!   stored with an alignment's residual report.
+//! - [`hier`]: alignment parent chain, mirror frames in `GEO.FRAME.TREE`, `compose_to_root`,
+//!   `check_parent`, `align.set_parent@1` (W2) and transform invalidation (`ALN.MODEL.HIER.CHAIN`).
 //!
 //! Nothing here panics; every input is bounded and every refusal is a typed [`AlignError`].
 //! No floating-point arithmetic happens in this crate: values are copied bit for bit.
@@ -25,6 +27,7 @@ pub mod datum_gate;
 pub mod diagnostics;
 pub mod element;
 mod error;
+pub mod hier;
 pub mod model;
 pub mod residuals;
 pub mod solver;
@@ -44,6 +47,13 @@ pub use element::{
     ReportRef, MAX_ELEMENT_BYTES, MAX_INPUTS, MAX_PARAMS, MAX_PARAM_NAME, MAX_PRINCIPAL_BYTES,
 };
 pub use error::{AlignError, MAX_CODE_BYTES};
+pub use hier::{
+    chain_depth, check_parent, compose_to_root, invoke_set_parent_cli, invoke_set_parent_mcp, mirror_frame_id,
+    replay_set_parent, set_parent, set_parent_command_def, sync_recompute_entry, update_alignment_transform,
+    AlignmentHierarchy, HierError, MirrorFrame, ParentTarget, SetParentCommit, SetParentEvent, SetParentParams,
+    SetParentResult, TransformUpdated, CLI_SET_PARENT, MAX_EVENT_BYTES, MAX_HIERARCHY_DEPTH, MCP_SET_PARENT,
+    SET_PARENT,
+};
 pub use model::{
     AlignmentModel, CreateRequest, Created, ElementLookup, RecomputeEntry, RecomputeItem, MAX_ALIGNMENTS,
     MAX_RECOMPUTE_NODES,
