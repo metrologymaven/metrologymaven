@@ -10,4 +10,5 @@ pub mod elem_prim;
 pub mod elem_shape;
 pub mod ops_intlin;
 pub mod ops_mid;
+pub mod ops_offs;
 pub mod ops_proj;
