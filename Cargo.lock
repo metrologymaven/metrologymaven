@@ -2210,7 +2210,13 @@ dependencies = [
 name = "fid-report-pdf"
 version = "0.0.1"
 dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-io-reg",
  "fid-num",
+ "fid-registry",
+ "fid-report",
+ "fid-report-out",
  "fid-types",
  "sha2 0.10.9",
 ]

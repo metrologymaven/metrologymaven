@@ -18,7 +18,8 @@ determinism: D0
 cli: [fid report export-pdf]
 mcp: [report_export_pdf]
 journal: [report.export_pdf@1]
-updated: 2026-11-17
+built_in: [fid-report-pdf]
+updated: 2026-11-23
 ---
 
 # RPT.OUTPUT.PDF.WRITE: Deterministic PDF writer and the PDF export command

@@ -12,9 +12,13 @@
 //!   painters for `table`, `text`, `header`, `footer`, `image`, `view`, `drawing` and
 //!   `form_field`.
 
+//! - [`write`] (`RPT.OUTPUT.PDF.WRITE`): deterministic PDF 1.7 writer, embedded `ExportMeta`
+//!   and `report.export_pdf@1` (W1, `fs_effect = write_root`).
+
 pub mod draw;
 pub(crate) mod flate;
 pub mod image_codec;
 pub(crate) mod int_json;
 pub mod layout;
 pub mod text;
+pub mod write;
