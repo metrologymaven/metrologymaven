@@ -1,0 +1,17 @@
+# Spec card (KRN.MZ.LIN.FLAT). Cite designators and clause numbers only; never paste standards text.
+id = "fit.line2.mz@1.0.0"
+title = "Minimum-zone 2D line (Chebyshev straightness in a plane)"
+method = "Projects 3D points into the caller's projection plane (default XY), centres and power-of-two scales them, and starts from the orthogonal least-squares 2D line. In the local frame (u along LS direction, w along left normal divided by exact power-of-two form scale k), solves for parallel bounding lines w = c + a u and w = e + a u minimising exact orthogonal zone width (c - e) / sqrt(1 + k^2 a^2) subject to linear constraints via sequential LP (KRN.SOLV.SEQ) and certifies a 3-row (2-1 or 1-2) KKT active-set vertex (KRN.SOLV.CERT, CertKind::Zone). Reports the mid-zone line and recomputes the zone width from the critical point set."
+applicability = "At least 2 distinct points projected into a plane (at least 1 with a fixed direction). Finite, non-subnormal SI metre coordinates. Exact collinear input yields width 0.0 closed-form."
+references = [
+  "ISO 12780-1:2011, Geometrical product specifications (GPS) - Straightness - Part 1: Vocabulary and parameters of straightness.",
+  "Conn, A. R., Gould, N. I. M. and Toint, P. L. (2000). Trust-Region Methods. SIAM [unverified chapter].",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "Fewer than 2 points (or 1 with fixed direction) or coincident projected points: TooFewPoints or Collinear.",
+  "Solver or KKT certification fails across all deterministic starts: SeqFailed (fail closed, never returns an uncertified iterate).",
+  "Certified zone leaves a point outside beyond SIDE_TOL: SideViolation (fail closed).",
+]
+validation = "Exact rational analytical generator fixtures/fit/mz-flat-v1 (make_mz_flat_fixtures.py) including 1 km offset from origin, independent active-set width recomputation bit-identity check, and cross-target output-digest pin on x86-64, ARM64 and wasm32."

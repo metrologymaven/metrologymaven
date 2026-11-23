@@ -28,6 +28,7 @@ pub mod ls_cyl;
 pub mod ls_lin;
 pub mod ls_rnd;
 pub mod mcc_cyl;
+pub mod mz_flat;
 pub mod plan2d_assign;
 pub mod tan_plane;
 pub mod tan_rock;
