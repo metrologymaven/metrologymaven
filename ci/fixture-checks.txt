@@ -38,6 +38,7 @@ python fixtures/cli/make_fixtures.py --check
 python fixtures/cons/check_row_schema.py
 python fixtures/cons/make_decl_fixtures.py --check
 python fixtures/cons/make_intlin_fixtures.py --check
+python fixtures/cons/make_intquad_fixtures.py --check
 python fixtures/cons/make_mid_fixtures.py --check
 python fixtures/cons/make_offs_fixtures.py --check
 python fixtures/cons/make_proj_fixtures.py --check
