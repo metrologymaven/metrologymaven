@@ -1425,6 +1425,7 @@ dependencies = [
  "fid-dep",
  "fid-geo-frame",
  "fid-geo-index",
+ "fid-geo-sel",
  "fid-geo-types",
  "fid-project",
  "fid-registry",
