@@ -1,0 +1,23 @@
+# Fixture inspect profile for AUTO.MCP.SRV (AC-1).
+format = "fid.mcp-profile"
+version = 1
+name = "inspect"
+title = "Metrology Maven Inspect"
+domains = [
+  "tools",
+  "align",
+  "probe",
+  "sim",
+]
+commands = [
+  "project.list_features@1",
+]
+front_door = [
+  "tools.search_tools@1",
+  "tools.describe_tool@1",
+  "tools.list_domains@1",
+  "tools.get_workflow@1",
+  "align.run_bestfit@1",
+  "align.set_datum@1",
+  "sim.run_program@1",
+]

@@ -1779,6 +1779,7 @@ dependencies = [
  "fid-registry-build",
  "fid-surface",
  "fid-types",
+ "toml",
 ]
 
 [[package]]

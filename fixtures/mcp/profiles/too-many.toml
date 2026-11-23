@@ -1,0 +1,25 @@
+# Fixture profile exceeding the 15-tool front-door cap (AC-2).
+format = "fid.mcp-profile"
+version = 1
+name = "too_many"
+title = "Too Many Front-Door Tools"
+domains = ["tools", "demo"]
+commands = []
+front_door = [
+  "tools.search_tools@1",
+  "tools.describe_tool@1",
+  "tools.list_domains@1",
+  "tools.get_workflow@1",
+  "demo.cmd_01@1",
+  "demo.cmd_02@1",
+  "demo.cmd_03@1",
+  "demo.cmd_04@1",
+  "demo.cmd_05@1",
+  "demo.cmd_06@1",
+  "demo.cmd_07@1",
+  "demo.cmd_08@1",
+  "demo.cmd_09@1",
+  "demo.cmd_10@1",
+  "demo.cmd_11@1",
+  "demo.cmd_12@1",
+]

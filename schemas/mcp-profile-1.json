@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.io/schemas/mcp-profile-1.json",
+  "title": "Metrology Maven MCP server profile (fid.mcp-profile v1)",
+  "description": "Declarative MCP server profile selecting served command domains, optional extra command IDs, and the ordered front-door tool list (AUTO.MCP.SRV).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "version",
+    "name",
+    "title",
+    "domains",
+    "front_door"
+  ],
+  "properties": {
+    "format": {
+      "const": "fid.mcp-profile"
+    },
+    "version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{1,31}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "domains": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]{0,31}$"
+      },
+      "uniqueItems": true
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]([a-z0-9_.]*[a-z0-9])?@[0-9]{1,5}$"
+      },
+      "uniqueItems": true
+    },
+    "front_door": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]([a-z0-9_.]*[a-z0-9])?@[0-9]{1,5}$"
+      },
+      "maxItems": 15,
+      "uniqueItems": true
+    }
+  }
+}

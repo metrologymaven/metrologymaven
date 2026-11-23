@@ -1,0 +1,21 @@
+# Core MCP server profile (spec node AUTO.MCP.SRV).
+format = "fid.mcp-profile"
+version = 1
+name = "core"
+title = "Metrology Maven Core"
+domains = [
+  "tools",
+  "project",
+  "program",
+  "journal",
+  "align",
+  "view",
+  "units",
+]
+commands = []
+front_door = [
+  "tools.search_tools@1",
+  "tools.describe_tool@1",
+  "tools.list_domains@1",
+  "tools.get_workflow@1",
+]

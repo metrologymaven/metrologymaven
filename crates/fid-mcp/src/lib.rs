@@ -23,6 +23,7 @@
 //! command of the workspace registry and every class.
 
 pub mod adapter;
+pub mod profiles;
 pub mod taint;
 pub mod text;
 pub mod tools;
@@ -30,6 +31,12 @@ pub mod tools;
 pub use adapter::{
     call_tool, call_tool_tainted, AgentSession, AuditSink, BusCall, McpBus, Refusal, Severity, ToolTable, Violation,
     CHANNEL,
+};
+pub use profiles::{
+    check_all_served, emit_profiles, parse_profile_bytes, parse_server_args, read_profile_file, resolve_profiles,
+    EmittedProfiles, ProfileError, ProfileIndex, ProfileSpec, ResolvedProfile, ServerSelectionArgs, CORE_PROFILE_TOML,
+    DEFAULT_PROFILE, DISCLOSURE_DOMAIN, EXIT_USAGE, MAX_FRONT_DOOR, MAX_PROFILE_BYTES, PROFILES_FILE, PROFILE_FORMAT,
+    PROFILE_VERSION,
 };
 pub use taint::{
     delimiters_balanced, escape_delimiters, render_text, render_text_with_schema, render_untrusted_text,

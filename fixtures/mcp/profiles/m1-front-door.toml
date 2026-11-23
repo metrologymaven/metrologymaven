@@ -1,0 +1,14 @@
+# Fixture profile naming an M1 motion command in front_door (AC-4).
+format = "fid.mcp-profile"
+version = 1
+name = "bad_motion"
+title = "Illegal Motion Front Door"
+domains = ["tools", "demo"]
+commands = []
+front_door = [
+  "tools.search_tools@1",
+  "tools.describe_tool@1",
+  "tools.list_domains@1",
+  "tools.get_workflow@1",
+  "demo.move_axis@1",
+]
