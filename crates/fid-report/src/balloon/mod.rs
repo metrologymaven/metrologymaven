@@ -7,5 +7,6 @@ pub mod auto_propose;
 pub mod auto_text;
 pub mod block;
 pub mod char;
+pub mod gauge;
 pub mod register;
 pub mod sheet;

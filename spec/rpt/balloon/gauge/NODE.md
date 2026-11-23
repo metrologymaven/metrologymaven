@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid report check-gauge]
 mcp: [report_check_gauge]
 journal: [report.check_gauge@1]
-updated: 2026-11-17
+built_in: [fid-report]
+updated: 2026-11-22
 ---
 
 # RPT.BALLOON.GAUGE: Gauge citation checks for manual readings
