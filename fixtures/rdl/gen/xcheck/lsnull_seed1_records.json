@@ -1,0 +1,280 @@
+[
+  {
+    "aim": "ls.line.svd",
+    "cross_check": [],
+    "generator": {
+      "id": "fid-rdl-gen",
+      "seed": "1",
+      "version": "0.0.1"
+    },
+    "id": "rdl:G/ls.line.svd/seed1/0001",
+    "inputs": [
+      {
+        "digest": "sha256:fb4f76ecb4e42a4c650b85aa8f877636a7f68fb8e3d0b4db35e3f920ac0dc1b7",
+        "role": "points",
+        "unit": "m"
+      }
+    ],
+    "licence": "CC-BY-4.0",
+    "provenance": {
+      "method": "null-space construction seed 1 (synthetic xcheck fixture)",
+      "source": "Metrology Maven UNC.RDL.GEN.XCHECK synthetic fixture"
+    },
+    "reference": {
+      "outputs": [
+        {
+          "kind": "length",
+          "name": "origin_x",
+          "test_uncertainty_hex": "0x39b4484bfeebc2a0",
+          "value_dec": "1.250000000000000000000000000000000000000000000000000001e-1",
+          "value_hex": "0x3fc0000000000000"
+        },
+        {
+          "kind": "dimensionless",
+          "name": "dir_x",
+          "test_uncertainty_hex": "0x39b4484bfeebc2a0",
+          "value_dec": "8.000000000000000000000000000000000000000000000000000000e-1",
+          "value_hex": "0x3fe999999999999a"
+        },
+        {
+          "kind": "dimensionless",
+          "name": "dir_y",
+          "test_uncertainty_hex": "0x39b4484bfeebc2a0",
+          "value_dec": "6.000000000000000000000000000000000000000000000000000000e-1",
+          "value_hex": "0x3fe3333333333333"
+        }
+      ],
+      "precision_digits": 55
+    },
+    "schema": "rdl-dataset/v1",
+    "tier": "G",
+    "visibility": "public"
+  },
+  {
+    "aim": "ls.plane.svd",
+    "cross_check": [],
+    "generator": {
+      "id": "fid-rdl-gen",
+      "seed": "1",
+      "version": "0.0.1"
+    },
+    "id": "rdl:G/ls.plane.svd/seed1/0002",
+    "inputs": [
+      {
+        "digest": "sha256:963eb63de61fa6c9ee16bec2270fff26a9d0dc8ad6f550b9532261811c5851a0",
+        "role": "points",
+        "unit": "m"
+      }
+    ],
+    "licence": "CC-BY-4.0",
+    "provenance": {
+      "method": "null-space construction seed 1 (synthetic xcheck fixture)",
+      "source": "Metrology Maven UNC.RDL.GEN.XCHECK synthetic fixture"
+    },
+    "reference": {
+      "outputs": [
+        {
+          "kind": "length",
+          "name": "offset_d",
+          "test_uncertainty_hex": "0x39b4484bfeebc2a0",
+          "value_dec": "-4.25000000000000000000000000000000000000000000000000002e-2",
+          "value_hex": "0xbfa5c28f5c28f5c3"
+        },
+        {
+          "kind": "dimensionless",
+          "name": "normal_z",
+          "test_uncertainty_hex": "0x39b4484bfeebc2a0",
+          "value_dec": "1.0000000000000000000000000000000000000000000000000000000e+0",
+          "value_hex": "0x3ff0000000000000"
+        }
+      ],
+      "precision_digits": 55
+    },
+    "schema": "rdl-dataset/v1",
+    "tier": "G",
+    "visibility": "public"
+  },
+  {
+    "aim": "ls.circle.gn",
+    "cross_check": [],
+    "generator": {
+      "id": "fid-rdl-gen",
+      "seed": "1",
+      "version": "0.0.1"
+    },
+    "id": "rdl:G/ls.circle.gn/seed1/0003",
+    "inputs": [
+      {
+        "digest": "sha256:7bca441bbf277898f230f392c9b1decfc0badf133f6d6d7f0a31ba4055b8853d",
+        "role": "points",
+        "unit": "m"
+      }
+    ],
+    "licence": "CC-BY-4.0",
+    "provenance": {
+      "method": "null-space construction seed 1 (synthetic xcheck fixture)",
+      "source": "Metrology Maven UNC.RDL.GEN.XCHECK synthetic fixture"
+    },
+    "reference": {
+      "outputs": [
+        {
+          "kind": "length",
+          "name": "center_x",
+          "test_uncertainty_hex": "0x39b4484bfeebc2a0",
+          "value_dec": "1.50000000000000000000000000000000000000000000000000003e-2",
+          "value_hex": "0x3f8eb851eb851eb8"
+        },
+        {
+          "kind": "length",
+          "name": "center_y",
+          "test_uncertainty_hex": "0x39b4484bfeebc2a0",
+          "value_dec": "-2.50000000000000000000000000000000000000000000000000004e-2",
+          "value_hex": "0xbf9999999999999a"
+        },
+        {
+          "kind": "length",
+          "name": "radius",
+          "test_uncertainty_hex": "0x39b4484bfeebc2a0",
+          "value_dec": "5.00000000000000000000000000000000000000000000000000005e-2",
+          "value_hex": "0x3fa999999999999a"
+        }
+      ],
+      "precision_digits": 55
+    },
+    "schema": "rdl-dataset/v1",
+    "tier": "G",
+    "visibility": "public"
+  },
+  {
+    "aim": "ls.sphere.gn",
+    "cross_check": [],
+    "generator": {
+      "id": "fid-rdl-gen",
+      "seed": "1",
+      "version": "0.0.1"
+    },
+    "id": "rdl:G/ls.sphere.gn/seed1/0004",
+    "inputs": [
+      {
+        "digest": "sha256:befbcbfa0a2bd1cf648018cbf477ed132bd4420c95c30e1325f2b9d8bd066e60",
+        "role": "points",
+        "unit": "m"
+      }
+    ],
+    "licence": "CC-BY-4.0",
+    "provenance": {
+      "method": "null-space construction seed 1 (synthetic xcheck fixture)",
+      "source": "Metrology Maven UNC.RDL.GEN.XCHECK synthetic fixture"
+    },
+    "reference": {
+      "outputs": [
+        {
+          "kind": "length",
+          "name": "center_x",
+          "test_uncertainty_hex": "0x39b4484bfeebc2a0",
+          "value_dec": "0e-55",
+          "value_hex": "0x0000000000000000"
+        },
+        {
+          "kind": "length",
+          "name": "radius",
+          "test_uncertainty_hex": "0x39b4484bfeebc2a0",
+          "value_dec": "7.50000000000000000000000000000000000000000000000000007e-2",
+          "value_hex": "0x3fb3333333333333"
+        }
+      ],
+      "precision_digits": 55
+    },
+    "schema": "rdl-dataset/v1",
+    "tier": "G",
+    "visibility": "public"
+  },
+  {
+    "aim": "ls.cylinder.gn",
+    "cross_check": [],
+    "generator": {
+      "id": "fid-rdl-gen",
+      "seed": "1",
+      "version": "0.0.1"
+    },
+    "id": "rdl:G/ls.cylinder.gn/seed1/0005",
+    "inputs": [
+      {
+        "digest": "sha256:e4c1123a81c00aef5a1972b3ba92e120460d937b4b5537dfe61d6cc104486ec7",
+        "role": "points",
+        "unit": "m"
+      }
+    ],
+    "licence": "CC-BY-4.0",
+    "provenance": {
+      "method": "null-space construction seed 1 (synthetic xcheck fixture)",
+      "source": "Metrology Maven UNC.RDL.GEN.XCHECK synthetic fixture"
+    },
+    "reference": {
+      "outputs": [
+        {
+          "kind": "dimensionless",
+          "name": "axis_z",
+          "test_uncertainty_hex": "0x39b4484bfeebc2a0",
+          "value_dec": "1.0000000000000000000000000000000000000000000000000000000e+0",
+          "value_hex": "0x3ff0000000000000"
+        },
+        {
+          "kind": "length",
+          "name": "radius",
+          "test_uncertainty_hex": "0x39b4484bfeebc2a0",
+          "value_dec": "3.20000000000000000000000000000000000000000000000000009e-2",
+          "value_hex": "0x3fa0624dd2f1a9fc"
+        }
+      ],
+      "precision_digits": 55
+    },
+    "schema": "rdl-dataset/v1",
+    "tier": "G",
+    "visibility": "public"
+  },
+  {
+    "aim": "ls.cone.gn",
+    "cross_check": [],
+    "generator": {
+      "id": "fid-rdl-gen",
+      "seed": "1",
+      "version": "0.0.1"
+    },
+    "id": "rdl:G/ls.cone.gn/seed1/0006",
+    "inputs": [
+      {
+        "digest": "sha256:266c0100d007d0f4d1fc64b7b2eca1001badd6dd1cecd37ec5dcdddbe2644d09",
+        "role": "points",
+        "unit": "m"
+      }
+    ],
+    "licence": "CC-BY-4.0",
+    "provenance": {
+      "method": "null-space construction seed 1 (synthetic xcheck fixture)",
+      "source": "Metrology Maven UNC.RDL.GEN.XCHECK synthetic fixture"
+    },
+    "reference": {
+      "outputs": [
+        {
+          "kind": "angle",
+          "name": "half_angle",
+          "test_uncertainty_hex": "0x39b4484bfeebc2a0",
+          "value_dec": "2.617993877991494365385536152732919070164307832812588184e-1",
+          "value_hex": "0x3fd0c152382d7366"
+        },
+        {
+          "kind": "length",
+          "name": "apex_z",
+          "test_uncertainty_hex": "0x39b4484bfeebc2a0",
+          "value_dec": "-1.000000000000000000000000000000000000000000000000000001e-1",
+          "value_hex": "0xbfb999999999999a"
+        }
+      ],
+      "precision_digits": 55
+    },
+    "schema": "rdl-dataset/v1",
+    "tier": "G",
+    "visibility": "public"
+  }
+]
