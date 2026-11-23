@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+built_in: [tools/house_rules]
+built_pr: 464
+updated: 2026-11-22
 ---
 
 # ECO.RULES.SYNC: House-rules sync tool
