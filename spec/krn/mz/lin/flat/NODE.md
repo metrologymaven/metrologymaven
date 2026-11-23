@@ -18,7 +18,8 @@ determinism: D0
 cli: [fid fit mz-line2d, fid fit mz-plane]
 mcp: [fit_mz_line2d, fit_mz_plane]
 journal: [fit.mz_line2d@1, fit.mz_plane@1]
-updated: 2026-11-17
+built_in: [fid-fit]
+updated: 2026-11-23
 ---
 
 # KRN.MZ.LIN.FLAT: Minimum-zone 2D line and plane (LP)
