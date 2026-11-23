@@ -5,6 +5,8 @@
 //! `fid_num::f` for square roots, `f64::total_cmp` for max/min with lowest-index tie breaking,
 //! NaN rejected as an error.
 
+pub mod flat;
+
 use crate::dmt::{OperatorChain, OperatorKind, Param};
 use core::cmp::Ordering;
 use core::fmt;
