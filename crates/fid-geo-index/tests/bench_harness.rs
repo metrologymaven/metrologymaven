@@ -169,7 +169,11 @@ fn ac3_injected_slowdown_under_reference_profile_flags_regression_and_fails() {
 
 #[test]
 fn out_file_and_invalid_cli_flags() {
-    let out_path = std::env::temp_dir().join(format!("fid-geo-index-bench-test-{}.json", std::process::id()));
+    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let tmp_dir = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"));
+    std::fs::create_dir_all(&tmp_dir).unwrap();
+    let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let out_path = tmp_dir.join(format!("fid-geo-index-bench-test-{n}.json"));
     let out_str = out_path.to_str().unwrap().to_string();
     let (code, stdout, stderr) = index_bench::run_cli(&args(&[
         "--n",
