@@ -327,7 +327,7 @@ fn ac5_claim_lint_runs_only_on_hand_written_sources_not_ref_pages() {
         }
     }
     assert_eq!(errors.len(), 1, "expected exactly one CL001 finding, got {errors:?}");
-    assert!(errors[0].0.ends_with("book/intro.md"));
+    assert!(errors[0].0.replace('\\', "/").ends_with("book/intro.md"));
     assert_eq!(errors[0].1, "CL001");
 
     // Confirm the excluded ref page really does contain "certified" so exclusion is meaningful.
