@@ -6,6 +6,8 @@
 //!   [`MeshImportCounts`], [`BuiltMesh`], [`BuiltPointSet`], [`BuiltGeometry`],
 //!   [`PrecisionReport`], [`f32_rounding_report`], [`count_non_manifold_edges`] and
 //!   [`MeshBuildError`].
+//! - `IO.MESH.STL`: [`stl`] — ASCII and binary STL reader/writer (`import.mesh_stl@1` and
+//!   `export.mesh_stl@1` built on the `fid-io-reg` skeletons).
 //!
 //! Every mesh reader (STL, PLY, OBJ, 3MF) feeds [`MeshBuilder`]: vertices and faces are
 //! kept in exact input order without merging, reordering, repairing or dropping elements
@@ -19,6 +21,7 @@ pub mod attrs;
 pub mod builder;
 pub mod error;
 pub mod precision;
+pub mod stl;
 
 pub use attrs::{AttrTable, CustomScalarType, ScalarColumn};
 pub use builder::{
