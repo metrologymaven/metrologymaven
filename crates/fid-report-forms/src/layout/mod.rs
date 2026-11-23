@@ -1,6 +1,7 @@
 //! Fixed form templates, field maps, `form_field` block kind & resolver, locking, clearance
 //! release gate and clean-room label checks (`RPT.FORMS.LAYOUT`).
 
+pub mod fai;
 pub mod map;
 
 pub use map::{
