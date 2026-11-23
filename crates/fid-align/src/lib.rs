@@ -30,6 +30,7 @@ mod error;
 pub mod hier;
 pub mod model;
 pub mod residuals;
+pub mod rps321;
 pub mod solver;
 
 pub use command::{
@@ -60,6 +61,11 @@ pub use model::{
 };
 pub use residuals::{
     get_residuals, ResidualStore, ResidualsParams, CLI_RESIDUALS, DEFAULT_PAGE, GET_RESIDUALS, MAX_PAGE, MCP_RESIDUALS,
+};
+pub use rps321::{
+    invoke_321_cli, invoke_321_mcp, replay_321, run_321, run_321_command_def, Rps321Elements, Run321Commit,
+    Run321Error, Run321Event, Run321Mode, Run321Params, CLI_RUN_321, MAX_321_EVENT_BYTES, MAX_RPS_ELEMENTS,
+    MCP_RUN_321, RUN_321,
 };
 pub use solver::{AlignmentSolver, SolveStatus, SolverError, SolverOutput, SolverRegistry, MAX_SOLVERS};
 
