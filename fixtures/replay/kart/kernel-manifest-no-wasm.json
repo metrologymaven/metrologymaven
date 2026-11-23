@@ -1,0 +1,1 @@
+{"artifacts":[{"role":"native","sha256":"sha256:fe07e5d5727d57e4c06af36d5758bb3aeee4031ca794eab331cd47f788eb7c3f","target":"x86_64-unknown-linux-gnu"}],"core":{"algorithms":[],"name":"fid-kernel","numeric_profile":"knp-1","schema_version":"1","semver":"0.2.0"},"core_digest":"sha256:4c1e49ae51216864ceabb1c4c25ff25f12633b45190714936cafa771666b943a"}
