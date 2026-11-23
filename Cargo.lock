@@ -2102,6 +2102,7 @@ dependencies = [
  "fid-bus",
  "fid-canon",
  "fid-gdt",
+ "fid-io-draw",
  "fid-io-reg",
  "fid-io-res",
  "fid-kdec",
@@ -2111,6 +2112,7 @@ dependencies = [
  "fid-registry",
  "fid-replay",
  "fid-report",
+ "fid-store",
  "fid-types",
 ]
 
