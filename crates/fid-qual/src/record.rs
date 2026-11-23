@@ -710,6 +710,7 @@ pub fn build_journal_entry(
         manifests: meta.manifests,
         reason: meta.reason.clone(),
         human_assertion: None,
+        agent_coedited: false,
         body: DraftBody::Command(CommandDraft {
             id: record.kind.command_name().to_string(),
             major: 1,
@@ -725,6 +726,7 @@ pub fn build_journal_entry(
                 digest: output_digest,
             }],
             algorithms: Vec::new(),
+            event_sources: Vec::new(),
         }),
     };
     build_entry(&draft, seq, prev, salts).map_err(|e| invalid_journal("entry", e.to_string()))

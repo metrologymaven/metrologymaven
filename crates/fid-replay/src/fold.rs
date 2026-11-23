@@ -144,6 +144,7 @@ impl FoldInvariantMismatch {
             manifests,
             reason: Some("fold_invariant_mismatch".to_string()),
             human_assertion: None,
+            agent_coedited: false,
             body: DraftBody::Command(CommandDraft {
                 id: ACTIVITY_INCIDENT_COMMAND.to_string(),
                 major: 1,
@@ -159,6 +160,7 @@ impl FoldInvariantMismatch {
                     digest: fid_canon::Digest(self.head.to_bytes()),
                 }],
                 algorithms: Vec::new(),
+                event_sources: Vec::new(),
             }),
         }
     }
