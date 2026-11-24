@@ -107,6 +107,7 @@ python fixtures/gdt/dmt/make_inventory_fixtures.py --check
 python fixtures/gdt/dprof/make_cases.py --check
 python fixtures/gdt/drf/build/make_cases.py --check
 python fixtures/gdt/drf/cyl/make_cases.py --check
+python fixtures/gdt/drf/make_targets_plate.py --check
 python fixtures/gdt/drf/measured/make_cases.py --check
 python fixtures/gdt/ident/make_fixtures.py --check
 python fixtures/gdt/interp/make_cases.py --check
