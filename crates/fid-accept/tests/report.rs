@@ -477,7 +477,7 @@ fn edited_trend_record_is_detected_by_its_report_digest() {
     assert_eq!(show_report(&store, &all).unwrap_err().code, VerdictErrorCode::Schema);
 
     // The report a record names is missing.
-    std::fs::write(store.trend_path(), &original).unwrap();
+    std::fs::write(store.trend_path(), original.as_bytes()).unwrap();
     let newest = original.lines().last().unwrap();
     let hex = newest.split("sha256:").nth(1).unwrap().get(0..64).unwrap();
     std::fs::remove_file(store.root().join("reports").join(format!("{hex}.json"))).unwrap();
