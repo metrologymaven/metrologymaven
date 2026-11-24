@@ -46,12 +46,12 @@ A Python replacement for `tools/grow.ps1` that runs on Windows, Linux and macOS:
 - **REQ-ECO.COMM.GROW-002** The driver shall run the first node alone, and if its log matches an authentication-failure pattern, then it shall stop with exit code 2 without starting other nodes.
 - **REQ-ECO.COMM.GROW-003** While nodes remain, the driver shall keep at most `--parallel` agent processes running.
 - **REQ-ECO.COMM.GROW-004** When all agents finish, the driver shall run `scope.py check` and exit with its exit code, and it shall never invoke `git commit` or `git push`.
-- **REQ-ECO.COMM.GROW-005** When the target level is 1 or 2, the driver shall print that splits need human review in a PR.
+- **REQ-ECO.COMM.GROW-005** When the target level is 1 or 2, the driver shall print that splits need independent agent review in a PR (D-052).
 - **REQ-ECO.COMM.GROW-006** The driver shall use only the Python standard library.
 
 ## Acceptance criteria
 
-- **AC-1** Given fixture tree `fixtures/grow/tree/` with three open level-2 nodes, when `python tools/grow.py --dry-run --root fixtures/grow/tree` runs, then it prints the three node paths and the human-review note and starts no process.
+- **AC-1** Given fixture tree `fixtures/grow/tree/` with three open level-2 nodes, when `python tools/grow.py --dry-run --root fixtures/grow/tree` runs, then it prints the three node paths and the independent-agent-review note and starts no process.
 - **AC-2** Given the same tree and `--agent-cmd fixtures/grow/fake_agent.py` (writes "ok" and sleeps 0.2 s), when `grow.py --parallel 2 --no-level-check` runs, then three logs exist under `generated/logs/`, the fake reports at most two concurrent runs, and the canary finished before the others started.
 - **AC-3** (error path) Given `fixtures/grow/fake_agent_authfail.py` (prints "Invalid API key"), when `grow.py` runs, then it exits 2 after exactly one agent run.
 - **AC-4** Given AC-2's run, when it finishes, then `scope.py check` ran last and `git` was never invoked (the test puts a failing `git` shim first on `PATH`).
@@ -73,7 +73,7 @@ A small fixture tree and two fake agent scripts under `tools/tests/fixtures/grow
 
 ## Build prompt
 
-> In the spec repository, write `tools/grow.py` (Python 3.9+, standard library only) to replace `tools/grow.ps1` on all OSes. Options: `--level`, `--limit`, `--parallel` (3), `--agent claude|codex`, `--model`, `--dry-run`, `--no-level-check`, plus test-only `--root` and `--agent-cmd`. Behaviour: list nodes via `python tools/scope.py open [--level] [--limit]`; print them; if the target level ≤ 2 print that splits need human review in a PR; on dry-run stop. Otherwise write logs to `generated/logs/<node path with / replaced by _>.log`; run the first node alone and exit 2 if its log matches `Failed to authenticate|OAuth access token is invalid|not logged in|Invalid API key`; then run the rest with at most `--parallel` concurrent processes; then, unless `--no-level-check`, run the agent once with "Follow prompts/level-check.md exactly. LEVEL: <n+1>"; finally run `scope.py check` and exit with its code. Never call git. Message per node: "Follow prompts/expand-node.md exactly. TARGET: <path>". Add `unittest` tests for AC-1..AC-5 of spec node ECO.COMM.GROW with fake agents, and run them in CI on three OSes. Keep `grow.ps1` until `grow.py` has passed one real level.
+> In the spec repository, write `tools/grow.py` (Python 3.9+, standard library only) to replace `tools/grow.ps1` on all OSes. Options: `--level`, `--limit`, `--parallel` (3), `--agent claude|codex`, `--model`, `--dry-run`, `--no-level-check`, plus test-only `--root` and `--agent-cmd`. Behaviour: list nodes via `python tools/scope.py open [--level] [--limit]`; print them; if the target level ≤ 2 print that splits need independent agent review in a PR (D-052); on dry-run stop. Otherwise write logs to `generated/logs/<node path with / replaced by _>.log`; run the first node alone and exit 2 if its log matches `Failed to authenticate|OAuth access token is invalid|not logged in|Invalid API key`; then run the rest with at most `--parallel` concurrent processes; then, unless `--no-level-check`, run the agent once with "Follow prompts/level-check.md exactly. LEVEL: <n+1>"; finally run `scope.py check` and exit with its code. Never call git. Message per node: "Follow prompts/expand-node.md exactly. TARGET: <path>". Add `unittest` tests for AC-1..AC-5 of spec node ECO.COMM.GROW with fake agents, and run them in CI on three OSes. Keep `grow.ps1` until `grow.py` has passed one real level.
 
 ## Open questions
 

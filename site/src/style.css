@@ -1,7 +1,7 @@
 /* Metrology Maven site. System fonts only: no third-party requests (REQ-OUTR.SITE-007). */
 :root{
   --paper:#f4f6f8; --sheet:#fff; --ink:#15202b; --ink-2:#4a5866; --rule:#cfd7df; --grid:#e8edf2;
-  --ruby:#b5132e; --ruby-soft:#f6e3e7; --steel:#2f5f8a; --steel-soft:#e2ecf5; --ok:#2e7d4f; --ok-soft:#e1f1e7; --warn:#9a5a08; --warn-soft:#f8ecd9;
+  --ruby:#b5132e; --ruby-soft:#f6e3e7; --steel:#2f5f8a; --steel-soft:#e2ecf5; --ok:#256a41; --ok-soft:#e1f1e7; --warn:#9a5a08; --warn-soft:#f8ecd9;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --mono:ui-monospace,"Cascadia Mono","SF Mono",Menlo,Consolas,monospace;
   color-scheme:light dark;
@@ -44,7 +44,7 @@ p{margin:0;max-width:70ch}
 .btns{display:flex;flex-wrap:wrap;gap:10px}
 .btn{display:inline-block;padding:10px 16px;border:1.5px solid var(--ink);text-decoration:none;color:var(--ink);font-weight:650;background:var(--sheet)}
 .btn.primary{background:var(--ink);color:var(--sheet)}
-.btn:hover{border-color:var(--ruby);color:var(--ruby)} .btn.primary:hover{background:var(--ruby);color:#fff}
+.btn:hover{border-color:var(--ruby);color:var(--ruby)} .btn.primary:hover{background:var(--ruby);color:var(--sheet)}
 .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
 .card{border:1.5px solid var(--ink);background:var(--sheet);padding:14px;display:flex;flex-direction:column;gap:6px;text-decoration:none;color:var(--ink)}
 a.card:hover{border-color:var(--ruby)}
@@ -66,7 +66,7 @@ th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);verti
 th{font:600 11.5px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);background:var(--paper)}
 td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 .bar{height:8px;background:var(--steel-soft);min-width:80px;position:relative}
-.bar i{position:absolute;inset:0 auto 0 0;background:var(--steel)}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--steel);color:var(--sheet)}
 ul.clean{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:5px}
 .two{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
 .col{border:1.5px solid var(--ink);padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--sheet)}

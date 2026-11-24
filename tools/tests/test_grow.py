@@ -85,7 +85,7 @@ class GrowDriverTest(unittest.TestCase):
 
         return tmp, marker
 
-    def test_ac1_dry_run_lists_nodes_and_human_review_note(self) -> None:
+    def test_ac1_dry_run_lists_nodes_and_agent_review_note(self) -> None:
         tree = self.copy_tree()
         state_dir = self.make_state_dir()
         env = dict(os.environ, GROW_TEST_STATE_DIR=str(state_dir))
@@ -101,7 +101,7 @@ class GrowDriverTest(unittest.TestCase):
         self.assertEqual(code, 0, out + err)
         for node in EXPECTED_NODES:
             self.assertIn(node, out)
-        self.assertIn("human review", out.lower())
+        self.assertIn("independent agent review", out.lower())
         self.assertFalse((tree / "generated" / "logs").exists())
         self.assertFalse((state_dir / "events").exists())
 

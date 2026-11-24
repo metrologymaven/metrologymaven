@@ -13,7 +13,7 @@ fn main() -> ExitCode {
         Err(_) => read_failed(),
     };
     let mut stdout = std::io::stdout().lock();
-    if stdout.write_all(&out).and_then(|()| stdout.flush()).is_err() {
+    if stdout.write_all(&out).and_then(|()| stdout.write_all(b"\n")).and_then(|()| stdout.flush()).is_err() {
         return ExitCode::from(EXIT_IO);
     }
     ExitCode::from(code)

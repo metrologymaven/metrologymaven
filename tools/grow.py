@@ -5,7 +5,7 @@ Python 3.9+ standard-library replacement for tools/grow.ps1 that runs on
 Windows, Linux and macOS:
 
 1. Lists open nodes via ``tools/scope.py open``.
-2. Prints the list and a human-review reminder when the target level <= 2.
+2. Prints the list and an independent-agent-review reminder when the target level <= 2 (D-052).
 3. Stops on ``--dry-run`` without starting any agent process.
 4. Runs the first node alone as a canary and aborts with exit code 2 if its
    log matches an authentication-failure pattern.
@@ -331,7 +331,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(f"  {node}")
     if target_level <= 2:
         print(
-            f"NOTE: level {target_level} splits need human review in a PR before merging."
+            f"NOTE: level {target_level} splits need independent agent review in a PR before merging (D-052)."
         )
 
     if args.dry_run:

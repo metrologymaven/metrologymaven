@@ -97,6 +97,16 @@ pub fn embedded_manifest_bytes() -> Vec<u8> {
             ]),
         ),
         make_def(
+            "align.run_bestfit",
+            2,
+            "R1",
+            "exposed",
+            false,
+            "Run best-fit alignment (v2)",
+            "Computes a deterministic rigid-body best-fit alignment residual summary (v2).",
+            obj(vec![("properties", obj(vec![])), ("type", s("object"))]),
+        ),
+        make_def(
             "align.set_datum",
             1,
             "W2",
@@ -131,6 +141,25 @@ pub fn embedded_manifest_bytes() -> Vec<u8> {
             ]),
         ),
         make_def(
+            "egress.send",
+            1,
+            "X1",
+            "request_only",
+            false,
+            "Send external egress payload",
+            "Sends an approved external egress payload (X1, request-only on MCP).",
+            obj(vec![
+                (
+                    "properties",
+                    obj(vec![(
+                        "tolerance",
+                        obj(vec![("type", s("number")), ("x-quantity", s("length")), ("x-unit", s("um"))]),
+                    )]),
+                ),
+                ("type", s("object")),
+            ]),
+        ),
+        make_def(
             "journal.list_entries",
             1,
             "R0",
@@ -161,6 +190,25 @@ pub fn embedded_manifest_bytes() -> Vec<u8> {
             obj(vec![("properties", obj(vec![])), ("type", s("object"))]),
         ),
         make_def(
+            "probe.read_temperature",
+            1,
+            "D1",
+            "request_only",
+            false,
+            "Read probe temperature",
+            "Reads hardware probe temperature sensor (D1, request-only on MCP).",
+            obj(vec![
+                (
+                    "properties",
+                    obj(vec![(
+                        "tolerance",
+                        obj(vec![("type", s("number")), ("x-quantity", s("length")), ("x-unit", s("um"))]),
+                    )]),
+                ),
+                ("type", s("object")),
+            ]),
+        ),
+        make_def(
             "program.save_draft",
             1,
             "W1",
@@ -179,6 +227,44 @@ pub fn embedded_manifest_bytes() -> Vec<u8> {
             "List project features",
             "Lists geometric features in the active project.",
             obj(vec![("properties", obj(vec![])), ("type", s("object"))]),
+        ),
+        make_def(
+            "rpt.release_report",
+            1,
+            "W3",
+            "request_only",
+            false,
+            "Release inspection report",
+            "Releases a controlled inspection report (W3, request-only on MCP).",
+            obj(vec![
+                (
+                    "properties",
+                    obj(vec![(
+                        "tolerance",
+                        obj(vec![("type", s("number")), ("x-quantity", s("length")), ("x-unit", s("um"))]),
+                    )]),
+                ),
+                ("type", s("object")),
+            ]),
+        ),
+        make_def(
+            "sim.run_program",
+            1,
+            "I1",
+            "exposed",
+            false,
+            "Run simulation program",
+            "Runs an offline inspection program simulation.",
+            obj(vec![
+                (
+                    "properties",
+                    obj(vec![(
+                        "tolerance",
+                        obj(vec![("type", s("number")), ("x-quantity", s("length")), ("x-unit", s("um"))]),
+                    )]),
+                ),
+                ("type", s("object")),
+            ]),
         ),
         make_def(
             "tools.describe_tool",

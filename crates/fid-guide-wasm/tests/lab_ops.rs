@@ -238,3 +238,31 @@ fn ac2_error_paths_never_panic() {
     let (code, _) = dispatch(&huge);
     assert_eq!(code, EXIT_BAD_INPUT);
 }
+
+#[test]
+fn cli_stdout_emits_single_newline_terminated_json_line() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+
+    let bin = env!("CARGO_BIN_EXE_fid-guide-wasm");
+    let mut child = Command::new(bin)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawn fid-guide-wasm");
+    child
+        .stdin
+        .take()
+        .expect("stdin")
+        .write_all(br#"{"op":"canon.digest","params":{"json_a":"{\"b\":1,\"a\":2}"}}"#)
+        .expect("write stdin");
+    let output = child.wait_with_output().expect("wait output");
+    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let stdout = String::from_utf8(output.stdout).expect("utf8 stdout");
+    assert!(stdout.ends_with('\n'), "expected trailing newline on stdout: {stdout:?}");
+    assert_eq!(stdout.lines().count(), 1, "expected single JSON line: {stdout:?}");
+    let val = parse(stdout.trim_end().as_bytes()).expect("valid JSON line");
+    let CValue::Obj(map) = val else { panic!("expected JSON object") };
+    assert_eq!(map.get("ok"), Some(&CValue::Bool(true)));
+}

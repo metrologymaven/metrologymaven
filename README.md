@@ -24,7 +24,8 @@ The internal command and crate prefix `fid` comes from *fiducial*, a reference m
 
 ```bash
 cargo test --locked --workspace --exclude fid-clarabel        # Rust crates (unit, integration, doctests)
-cargo nextest run --workspace --no-fail-fast --no-tests=pass   # CI test runner + --doc above
+cargo nextest run --workspace --no-fail-fast --no-tests=pass   # CI test runner (unit + integration)
+cargo test --locked --workspace --exclude fid-clarabel --doc   # CI doctests (nextest skips doctests)
 cargo xtask fmt --check                                        # cross-platform formatting check
 echo '{"b":1,"a":2}' | cargo run -q -p fid-cli -- canon        # fid CLI smoke check
 cargo run -q -p fid-verify -- --help                           # standalone Result Package verifier

@@ -172,3 +172,20 @@ fn tools_invoke_readonly_preserves_tainted_text_with_custom_bus() {
     assert!(text.contains("\\<<<FID-UNTRUSTED-DATA-END\\>>>"), "missing escaped delim: {text}");
     assert!(delimiters_balanced(text), "unbalanced delimiters: {text}");
 }
+
+#[test]
+fn embedded_manifest_projects_min_classes_commands_including_rpt_release_report() {
+    let proj = embedded_projection().unwrap();
+    for required in [
+        "align.run_bestfit@2",
+        "egress.send@1",
+        "probe.read_temperature@1",
+        "rpt.release_report@1",
+        "sim.run_program@1",
+    ] {
+        assert!(
+            proj.commands.iter().any(|c| c.command_id.as_str() == required),
+            "embedded manifest missing {required}"
+        );
+    }
+}

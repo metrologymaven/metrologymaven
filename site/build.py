@@ -273,7 +273,7 @@ def apps_index(d):
 <section class="hero">{fcf("A", "APPS")}
 <h1>The app family</h1>
 <p class="lead">Report and Inspect come first, because they help shops that run several brands of equipment straight away. Probe and Network follow.</p>{notice(d)}</section>
-<section class="sheet"><div class="grid">{"".join(app_card(a, d) for a in APPS)}</div></section>
+<section class="sheet"><h2>Four focused apps</h2><div class="grid">{"".join(app_card(a, d) for a in APPS)}</div></section>
 <section class="sheet">{fcf("C", "SHARED CORE", "FOUNDATION")}
 <h2>Shared core &amp; platform domains</h2>
 <p class="muted">All four apps sit on the same deterministic kernel, geometry engine, command registry, journal, CLI and MCP surfaces.</p>
@@ -418,6 +418,7 @@ def contribute(d):
 <p class="lead">Every piece of work is a self-contained node in the repository. No waiting, no outreach, and no gatekeepers: pick an open node or buildable leaf and open a pull request.</p>
 <div class="btns"><a class="btn primary" href="{REPO}">Open repository</a><a class="btn" href="{REPO}/blob/main/generated/milestones/launch-1.md">Launch-1 build waves</a><a class="btn" href="{REPO}/blob/main/CONTRIBUTING.md">Contributing guide</a></div></section>
 <section class="sheet">{fcf("1", "SELF-SERVICE WORKFLOWS")}
+<h2>Self-service workflows</h2>
 <div class="grid">
 <div class="card"><h3>Build Rust leaves</h3><p>Pick an unbuilt leaf from the earliest waves in <code>generated/milestones/launch-1.md</code>. Each leaf's build prompt is self-contained and checked by CI.</p></div>
 <div class="card"><h3>Expand open spec nodes</h3><p>Run <code>python tools/scope.py open</code> and follow <code>prompts/expand-node.md</code> with a coding agent or by hand. Name your agent tool in the PR.</p></div>
@@ -434,7 +435,9 @@ def company(d):
 <section class="hero">{fcf("M", "COMPANY")}
 <h1>Metrology Maven, the company</h1>
 <p class="lead">Metrology Maven stewards the open-source core platform and funds its infrastructure. The four base apps, deterministic kernel and verifier are free and open source. The company builds commercial enterprise, industry-pack, AI-fleet and regulated-assurance products on top.</p></section>
-<section class="sheet">{fcf("1", "OPEN-CORE BOUNDARY")}<div class="two">
+<section class="sheet">{fcf("1", "OPEN-CORE BOUNDARY")}
+<h2>Open-core boundary</h2>
+<div class="two">
 <div class="col free"><h3>Open core (MIT OR Apache-2.0)</h3><ul class="clean"><li>All four base apps (Report, Inspect, Probe, Network), the deterministic math kernel and QIF/STEP/DMIS formats</li><li>The CLI, MCP servers, Python scripting and vendor-neutral HAL</li><li>The independent verifier (<code>fid-verify</code>)</li><li>Open validation templates (<code>QUAL.VAP</code>), IQ/OQ runner and the <code>IND.CONTRACT</code> plugin SDK</li></ul></div>
 <div class="col"><h3>Commercial products &amp; services (D-053)</h3><ul class="clean"><li>Multi-site Enterprise server: SSO/SAML, RBAC, sync, cross-site dashboards and PLM/MES/ERP connectors (<code>ENT</code>)</li><li>Commercial industry packs built on <code>IND.CONTRACT</code> (airfoil, gear, sheet metal, gap &amp; flush, tube, pattern, portable)</li><li>Hosted verification, evidence archive and OEM supplier quality verification portal</li><li>On-premises private machine-adapter LoRA fine-tuning, fleet drift monitoring and autonomous AI auto-programming (D-049)</li><li>Pre-built certified regulated LTS builds, release dossiers, support SLAs and OEM hardware integration packs</li></ul></div>
 </div>
