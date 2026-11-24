@@ -56,6 +56,9 @@ ALWAYS_RUN_AFFECTED = (
     "python tools/check_eval_suite.py",
     "python tools/check_manifest_schema.py",
     "python tools/check_registry_keywords.py",
+    # TRUST.SIGN.KEYSTORE.TRAIT (PR #444): a call to UvRelease::issue can appear in any crate,
+    # so the workspace-wide rule runs on every PR, not only when the keystore changes.
+    "python ci/keystore/key-bytes-scan --uv-release-issue",
 )
 
 
