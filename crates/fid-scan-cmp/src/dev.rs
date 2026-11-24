@@ -1027,17 +1027,19 @@ mod tests {
             DevResult::Valid(0.001)
         );
 
-        // Boundary dot products slightly outside [-1, 1] clamp safely without Domain error
+        // Boundary dot products strictly outside [-1, 1] clamp safely without Domain error
+        // (note: `1.0 + 1e-16` rounds to `1.0` in IEEE-754 f64, so also test 1 ULP past +/-1.0).
+        let over_one = f64::from_bits(1.0_f64.to_bits() + 1);
+        assert!(!angle_exceeds([0.0, 0.0, over_one], [0.0, 0.0, 1.0], 0.0).unwrap());
+        assert!(!angle_exceeds([0.0, 0.0, -over_one], [0.0, 0.0, 1.0], PI).unwrap());
         let p_zero = DevParams { method: Method::Normal, max_distance: 0.01, max_angle: 0.0 };
         assert_eq!(
-            deviation([0.2, 0.2, 0.001], Some([0.0, 0.0, 1.0 + 1e-16]), NominalRef::Mesh(&sign_target), &p_zero)
-                .unwrap(),
+            deviation([0.2, 0.2, 0.001], Some([0.0, 0.0, over_one]), NominalRef::Mesh(&sign_target), &p_zero).unwrap(),
             DevResult::Valid(0.001)
         );
         let p_pi = DevParams { method: Method::Normal, max_distance: 0.01, max_angle: PI };
         assert_eq!(
-            deviation([0.2, 0.2, 0.001], Some([0.0, 0.0, -1.0 - 1e-16]), NominalRef::Mesh(&sign_target), &p_pi)
-                .unwrap(),
+            deviation([0.2, 0.2, 0.001], Some([0.0, 0.0, -over_one]), NominalRef::Mesh(&sign_target), &p_pi).unwrap(),
             DevResult::Valid(0.001)
         );
     }

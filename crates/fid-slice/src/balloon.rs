@@ -89,7 +89,7 @@ pub fn run_balloon_file(
     ]))
     .ok_or_else(|| SliceError::new("internal", "invalid demo RevisionId"))?;
 
-    let drawing_number = strip_pdf_suffix_ascii(&file_name).to_string();
+    let drawing_number = strip_pdf_suffix_ascii(file_name).to_string();
     let imported = {
         let mut env = ImportEnv { roots: &roots, principal: Principal::Agent, blobs: &mut blobs, ids: &mut ids };
         add_drawing_balloon(
