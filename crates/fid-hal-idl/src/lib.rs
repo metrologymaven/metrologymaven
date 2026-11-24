@@ -15,8 +15,11 @@
 //!   (`HAL.IDL.GEN.FMT`).
 //! - [`profile`]: the `instrument-profile/v1` descriptor, its validator, the spec-sheet UEC
 //!   cap and the canonical digest that excludes the signature block (`HAL.IDL.PROFILE`).
+//! - [`negotiate`]: capability declarations, the runtime-support table, the fail-closed
+//!   negotiation function and the capability-package semver rules (`HAL.IDL.NEG`).
 
 pub mod base;
+pub mod negotiate;
 pub mod package;
 pub mod profile;
 pub mod stamp;
@@ -59,3 +62,8 @@ pub use package::{
 };
 
 pub use profile::{InstrumentProfile, ProfileError, ProfileErrorKind, SourceKind as ProfileSourceKind};
+
+pub use negotiate::{
+    negotiate, negotiate_json, negotiate_with_profile, CapabilityDeclaration, CapabilityOffer, NegError, NegErrorKind,
+    NegotiationResult, Outcome, RuntimeSupport, VersionRange,
+};

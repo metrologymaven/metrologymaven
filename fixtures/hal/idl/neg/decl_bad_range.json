@@ -1,0 +1,54 @@
+{
+  "schema": "capability-declaration/v1",
+  "driver_version": "0.3.0",
+  "device": {
+    "driver_id": "drv.example.linescan",
+    "make": {
+      "bytes": "Example Optics (invented)",
+      "truncated": false
+    },
+    "model": {
+      "bytes": "EX-LS 100 (invented)",
+      "truncated": false
+    },
+    "serial": {
+      "bytes": "INVENTED-SN-0007",
+      "truncated": false
+    },
+    "firmware": {
+      "bytes": "ex-fw 4.2 (invented)",
+      "truncated": false
+    }
+  },
+  "capabilities": [
+    {
+      "name": "Device",
+      "versions": ">=1.0 <2",
+      "features": [
+        "health_push"
+      ],
+      "limits": {}
+    },
+    {
+      "name": "LineScan",
+      "versions": ">=1.2 < 2",
+      "features": [],
+      "limits": {}
+    }
+  ],
+  "time_sources": [
+    "PTP",
+    "HOST_RECEIVE"
+  ],
+  "tested_firmware": {
+    "lowest": {
+      "bytes": "ex-fw 4.0 (invented)",
+      "truncated": false
+    },
+    "highest": {
+      "bytes": "ex-fw 4.2 (invented)",
+      "truncated": false
+    }
+  },
+  "conformance_report": "sha256:0000000000000000000000000000000000000000000000000000000000000001"
+}

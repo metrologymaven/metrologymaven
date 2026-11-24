@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-hal-idl]
 satisfies: [REQ-HAL.IDL-002, REQ-HAL.IDL-007]
 covers: []
 depends_on: [HAL.IDL.BASE]
