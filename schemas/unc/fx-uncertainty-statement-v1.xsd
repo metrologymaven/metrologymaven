@@ -144,6 +144,7 @@
           </xs:sequence>
         </xs:complexType>
       </xs:element>
+      <xs:element name="SamplesDigest" type="fx:Sha256DigestType" minOccurs="0"/>
       <xs:element name="SelectionRule" type="xs:string" minOccurs="0"/>
       <xs:element name="EstimateConvention" type="xs:string" minOccurs="0"/>
       <xs:element name="Provenance">

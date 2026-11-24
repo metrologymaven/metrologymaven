@@ -24,8 +24,9 @@ the bounds and that no bound is within 1e-13 of a decision threshold, so the ker
 erfc error (at most 2e-15) cannot change an expected outcome.
 
 Samples (maintainer decision 2026-11-21). Rows with a sample file are run through the
-kernel's digest-checked entry point (evaluate_with_samples); `samples_digest` is empty for
-the file's own SHA-256 or `wrong`. A decision needs T >= max(100, 20 / (1 - p_min))
+kernel's digest-checked entry point (evaluate_with_samples); `samples_digest` is what the MCM
+statement carries (UNC.UEC.STMT): empty for the file's own SHA-256, or `wrong`. A non-MCM
+statement carries none, so its samples are unbound. A decision needs T >= max(100, 20 / (1 - p_min))
 [unverified]; with fewer trials a conformance-probability rule is INDETERMINATE with flag
 samples_too_few.
 
