@@ -1,6 +1,6 @@
 ---
 title: Contributor guide
-revision: f1aa07d0b18bf60bd3bdd04612b66262864ad6d7
+revision: 7f18e733b2c5c46fba184ae31cd592367c1d67f8
 ---
 
 # Contributor guide
@@ -23,7 +23,7 @@ To look at one level, or at the first few nodes only, pass `--level` or `--limit
 python tools/scope.py open --level 4 --limit 5
 ```
 
-Nodes marked `needs_expert:` are left out of this list, because a person with the named domain expertise must write them (see `AGENTS.md`, rule 13, and the expert queue in `generated/EXPERT-QUEUE.md`). `generated/INDEX.md` is the same tree as a browsable table.
+Under `D-052`, autonomous build mode is active (`needs_expert:` is retired, and all open public nodes enter `scope.py open`). `generated/INDEX.md` is the tree as a browsable table, and `generated/milestones/launch-1.md` tracks the launch waves.
 
 For counts by level and status:
 
@@ -37,9 +37,7 @@ Before you write anything, make sure nobody else is working on the node (`AGENTS
 
 1. Open the node's `NODE.md` and look at `claimed_by:` in its front matter. If it names someone, the node is taken.
 2. Search the open pull requests and issues on GitHub for the node ID (for example `OUTR.DOCS.CONTRIB`).
-3. Claim it: open an issue with the **Expand node** template, or comment `/claim` on the existing issue, and you are assigned automatically (`/unclaim` releases it). In your pull request, set `claimed_by: <your-handle>` in the node's front matter.
-
-Claims older than 14 days with no pull request can be taken over (`CONTRIBUTING.md`). If you stop, release your claim.
+3. Claim it in your pull request (or comment `/claim` on an `expand-node` issue to be assigned automatically, `/unclaim` to release), and set `claimed_by: <your-handle>` if you leave a claim open. Release your claim if you stop.
 
 ## Expand
 
@@ -47,12 +45,12 @@ Follow `prompts/expand-node.md` exactly. It tells you what to read first (`AGENT
 
 - **Leaf:** the node is small enough for one pull request in one crate (size S or M), with concrete acceptance criteria and a named fixture. Rewrite it from `templates/LEAF.md`.
 - **Split:** the node is too big; divide it into 2 to 9 children that between them satisfy every parent requirement, with no overlap.
-- **Decision:** the node cannot be finished without a choice that belongs to people (licensing, naming, a phase move, a standards interpretation). Open a record under `decisions/` and set `status: decision`.
+- **Decision:** only external account, credential, DNS, spending, or licensing actions require a maintainer (`D-052`); architecture, specification, and clean-room standards interpretation proceed autonomously (`D-045` provisional labels apply to unreviewed GD&T rules). If an exceptional maintainer choice is required, open a record under `decisions/` and set `status: decision`.
 
-You may do this by hand or with any coding agent; `AGENTS.md` applies to both. With Claude Code, for example (not run by the checker, because it needs an agent):
+Any coding agent or manual edit works; `AGENTS.md` is tool-neutral. For example, invoking a CLI coding agent (not run by the checker, because it needs an agent):
 
 ```sh
-claude -p "Follow prompts/expand-node.md exactly. TARGET: spec/aln/NODE.md"
+<agent-cli> "Follow prompts/expand-node.md exactly. TARGET: spec/aln/NODE.md"
 ```
 
 <!-- claim-lint: allow CL001 reason="section name for running the spec tree checker; no conformance claim" -->
@@ -80,7 +78,7 @@ The full rules are in [`AGENTS.md`](../../AGENTS.md), and they apply to people a
 - The constitution (`spec/CONSTITUTION.md`) wins over everything else in the tree.
 - Each requirement holds one testable `shall`, and every child lists the parent requirements it satisfies.
 - Never paste text from ISO, ASME or VDA standards; cite the designator and clause and use your own words. Mark claims you have not checked with `[unverified]`.
-- Choices that belong to the maintainers go into a decision record, not into a node.
+- Under `D-052`, spec expansions, architectural decisions, and implementation PRs are reviewed by an independent agent reviewer (`AGENTS.md` rule 8) plus required CI gates.
 - A person is accountable for every pull request. Name the agent tool in the description if one generated content, and sign off every commit (`git commit -s`, DCO).
 - Report only checks you actually ran, and say whether `python tools/scope.py check` passed.
 
@@ -88,7 +86,30 @@ The pull request checklist and review rules are in [`CONTRIBUTING.md`](../../CON
 
 ## Building from source
 
-The Rust code lives in the same repository as the tree, under `crates/`. Build and test commands are in the Build section of the [README](../../README.md#build). A full guide to building from source (toolchain setup and supported platforms) does not exist yet; this page will link it once it does.
+The Rust workspace lives under `crates/` and `vendor/fid-clarabel/crate` (MSRV `1.89`, edition `2021`).
+
+### Prerequisites
+
+- **All platforms:** Rust `>= 1.89` with `clippy` and `rustfmt`, Git, and Python `3.10+` (`jsonschema` is needed for fixture schema checks; `tools/scope.py` and `site/build.py` use the Python standard library only).
+- **C toolchain (`D-043`):** `fid-store` compiles bundled SQLite (`libsqlite3-sys`) via `cc-rs`. Install Visual Studio Build Tools (MSVC C++) and the Windows SDK on Windows, `gcc`/`cc` + libc headers on Linux, or Xcode Command Line Tools on macOS. Pure-Rust crates (`fid-cli`, `fid-verify`, `fid-mcp`, `fid-pkg`, `fid-platform`, `fid-outreach`, `fid-scan-cmp`) build without a C compiler.
+- **Optional tools:** `wasm32-wasip1` target and `wasmtime` (for `/guide/` WASM labs and kernel WASM checks), `cargo-nextest`, `cargo-deny`, and Node.js (for canonical journal fixture checks).
+
+### Commands
+
+```sh
+cargo build --locked
+cargo test --locked --workspace --exclude fid-clarabel
+cargo nextest run --workspace --no-fail-fast --no-tests=pass
+cargo test --workspace --exclude fid-clarabel --doc
+cargo clippy --workspace --all-targets -- -D warnings
+cargo xtask fmt --check
+cargo xtask layers
+cargo xtask kernel-allow
+cargo xtask lint-crate-graph
+python site/build.py
+```
+
+On Windows, prefer `cargo xtask fmt --check` over `cargo fmt --all --check` so crate formatting batches stay under the 32 KiB `CreateProcess` command-line limit.
 
 ## Checking this guide
 
@@ -98,4 +119,4 @@ The guide is checked by `fid-outreach doc-run`, which needs Git and a Rust toolc
 cargo run -q -p fid-outreach -- doc-run --guide docs/contributor/guide.md --repo .
 ```
 
-It refuses to run (error `revision_mismatch`) unless the `revision:` above is the commit checked out in `--repo`. It then copies that commit into a temporary folder, runs each `sh run` block there in order, and deletes the folder, so your working copy is never changed. Runnable lines are run without a shell, may start only `python` (with a script file from the repository), `git` or `cargo`, and see only a few environment variables such as `PATH`.
+It refuses to run (error `revision_mismatch`) unless `revision:` matches the commit checked out in `--repo`. Because a commit cannot embed its own SHA-1, CI and `fid-outreach` tests substitute `HEAD` into a temporary copy of this file before running `doc-run`. `doc-run` then checks out that commit into a temporary folder, runs each `sh run` block there in order, and deletes the folder so your working copy is never changed. Runnable lines execute without a shell, may start only `python` (with a repository-relative `.py` path), `git` or `cargo`, and see only a restricted environment allowlist.

@@ -7,7 +7,7 @@ Every operating system version and architecture that Metrology Maven lists is a 
 of three tiers. This page says what each tier means in practice: what CI runs, whether a
 failure blocks a release, and what support response to expect. Which rows exist and which
 tier each one gets is set elsewhere (see [Where the rows come from](#where-the-rows-come-from)).
-Several of the checks named here are not built yet; see [Status today](#status-today).
+The release gate (`PLAT.MATRIX.CI`) is not built yet; see [Status today](#status-today).
 
 Check this page's table with `cargo xtask plat-matrix lint-tiers`.
 
@@ -60,7 +60,7 @@ ARM64. Linux ARM64 is Tier 2 and Windows ARM64 Tier 3. Spec node
   records what the repository's CI runs on each pull request today, not a support
   promise. The tiers stay [unverified] until the rows above are applied and the promotion
   rule has been met.
-- Not built yet: the release gate (`PLAT.MATRIX.CI`), the D-010 window and promotion
-  checks (`PLAT.MATRIX.POLICY.ROWS`), and the end-of-support list `platform/os-eol.toml`
-  with its warning and demotion check (`PLAT.MATRIX.POLICY.EOL`). Until they exist, the
-  rules above are policy only and nothing enforces them.
+- Built checks:
+  - `PLAT.MATRIX.POLICY.ROWS` (`platform/tier1-window.toml`): enforced by `cargo xtask plat-matrix window-check --phase <P>` and `cargo xtask plat-matrix promote-check` (via `fid-platform`).
+  - `PLAT.MATRIX.POLICY.EOL` (`platform/os-eol.toml`): enforced by `cargo xtask plat-matrix eol-check --today <YYYY-MM-DD>` (via `fid-platform`; vendor EOL dates in `platform/os-eol.toml` remain marked `[unverified]` until confirmed against primary vendor notices).
+- Not built yet: the release gate (`PLAT.MATRIX.CI`, `plat-matrix jobs` / `plat-matrix gate`) and its release-workflow integration. Until `PLAT.MATRIX.CI` is built, release blocking and CI-job aggregation remain policy only.

@@ -11,9 +11,11 @@ Every step is run by CI except one: **sign-approval**, performed by a person hol
 Most steps are **planned**: the spec defines them, but the tool that performs them is not
 built yet. A step marked `available` names a command that exists in this repository today;
 a step marked `planned` must not be described or performed as if it worked. In particular,
-nothing in this repository signs, notarises, publishes or updates channel feeds yet, and
-the release workflow itself (ECO.REL.PROC.FLOW) does not exist: `release-workflow.yml` in
-this directory is a skeleton of job IDs, never run.
+nothing in this repository signs, notarises, publishes or updates channel feeds yet:
+`release-workflow.yml` (`ECO.REL.PROC.FLOW`) wires all 22 runbook jobs and simulates the
+pre-approval/post-approval state machine via `cargo xtask rel flow-sim` in dry-run mode,
+while live gate evaluation (`ECO.REL.PROC.GATES`), signing, notarisation and publication
+remain planned.
 
 No tool used here creates tags, GitHub releases or signatures as a side effect of checking.
 
@@ -57,7 +59,7 @@ nightly key; `beta`, `stable` and `lts` releases stop at sign-approval.
 | 13 | `kernel-patch-gate` | Kernel bit-identity gate for patch releases | `ci` | `kernel-patch-gate` | `krn-xart` | stable, lts | planned |
 | 14 | `lts-gate` | LTS gate | `ci` | `lts-gate` | `lts` | lts | planned |
 | 15 | `gates-summary` | Aggregate every gate into one release verdict | `ci` | `gates-summary` | - | nightly, beta, stable, lts | planned |
-| 16 | `notes` | Generate the release notes | `ci` | `notes` | - | nightly, beta, stable, lts | planned |
+| 16 | `notes` | Generate the release notes | `ci` | `notes` | - | nightly, beta, stable, lts | available |
 | 17 | `sign-approval` | Approve signing of the exact pre-sign digest | `role:release-approver` | - | - | beta, stable, lts | planned |
 | 18 | `os-sign` | OS code signing and notarisation of the installers | `ci` | `os-sign` | - | beta, stable, lts | planned |
 | 19 | `sums` | Write SHA256SUMS and the checksum statement | `ci` | `sums` | - | nightly, beta, stable, lts | available |
@@ -212,7 +214,9 @@ Planned: the gate file comes from I18N.XLATE, which is not built yet.
 - Channels: stable, lts
 - Status: planned
 
-Planned: the report comes from KRN.MAN.XART, which is not built yet. Patch releases only.
+Planned gate adapter: `KRN.MAN.XART` (`fid-xart` and `.github/workflows/xart.yml`) is built,
+while the `krn-xart` gate evaluator (`ECO.REL.PROC.GATES`, `cargo xtask rel gate`) and
+release-workflow integration remain planned. Patch releases only.
 
 ### 14. `lts-gate`: LTS gate
 
@@ -242,9 +246,11 @@ verdict is `pass`.
 - Workflow job: `notes`
 - Gates: -
 - Channels: nightly, beta, stable, lts
-- Status: planned
+- Status: available
+- Tool: `cargo xtask rel notes --tag <tag> --channel <channel> --prs <prs.json> --reports <dir> --out <dir>`
 
-Planned: ECO.REL.PROC.NOTES is not built yet.
+Spec node ECO.REL.PROC.NOTES. Generates markdown release notes (`RELEASE-NOTES.md` and
+`notes-manifest.json`) from PR metadata and gate reports offline.
 
 ### 17. `sign-approval`: Approve signing of the exact pre-sign digest
 
@@ -255,10 +261,11 @@ Planned: ECO.REL.PROC.NOTES is not built yet.
 - Status: planned
 
 The only step a person performs. Who may hold the release-approver role is set by
-GOVERNANCE.md (D-003); this runbook names the role, not people. The approval mechanism
-(a protected signing environment that only accepts an approval naming the pre-sign digest)
-is planned in ECO.REL.PROC.FLOW and ECO.REL.SIGN.CUSTODY and does not exist yet. Nightly
-builds need no approval: they are signed with a separate nightly key.
+GOVERNANCE.md (D-003); this runbook names the role, not people. `ECO.REL.PROC.FLOW`
+(`release/release-workflow.yml` and `cargo xtask rel flow-sim`) models the
+`release-signing` protected environment and `SIGN_APPROVAL_JSON` pre-sign digest
+verification; live approval and key custody (`ECO.REL.SIGN.CUSTODY`) remain planned.
+Nightly builds need no approval: they are signed with a separate nightly key.
 
 ### 18. `os-sign`: OS code signing and notarisation of the installers
 
@@ -301,8 +308,9 @@ after sign-approval; nightly builds with the separate nightly key.
 - Channels: nightly, beta, stable, lts
 - Status: planned
 
-Planned: ECO.REL.PROC.FLOW is not built yet. Publishes only to the venues the gate verdict
-enables.
+Planned: `ECO.REL.PROC.FLOW` (`release/release-workflow.yml` and `cargo xtask rel flow-sim`)
+simulates venue enablement in dry-run mode, while live upload and publication remain
+planned. Publishes only to the venues the gate verdict enables.
 
 ### 22. `feeds`: Update and sign the channel feeds
 

@@ -176,7 +176,11 @@ job = "kernel-patch-gate"
 gates = ["krn-xart"]
 channels = ["stable", "lts"]
 status = "planned"
-notes = "Planned: the report comes from KRN.MAN.XART, which is not built yet. Patch releases only."
+notes = """
+Planned gate adapter: `KRN.MAN.XART` (`fid-xart` and `.github/workflows/xart.yml`) is built,
+while the `krn-xart` gate evaluator (`ECO.REL.PROC.GATES`, `cargo xtask rel gate`) and
+release-workflow integration remain planned. Patch releases only.
+"""
 
 [[step]]
 id = "lts-gate"
@@ -209,8 +213,12 @@ performer = "ci"
 job = "notes"
 gates = []
 channels = ["nightly", "beta", "stable", "lts"]
-status = "planned"
-notes = "Planned: ECO.REL.PROC.NOTES is not built yet."
+status = "available"
+tool = "cargo xtask rel notes --tag <tag> --channel <channel> --prs <prs.json> --reports <dir> --out <dir>"
+notes = """
+Spec node ECO.REL.PROC.NOTES. Generates markdown release notes (`RELEASE-NOTES.md` and
+`notes-manifest.json`) from PR metadata and gate reports offline.
+"""
 
 [[step]]
 id = "sign-approval"
@@ -221,10 +229,11 @@ channels = ["beta", "stable", "lts"]
 status = "planned"
 notes = """
 The only step a person performs. Who may hold the release-approver role is set by
-GOVERNANCE.md (D-003); this runbook names the role, not people. The approval mechanism
-(a protected signing environment that only accepts an approval naming the pre-sign digest)
-is planned in ECO.REL.PROC.FLOW and ECO.REL.SIGN.CUSTODY and does not exist yet. Nightly
-builds need no approval: they are signed with a separate nightly key.
+GOVERNANCE.md (D-003); this runbook names the role, not people. `ECO.REL.PROC.FLOW`
+(`release/release-workflow.yml` and `cargo xtask rel flow-sim`) models the
+`release-signing` protected environment and `SIGN_APPROVAL_JSON` pre-sign digest
+verification; live approval and key custody (`ECO.REL.SIGN.CUSTODY`) remain planned.
+Nightly builds need no approval: they are signed with a separate nightly key.
 """
 
 [[step]]
@@ -273,8 +282,9 @@ gates = []
 channels = ["nightly", "beta", "stable", "lts"]
 status = "planned"
 notes = """
-Planned: ECO.REL.PROC.FLOW is not built yet. Publishes only to the venues the gate verdict
-enables.
+Planned: `ECO.REL.PROC.FLOW` (`release/release-workflow.yml` and `cargo xtask rel flow-sim`)
+simulates venue enablement in dry-run mode, while live upload and publication remain
+planned. Publishes only to the venues the gate verdict enables.
 """
 
 [[step]]

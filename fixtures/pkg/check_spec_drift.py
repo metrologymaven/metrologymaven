@@ -13,10 +13,12 @@ docs/result-package/v1.md, or the reverse:
   of the spec's `<!-- reasons pkg.<code> -->` tables;
 - manifest and statement fields: every `("<field>", ...)` key the serialiser in
   crates/fid-pkg/src/manifest.rs writes, against the first column of the spec's
-  `<!-- fields ... -->` tables.
+  `<!-- fields ... -->` tables;
+- reserved member folders: `MEMBER_DIRS` in crates/fid-pkg/src/manifest.rs, against
+  the folder prefixes in the spec's `<!-- members -->` table (excluding `signatures/`).
 
 It then runs a self-test: it adds an error code to a copy of the code text and checks that the
-comparison fails naming it (AC-4), and likewise for a reason and a field.
+comparison fails naming it (AC-4), and likewise for a reason, a field and a member dir.
 
 Stdlib only. Run: python fixtures/pkg/check_spec_drift.py
 """
@@ -39,7 +41,7 @@ def array(text, name):
 
 
 def code_items(errors_text, reader_text, manifest_text):
-    """{"codes": set, "reasons:<code>": set, "fields": set} from the crate's sources."""
+    """{"codes": set, "reasons:<code>": set, "fields": set, "member_dirs": set} from the crate's sources."""
     items = {"codes": set(re.findall(r'"(pkg\.[a-z0-9_]+)"', errors_text))}
     items["reasons:pkg.limit"] = array(errors_text, "LIMIT_REASONS") | set(
         re.findall(r'\blimit\("([a-z0-9_]+)"', reader_text))
@@ -48,6 +50,7 @@ def code_items(errors_text, reader_text, manifest_text):
     items["reasons:pkg.digest_mismatch"] = set(
         re.findall(r'ReadError::mismatch\([^,()]+(?:\([^()]*\))?,\s*"([a-z0-9_]+)"\)', reader_text))
     items["fields"] = set(re.findall(r'\(\s*"([A-Za-z_][A-Za-z0-9_]*)",\s*(?:s\(|CValue::|obj\()', manifest_text))
+    items["member_dirs"] = array(manifest_text, "MEMBER_DIRS")
     return items
 
 
@@ -56,11 +59,21 @@ def first_column(block):
 
 
 def spec_items(spec_text):
-    items = {"codes": set(re.findall(r"^### `(pkg\.[a-z0-9_]+)`\s*$", spec_text, re.M)), "fields": set()}
+    items = {
+        "codes": set(re.findall(r"^### `(pkg\.[a-z0-9_]+)`\s*$", spec_text, re.M)),
+        "fields": set(),
+        "member_dirs": set(),
+    }
     for m in re.finditer(r"<!-- reasons (pkg\.[a-z0-9_]+) -->(.*?)<!-- /reasons -->", spec_text, re.S):
         items["reasons:" + m.group(1)] = first_column(m.group(2))
     for m in re.finditer(r"<!-- fields [a-z]+ -->(.*?)<!-- /fields -->", spec_text, re.S):
         items["fields"] |= first_column(m.group(1))
+    for m in re.finditer(r"<!-- members -->(.*?)<!-- /members -->", spec_text, re.S):
+        items["member_dirs"] |= {
+            p.split("/", 1)[0]
+            for p in first_column(m.group(1))
+            if "/" in p and not p.startswith("signatures/")
+        }
     return items
 
 
@@ -83,6 +96,8 @@ def self_test(errors_text, reader_text, manifest_text, spec):
     assert any("reasons:pkg.malformed: `injected_reason`" in g for g in got), got
     got = compare(code_items(errors_text, reader_text, manifest_text + '\n("injected_field", s(&x)),'), spec)
     assert any("fields: `injected_field`" in g for g in got), got
+    got = compare(code_items(errors_text, reader_text, manifest_text.replace('"results"', '"results", "injected_dir"')), spec)
+    assert any("member_dirs: `injected_dir`" in g for g in got), got
 
 
 def main():
@@ -91,7 +106,7 @@ def main():
     manifest_text = MANIFEST_FILE.read_text(encoding="utf-8")
     code = code_items(errors_text, reader_text, manifest_text)
     spec = spec_items(SPEC.read_text(encoding="utf-8"))
-    for key in ("codes", "reasons:pkg.limit", "reasons:pkg.malformed", "reasons:pkg.digest_mismatch", "fields"):
+    for key in ("codes", "reasons:pkg.limit", "reasons:pkg.malformed", "reasons:pkg.digest_mismatch", "fields", "member_dirs"):
         if not code.get(key):
             print(f"spec.drift {key}: nothing found in the code; the extraction patterns are stale")
             return 1
@@ -104,7 +119,7 @@ def main():
     n = {k: len(v) for k, v in code.items()}
     print(f"spec and code agree: {n['codes']} codes, {n['reasons:pkg.limit']} limit, "
           f"{n['reasons:pkg.malformed']} malformed and {n['reasons:pkg.digest_mismatch']} digest reasons, "
-          f"{n['fields']} fields; self-test names an added code, reason and field")
+          f"{n['fields']} fields, {n['member_dirs']} member dirs; self-test names an added code, reason, field and member dir")
     return 0
 
 

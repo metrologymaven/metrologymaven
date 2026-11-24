@@ -11,10 +11,10 @@ This one repository holds everything:
 | Path | What |
 |---|---|
 | [`spec/`](spec/), [`seeds/`](seeds/), [`decisions/`](decisions/) | The specification tree, reference workflow inventories and decision records |
-| [`crates/`](crates/) | The Rust workspace (`fid` CLI, `fid-*` crates) |
+| [`crates/`](crates/) | The Rust workspace (`fid` CLI, `fid-verify`, `fid-mcp`, `fid-slice`, `fid-*` crates) |
 | [`site/`](site/) | The website, generated from the spec tree (`python site/build.py`) |
 | [`fixtures/`](fixtures/) | Test data and conformance vectors |
-| [`generated/`](generated/) | Reports generated from the tree (`INDEX.md`, `BUILT.md`, `COVERAGE.md`, `DECISIONS.md`) |
+| [`generated/`](generated/) | Reports generated from the tree (`INDEX.md`, `BUILT.md`, `COVERAGE.md`, `DECISIONS.md`, `EXPERT-QUEUE.md`, `milestones/launch-1.md`, `reviews/`) |
 
 **Automated build pipeline ([D-052](decisions/D-052-autonomous-zero-human-bottlenecks.md)):** coding agents specify, independently review, and build the platform in parallel waves against clean-room mathematical oracles and CI gates. Unreviewed GD&T rules stay visibly labelled `interpretation: provisional` ([D-045](decisions/D-045-provisional-gdt-interpretation.md)). Self-service contributor instructions: [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -23,9 +23,14 @@ The internal command and crate prefix `fid` comes from *fiducial*, a reference m
 ## Build
 
 ```bash
-cargo test --workspace                          # Rust crates
-echo '{"b":1,"a":2}' | cargo run -q -p fid-cli -- canon
-python site/build.py                            # website into site/dist/
+cargo test --locked --workspace --exclude fid-clarabel        # Rust crates (unit, integration, doctests)
+cargo nextest run --workspace --no-fail-fast --no-tests=pass   # CI test runner + --doc above
+cargo xtask fmt --check                                        # cross-platform formatting check
+echo '{"b":1,"a":2}' | cargo run -q -p fid-cli -- canon        # fid CLI smoke check
+cargo run -q -p fid-verify -- --help                           # standalone Result Package verifier
+cargo run -q -p fid-mcp -- --help                              # stdio MCP server
+cargo run -q -p fid-slice -- --help                            # Vertical Slice 0 pipeline CLI
+python site/build.py                                           # website into site/dist/
 ```
 
 ## How the tree grows
@@ -52,9 +57,10 @@ One rule drives everything: **pick an open node and either split it or finish it
 ## Quick start
 
 ```bash
-python tools/scope.py check          # validate the tree and coverage, regenerate generated/
-python tools/scope.py open           # list open nodes at the shallowest open level
-python tools/scope.py stats          # counts by level and status
+python tools/scope.py check                                   # validate the tree and coverage, regenerate top-level generated/ reports
+python tools/scope.py milestone milestones/launch-1.md        # regenerate generated/milestones/launch-1.md
+python tools/scope.py open                                    # list open nodes at the shallowest open level
+python tools/scope.py stats                                   # counts by level and status
 ```
 
 ```powershell
@@ -72,7 +78,7 @@ python tools/scope.py stats          # counts by level and status
 - a user-facing feature leaf lacks its CLI command, MCP tool or journal event;
 - IDs, levels, parents or folder names disagree.
 
-The generated reports are in [`generated/`](generated/): `INDEX.md` (the tree), `BUILT.md` (leaves built in code), `COVERAGE.md` (each reference workflow feature mapped to our nodes), `DECISIONS.md`, `EXPERT-QUEUE.md` and `milestones/launch-1.md`. Per [D-042](decisions/D-042-generated-reports-refreshed-on-main.md), they are refreshed on `main` in dedicated regeneration PRs rather than on every feature PR.
+The generated reports are in [`generated/`](generated/): `INDEX.md` (the tree), `BUILT.md` (leaves built in code), `COVERAGE.md` (each reference workflow feature mapped to our nodes), `DECISIONS.md`, `EXPERT-QUEUE.md` (written by `python tools/scope.py check`), `milestones/launch-1.md` (written by `python tools/scope.py milestone milestones/launch-1.md`), plus static review reports under `generated/reviews/` (`LAUNCH-1.md`, `LEVEL-2.md`, `LEVEL-3.md`, `RESEARCH-HYPOTHESES.md`). Per [D-042](decisions/D-042-generated-reports-refreshed-on-main.md), generated files are refreshed on `main` in dedicated regeneration PRs rather than on every feature PR.
 
 ## Map
 

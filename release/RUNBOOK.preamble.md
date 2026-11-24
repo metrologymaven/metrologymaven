@@ -9,9 +9,11 @@ Every step is run by CI except one: **sign-approval**, performed by a person hol
 Most steps are **planned**: the spec defines them, but the tool that performs them is not
 built yet. A step marked `available` names a command that exists in this repository today;
 a step marked `planned` must not be described or performed as if it worked. In particular,
-nothing in this repository signs, notarises, publishes or updates channel feeds yet, and
-the release workflow itself (ECO.REL.PROC.FLOW) does not exist: `release-workflow.yml` in
-this directory is a skeleton of job IDs, never run.
+nothing in this repository signs, notarises, publishes or updates channel feeds yet:
+`release-workflow.yml` (`ECO.REL.PROC.FLOW`) wires all 22 runbook jobs and simulates the
+pre-approval/post-approval state machine via `cargo xtask rel flow-sim` in dry-run mode,
+while live gate evaluation (`ECO.REL.PROC.GATES`), signing, notarisation and publication
+remain planned.
 
 No tool used here creates tags, GitHub releases or signatures as a side effect of checking.
 

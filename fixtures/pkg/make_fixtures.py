@@ -32,7 +32,7 @@ FORMAT_NAME = "metrologymaven-result-package"
 FORMAT_VERSION = "1.0.0"
 STATEMENT_TYPE = "https://in-toto.io/Statement/v1"
 PREDICATE_TYPE = "https://metrologymaven.io/result-package/predicate/v1"
-RESERVED_DIRS = ["journal", "kernel", "points", "profile", "results"]
+RESERVED_DIRS = ["interp", "journal", "kernel", "points", "profile", "results"]
 STORED_MEDIA_TYPES = {
     "application/gzip",
     "application/x-bzip2",
