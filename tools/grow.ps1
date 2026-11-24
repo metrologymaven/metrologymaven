@@ -34,6 +34,9 @@ $scopeArgs = @("tools/scope.py", "open")
 if ($Level -ge 0) { $scopeArgs += @("--level", "$Level") }
 if ($Limit -gt 0) { $scopeArgs += @("--limit", "$Limit") }
 $nodes = @(& python @scopeArgs | Where-Object { $_ -and $_.Trim() })
+if ($null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0) {
+  exit $LASTEXITCODE
+}
 
 if ($nodes.Count -eq 0) {
   Write-Host "No open nodes. The tree is fully expanded (or blocked on decisions)."
@@ -64,9 +67,18 @@ function Get-AgentCommand([string]$message) {
 $agentJob = {
   # The agent's own arguments arrive as the remaining positional values in $args.
   param($root, $exe, $log)
+  $ErrorActionPreference = "Stop"
   $argv = [string[]]$args
-  Set-Location $root
-  & $exe @argv *> $log
+  Remove-Item -LiteralPath $log -Force -ErrorAction SilentlyContinue
+  try {
+    Set-Location $root
+    $cmdInfo = Get-Command $exe -ErrorAction Stop
+    $ErrorActionPreference = "Continue"
+    & $cmdInfo @argv *> $log
+  } catch {
+    "ERROR: $($_.Exception.Message)" | Out-File -FilePath $log -Encoding utf8 -Append
+    throw
+  }
   $code = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
   "exit=$code" | Add-Content $log
 }
@@ -78,6 +90,18 @@ function Start-AgentJob([string]$message, [string]$log) {
 }
 
 function Get-JobExitCode($job, [string]$log) {
+  if ($job.State -eq "Failed") {
+    $reason = $null
+    if ($job.ChildJobs.Count -gt 0) {
+      $reason = $job.ChildJobs[0].JobStateInfo.Reason
+    }
+    if ($reason -and $reason.Message) {
+      [Console]::Error.WriteLine("Agent job failed: $($reason.Message)")
+    } else {
+      [Console]::Error.WriteLine("Agent job failed.")
+    }
+    return 1
+  }
   if (Test-Path $log) {
     $lines = @(Get-Content $log -ErrorAction SilentlyContinue)
     for ($i = $lines.Count - 1; $i -ge 0; $i--) {
@@ -86,7 +110,6 @@ function Get-JobExitCode($job, [string]$log) {
       }
     }
   }
-  if ($job.State -eq "Failed") { return 1 }
   return 0
 }
 

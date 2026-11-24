@@ -482,6 +482,91 @@ class GrowDriverTest(unittest.TestCase):
         )
         self.assertEqual(r3.returncode, 2, r3.stdout + r3.stderr)
 
+    def test_tier5_grow_ps1_missing_agent_exits_nonzero_after_canary(self) -> None:
+        ps = shutil.which("powershell") or shutil.which("pwsh")
+        if not ps:
+            self.skipTest("PowerShell not available on host")
+
+        tmp = Path(tempfile.mkdtemp(prefix="grow-ps1-missing-"))
+        self.addCleanup(shutil.rmtree, tmp, True)
+        repo = tmp / "repo"
+        (repo / "tools").mkdir(parents=True)
+        shutil.copy2(ROOT / "tools" / "grow.ps1", repo / "tools" / "grow.ps1")
+        shutil.copy2(ROOT / "tools" / "scope.py", repo / "tools" / "scope.py")
+        for sub in ("spec", "seeds", "decisions"):
+            if (FIX_TREE / sub).exists():
+                shutil.copytree(FIX_TREE / sub, repo / sub)
+
+        bin_dir = tmp / "bin"
+        bin_dir.mkdir()
+        if os.name == "nt":
+            (bin_dir / "python.cmd").write_text(
+                f'@echo off\r\n"{sys.executable}" %*\r\nexit /b %ERRORLEVEL%\r\n',
+                encoding="utf-8",
+            )
+            sys_root = os.environ.get("SystemRoot", r"C:\Windows")
+            path_parts = [str(bin_dir), str(Path(ps).parent), os.path.join(sys_root, "System32")]
+        else:
+            py_link = bin_dir / "python"
+            py_link.write_text(f'#!/bin/sh\nexec "{sys.executable}" "$@"\n', encoding="utf-8")
+            py_link.chmod(py_link.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+            path_parts = [str(bin_dir), str(Path(ps).parent), "/usr/bin", "/bin"]
+
+        clean_path = os.pathsep.join(dict.fromkeys(path_parts))
+        self.assertIsNone(shutil.which("claude", path=clean_path))
+        self.assertIsNone(shutil.which("codex", path=clean_path))
+
+        env = dict(os.environ, PATH=clean_path)
+        cmd = [ps, "-NoProfile"]
+        if os.name == "nt":
+            cmd += ["-ExecutionPolicy", "Bypass"]
+        cmd += [
+            "-File",
+            str(repo / "tools" / "grow.ps1"),
+            "-Agent",
+            "claude",
+            "-Limit",
+            "2",
+            "-Parallel",
+            "3",
+            "-NoLevelCheck",
+        ]
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", env=env)
+        self.assertNotEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("-> expanding spec/a/one/NODE.md", proc.stdout)
+        self.assertNotIn("-> expanding spec/a/three/NODE.md", proc.stdout)
+
+        logs = list((repo / "generated" / "logs").glob("*.log"))
+        self.assertEqual(len(logs), 1, f"canary must stop before launching pool; logs={logs}")
+        self.assertEqual(logs[0].name, "spec_a_one_NODE.md.log")
+        log_text = logs[0].read_text(encoding="utf-8", errors="replace")
+        self.assertNotIn("exit=0", log_text)
+        self.assertIn("ERROR:", log_text)
+
+    def test_tier5_grow_ps1_scope_open_failure_exits_nonzero(self) -> None:
+        ps = shutil.which("powershell") or shutil.which("pwsh")
+        if not ps:
+            self.skipTest("PowerShell not available on host")
+
+        tmp = Path(tempfile.mkdtemp(prefix="grow-ps1-scope-fail-"))
+        self.addCleanup(shutil.rmtree, tmp, True)
+        repo = tmp / "repo"
+        (repo / "tools").mkdir(parents=True)
+        shutil.copy2(ROOT / "tools" / "grow.ps1", repo / "tools" / "grow.ps1")
+        (repo / "tools" / "scope.py").write_text(
+            "import sys\nsys.stderr.write('scope open boom\\n')\nsys.exit(4)\n",
+            encoding="utf-8",
+        )
+
+        cmd = [ps, "-NoProfile"]
+        if os.name == "nt":
+            cmd += ["-ExecutionPolicy", "Bypass"]
+        cmd += ["-File", str(repo / "tools" / "grow.ps1"), "-DryRun"]
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
+        self.assertEqual(proc.returncode, 4, proc.stdout + proc.stderr)
+        self.assertNotIn("No open nodes", proc.stdout)
+        self.assertIn("scope open boom", proc.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
