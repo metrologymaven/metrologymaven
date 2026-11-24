@@ -271,19 +271,36 @@ class ScopeFixtureTest(unittest.TestCase):
 
     def test_tier5_list_typed_scalars_backslash_builtin_frozen_milestone_and_id_escape(self) -> None:
         # 1. List-typed scalars must return structured ERROR (exit 1) without TypeError traceback.
-        for field_line, repl in [
-            ("level: 2", "level: [2]"),
-            ("id: ALPHA.ONE", "id: [ALPHA, ONE]"),
-            ("status: leaf", "status: [leaf]"),
-            ("parent: ALPHA", "parent: [ALPHA]"),
+        for field_line, repl, extra_setup in [
+            ("level: 2", "level: [2]", False),
+            ("id: ALPHA.ONE", "id: [ALPHA, ONE]", False),
+            ("status: leaf", "status: [leaf]", False),
+            ("parent: ALPHA", "parent: [ALPHA]", False),
+            ("kind: feature", "kind: [feature]", False),
+            ("phase: P0", "phase: [P0]", False),
+            ("size: S", "size: [S]", False),
+            ("determinism: D0", "determinism: [D0]", False),
+            ("status: leaf", "status: open\nneeds_expert: [gdt]", False),
+            ("status: leaf", "status: leaf\nbuilt_in: [mm-fake]\nbuilt_pr: [123]", True),
+            ("title: Alpha one", "title: [Alpha, one]", False),
+            ("status: leaf", "status: leaf\ndecision: [D-001]", False),
+            ("status: leaf", "status: leaf\ncommercial_repo: [metrologymaven-enterprise]", False),
+            ("claimed_by:", "claimed_by: [alice]", False),
         ]:
             vtree = self.copy_fixture("valid")
+            if extra_setup:
+                (vtree / "crates" / "mm-fake").mkdir(parents=True, exist_ok=True)
+                (vtree / "crates" / "mm-fake" / "Cargo.toml").write_text(
+                    "[package]\nname = 'mm-fake'\n", encoding="utf-8"
+                )
             a1 = vtree / "spec" / "alpha" / "one" / "NODE.md"
-            a1.write_text(a1.read_text(encoding="utf-8").replace(field_line, repl, 1), encoding="utf-8")
+            text = a1.read_text(encoding="utf-8")
+            self.assertIn(field_line, text, f"fixture missing {field_line!r}")
+            a1.write_text(text.replace(field_line, repl, 1), encoding="utf-8")
             code, out, err = run_scope("--root", str(vtree), "check")
             self.assertEqual(code, 1, f"{repl}: out={out} err={err}")
-            self.assertNotIn("Traceback", out + err)
-            self.assertIn("ERROR", out)
+            self.assertNotIn("Traceback", out + err, f"{repl}: out={out} err={err}")
+            self.assertIn("ERROR", out, f"{repl}: out={out} err={err}")
 
         # 2. Backslash traversal in built_in must be rejected.
         vtree2 = self.copy_fixture("valid")

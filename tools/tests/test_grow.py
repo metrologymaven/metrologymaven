@@ -396,6 +396,92 @@ class GrowDriverTest(unittest.TestCase):
         codex_tail = ps1.split('Exe = "claude"', 1)[1].split("$agentJob", 1)[0]
         self.assertIn("--model", codex_tail)
 
+    def test_tier5_grow_ps1_execution_model_order_worker_exit_and_level_check_auth(self) -> None:
+        ps = shutil.which("powershell") or shutil.which("pwsh")
+        if not ps:
+            self.skipTest("PowerShell not available on host")
+
+        tmp = Path(tempfile.mkdtemp(prefix="grow-ps1-"))
+        self.addCleanup(shutil.rmtree, tmp, True)
+        repo = tmp / "repo"
+        (repo / "tools").mkdir(parents=True)
+        shutil.copy2(ROOT / "tools" / "grow.ps1", repo / "tools" / "grow.ps1")
+        shutil.copy2(ROOT / "tools" / "scope.py", repo / "tools" / "scope.py")
+        for sub in ("spec", "seeds", "decisions"):
+            if (FIX_TREE / sub).exists():
+                shutil.copytree(FIX_TREE / sub, repo / sub)
+
+        shim_dir = tmp / "shims"
+        shim_dir.mkdir()
+        events_dir = tmp / "events"
+        events_dir.mkdir()
+        shim_py = shim_dir / "shim_agent.py"
+        shim_py.write_text(
+            "import json, os, sys, uuid\n"
+            "ev_dir = os.environ['GROW_PS_EVENTS']\n"
+            "args = sys.argv[1:]\n"
+            "with open(os.path.join(ev_dir, f'{uuid.uuid4().hex}.json'), 'w', encoding='utf-8') as f:\n"
+            "    json.dump(args, f)\n"
+            "joined = ' '.join(args)\n"
+            "fail_target = os.environ.get('GROW_PS_FAIL_TARGET', '')\n"
+            "if fail_target and fail_target in joined:\n"
+            "    print(f'worker failed on {fail_target}', flush=True)\n"
+            "    sys.exit(3)\n"
+            "if os.environ.get('GROW_PS_LC_AUTH_FAIL') == '1' and 'level-check.md' in joined:\n"
+            "    print('Invalid API key', flush=True)\n"
+            "    sys.exit(1)\n"
+            "sys.exit(0)\n",
+            encoding="utf-8",
+        )
+        for name in ("codex", "claude"):
+            if os.name == "nt":
+                (shim_dir / f"{name}.cmd").write_text(
+                    f'@echo off\r\n"{sys.executable}" "{shim_py}" %*\r\nexit /b %ERRORLEVEL%\r\n',
+                    encoding="utf-8",
+                )
+            else:
+                sh = shim_dir / name
+                sh.write_text(
+                    f'#!/bin/sh\nexec "{sys.executable}" "{shim_py}" "$@"\n',
+                    encoding="utf-8",
+                )
+                sh.chmod(sh.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+        def run_ps(ps_args: list[str], extra_env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+            env = dict(os.environ)
+            env["PATH"] = str(shim_dir) + os.pathsep + env.get("PATH", "")
+            env["GROW_PS_EVENTS"] = str(events_dir)
+            if extra_env:
+                env.update(extra_env)
+            cmd = [ps, "-NoProfile"]
+            if os.name == "nt":
+                cmd += ["-ExecutionPolicy", "Bypass"]
+            cmd += ["-File", str(repo / "tools" / "grow.ps1"), *ps_args]
+            return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", env=env)
+
+        # (a) codex -Model o3 passes --model o3 BEFORE the positional message.
+        r1 = run_ps(["-Agent", "codex", "-Model", "o3", "-Limit", "1", "-NoLevelCheck"])
+        self.assertEqual(r1.returncode, 0, r1.stdout + r1.stderr)
+        ev_files = list(events_dir.glob("*.json"))
+        self.assertEqual(len(ev_files), 1, f"expected 1 codex event, got {ev_files}")
+        argv = json.loads(ev_files[0].read_text(encoding="utf-8"))
+        self.assertEqual(argv[:4], ["exec", "--full-auto", "--model", "o3"], argv)
+        self.assertTrue(argv[4].startswith("Follow prompts/expand-node.md exactly. TARGET:"), argv)
+
+        # (b) non-zero worker exit propagates (node 'three' fails in pool after canary 'one' passes).
+        r2 = run_ps(
+            ["-Agent", "claude", "-Limit", "2", "-Parallel", "2", "-NoLevelCheck"],
+            extra_env={"GROW_PS_FAIL_TARGET": "three"},
+        )
+        self.assertEqual(r2.returncode, 3, r2.stdout + r2.stderr)
+
+        # (c) level-check auth failure exits 2.
+        r3 = run_ps(
+            ["-Agent", "claude", "-Limit", "1"],
+            extra_env={"GROW_PS_LC_AUTH_FAIL": "1"},
+        )
+        self.assertEqual(r3.returncode, 2, r3.stdout + r3.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

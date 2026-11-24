@@ -9,7 +9,8 @@ use std::process::Command;
 
 use fid_canon::{parse, CValue};
 use fid_cli::{
-    embedded_tree, emit, invoke_with_tree, levenshtein, parse_tree, Bus, ExitCode, Output, RESERVED_HOST_SUBCOMMANDS,
+    embedded_tree, emit, invoke_with_tree, levenshtein, parse_tree, resolve_args, Bus, ExitCode, Output,
+    ResolveOutcome, RESERVED_HOST_SUBCOMMANDS,
 };
 use fid_surface::{project, Envelope, ErrorCode, Outcome};
 
@@ -258,7 +259,7 @@ fn tier5_resolve_args_preserves_flag_values_and_leading_json() {
     // --reason --help must NOT trigger CommandHelp.
     match resolve_args(&tree, &to_vec(&["project", "list-features", "--reason", "--help"])) {
         ResolveOutcome::Invoke { command_id, rest, .. } => {
-            assert_eq!(command_id, "project.list_features@1");
+            assert_eq!(command_id.as_str(), "project.list_features@1");
             assert_eq!(rest, to_vec(&["--reason", "--help"]));
         }
         other => panic!("expected Invoke, got {other:?}"),
@@ -276,7 +277,7 @@ fn tier5_resolve_args_preserves_flag_values_and_leading_json() {
     // Leading --json before domain or ctrl subcommand is accepted.
     match resolve_args(&tree, &to_vec(&["--json", "project", "list-features"])) {
         ResolveOutcome::Invoke { command_id, json, .. } => {
-            assert_eq!(command_id, "project.list_features@1");
+            assert_eq!(command_id.as_str(), "project.list_features@1");
             assert!(json);
         }
         other => panic!("expected Invoke with json=true, got {other:?}"),

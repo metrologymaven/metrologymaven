@@ -296,9 +296,11 @@ pub fn run_balloon_file(
 /// Runs the Day-1 2D PDF Auto-Ballooning demo on the bundled `vector_bracket.pdf` drawing
 /// (`12 dimensions + 3 GD&T frames`), writing `ballooned.pdf` and `form3-starter.csv` into `out_dir`.
 pub fn run_balloon_demo(out_dir: &Path) -> Result<BalloonSliceOutput, SliceError> {
+    static DEMO_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     validate_export_out_dir(out_dir)?;
+    let seq = DEMO_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
-    let stage_dir = std::env::temp_dir().join(format!("fid_slice_demo_{}_{nanos}", std::process::id()));
+    let stage_dir = std::env::temp_dir().join(format!("fid_slice_demo_{}_{seq}_{nanos}", std::process::id()));
     std::fs::create_dir_all(&stage_dir)
         .map_err(|e| SliceError::new("io_error", format!("creating {}: {e}", stage_dir.display())))?;
     let demo_pdf = stage_dir.join("vector_bracket.pdf");

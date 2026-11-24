@@ -234,7 +234,9 @@ impl<B: McpBus, A: AuditSink> Session<B, A> {
     fn handle_notification(&mut self, method: &str, params: &CValue) {
         match method {
             "notifications/initialized" => {
-                self.initialized = true;
+                if self.initialize_requested {
+                    self.initialized = true;
+                }
             }
             "notifications/cancelled" => {
                 if let CValue::Obj(m) = params {

@@ -274,3 +274,39 @@ fn tier5_crlf_at_max_message_bytes_accepted_and_uninitialized_call_rejected() {
     let CValue::Obj(res4) = &m4["result"] else { panic!() };
     assert_eq!(res4.get("isError"), Some(&CValue::Bool(true)));
 }
+
+#[test]
+fn tier5_notifications_initialized_without_initialize_is_ignored() {
+    let bytes = embedded_manifest_bytes();
+    let proj = embedded_projection().unwrap();
+    let idx = embedded_profile_index(&proj).unwrap();
+    let profile = idx.select(Some("core")).unwrap().clone();
+    let table = ToolTable::from_projection_and_manifest(&proj, &parse(&bytes).unwrap()).unwrap();
+    let disclosure = DisclosureState::new(&proj, &profile).unwrap();
+    let mut sess = Session::new(
+        SessionConfig::default(),
+        disclosure,
+        table,
+        StandaloneMcpBus::new(None),
+        MemoryAuditSink::default(),
+    );
+
+    let req = concat!(
+        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n",
+        "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"params\":{}}\n",
+        "{\"id\":2,\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"arguments\":{},\"name\":\"tools_search_tools\"}}\n",
+    );
+    let mut out = Vec::new();
+    sess.run_stdio(Cursor::new(req.as_bytes()), &mut out).unwrap();
+    assert!(!sess.initialized, "notifications/initialized without initialize must not mark session initialized");
+
+    let stdout = std::str::from_utf8(&out).unwrap();
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert_eq!(lines.len(), 2, "stdout={stdout}");
+    for (idx, line) in lines.iter().enumerate() {
+        let reply = parse(line.as_bytes()).unwrap();
+        let CValue::Obj(m) = reply else { panic!("line {idx} not obj") };
+        let CValue::Obj(err) = &m["error"] else { panic!("line {idx} missing error: {line}") };
+        assert_eq!(err.get("code"), Some(&CValue::Num(-32002.0)));
+    }
+}

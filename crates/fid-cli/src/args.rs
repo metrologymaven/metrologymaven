@@ -681,6 +681,6 @@ mod tests {
         let reader = StdParamsReader;
         let args: Vec<String> = ["--meta", "foo"].iter().map(|s| (*s).to_string()).collect();
         let err = parse_command_args(&major, &args, true, &mut Cursor::new(b"" as &[u8]), None, &reader).unwrap_err();
-        assert!(matches!(err, ArgError::Usage(_)), "unexpected {err:?}");
+        assert!(matches!(err, ArgError::Usage { .. }), "unexpected {err:?}");
     }
 }

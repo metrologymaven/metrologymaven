@@ -54,6 +54,22 @@ def test_t5_mcp_lifecycle_disclosure_profiles_and_canon(ctx: TestContext) -> Non
     mcp = ctx.require_bin("fid-mcp")
     idx = write_disclosure_profiles_index(ctx.workdir)
 
+    # 0. notifications/initialized without prior initialize must NOT mark session initialized.
+    rc_uninit, msgs_uninit, _, stderr_uninit = run_mcp_session(
+        mcp,
+        ["--headless"],
+        [
+            {"jsonrpc": "2.0", "method": "notifications/initialized"},
+            {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}},
+        ],
+        cwd=ctx.repo_root,
+    )
+    if rc_uninit != 0 or len(msgs_uninit) != 1 or msgs_uninit[0].get("error", {}).get("code") != -32002:
+        raise TestFailure(
+            f"expected -32002 on tools/list after notifications/initialized without initialize: "
+            f"rc={rc_uninit} msgs={msgs_uninit!r} stderr={stderr_uninit!r}"
+        )
+
     # 1. Uninitialized tools/call -> -32002; fractional ID -> -32600; init; un-enabled direct tool -> isError; canon string -> ok.
     msgs_in = [
         {"jsonrpc": "2.0", "id": 10, "method": "tools/call", "params": {"name": "tools_search_tools", "arguments": {}}},
@@ -196,14 +212,27 @@ def test_t5_spec_drift_and_scope_hardening(ctx: TestContext) -> None:
     test_id="T5-F2-01",
     tier=5,
     feature="F2",
-    description="fid CLI avoids flag value-stealing & rejects bad object params; fid-slice rejects conflicting modes",
+    description="fid CLI avoids flag value-stealing (--reason --help / --reason --major 2) & rejects malformed JSON params; fid-slice rejects conflicting modes",
     capabilities_required=("c_toolchain",),
 )
 def test_t5_cli_and_slice_hardening(ctx: TestContext) -> None:
     fid = ctx.require_bin("fid")
     r_hlp = ctx.run([fid, "project", "list-features", "--reason", "--help", "--json"])
-    if "USAGE:" in r_hlp.stdout:
-        raise TestFailure(f"--reason --help triggered help unexpectedly: {r_hlp.stdout!r}")
+    env_hlp = parse_single_line_json(r_hlp.stdout)
+    if env_hlp.get("command_id") != "project.list_features@1":
+        raise TestFailure(f"--reason --help did not invoke project.list_features@1: {env_hlp!r}")
+
+    r_maj = ctx.run([fid, "project", "list-features", "--reason", "--major", "2", "--json"])
+    env_maj = parse_single_line_json(r_maj.stdout)
+    if env_maj.get("command_id") != "project.list_features@1" or "has no major 2" in (r_maj.stdout + r_maj.stderr):
+        raise TestFailure(f"--reason --major 2 consumed --major as selector unexpectedly: {env_maj!r}")
+
+    r_bad_param = ctx.run([fid, "align", "set-datum", "--offset", "1", "--source", "s", "--frame", "{not-json", "--json"])
+    env_bad_param = parse_single_line_json(r_bad_param.stdout)
+    if r_bad_param.returncode == 0 or env_bad_param.get("error", {}).get("code") != "usage_error":
+        raise TestFailure(
+            f"expected usage_error for malformed JSON --frame param, rc={r_bad_param.returncode} out={env_bad_param!r}"
+        )
 
     r_ctrl = ctx.run([fid, "ctrl", "--help"])
     if r_ctrl.returncode != 0 or "fid ctrl status" not in r_ctrl.stdout:

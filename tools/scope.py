@@ -112,8 +112,26 @@ class Node:
         self.meta = meta
         self.body = body
         self.bad_scalars: list[str] = []
-        for sk in ("id", "parent", "status", "level", "title", "kind", "phase", "size", "decision", "needs_expert"):
-            if sk in meta and isinstance(meta[sk], list):
+        for sk in (
+            "id",
+            "parent",
+            "status",
+            "level",
+            "title",
+            "kind",
+            "phase",
+            "size",
+            "decision",
+            "needs_expert",
+            "determinism",
+            "built_pr",
+            "commercial_repo",
+            "claimed_by",
+        ):
+            if sk in meta and (
+                isinstance(meta[sk], (list, dict, bool))
+                or (sk not in ("level", "built_pr") and not isinstance(meta[sk], str))
+            ):
                 self.bad_scalars.append(sk)
         raw_id = meta.get("id", "")
         self.id = raw_id if isinstance(raw_id, str) else ""
@@ -288,21 +306,30 @@ def validate(nodes: list[Node], seeds, oos, rep: Report) -> dict[str, Node]:
                 elif not re.fullmatch(r"[a-z0-9_-]+", c) or not (CRATES / c / "Cargo.toml").exists():
                     rep.err(w, f"built_in names crate '{c}', which does not exist under crates/ "
                                "(use a repo path such as tools/<package> for non-crate code)")
-        if m.get("built_pr") and not str(m["built_pr"]).isdigit():
-            rep.err(w, "built_pr must be a pull-request number")
-        if m.get("built_pr") and not built:
+        built_pr = m.get("built_pr")
+        if built_pr:
+            pr_valid = (
+                (isinstance(built_pr, str) and built_pr.isdigit())
+                or (isinstance(built_pr, int) and not isinstance(built_pr, bool) and built_pr >= 0)
+            )
+            if not pr_valid:
+                rep.err(w, "built_pr must be a pull-request number")
+        if built_pr and not built:
             rep.warn(w, "built_pr is set but built_in is empty")
         needs_exp = m.get("needs_expert")
         if needs_exp:
             if not isinstance(needs_exp, str) or needs_exp not in EXPERT_AREAS:
                 rep.err(w, f"needs_expert must be one of {sorted(EXPERT_AREAS)}")
-            if m.get("status") != "open":
+            if status_val != "open":
                 rep.warn(w, "needs_expert is set on a node that is no longer open; remove it")
-        if m.get("kind") not in KINDS:
+        kind_val = m.get("kind")
+        if not isinstance(kind_val, str) or kind_val not in KINDS:
             rep.err(w, f"kind must be one of {sorted(KINDS)}")
-        if m.get("phase") not in PHASES:
+        phase_val = m.get("phase")
+        if not isinstance(phase_val, str) or phase_val not in PHASES:
             rep.err(w, f"phase must be one of {sorted(PHASES)}")
-        if m.get("size") not in SIZES:
+        size_val = m.get("size")
+        if not isinstance(size_val, str) or size_val not in SIZES:
             rep.err(w, f"size must be one of {sorted(SIZES)}")
 
         depth = len(n.path.parent.relative_to(SPEC).parts)
@@ -362,29 +389,30 @@ def validate(nodes: list[Node], seeds, oos, rep: Report) -> dict[str, Node]:
 
         st = n.status
         if st == "leaf":
-            if m.get("size") not in LEAF_SIZES:
+            if not isinstance(size_val, str) or size_val not in LEAF_SIZES:
                 rep.err(w, "a leaf must be size S or M; otherwise split it")
-            if m.get("kind") not in {"feature", "task"}:
+            if not isinstance(kind_val, str) or kind_val not in {"feature", "task"}:
                 rep.err(w, "a leaf must be kind feature or task")
             for s in SECTIONS_LEAF:
                 if s not in n.body:
                     rep.err(w, f"leaf missing section '{s}'")
             se = m.get("side_effect")
             se_list = se if isinstance(se, list) else [se]
-            if not se_list or any(s not in SIDE_EFFECTS for s in se_list):
+            if not se_list or any(not isinstance(s, str) or s not in SIDE_EFFECTS for s in se_list):
                 rep.err(w, f"leaf needs side_effect in {sorted(SIDE_EFFECTS)} "
                            "(one value, or a [list] with one class per command in cli/mcp order)")
-            if m.get("determinism") not in DETERMINISM:
+            det_val = m.get("determinism")
+            if not isinstance(det_val, str) or det_val not in DETERMINISM:
                 rep.err(w, f"leaf needs determinism in {sorted(DETERMINISM)}")
-            if m.get("kind") == "feature":
+            if kind_val == "feature":
                 for k in ("cli", "mcp", "journal"):
                     if not n.lst(k):
                         rep.err(w, f"feature leaf needs '{k}' (CONSTITUTION C3/C4)")
-        elif st in {"open", "split", "frozen"} and m.get("size") in LEAF_SIZES and n.level > 0:
-            rep.warn(w, f"size {m.get('size')} on a non-leaf: finish it as a leaf?")
+        elif st in {"open", "split", "frozen"} and isinstance(size_val, str) and size_val in LEAF_SIZES and n.level > 0:
+            rep.warn(w, f"size {size_val} on a non-leaf: finish it as a leaf?")
         if st == "decision":
             d = m.get("decision", "")
-            if not d or not list(DECISIONS.glob(f"{d}*.md")):
+            if not isinstance(d, str) or not d or not list(DECISIONS.glob(f"{d}*.md")):
                 rep.err(w, "status decision needs 'decision: D-NNN' with a file in decisions/")
 
     # Parent-child traceability.
@@ -431,10 +459,12 @@ def validate(nodes: list[Node], seeds, oos, rep: Report) -> dict[str, Node]:
     order = {p: i for i, p in enumerate(["P0", "P1a", "P1b", "P2", "P3", "P4", "later"])}
     for n in nodes:
         pnode = by_id.get(n.parent)
-        if pnode is not None and n.meta.get("phase") in order and pnode.meta.get("phase") in order:
-            if order[n.meta["phase"]] < order[pnode.meta["phase"]]:
-                rep.warn(n.where, f"phase {n.meta['phase']} is earlier than parent {pnode.id} "
-                                  f"({pnode.meta['phase']}); move the parent earlier by decision")
+        np = n.meta.get("phase")
+        pp = pnode.meta.get("phase") if pnode is not None else None
+        if isinstance(np, str) and isinstance(pp, str) and np in order and pp in order:
+            if order[np] < order[pp]:
+                rep.warn(n.where, f"phase {np} is earlier than parent {pnode.id} "
+                                  f"({pp}); move the parent earlier by decision")
 
     # Dependency cycles. A dependency on a node also reaches all its descendants.
     edges: dict[str, set[str]] = defaultdict(set)
@@ -536,8 +566,10 @@ def write_reports(nodes: list[Node], by_id, seeds, oos, rep: Report) -> None:
         mark = {"open": "[ ]", "split": "[+]", "leaf": "[x]", "decision": "[?]", "frozen": "[=]"}.get(n.status, "[!]")
         if n.lst("built_in"):
             mark = "[B]"
-        claim = f" (claimed: {n.meta.get('claimed_by')})" if n.meta.get("claimed_by") else ""
-        crepo = str(n.meta.get("commercial_repo", "")).strip()
+        cb = n.meta.get("claimed_by")
+        claim = f" (claimed: {cb})" if isinstance(cb, str) and cb else ""
+        crepo_raw = n.meta.get("commercial_repo", "")
+        crepo = crepo_raw.strip() if isinstance(crepo_raw, str) else ""
         comm = f" (commercial: {crepo})" if crepo else ""
         out.append(f"{'  ' * depth}- {mark} {link(n, GEN)} {n.meta.get('title', '')}, "
                    f"{n.meta.get('phase', '')}, {n.meta.get('size', '')}{claim}{comm}")
@@ -626,8 +658,9 @@ def write_reports(nodes: list[Node], by_id, seeds, oos, rep: Report) -> None:
            "| Leaf | Title | Phase | Built in | PR |", "|---|---|---|---|---|"]
     for n in built:
         pr = n.meta.get("built_pr", "")
+        pr_str = str(pr) if isinstance(pr, (str, int)) and not isinstance(pr, bool) and str(pr) != "" else ""
         out.append(f"| {link(n, GEN)} | {n.meta.get('title', '')} | {n.meta.get('phase', '')} | "
-                   + ", ".join(f"`{c}`" for c in n.lst("built_in")) + f" | {'#' + pr if pr else ''} |")
+                   + ", ".join(f"`{c}`" for c in n.lst("built_in")) + f" | {'#' + pr_str if pr_str else ''} |")
     out.append("")
     (GEN / "BUILT.md").write_text("\n".join(out), encoding="utf-8", newline="\n")
 
@@ -647,7 +680,7 @@ def expert_queue(nodes: list[Node]) -> dict[str, list[Node]]:
     q: dict[str, list[Node]] = {}
     for n in sorted(nodes, key=lambda n: n.id):
         a = n.meta.get("needs_expert")
-        if n.status == "open" and a in EXPERT_AREAS:
+        if n.status == "open" and isinstance(a, str) and a in EXPERT_AREAS:
             q.setdefault(a, []).append(n)
     return dict(sorted(q.items()))
 
@@ -753,7 +786,10 @@ def cmd_milestone(args) -> int:
     )
     open_nodes = sorted(x for x in scope if by_id[x].status == "open")
     dec_nodes = sorted(x for x in scope if by_id[x].status == "decision")
-    decisions = sorted({by_id[x].meta.get("decision", "") for x in dec_nodes} - {""})
+    decisions = sorted({
+        d for x in dec_nodes
+        if isinstance((d := by_id[x].meta.get("decision", "")), str)
+    } - {""})
 
     # Effective dependencies of a leaf: its own and its ancestors' depends_on, mapped to leaves in scope.
     leaf_set = set(leaves)
