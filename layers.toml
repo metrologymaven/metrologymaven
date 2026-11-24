@@ -27,8 +27,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # Outlier policies and point selection (KRN.OUT.POL first): KNP-1, only fid-fit, fid-kci, fid-num, fid-types.
 "fid-filter" = "kernel"
 "fid-scan-cmp" = "kernel"
-# Mesh quality report (SCAN.POLY.QUAL) and mesh-operation contract (SCAN.MESHOP.PROV): KNP-1,
-# only fid-geo-types, fid-kci, fid-num and fid-types.
+# Mesh quality report (SCAN.POLY.QUAL), mesh-operation contract (SCAN.MESHOP.PROV) and normal
+# inversion (SCAN.MESHOP.CUT.INVERT): KNP-1, only fid-geo-sel, fid-geo-types, fid-kci, fid-num
+# and fid-types.
 "fid-scan-mesh" = "kernel"
 # B-rep model (GEO.CAD.TOPO.MODEL, ADJ, PCURVE): L0 library code, KNP-1; only fid-geo-nurbs, fid-num,
 # fid-kci, fid-types.
@@ -86,6 +87,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # GEO command adapter (GEO.TYPES.REG): element registration and geo.describe_element@1; needs
 # fid-dep (engine), so engine, outside the kernel graph.
 "fid-geo-cmd" = "engine"
+# SCAN mesh-operation command adapter (SCAN.MESHOP.CUT.INVERT): registry definition, CLI and MCP
+# of mesh.invert_normals@1 over fid-scan-mesh (kernel), fid-geo-cmd (engine) and fid-registry.
+"fid-scan-mesh-cmd" = "engine"
 "fid-hal-runtime" = "engine"
 # Uncertainty commands (UNC.MODEL.GRAPH.STORE first): model store, journal and surfaces over the
 # fid-kunc kernel types; needs fid-bus and fid-replay (engine), so engine, outside the kernel graph.

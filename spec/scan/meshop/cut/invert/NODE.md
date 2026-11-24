@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-scan-mesh, fid-scan-mesh-cmd]
 satisfies: [REQ-SCAN.MESHOP.CUT-001, REQ-SCAN.MESHOP.CUT-006, REQ-SCAN.MESHOP.CUT-007]
 covers: [GOM.MSH.09, PW.PCL.04]
 depends_on: [SCAN.MESHOP.PROV, GEO.SEL.MODEL]
@@ -65,7 +66,7 @@ Reverses the orientation of a whole mesh or of a selected set of triangles by re
 
 ## Open questions
 
-- None.
+- Built 2026-11-24: the kernel operation is in `fid-scan-mesh` (`cut::invert`); the registry definition, CLI and MCP are in the engine-layer adapter `fid-scan-mesh-cmd`, because a kernel crate cannot depend on the registry. AC-2's misoriented pairs are read from the GEO.TYPES topology facts of the output mesh: the `SCAN.POLY.QUAL` report has no orientation field. Inverting a raw mesh (no `synthesized` attribute) twice reproduces its geometry and element digest; the version digest comes back exactly when the input carries the attribute, since `SCAN.MESHOP.PROV` gives every output a derived-mesh digest.
 
 ## Children
 

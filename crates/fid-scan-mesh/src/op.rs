@@ -18,6 +18,9 @@
 //!   its (at least one) contributing input triangles, and `create_triangle` sets true
 //!   (REQ-003). Inputs without the attribute count as all-false (REQ-004). The operation
 //!   never sets a flag directly.
+//!   Output vertex channels and per-triangle attributes are empty unless an operation of
+//!   this crate sets them through the crate-private `set_vertex_attrs` and
+//!   `set_triangle_attrs` (`SCAN.MESHOP.CUT.INVERT` keeps them); neither can set a flag.
 //! * **The record** ([`MeshOpOutput`]) is assembled by the runner, not the operation: the
 //!   operation ID, determinism class, the digest of every input version in order, the
 //!   canonical parameter JSON ([`OpParams`]), the seed (required for D2, refused for D0),
@@ -139,7 +142,7 @@
 
 use core::fmt;
 
-use fid_geo_types::{digest_mesh, AttributeSet, GeoTypeError, Mesh, MeshOptions, PointBuffer};
+use fid_geo_types::{digest_mesh, AttributeSet, GeoTypeError, Mesh, MeshOptions, PointBuffer, TriangleAttrs};
 use fid_kci::kci::{sha256, Sha256};
 use fid_types::{CommandId, Determinism, Digest};
 
@@ -461,6 +464,10 @@ pub struct MeshOpBuilder<'b, 'a> {
     flags: Synthesized,
     /// Per input, the output index of each copied vertex (allocated on first copy).
     vmap: Vec<Vec<u64>>,
+    /// Per-vertex channels of the output (none unless an in-crate operation sets them).
+    vertex_attrs: AttributeSet,
+    /// Per-triangle attributes of the output (none unless an in-crate operation sets them).
+    triangle_attrs: TriangleAttrs,
 }
 
 fn grow<T>(v: &mut Vec<T>) -> Result<(), MeshOpError> {
@@ -481,6 +488,8 @@ impl<'b, 'a> MeshOpBuilder<'b, 'a> {
             triangles: Vec::new(),
             flags: Synthesized::new(),
             vmap,
+            vertex_attrs: AttributeSet::default(),
+            triangle_attrs: TriangleAttrs::default(),
         })
     }
 
@@ -602,6 +611,21 @@ impl<'b, 'a> MeshOpBuilder<'b, 'a> {
     pub fn create_triangle(&mut self, verts: [u64; 3]) -> Result<u64, MeshOpError> {
         self.push_triangle(verts, true)
     }
+
+    /// Sets the per-vertex channels of the output (normals, intensity, colour, ...).
+    /// Crate-private: only operations of this crate that keep the input vertices in order
+    /// (`SCAN.MESHOP.CUT.INVERT`) carry channels. GEO.TYPES validates them against the
+    /// output vertex count when the run finishes (`scan.mesh.invalid_output` otherwise).
+    pub(crate) fn set_vertex_attrs(&mut self, attrs: AttributeSet) {
+        self.vertex_attrs = attrs;
+    }
+
+    /// Sets the per-triangle attributes of the output (scanner ID, quality flags; never the
+    /// `synthesized` flag, which only the triangle methods set). Crate-private, as
+    /// [`set_vertex_attrs`](Self::set_vertex_attrs).
+    pub(crate) fn set_triangle_attrs(&mut self, attrs: TriangleAttrs) {
+        self.triangle_attrs = attrs;
+    }
 }
 
 /// A mesh operation. Implementations are pure functions of their inputs and parameters
@@ -702,9 +726,13 @@ impl<O: MeshOp> Registered<O> {
             check_input_intact(v.view(), d).map_err(|_| MeshOpError::InputMutated { input: i as u64 })?;
         }
 
-        let MeshOpBuilder { x, y, z, triangles, flags, .. } = b;
-        let opts = MeshOptions { work_budget_bytes: options.limits.work_budget_bytes, ..MeshOptions::default() };
-        let mesh = Mesh::with_options(frame, PointBuffer::new(x, y, z), AttributeSet::default(), triangles, opts)
+        let MeshOpBuilder { x, y, z, triangles, flags, vertex_attrs, triangle_attrs, .. } = b;
+        let opts = MeshOptions {
+            triangle_attrs,
+            work_budget_bytes: options.limits.work_budget_bytes,
+            ..MeshOptions::default()
+        };
+        let mesh = Mesh::with_options(frame, PointBuffer::new(x, y, z), vertex_attrs, triangles, opts)
             .map_err(MeshOpError::Geometry)?;
         let quality_after = mesh_quality(&mesh, options.degenerate_area)?;
         let output = derived_digest(&mesh, &flags)?;
