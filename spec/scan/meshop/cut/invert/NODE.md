@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-scan-mesh, fid-scan-mesh-cmd]
+built_pr: 582
 satisfies: [REQ-SCAN.MESHOP.CUT-001, REQ-SCAN.MESHOP.CUT-006, REQ-SCAN.MESHOP.CUT-007]
 covers: [GOM.MSH.09, PW.PCL.04]
 depends_on: [SCAN.MESHOP.PROV, GEO.SEL.MODEL]
