@@ -21,11 +21,13 @@
 //! `fid-canon` apply: `journal_seq` is a decimal string, `si` is the `"0x"` hex of its IEEE 754
 //! bits. The digest is streamed page by page, so memory does not grow with the catalog.
 
-use crate::schema::{Catalog, CatalogEntryRow, CatalogError, CatalogText, EntryStatus, Mode, ProjectRow, MAX_PAGE};
+use crate::schema::{
+    read_tags, Catalog, CatalogEntryRow, CatalogError, CatalogText, EntryStatus, Mode, ProjectRow, MAX_PAGE,
+};
 use fid_canon::CValue;
 use fid_types::Digest;
 use fid_uuid::Uuid;
-use rusqlite::params;
+use rusqlite::{params, Statement};
 use sha2::{Digest as _, Sha256};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -194,8 +196,8 @@ impl DigestWriter {
         DigestWriter { hasher, first: true }
     }
 
-    fn push(&mut self, catalog: &Catalog, e: &CatalogEntryRow) -> Result<(), CheckError> {
-        let tags = catalog.tags(&e.project_id, &e.record_id)?;
+    fn push(&mut self, tag_st: &mut Statement<'_>, e: &CatalogEntryRow) -> Result<(), CheckError> {
+        let tags = read_tags(tag_st, &e.project_id, &e.record_id)?;
         let bytes = fid_canon::to_canonical_bytes(&entry_value(e, &tags))
             .map_err(|err| CheckError::Canon(format!("entry cannot be written canonically: {err}")))?;
         if !self.first {
@@ -235,8 +237,10 @@ fn each_entry(
 /// The catalog content digest (REQ-RPT.CATALOG.CHECK-003, -006): independent of insertion
 /// order and of every entry status.
 pub fn content_digest(catalog: &Catalog) -> Result<Digest, CheckError> {
+    // One prepared tag query for the whole pass.
+    let mut tag_st = catalog.tag_statement()?;
     let mut w = DigestWriter::new();
-    each_entry(catalog, |e| w.push(catalog, e))?;
+    each_entry(catalog, |e| w.push(&mut tag_st, e))?;
     Ok(w.finish())
 }
 
@@ -283,33 +287,43 @@ pub fn check_catalog(
     }
 }
 
+/// Refuses a catalog holding entries of an unregistered project (a file edited outside this
+/// crate with foreign keys off): such an entry belongs to no checked project, so it would keep
+/// whatever status it had, `ok` included.
+fn refuse_orphans(catalog: &Catalog) -> Result<(), CheckError> {
+    let mut st = catalog.connection().prepare("PRAGMA foreign_key_check(entry)")?;
+    let mut rows = st.query([])?;
+    if rows.next()?.is_some() {
+        return Err(
+            CatalogError::Corrupt("the catalog holds entries of a project that is not registered".into()).into()
+        );
+    }
+    Ok(())
+}
+
 fn run_check(
     catalog: &Catalog,
     sources: &mut dyn ProjectSources,
     project: Option<&Uuid>,
 ) -> Result<CheckReport, CheckError> {
+    refuse_orphans(catalog)?;
     let projects = catalog.projects()?;
     if let Some(p) = project {
         if !projects.iter().any(|r| r.project_id == *p) {
             return Err(CheckError::UnknownProject(*p));
         }
     }
+    let mut update =
+        catalog.connection().prepare("UPDATE entry SET entry_status = ?1 WHERE project_id = ?2 AND record_id = ?3")?;
     let mut per_project = Vec::new();
     let mut stale = Vec::new();
-    let mut changes: Vec<(Uuid, CatalogText, EntryStatus)> = Vec::new();
     for row in projects.iter().filter(|r| project.map_or(true, |p| r.project_id == *p)) {
         let mut counts = ProjectCounts { project_id: row.project_id, ok: 0, stale: 0, unavailable: 0 };
         let mut lookup = sources.open(row);
-        // Record IDs are never empty, so "" sorts before the project's first entry.
-        let mut after = CatalogText::new("");
+        let mut after: Option<CatalogText> = None;
         loop {
-            let page = catalog.entries_after(Some((&row.project_id, &after)), MAX_PAGE)?;
-            let mut done = page.len() < MAX_PAGE;
+            let page = catalog.project_entries_after(&row.project_id, after.as_ref(), MAX_PAGE)?;
             for e in &page {
-                if e.project_id != row.project_id {
-                    done = true;
-                    break;
-                }
                 let status = judge(lookup.as_deref_mut(), e);
                 match status {
                     EntryStatus::Ok => counts.ok += 1,
@@ -319,25 +333,24 @@ fn run_check(
                     }
                     _ => counts.unavailable += 1,
                 }
+                // Written page by page, inside the caller's transaction.
                 if status != e.entry_status {
-                    changes.push((e.project_id, e.record_id.clone(), status));
+                    let n = update.execute(params![status.as_str(), e.project_id.to_string(), e.record_id.raw()])?;
+                    if n != 1 {
+                        return Err(
+                            CatalogError::Corrupt(format!("entry status update changed {n} rows, expected 1")).into()
+                        );
+                    }
                 }
             }
             match page.last() {
-                Some(last) if !done => after = last.record_id.clone(),
+                Some(last) if page.len() == MAX_PAGE => after = Some(last.record_id.clone()),
                 _ => break,
             }
         }
         per_project.push(counts);
     }
-    let mut st =
-        catalog.connection().prepare("UPDATE entry SET entry_status = ?1 WHERE project_id = ?2 AND record_id = ?3")?;
-    for (p, r, status) in &changes {
-        let n = st.execute(params![status.as_str(), p.to_string(), r.raw()])?;
-        if n != 1 {
-            return Err(CatalogError::Corrupt(format!("entry status update changed {n} rows, expected 1")).into());
-        }
-    }
+    drop(update);
     let digest = content_digest(catalog)?;
     Ok(CheckReport { per_project, stale, digest })
 }

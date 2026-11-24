@@ -59,11 +59,20 @@ use fid_store::schema::{
     verify_schema, MigrationHooks,
 };
 use fid_store::{OpenMode, SchemaError, SchemaVersion, StoreError};
-use rusqlite::types::Value;
 use rusqlite::{params, Connection, ErrorCode};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+
+/// The `entry` columns in DDL order, as decoded by [`decode_entry`] (a macro, so the paging
+/// queries can be `concat!` constants).
+macro_rules! entry_columns {
+    () => {
+        "project_id, record_id, part, revision, plan, run, stage, characteristic, timestamp, value_literal, unit, \
+         si_value, decision_outcome, rule_id, evaluation_basis, uec_class, claimed, declared_input, \
+         uncharacterized_input, interpretation, record_status, journal_seq, journal_entry_hash, entry_status"
+    };
+}
 
 /// The v1 DDL (no transaction control).
 pub const V1_SQL: &str = include_str!("v1.sql");
@@ -488,29 +497,50 @@ impl Catalog {
 
     /// Up to `limit` (at most [`MAX_PAGE`]) entries in (project ID, record ID) order, both
     /// compared bytewise, starting after `after` (exclusive) or at the first entry. The order
-    /// does not depend on insertion order.
+    /// does not depend on insertion order. A starting key is a row-value range on the primary
+    /// key index (a SEARCH, not a scan of the rows before it).
     pub fn entries_after(
         &self,
         after: Option<(&Uuid, &CatalogText)>,
         limit: usize,
     ) -> Result<Vec<CatalogEntryRow>, CatalogError> {
-        let limit = i64::try_from(limit.min(MAX_PAGE)).unwrap_or(0);
-        let (p, r) = match after {
-            Some((p, r)) => (Value::Text(p.to_string()), Value::Text(r.raw().to_string())),
-            None => (Value::Null, Value::Null),
-        };
-        let sql = format!(
-            "SELECT {ENTRY_COLUMNS} FROM entry \
-             WHERE ?1 IS NULL OR project_id > ?1 OR (project_id = ?1 AND record_id > ?2) \
-             ORDER BY project_id, record_id LIMIT ?3"
-        );
-        let mut st = self.conn.prepare(&sql)?;
-        let mut rows = st.query(params![p, r, limit])?;
-        let mut out = Vec::new();
-        while let Some(row) = rows.next()? {
-            out.push(decode_entry(row)?);
+        let limit = page_limit(limit);
+        match after {
+            Some((p, r)) => {
+                let mut st = self.conn.prepare(ENTRIES_AFTER_SQL)?;
+                let rows = st.query(params![p.to_string(), r.raw(), limit])?;
+                decode_entries(rows)
+            }
+            None => {
+                let mut st = self.conn.prepare(ENTRIES_FIRST_SQL)?;
+                let rows = st.query(params![limit])?;
+                decode_entries(rows)
+            }
         }
-        Ok(out)
+    }
+
+    /// Up to `limit` (at most [`MAX_PAGE`]) entries of one project in record-ID order (bytewise),
+    /// starting after record `after` (exclusive) or at the project's first entry. Never reads
+    /// another project's rows.
+    pub fn project_entries_after(
+        &self,
+        project: &Uuid,
+        after: Option<&CatalogText>,
+        limit: usize,
+    ) -> Result<Vec<CatalogEntryRow>, CatalogError> {
+        let limit = page_limit(limit);
+        match after {
+            Some(r) => {
+                let mut st = self.conn.prepare(PROJECT_ENTRIES_AFTER_SQL)?;
+                let rows = st.query(params![project.to_string(), r.raw(), limit])?;
+                decode_entries(rows)
+            }
+            None => {
+                let mut st = self.conn.prepare(PROJECT_ENTRIES_FIRST_SQL)?;
+                let rows = st.query(params![project.to_string(), limit])?;
+                decode_entries(rows)
+            }
+        }
     }
 
     /// Number of `entry` rows.
@@ -531,21 +561,69 @@ impl Catalog {
 
     /// The tags of an entry, sorted bytewise.
     pub fn tags(&self, project: &Uuid, record: &CatalogText) -> Result<Vec<CatalogText>, CatalogError> {
-        let mut st =
-            self.conn.prepare("SELECT tag FROM entry_tag WHERE project_id = ?1 AND record_id = ?2 ORDER BY tag")?;
-        let mut rows = st.query(params![project.to_string(), record.raw()])?;
-        let mut out = Vec::new();
-        while let Some(r) = rows.next()? {
-            out.push(CatalogText::from_string(text(r, 0)?));
-        }
-        Ok(out)
+        let mut st = self.tag_statement()?;
+        read_tags(&mut st, project, record)
+    }
+
+    /// The prepared statement of [`read_tags`], for callers that read the tags of many entries
+    /// (rusqlite's statement cache is a feature this crate does not enable).
+    pub(crate) fn tag_statement(&self) -> Result<rusqlite::Statement<'_>, CatalogError> {
+        Ok(self.conn.prepare(TAGS_SQL)?)
     }
 }
 
-/// The `entry` columns in DDL order, as decoded by [`decode_entry`].
-const ENTRY_COLUMNS: &str = "project_id, record_id, part, revision, plan, run, stage, characteristic, timestamp, \
-     value_literal, unit, si_value, decision_outcome, rule_id, evaluation_basis, uec_class, claimed, declared_input, \
-     uncharacterized_input, interpretation, record_status, journal_seq, journal_entry_hash, entry_status";
+const TAGS_SQL: &str = "SELECT tag FROM entry_tag WHERE project_id = ?1 AND record_id = ?2 ORDER BY tag";
+
+/// The tags of an entry through a statement from [`Catalog::tag_statement`], sorted bytewise.
+pub(crate) fn read_tags(
+    st: &mut rusqlite::Statement<'_>,
+    project: &Uuid,
+    record: &CatalogText,
+) -> Result<Vec<CatalogText>, CatalogError> {
+    let mut rows = st.query(params![project.to_string(), record.raw()])?;
+    let mut out = Vec::new();
+    while let Some(r) = rows.next()? {
+        out.push(CatalogText::from_string(text(r, 0)?));
+    }
+    Ok(out)
+}
+
+fn page_limit(limit: usize) -> i64 {
+    i64::try_from(limit.min(MAX_PAGE)).unwrap_or(0)
+}
+
+fn decode_entries(mut rows: rusqlite::Rows<'_>) -> Result<Vec<CatalogEntryRow>, CatalogError> {
+    let mut out = Vec::new();
+    while let Some(row) = rows.next()? {
+        out.push(decode_entry(row)?);
+    }
+    Ok(out)
+}
+
+/// The first page of entries (no starting key).
+pub(crate) const ENTRIES_FIRST_SQL: &str =
+    concat!("SELECT ", entry_columns!(), " ", "FROM entry ORDER BY project_id, record_id LIMIT ?1");
+
+/// The page of entries after a (project ID, record ID) key: a row-value range on the key index.
+pub(crate) const ENTRIES_AFTER_SQL: &str = concat!(
+    "SELECT ",
+    entry_columns!(),
+    " ",
+    "FROM entry WHERE (project_id, record_id) > (?1, ?2) ORDER BY project_id, record_id LIMIT ?3"
+);
+
+/// The first page of one project's entries.
+pub(crate) const PROJECT_ENTRIES_FIRST_SQL: &str =
+    concat!("SELECT ", entry_columns!(), " FROM entry WHERE project_id = ?1 ORDER BY record_id LIMIT ?2");
+
+/// The page of one project's entries after a record ID: a range on the key index.
+pub(crate) const PROJECT_ENTRIES_AFTER_SQL: &str = concat!(
+    "SELECT ",
+    entry_columns!(),
+    " FROM entry WHERE project_id = ?1 AND record_id > ?2 ORDER BY record_id LIMIT ?3"
+);
+
+const ENTRY_COLUMNS: &str = entry_columns!();
 
 fn seq_to_sql(seq: u64) -> Result<i64, CatalogError> {
     i64::try_from(seq).map_err(|_| CatalogError::Constraint("journal sequence out of range".into()))
@@ -908,5 +986,33 @@ impl MigrationHooks for CatalogHooks<'_> {
             CatalogError::Locked => CatalogError::Locked,
             other => self.failed(from, to, format!("{what}: {other}")),
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+mod tests {
+    use super::*;
+
+    /// The keyed paging and tag queries are index range searches: no scan of the rows before
+    /// the key and no temporary sort.
+    #[test]
+    fn paging_queries_search_the_key_index() {
+        let dir = std::env::temp_dir().join(format!("fid-cat-plan-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let path = std::path::absolute(dir.join("catalog.sqlite")).unwrap();
+        let cat = Catalog::open(&path, Mode::ReadWrite).unwrap();
+        for sql in [ENTRIES_AFTER_SQL, PROJECT_ENTRIES_AFTER_SQL, PROJECT_ENTRIES_FIRST_SQL, TAGS_SQL] {
+            let mut st = cat.connection().prepare(&format!("EXPLAIN QUERY PLAN {sql}")).unwrap();
+            let details: Vec<String> =
+                st.query_map([], |r| r.get::<_, String>(3)).unwrap().map(|d| d.unwrap()).collect();
+            assert!(!details.is_empty(), "{sql}");
+            for d in &details {
+                assert!(d.starts_with("SEARCH "), "{sql}: {d}");
+                assert!(!d.contains("TEMP B-TREE"), "{sql}: {d}");
+            }
+        }
+        drop(cat);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -571,3 +571,29 @@ fn locked_catalog_is_refused_and_changes_nothing() {
     other.execute_batch("ROLLBACK").unwrap();
     assert_eq!(statuses(&cat), before);
 }
+
+/// An entry whose project row was deleted outside the crate (foreign keys off, so no cascade)
+/// must not keep its status: the check refuses the catalog as corrupt and changes nothing.
+#[test]
+fn orphaned_entries_are_refused() {
+    let c = cases();
+    let dir = TempDir::new("orphan");
+    let path = fixture_catalog(&dir, &c);
+    {
+        let conn = rusqlite::Connection::open(&path).unwrap();
+        let fk: i64 = conn.query_row("PRAGMA foreign_keys", [], |r| r.get(0)).unwrap();
+        assert_eq!(fk, 0);
+        let n = conn
+            .execute("DELETE FROM project WHERE project_id = ?1", ["01936f3a-0000-7000-8000-000000000003"])
+            .unwrap();
+        assert_eq!(n, 1);
+    }
+    let mut cat = open(&path, Mode::ReadWrite);
+    let before = statuses(&cat);
+    assert_eq!(before.len(), 10);
+    let mut src = fixture_sources(&c);
+    let err = check_catalog(&mut cat, &mut src, None).unwrap_err();
+    assert_eq!(err.code(), "stats.catalog_corrupt");
+    assert!(src.opens.is_empty());
+    assert_eq!(statuses(&cat), before);
+}
