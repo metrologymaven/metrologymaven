@@ -249,8 +249,8 @@ verdict is `pass`.
 - Status: available
 - Tool: `cargo xtask rel notes --tag <tag> --channel <channel> --prs <prs.json> --reports <dir> --out <dir>`
 
-Spec node ECO.REL.PROC.NOTES. Generates markdown release notes (`RELEASE-NOTES.md` and
-`notes-manifest.json`) from PR metadata and gate reports offline.
+Spec node ECO.REL.PROC.NOTES. Generates `<out>/release-notes.md` (and nothing else) from
+the exported PR metadata (`--prs`) and gate/evidence/threat reports (`--reports`) offline.
 
 ### 17. `sign-approval`: Approve signing of the exact pre-sign digest
 

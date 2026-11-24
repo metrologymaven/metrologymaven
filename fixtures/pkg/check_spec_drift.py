@@ -96,7 +96,9 @@ def self_test(errors_text, reader_text, manifest_text, spec):
     assert any("reasons:pkg.malformed: `injected_reason`" in g for g in got), got
     got = compare(code_items(errors_text, reader_text, manifest_text + '\n("injected_field", s(&x)),'), spec)
     assert any("fields: `injected_field`" in g for g in got), got
-    got = compare(code_items(errors_text, reader_text, manifest_text.replace('"results"', '"results", "injected_dir"')), spec)
+    mutated = manifest_text.replace('MEMBER_DIRS: [&str; 6] = [', 'MEMBER_DIRS: [&str; 6] = ["injected_dir", ', 1)
+    assert mutated != manifest_text, "MEMBER_DIRS signature not found in manifest.rs"
+    got = compare(code_items(errors_text, reader_text, mutated), spec)
     assert any("member_dirs: `injected_dir`" in g for g in got), got
 
 

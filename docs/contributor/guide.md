@@ -1,6 +1,6 @@
 ---
 title: Contributor guide
-revision: 7f18e733b2c5c46fba184ae31cd592367c1d67f8
+revision: f7885bf978b93bdb31379e0bacf37026f5cb44c4
 ---
 
 # Contributor guide
@@ -91,7 +91,7 @@ The Rust workspace lives under `crates/` and `vendor/fid-clarabel/crate` (MSRV `
 ### Prerequisites
 
 - **All platforms:** Rust `>= 1.89` with `clippy` and `rustfmt`, Git, and Python `3.10+` (`jsonschema` is needed for fixture schema checks; `tools/scope.py` and `site/build.py` use the Python standard library only).
-- **C toolchain (`D-043`):** `fid-store` compiles bundled SQLite (`libsqlite3-sys`) via `cc-rs`. Install Visual Studio Build Tools (MSVC C++) and the Windows SDK on Windows, `gcc`/`cc` + libc headers on Linux, or Xcode Command Line Tools on macOS. Pure-Rust crates (`fid-cli`, `fid-verify`, `fid-mcp`, `fid-pkg`, `fid-platform`, `fid-outreach`, `fid-scan-cmp`) build without a C compiler.
+- **C toolchain (`D-043`):** `fid-store` compiles bundled SQLite (`libsqlite3-sys`) via `cc-rs`. Install Visual Studio Build Tools (MSVC C++) and the Windows SDK on Windows, `gcc`/`cc` + libc headers on Linux, or Xcode Command Line Tools on macOS. Pure-Rust crates without `libsqlite3-sys` (`fid-verify`, `fid-mcp`, `fid-pkg`, `fid-platform`, `fid-outreach`, `fid-scan-cmp`) build without a C compiler or binutils, while `fid-cli` links `windows-sys` (via `fid-ctrl-acl`), which uses MSVC `windows-targets` (recommended) or requires MinGW `dlltool` on `-gnu` targets.
 - **Optional tools:** `wasm32-wasip1` target and `wasmtime` (for `/guide/` WASM labs and kernel WASM checks), `cargo-nextest`, `cargo-deny`, and Node.js (for canonical journal fixture checks).
 
 ### Commands
