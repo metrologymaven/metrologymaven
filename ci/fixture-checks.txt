@@ -184,6 +184,7 @@ python fixtures/manifest/make_fixtures.py --check
 python fixtures/mcp/make_fixtures.py --check
 python fixtures/mcp/profiles/make_fixtures.py --check
 python fixtures/mig/cover/corpus/make_fixtures.py --check
+python fixtures/mig/cover/gen/make_fixtures.py --check
 python fixtures/mig/cover/taxo/make_fixtures.py --check
 python fixtures/mig/explain/cat/make_fixtures.py --check
 python fixtures/mig/ladder/def/make_fixtures.py --check

@@ -1,0 +1,188 @@
+{
+  "schema": "mig-report-set@1",
+  "reports": [
+    {
+      "name": "mig-csv-demo-1.mapreport.json",
+      "report": {
+        "schema": "mig-mapreport@1",
+        "header": {
+          "profile_id": "demo-csv-profile",
+          "profile_version": "1.0.0",
+          "source_sha256": "sha256:3d3ec586d188079ed8add0f275f955c9ca7e3a39e90384d61d4308f8ddc031ad",
+          "format_id": "csv-points",
+          "importer_version": "0.1.0"
+        },
+        "items": [
+          {
+            "locator": "line 2",
+            "construct_id": "column.header",
+            "status": "MAPPED"
+          },
+          {
+            "locator": "line 3",
+            "construct_id": "point_set.xyz",
+            "status": "MAPPED"
+          },
+          {
+            "locator": "line 4",
+            "construct_id": "point_set.xyz",
+            "status": "MAPPED"
+          },
+          {
+            "locator": "line 5",
+            "construct_id": "point_set.ijk_normal",
+            "status": "MAPPED"
+          }
+        ],
+        "summary": {
+          "MAPPED": 4,
+          "PARTIAL": 0,
+          "UNSUPPORTED": 0
+        }
+      }
+    },
+    {
+      "name": "mig-csv-demo-2.mapreport.json",
+      "report": {
+        "schema": "mig-mapreport@1",
+        "header": {
+          "profile_id": "demo-csv-profile",
+          "profile_version": "1.0.0",
+          "source_sha256": "sha256:91964cb8f50da2d225791892cb9f624abde6d981c85935cf6122ce09e1f35ae4",
+          "format_id": "csv-points",
+          "importer_version": "0.1.0"
+        },
+        "items": [
+          {
+            "locator": "line 2",
+            "construct_id": "column.header",
+            "status": "MAPPED"
+          },
+          {
+            "locator": "line 3",
+            "construct_id": "point_set.xyz",
+            "status": "MAPPED"
+          },
+          {
+            "locator": "line 4",
+            "construct_id": "point_set.ijk_normal",
+            "status": "PARTIAL",
+            "reason": "missing_field"
+          },
+          {
+            "locator": "line 5",
+            "construct_id": "unit.column",
+            "status": "UNSUPPORTED",
+            "reason": "unsupported_construct"
+          }
+        ],
+        "summary": {
+          "MAPPED": 2,
+          "PARTIAL": 1,
+          "UNSUPPORTED": 1
+        }
+      }
+    },
+    {
+      "name": "mig-csv-demo-3.mapreport.json",
+      "report": {
+        "schema": "mig-mapreport@1",
+        "header": {
+          "profile_id": "demo-csv-profile",
+          "profile_version": "1.0.0",
+          "source_sha256": "sha256:6a733c0505497d3e69c771b6cc469a82821bcd3ae2f2cb2395adb1bc6f597801",
+          "format_id": "csv-points",
+          "importer_version": "0.1.0"
+        },
+        "items": [
+          {
+            "locator": "line 2",
+            "construct_id": "column.header",
+            "status": "MAPPED"
+          },
+          {
+            "locator": "line 3",
+            "construct_id": "result.row",
+            "status": "MAPPED"
+          },
+          {
+            "locator": "line 4",
+            "construct_id": "result.row",
+            "status": "MAPPED"
+          },
+          {
+            "locator": "line 5",
+            "construct_id": "unit.column",
+            "status": "UNSUPPORTED",
+            "reason": "unsupported_construct"
+          }
+        ],
+        "summary": {
+          "MAPPED": 3,
+          "PARTIAL": 0,
+          "UNSUPPORTED": 1
+        }
+      }
+    },
+    {
+      "name": "mig-csv-demo-4.mapreport.json",
+      "report": {
+        "schema": "mig-mapreport@1",
+        "header": {
+          "profile_id": "demo-csv-profile",
+          "profile_version": "1.0.0",
+          "source_sha256": "sha256:39fdf77c704d363e80433d99d3d3face866f04fb19f171f7c7f826683536c9af",
+          "format_id": "csv-points",
+          "importer_version": "0.1.0"
+        },
+        "items": [
+          {
+            "locator": "line 2",
+            "construct_id": "column.header",
+            "status": "MAPPED"
+          },
+          {
+            "locator": "line 3",
+            "construct_id": "point_set.xyz",
+            "status": "MAPPED"
+          },
+          {
+            "locator": "line 4",
+            "construct_id": "point_set.ijk_normal",
+            "status": "MAPPED"
+          }
+        ],
+        "summary": {
+          "MAPPED": 3,
+          "PARTIAL": 0,
+          "UNSUPPORTED": 0
+        }
+      }
+    },
+    {
+      "name": "mig-csv-stray.mapreport.json",
+      "report": {
+        "schema": "mig-mapreport@1",
+        "header": {
+          "profile_id": "demo-csv-profile",
+          "profile_version": "1.0.0",
+          "source_sha256": "sha256:a7af15e46ea15ba87b97e5f70be5a53187721ee70c1117f8430a81b92aa46130",
+          "format_id": "csv-points",
+          "importer_version": "0.1.0"
+        },
+        "items": [
+          {
+            "locator": "line 2",
+            "construct_id": "column.header",
+            "status": "MAPPED"
+          }
+        ],
+        "summary": {
+          "MAPPED": 1,
+          "PARTIAL": 0,
+          "UNSUPPORTED": 0
+        }
+      }
+    }
+  ]
+}

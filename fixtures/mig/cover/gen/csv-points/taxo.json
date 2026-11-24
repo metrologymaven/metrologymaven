@@ -1,0 +1,42 @@
+{
+  "schema": "mig-taxonomy@1",
+  "format_id": "csv-points",
+  "version": "1.0.0",
+  "reviewer_attestation": {
+    "date": "2026-11-24",
+    "reviewer": "Metrology Maven maintainers",
+    "statement": "Construct descriptions authored in original project wording for this fixture."
+  },
+  "constructs": [
+    {
+      "id": "column.header",
+      "kind": "layout",
+      "description": "Header row naming the exported columns."
+    },
+    {
+      "id": "point_set.xyz",
+      "kind": "record",
+      "description": "Row of three Cartesian coordinates."
+    },
+    {
+      "id": "point_set.ijk_normal",
+      "kind": "field",
+      "description": "Optional surface normal columns per point."
+    },
+    {
+      "id": "result.row",
+      "kind": "record",
+      "description": "Row with a characteristic value and its limits."
+    },
+    {
+      "id": "unit.column",
+      "kind": "field",
+      "description": "Column holding a unit symbol per row."
+    },
+    {
+      "id": "comment.line",
+      "kind": "layout",
+      "description": "Free comment line between data rows."
+    }
+  ]
+}
