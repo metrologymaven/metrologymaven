@@ -11,6 +11,11 @@
 //! [--deny-names <file>] [--json]` or `review-check --all --root <design dir> [--base <repo>] ..`,
 //! `fid-design icons-prov --root <design dir> --attribution <file> [--json]`,
 //! `fid-design icons-registry --manifest <file> --root <design dir> [--json]`,
+//! `fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]`,
+//! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]`,
+//! `fid-design fonts-check --root <design dir> --allowlist <file> [--json]`,
+//! `fid-design page-check (--root <design dir> | --file <pages.json>) [--json]`,
+//! `fid-design icons-lint --root <icons dir> [--json]`,
 //! `fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]`,
 //! `fid-design sources-check --root <design dir> [--spec <spec dir>] [--json]`, and
 //! `fid-design research-check --root <dir> [--key <private csv>] [--json]`.
@@ -37,6 +42,9 @@ const USAGE: &str =
        fid-design icons-registry --manifest <file> --root <design dir> [--json]
        fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]
        fid-design screens-gate --spec <spec dir> --root <design dir> [--json]
+       fid-design fonts-check --root <design dir> --allowlist <file> [--json]
+       fid-design page-check (--root <design dir> | --file <pages.json>) [--json]
+       fid-design icons-lint --root <icons dir> [--json]
        fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]
        fid-design sources-check --root <design dir> [--spec <spec dir>] [--json]
        fid-design research-check --root <dir> [--key <private csv>] [--json]";

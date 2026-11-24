@@ -167,6 +167,23 @@ fn error_paths_board_missing_and_catalog_mismatch() {
     let _ = std::fs::remove_dir_all(&tmp);
 }
 
+fn json_str(s: &str) -> String {
+    let mut out = String::from("\"");
+    for ch in s.chars() {
+        match ch {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if c.is_control() => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
 #[test]
 fn rejects_unsafe_model_ids_and_non_regular_files() {
     let (_, catalog, hosts) = fixture_inputs();
@@ -174,14 +191,19 @@ fn rejects_unsafe_model_ids_and_non_regular_files() {
     let _ = std::fs::remove_dir_all(&tmp);
     std::fs::create_dir_all(&tmp).expect("mkdir");
 
-    for bad_id in ["../escape", "/etc/passwd", "a/b", "a\\b", "C:evil", ".", ".."] {
+    for bad_id in ["../escape", "/etc/passwd", "a/b", "a\\b", "C:evil", ".", "..", "a\u{007f}b", "a\nb"] {
         let board_file = tmp.join("board.json");
+        let escaped = json_str(bad_id);
         let json = format!(
-            r#"{{"release":"r1","verdict":{{"outcome":"pass"}},"models":[{{"model":{bad_id:?},"open_weight":true,"by_task":{{}}}}]}}"#
+            r#"{{"release":"r1","verdict":{{"outcome":"pass"}},"models":[{{"model":{escaped},"open_weight":true,"by_task":{{}}}}]}}"#
         );
         std::fs::write(&board_file, json).expect("write bad board");
         let err = build_guide(&GuideInputs { board: &board_file, catalog: &catalog, hosts: &hosts }).unwrap_err();
         assert_eq!(err.code(), "board_missing", "expected board_missing for model id {bad_id:?}, got {err}");
+        assert!(
+            err.to_string().contains("invalid model id"),
+            "expected validate_model_id rejection for {bad_id:?}, got {err}"
+        );
     }
 
     // Non-regular file (directory named host.json) must be refused

@@ -312,7 +312,12 @@ fn validate_model_id(id: &str) -> Result<(), String> {
     if id.is_empty() || id.len() > 128 {
         return Err(format!("invalid model id {id:?}: must be 1..=128 bytes"));
     }
-    if id.contains('/') || id.contains('\\') || id.contains(':') || id.contains('\0') {
+    if id.contains('/')
+        || id.contains('\\')
+        || id.contains(':')
+        || id.contains('\0')
+        || id.chars().any(char::is_control)
+    {
         return Err(format!("invalid model id {id:?}: contains forbidden path character"));
     }
     let mut comps = Path::new(id).components();
