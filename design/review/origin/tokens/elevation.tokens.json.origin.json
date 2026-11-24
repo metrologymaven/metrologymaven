@@ -1,0 +1,11 @@
+{
+  "artefact": "tokens/elevation.tokens.json",
+  "author": "Claude Code (Claude Opus 5.5), agent author of UX.TOKENS.SPACE; the three levels, their shadows (offsets of 0, 1 and 4 px, blurs of 0, 2 and 16 px, black at 0, 12 and 20 percent alpha; shadow offsets and blurs are not held to the 4 px spacing grid) and the choice of surface and border cue per level were chosen for this project; the cues name existing colour roles of UX.TOKENS.COLOR",
+  "date": "2026-11-21",
+  "references": [
+    "The UX.TOKENS and UX.TOKENS.SPACE spec nodes in this repository",
+    "The UX.TOKENS.COLOR spec node and its theme bindings in this repository (cue colours)",
+    "The Design Tokens Community Group format draft pinned by UX.SYSTEM.PKG (token syntax only)"
+  ],
+  "statement_version": "originality-statement@1"
+}

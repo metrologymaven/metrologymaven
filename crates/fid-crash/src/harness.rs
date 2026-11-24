@@ -284,9 +284,12 @@ pub fn run(config: &Config, adapter: &dyn CrashAdapter, log: &mut dyn Write) -> 
             summary.stores += 1;
         }
         let mut w = Writer::spawn(&config.writer, &root).map_err(|e| fail(refused(e), log))?;
-        // Every fourth kill is timed from the spawn, so it can land while the writer is still
-        // starting: opening the store, recovering the WAL, taking over the stale lock.
-        if !instant.from_spawn() {
+        // Every fourth kill is timed from the spawn (store open, WAL recovery, lock takeover).
+        // Every eighth kill is timed from the writer's first `ACK` so the run always exercises
+        // kills after at least one acknowledged commit even under heavy I/O contention.
+        if instant.from_first_ack() {
+            w.wait_for("ACK ").map_err(|e| fail(refused(e), log))?;
+        } else if !instant.from_spawn() {
             w.wait_for("READY").map_err(|e| fail(refused(e), log))?;
         }
         std::thread::sleep(Duration::from_micros(instant.delay_us));

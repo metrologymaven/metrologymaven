@@ -58,6 +58,20 @@ pub enum GeoCmdError {
     Cycle(Vec<Uuid>),
     /// Rotation matrix or quaternion is not orthonormal / right-handed (`GEO.FRAME.CMD`).
     NotOrthonormal(String),
+    /// A selection's target digest no longer matches the current element (`REQ-GEO.SEL.CMD-003`).
+    StaleSelection(Uuid),
+    /// Two selections in a set combination refer to different target elements (`GEO.SEL.CMD`).
+    ElementMismatch(String),
+    /// Selection domain does not match element kind or sibling operand (`GEO.SEL.CMD`).
+    DomainMismatch(String),
+    /// Camera parameters for CPU selection resolution are degenerate (`GEO.SEL.CMD`).
+    BadCamera(String),
+    /// Lasso polygon is malformed or outside vertex bounds (`GEO.SEL.CMD`).
+    BadPolygon(String),
+    /// Inline explicit index list exceeds 1 000 000 entries (`REQ-GEO.SEL.CMD-005`).
+    TooManyIndices { count: usize, max: usize },
+    /// Other selection library refusal (`GEO.SEL.CMD`).
+    Selection(String),
     /// An underlying spatial index operation refused the input.
     Index(String),
     /// The dependency graph refused the edges.
@@ -72,9 +86,10 @@ pub enum GeoCmdError {
 
 impl GeoCmdError {
     /// Stable code. `not_found`, `not_geometry`, `too_many_queries`, `frame_mismatch`,
-    /// `budget_exceeded`, `frame_in_use`, `unknown_frame`, `cycle`, `not_orthonormal` and
-    /// `bad_quantity` are the codes the leaves name; the edge, propagation and ID codes
-    /// pass through unchanged.
+    /// `budget_exceeded`, `frame_in_use`, `unknown_frame`, `cycle`, `not_orthonormal`,
+    /// `bad_quantity`, `stale_selection`, `element_mismatch`, `domain_mismatch`, `bad_camera`,
+    /// `bad_polygon`, and `too_many_indices` are the codes the leaves name; the edge,
+    /// propagation and ID codes pass through unchanged.
     pub fn code(&self) -> &'static str {
         match self {
             GeoCmdError::NotFound(_) => "not_found",
@@ -98,6 +113,13 @@ impl GeoCmdError {
             GeoCmdError::UnknownFrame(_) => "unknown_frame",
             GeoCmdError::Cycle(_) => "cycle",
             GeoCmdError::NotOrthonormal(_) => "not_orthonormal",
+            GeoCmdError::StaleSelection(_) => "stale_selection",
+            GeoCmdError::ElementMismatch(_) => "element_mismatch",
+            GeoCmdError::DomainMismatch(_) => "domain_mismatch",
+            GeoCmdError::BadCamera(_) => "bad_camera",
+            GeoCmdError::BadPolygon(_) => "bad_polygon",
+            GeoCmdError::TooManyIndices { .. } => "too_many_indices",
+            GeoCmdError::Selection(_) => "selection_error",
             GeoCmdError::Index(_) => "index_error",
             GeoCmdError::Edge(e) => e.code(),
             GeoCmdError::Prop(e) => e.code(),
@@ -116,22 +138,29 @@ impl GeoCmdError {
     pub fn bus_error(&self) -> (&'static str, &'static str) {
         match self {
             GeoCmdError::IdCollision(_) => ("conflict", "id_collision"),
-            GeoCmdError::DigestMismatch(_) => ("conflict", "expected_digest_mismatch"),
+            GeoCmdError::DigestMismatch(_) | GeoCmdError::StaleSelection(_) => ("conflict", "expected_digest_mismatch"),
             GeoCmdError::NotFound(_) | GeoCmdError::UnknownFrame(_) => ("not_found", "unknown_entity"),
             GeoCmdError::UnknownCommand(_) => ("not_found", "unknown_command"),
             GeoCmdError::Edge(e) if e.code() == "not_found" => ("not_found", "unknown_entity"),
-            GeoCmdError::BadParams(_) | GeoCmdError::NotOrthonormal(_) => ("validation", "schema"),
+            GeoCmdError::BadParams(_)
+            | GeoCmdError::NotOrthonormal(_)
+            | GeoCmdError::BadCamera(_)
+            | GeoCmdError::BadPolygon(_) => ("validation", "schema"),
             GeoCmdError::BadLength(_) | GeoCmdError::BadQuantity(_) => ("validation", "literal_syntax"),
             GeoCmdError::BadSourceId(_) | GeoCmdError::BadOutput(_) => ("validation", "label"),
-            GeoCmdError::InputLimit(_) | GeoCmdError::TooManyQueries { .. } | GeoCmdError::BudgetExceeded { .. } => {
-                ("validation", "input_limit")
-            }
+            GeoCmdError::InputLimit(_)
+            | GeoCmdError::TooManyQueries { .. }
+            | GeoCmdError::BudgetExceeded { .. }
+            | GeoCmdError::TooManyIndices { .. } => ("validation", "input_limit"),
             GeoCmdError::NotGeometry(_)
             | GeoCmdError::DuplicateInput(_)
             | GeoCmdError::KindMismatch { .. }
             | GeoCmdError::FrameMismatch { .. }
             | GeoCmdError::FrameInUse { .. }
             | GeoCmdError::Cycle(_)
+            | GeoCmdError::ElementMismatch(_)
+            | GeoCmdError::DomainMismatch(_)
+            | GeoCmdError::Selection(_)
             | GeoCmdError::Index(_)
             | GeoCmdError::Edge(_)
             | GeoCmdError::Prop(_) => ("validation", "bad_reference"),
@@ -158,7 +187,8 @@ impl fmt::Display for GeoCmdError {
             | GeoCmdError::NotGeometry(id)
             | GeoCmdError::IdCollision(id)
             | GeoCmdError::DuplicateInput(id)
-            | GeoCmdError::DigestMismatch(id) => write!(f, ": {id}"),
+            | GeoCmdError::DigestMismatch(id)
+            | GeoCmdError::StaleSelection(id) => write!(f, ": {id}"),
             GeoCmdError::Geometry(e) => write!(f, ": {e}"),
             GeoCmdError::BadParams(s)
             | GeoCmdError::BadSourceId(s)
@@ -167,7 +197,9 @@ impl fmt::Display for GeoCmdError {
             | GeoCmdError::Internal(s) => write!(f, ": {s}"),
             GeoCmdError::UnknownCommand(s) => write!(f, ": {s:?}"),
             GeoCmdError::KindMismatch { expected, found } => write!(f, ": expected {expected}, found {found}"),
-            GeoCmdError::TooManyQueries { count, max } => write!(f, ": {count} exceeds limit {max}"),
+            GeoCmdError::TooManyQueries { count, max } | GeoCmdError::TooManyIndices { count, max } => {
+                write!(f, ": {count} exceeds limit {max}")
+            }
             GeoCmdError::FrameMismatch { expected, found } => write!(
                 f,
                 ": expected frame {}, found {}",
@@ -182,7 +214,12 @@ impl fmt::Display for GeoCmdError {
             }
             GeoCmdError::UnknownFrame(s) => write!(f, ": {s}"),
             GeoCmdError::Cycle(ids) => write!(f, ": cycle of length {}", ids.len()),
-            GeoCmdError::NotOrthonormal(s) => write!(f, ": {s}"),
+            GeoCmdError::NotOrthonormal(s)
+            | GeoCmdError::ElementMismatch(s)
+            | GeoCmdError::DomainMismatch(s)
+            | GeoCmdError::BadCamera(s)
+            | GeoCmdError::BadPolygon(s)
+            | GeoCmdError::Selection(s) => write!(f, ": {s}"),
             GeoCmdError::BadLength(s) | GeoCmdError::BadQuantity(s) | GeoCmdError::Index(s) => write!(f, ": {s}"),
             GeoCmdError::Edge(e) => write!(f, ": {e}"),
             GeoCmdError::Prop(e) => write!(f, ": {e:?}"),

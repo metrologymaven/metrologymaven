@@ -39,7 +39,7 @@ Each crate belongs to one layer and may depend only on its own layer or lower on
 |---|---|---|
 | L0 Foundation | Pure libraries: KRN.* (including the exact geometric predicates, KRN.NUM.PRED); GEO geometry libraries (everything except `*.CMD` and storage); UNC math (MODEL, PROP, XFM) and the instrument-model kernel (`fid-kunc`); the GD&T evaluation library (`fid-gps`); the ResultRecord schema crate (types only); the unit catalogue (GEO.FRAME.UNITS); canonical JSON (CORE.JRN.CANON); the I18N locale render transform; HAL.IDL types (D-035) | CORE or anything above |
 | L1 Core | CORE.* | L2, L3 |
-| L2 Domain services | Command crates, in this order: IO < ALN < GDT < UNC commands < SCAN < RPT < TRUST < HAL < CMM < LVM < IND < MIG < ENT | A later L2 domain, or L3 |
+| L2 Domain services | Command crates, in this order: IO < ALN < GDT < UNC commands < SCAN < RPT < TRUST < HAL < CMM < LVM < SURF < IND < CAL < MIG < ENT | A later L2 domain, or L3 |
 | L3 Surfaces and apps | AUTO, VIZ, ECO.APPS, FLOW runners, AGENT, I18N runtime, UX token consumers; also the QUAL product crate, the SCAN GPU-preview crate and the RPT designer UI (D-035) | — |
 | Tooling | ECO CI/REL/RULES/PARITY, OUTR, PLAT checks, QUAL evidence, UNC.RDL/ORS suites, test harnesses | Product crates above L0: tooling reads **artifacts**, but may link pure L0 libraries (D-035) |
 
@@ -185,8 +185,8 @@ A phase means **when work starts** (D-006). A parent's phase is the earliest pha
 | P1a | First usable product: transcription reports, prismatic GD&T subset (ASME), minimal GUI and viewer |
 | P1b | Scan-to-CAD inspection, ISO GPS dialect, CAD + PMI, SPC, Python, report designer |
 | P2 | Live devices and CMM programming: I++ client, simulator, approval station, DMIS import |
-| P3 | Form and texture, live portables, large-volume networks, auto-path |
-| P4 | Ecosystem: OPC UA, MTConnect, marketplace, program conversion from incumbents |
+| P3 | Form and texture (SURF), MSA and non-normal capability (RPT.STATS.MSA), live portables, large-volume networks, auto-path |
+| P4 | Calibration-lab verification (CAL), OPC UA, MTConnect, marketplace, program conversion from incumbents |
 | later | Not yet scheduled |
 
 ## 8. Engineering rules (binding on implementation; specs must not contradict them)

@@ -60,24 +60,25 @@ Statistics across parts, stages and runs, per characteristic: descriptive statis
 - **REQ-RPT.STATS-012** A dashboard shall be a saved definition (catalog query plus statistics and charts), and opening it shall recompute only from journaled data.
 - **REQ-RPT.STATS-013** Statistics values shown in reports or dashboards shall be formatted by the kernel's versioned formatters.
 - **REQ-RPT.STATS-014** The system shall cite every statistical method by standard designator, edition and clause, or by published reference, and shall not embed standards text.
+- **REQ-RPT.STATS-015** The system shall support Measurement Systems Analysis (AIAG MSA 4th Ed. Type 1, ANOVA Gage R&R, linearity, bias, attribute agreement; VDA 5 capability indices tied to UNC) and non-normal capability distributions (ISO 22514-2) in post-1.0 releases (D-054).
 
 ## Interfaces
 
-- **Offers:** `stats.compute_summary@1`, `stats.compute_capability@1`, `stats.compute_limits@1`, `stats.freeze_limits@1`, `stats.build_chart@1`, `stats.compare_parts@1`, `stats.save_dashboard@1`; types `DataSet`, `StatSummary`, `ControlLimits`, `CapabilityIndex`, `ChartSeries`.
-- **Consumes:** ResultRecord queries (`RPT.CATALOG`), kernel numerics (`KRN`, `fid-num`), formatters, chart blocks (`RPT.MODEL`).
+- **Offers:** `stats.compute_summary@1`, `stats.compute_capability@1`, `stats.compute_limits@1`, `stats.freeze_limits@1`, `stats.build_chart@1`, `stats.compare_parts@1`, `stats.save_dashboard@1`, `stats.compute_msa@1`; types `DataSet`, `StatSummary`, `ControlLimits`, `CapabilityIndex`, `ChartSeries`, `MsaStudy`.
+- **Consumes:** ResultRecord queries (`RPT.CATALOG`), kernel numerics (`KRN`, `fid-num`), uncertainty statements (`UNC`), formatters, chart blocks (`RPT.MODEL`).
 - **Side effects:** compute is R1; freezing limits and saving dashboards is W2.
 
 ## Decomposition hints
 
-DSET (data-set selection and exclusions), DESC (descriptive statistics), TREND (trend series), SPC (control charts, limits, run rules), CAP (capability indices), CMP (part-to-part comparison and piece stepping), DASH (dashboards).
+DSET (data-set selection and exclusions), DESC (descriptive statistics), TREND (trend series), SPC (control charts, limits, run rules), CAP (capability indices), CMP (part-to-part comparison and piece stepping), DASH (dashboards), MSA (AIAG MSA, VDA 5 and non-normal capability, P3).
 
 ## Split rationale
 
-The split follows the **statistical method**, with one shared input: every statistic reads a digested, ordered `DataSet` (DSET), which is what makes "which results were used" answerable and results reproducible. Methods then split by what they compute: descriptive statistics (DESC), trend and histogram series plus the shared `ChartSeries` contract (TREND), control charts and run rules (SPC), capability indices (CAP), and part comparison with piece stepping (CMP). Dashboards (DASH) are saved definitions over the others and compute nothing themselves.
+The split follows the **statistical method**, with one shared input: every statistic reads a digested, ordered `DataSet` (DSET), which is what makes "which results were used" answerable and results reproducible. Methods then split by what they compute: descriptive statistics (DESC), trend and histogram series plus the shared `ChartSeries` contract (TREND), control charts and run rules (SPC), capability indices (CAP), part comparison with piece stepping (CMP), and post-1.0 MSA / VDA 5 / non-normal capability (MSA, D-054). Dashboards (DASH) are saved definitions over the others and compute nothing themselves.
 
 - DESC is finished as a leaf: the method is standard, the NIST StRD univariate datasets give certified answers, and its command is R1.
 - The chart-series contract sits in TREND, the simplest producer, so SPC and LVM depend on it rather than on a separate contract child.
-- REQ-RPT.STATS-002 (reproducibility) is satisfied by every computing child; REQ-RPT.STATS-014 (citations) by the three method children that cite standards.
+- REQ-RPT.STATS-002 (reproducibility) is satisfied by every computing child; REQ-RPT.STATS-014 (citations) by the method children that cite standards.
 - `*-dataset` was added to this node's CLI, MCP and journal patterns for DSET.
 
 Alternatives considered:
@@ -86,8 +87,8 @@ Alternatives considered:
 
 ## Open questions
 
-- Which reference (ISO 22514 parts, ISO 7870-2, AIAG SPC manual) and which edition defines the default constants and run rules? Needs a domain expert; may become a decision before the SPC leaf.
-- Non-normal capability methods (percentile, Box-Cox) are not required yet.
+- Which reference (ISO 22514 parts, ISO 7870-2, AIAG SPC manual) and which edition defines the default constants and run rules? Autonomous clean-room defaults apply under D-052 with provisional tagging until signed off.
+- Non-normal capability methods (percentile, Box-Cox, Weibull, Rayleigh) and MSA/VDA 5 are scheduled in `RPT.STATS.MSA` (`P3`) per D-054.
 
 ## Children
 
@@ -100,3 +101,4 @@ Alternatives considered:
 | RPT.STATS.CAP | Capability and performance indices | 002 007 008 014 | GOM.TRD.03 |
 | RPT.STATS.CMP | Part-to-part comparison and piece stepping | 010 011 | GOM.TRD.04, PW.MSP.05 |
 | RPT.STATS.DASH | Dashboards | 012 013 | PW.MSP.04 |
+| RPT.STATS.MSA | Measurement Systems Analysis, VDA 5 and non-normal capability | 002 014 015 | none |
