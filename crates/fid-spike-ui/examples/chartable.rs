@@ -623,6 +623,9 @@ fn table_ui(ui: &mut egui::Ui, m: &mut Model) {
     let frac = (m.scroll_top - first as f64) as f32;
     let focus = (m.grid.focus_row(), m.grid.focus_col());
     let editing = m.grid.mode() == Mode::Edit;
+    // The editor sits on the cell the edit started on, which a background result shown
+    // meanwhile may have moved the focus away from.
+    let edit_cell = m.grid.edit_target();
     // The selection once per frame (finding the focused row's position scans the view).
     let sel = m.grid.selection();
     let in_sel =
@@ -654,13 +657,14 @@ fn table_ui(ui: &mut egui::Ui, m: &mut Model) {
             }
             let painter = rui.painter_at(vis);
             let is_focus = focus == (Some(id), *c);
+            let is_edit = edit_cell == Some((id, *c));
             if in_sel(k, p) {
                 painter.rect_filled(cell, 0.0, visuals.selection.bg_fill);
             }
             painter.line_segment([cell.right_top(), cell.right_bottom()], line);
             if *c == Column::Status {
                 chip(&painter, cell, row.status);
-            } else if !(is_focus && editing) {
+            } else if !is_edit {
                 let text = row.text(*c);
                 let (pos, align) = if c.numeric() || matches!(c, Column::Id | Column::Balloon) {
                     (egui::pos2(cell.max.x - PAD, cell.center().y), egui::Align2::RIGHT_CENTER)
@@ -672,11 +676,12 @@ fn table_ui(ui: &mut egui::Ui, m: &mut Model) {
             let cid = egui::Id::new(("chartable-cell", id, c.key()));
             cells.insert(cid, (id, *c));
             let resp = rui.interact(vis, cid, egui::Sense::click());
+            if is_edit {
+                edit_rect = Some(vis);
+            }
             if is_focus {
                 painter.rect_stroke(cell.shrink(1.0), 0.0, visuals.selection.stroke, egui::StrokeKind::Inside);
-                if editing {
-                    edit_rect = Some(vis);
-                } else if m.want_focus {
+                if !editing && m.want_focus {
                     resp.request_focus();
                     m.want_focus = false;
                 }
@@ -867,6 +872,30 @@ struct Bench {
     series: BTreeMap<Phase, Vec<f64>>,
     scroll_started: Option<Instant>,
     scroll_seconds: Option<f64>,
+    /// When the AC-2 sort was requested, and seconds until its result was painted.
+    sort_requested: Option<Instant>,
+    sort_shown: Option<f64>,
+    /// When the last filter character was typed, and seconds until the result was painted.
+    filter_requested: Option<Instant>,
+    filter_shown: Option<f64>,
+}
+
+impl Bench {
+    /// After a frame is painted: records when the requested sort or filter result first
+    /// appeared on screen.
+    fn note_shown(&mut self, m: &Model) {
+        let settled = !m.busy();
+        if let (None, Some(t)) = (self.sort_shown, self.sort_requested) {
+            if settled && m.grid.shown_query().sort == Some((Column::Deviation, Dir::Asc)) {
+                self.sort_shown = Some(t.elapsed().as_secs_f64());
+            }
+        }
+        if let (None, Some(t)) = (self.filter_shown, self.filter_requested) {
+            if settled && m.grid.shown_query().filter == self.schedule.filter_text {
+                self.filter_shown = Some(t.elapsed().as_secs_f64());
+            }
+        }
+    }
 }
 
 struct App {
@@ -944,6 +973,8 @@ impl App {
             }),
             series: b.series,
             scroll_seconds: b.scroll_seconds,
+            sort_shown: b.sort_shown,
+            filter_shown: b.filter_shown,
             exact: exact_decimal(&fixture),
             keyboard,
             screen_reader: self.args.screen_reader,
@@ -981,11 +1012,15 @@ impl App {
                     record = Some(Phase::Scroll);
                 }
                 Command::Sort(phase, c, dir) => {
+                    b.sort_requested = Some(Instant::now());
                     m.grid.set_sort(Some((c, dir)));
                     m.poll_worker();
                     record = Some(phase);
                 }
                 Command::Act(phase, a) => {
+                    if phase == Phase::Filter {
+                        b.filter_requested = Some(Instant::now());
+                    }
                     act(m, &a);
                     m.poll_worker();
                     record = (phase != Phase::Warmup).then_some(phase);
@@ -1015,6 +1050,9 @@ impl App {
         );
         if let (Some(phase), Some(b)) = (record, self.bench.as_mut()) {
             b.series.entry(phase).or_default().push(t0.elapsed().as_secs_f64() * 1000.0);
+        }
+        if let Some(b) = self.bench.as_mut() {
+            b.note_shown(&self.model);
         }
         if self.bench.is_some() || delay == Some(Duration::ZERO) {
             g.window.request_redraw();
@@ -1105,6 +1143,10 @@ fn main() -> ExitCode {
         series: BTreeMap::new(),
         scroll_started: None,
         scroll_seconds: None,
+        sort_requested: None,
+        sort_shown: None,
+        filter_requested: None,
+        filter_shown: None,
     });
     let mut app =
         App { args, model: Model::new(table), gfx: None, bench, proxy: event_loop.create_proxy(), failure: None };

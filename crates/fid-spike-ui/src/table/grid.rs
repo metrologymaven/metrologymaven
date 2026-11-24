@@ -208,7 +208,7 @@ fn key(r: &Row, c: Column) -> Key<'_> {
         Column::Balloon => Key::Int(r.balloon),
         Column::Status => Key::Status(r.status),
         // `-` (and anything that is not a decimal) is `None`; `cmp_key` puts it last.
-        c if c.numeric() => Key::Num(Dec::parse(&r.text(c)).map(|d| d.scaled)),
+        c if c.numeric() => Key::Num(Dec::parse(&r.text(c)).map(|d| d.scaled())),
         Column::Characteristic => Key::Text(&r.characteristic),
         Column::Unit => Key::Text(&r.unit),
         Column::Method => Key::Text(&r.method),
@@ -338,6 +338,9 @@ pub struct Grid {
     error: Option<EditError>,
     clipboard: Option<String>,
     fly_to: Option<u32>,
+    /// The cell an open edit belongs to, recorded when editing starts: a background
+    /// sort or filter shown meanwhile may move the focus, never the edit.
+    edit_target: Option<(u32, Column)>,
     /// Rows per PageUp / PageDown.
     pub page_rows: usize,
 }
@@ -363,6 +366,7 @@ impl Grid {
             error: None,
             clipboard: None,
             fly_to: None,
+            edit_target: None,
             page_rows: DEFAULT_PAGE_ROWS,
         }
     }
@@ -444,6 +448,15 @@ impl Grid {
     /// Edit buffer (meaningful in edit mode).
     pub fn buffer(&self) -> &str {
         &self.buf
+    }
+
+    /// The cell an open edit will be stored in (row id, column).
+    pub fn edit_target(&self) -> Option<(u32, Column)> {
+        if self.mode == Mode::Edit {
+            self.edit_target
+        } else {
+            None
+        }
     }
 
     /// Last refused commit, if the edit is still open.
@@ -608,6 +621,7 @@ impl Grid {
                     self.mode = Mode::Grid;
                     self.buf.clear();
                     self.error = None;
+                    self.edit_target = None;
                     return Some(row);
                 }
                 Err(e) => self.error = Some(e),
@@ -616,19 +630,22 @@ impl Grid {
                 self.mode = Mode::Grid;
                 self.buf.clear();
                 self.error = None;
+                self.edit_target = None;
             }
             _ => {}
         }
         None
     }
 
+    /// Commits against the cell recorded when editing started, not the current focus.
     fn commit(&self, table: &Table) -> Result<Row, EditError> {
-        let Some(row) = self.focus_row.and_then(|f| table.get(f)) else { return Err(EditError::NotDecimal) };
+        let Some((id, col)) = self.edit_target else { return Err(EditError::NotDecimal) };
+        let Some(row) = table.get(id) else { return Err(EditError::NotDecimal) };
         if Dec::parse(&self.buf).is_none() {
             return Err(EditError::NotDecimal);
         }
         let mut next = row.clone();
-        match self.focus_col {
+        match col {
             Column::Nominal => next.nominal.clone_from(&self.buf),
             Column::Upper => next.upper.clone_from(&self.buf),
             Column::Lower => next.lower.clone_from(&self.buf),
@@ -684,20 +701,23 @@ impl Grid {
             Action::SortClear => self.query.sort = None,
             Action::FocusFilter => self.mode = Mode::Filter,
             Action::Type(t) => {
-                if self.editable() {
+                if let (true, Some(f)) = (self.editable(), self.focus_row) {
                     self.mode = Mode::Edit;
                     self.buf.clear();
                     self.error = None;
+                    self.edit_target = Some((f, self.focus_col));
                     Self::push_limited(&mut self.buf, t, MAX_DEC_CHARS);
                 }
             }
             Action::Enter | Action::F2 => {
                 if self.editable() {
-                    let text = self.focus_row.and_then(|f| table.get(f)).map(|r| r.text(self.focus_col).into_owned());
-                    if let Some(text) = text {
+                    let cell =
+                        self.focus_row.and_then(|f| table.get(f)).map(|r| (r.id, r.text(self.focus_col).into_owned()));
+                    if let Some((id, text)) = cell {
                         self.mode = Mode::Edit;
                         self.buf = text;
                         self.error = None;
+                        self.edit_target = Some((id, self.focus_col));
                     }
                 }
             }
@@ -864,6 +884,39 @@ mod tests {
         g.refresh(&t);
         assert!(!g.is_stale());
         assert_eq!(g.view().len(), 30);
+    }
+
+    /// A background filter shown during an edit moves the focus, but the commit still
+    /// lands on the row the edit started on.
+    #[test]
+    fn edit_commits_to_its_own_row_after_install_moves_focus() {
+        let mut t = Table::generate(9, 2000).unwrap();
+        let mut g = Grid::new(&t);
+        for _ in 0..g.column_pos(Column::Upper) {
+            g.apply_mut(&mut t, &Action::Right);
+        }
+        g.apply_mut(&mut t, &Action::FocusFilter);
+        assert!(g.apply_mut(&mut t, &Action::Type("hole 1".into())));
+        g.apply_mut(&mut t, &Action::Enter);
+        // The filter is requested but not yet shown; edit row 1, which it drops.
+        assert!(g.is_stale());
+        assert_eq!(g.focus_row(), Some(1));
+        g.apply_mut(&mut t, &Action::F2);
+        assert_eq!(g.edit_target(), Some((1, Column::Upper)));
+        let q = g.query().clone();
+        let view = compute_view(&t, &q);
+        assert!(!view.contains(&1) && !view.is_empty());
+        let other = view[0];
+        let before = t.get(other).unwrap().clone();
+        assert!(g.install(&q, view));
+        assert_eq!(g.focus_row(), Some(other));
+        assert_eq!(g.mode(), Mode::Edit);
+        g.apply_mut(&mut t, &Action::Type("9".into()));
+        g.apply_mut(&mut t, &Action::Enter);
+        assert_eq!(g.mode(), Mode::Grid);
+        assert_eq!(t.get(1).unwrap().upper, "0.01009");
+        assert_eq!(t.get(other).unwrap(), &before);
+        assert_eq!(g.edit_target(), None);
     }
 
     #[test]

@@ -45,6 +45,12 @@ pub struct Results {
     /// clock. AC-1 asks for at least [`SCROLL_SECONDS`]; a shorter (or unknown) scroll is
     /// "not run".
     pub scroll_seconds: Option<f64>,
+    /// AC-2: seconds from requesting the sort by deviation until its result was shown;
+    /// `None` if it was never shown (the sort row is then "not run").
+    pub sort_shown: Option<f64>,
+    /// AC-2: seconds from typing the last filter character until the filter result was
+    /// shown; `None` if it was never shown (the filter row is then "not run").
+    pub filter_shown: Option<f64>,
     /// AC-3: the text stored after committing "0.0500"; `None` if not run.
     pub exact: Option<String>,
     /// Keyboard sequence: (steps that matched, total steps); `None` if not run.
@@ -81,8 +87,16 @@ struct Row {
 
 const TIMED: [(Phase, &str, &str); 3] = [
     (Phase::Scroll, "AC-1 scroll end to end for 30 s, p95 frame time", "AC-1 scroll"),
-    (Phase::Sort, "AC-2 sort by deviation, p95 frame time", "AC-2 sort"),
-    (Phase::Filter, "AC-2 type a 6-character filter, p95 frame time", "AC-2 filter"),
+    (
+        Phase::Sort,
+        "AC-2 sort by deviation: UI-thread frame time while the background sort is pending, p95",
+        "AC-2 sort",
+    ),
+    (
+        Phase::Filter,
+        "AC-2 type a 6-character filter: UI-thread frame time while the background filter is pending, p95",
+        "AC-2 filter",
+    ),
 ];
 
 fn ms(v: f64) -> String {
@@ -136,6 +150,23 @@ fn rows(r: &Results) -> (Vec<Row>, Vec<(Phase, Summary)>) {
                 note = " (needs 30 s)";
             }
         }
+        let shown = match phase {
+            Phase::Sort => Some(r.sort_shown),
+            Phase::Filter => Some(r.filter_shown),
+            _ => None,
+        };
+        if let (Some(shown), Some(_)) = (shown, s) {
+            match shown.filter(|t| t.is_finite() && *t >= 0.0) {
+                Some(t) => {
+                    let _ = write!(measured, ", result shown after {t:.3} s");
+                }
+                None => {
+                    measured.push_str(", result not shown");
+                    outcome = Outcome::NotRun;
+                    note = " (result not shown)";
+                }
+            }
+        }
         out.push(Row { label, short, measured, threshold: format!("< {THRESHOLD_MS:.0} ms"), outcome, note });
     }
     let (measured, outcome) = match &r.exact {
@@ -160,7 +191,7 @@ fn rows(r: &Results) -> (Vec<Row>, Vec<(Phase, Summary)>) {
         None => ("-".to_string(), Outcome::NotRun),
     };
     out.push(Row {
-        label: "AC-4 keyboard sequence",
+        label: "AC-4 keyboard sequence (model)",
         short: "AC-4 keyboard",
         measured,
         threshold: "all steps".to_string(),

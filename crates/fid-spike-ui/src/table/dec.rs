@@ -19,12 +19,22 @@ pub const MAX_DEC_CHARS: usize = 1 + MAX_INT_DIGITS + 1 + MAX_FRAC_DIGITS;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Dec {
     /// Value times 10^12.
-    pub scaled: i128,
-    /// Decimal places as typed (0 to 12).
-    pub places: u32,
+    scaled: i128,
+    /// Decimal places as typed (0 to 12); private so it cannot exceed the scale.
+    places: u32,
 }
 
 impl Dec {
+    /// The value times 10^[`MAX_FRAC_DIGITS`].
+    pub fn scaled(&self) -> i128 {
+        self.scaled
+    }
+
+    /// Decimal places as typed (0 to [`MAX_FRAC_DIGITS`]).
+    pub fn places(&self) -> u32 {
+        self.places
+    }
+
     /// Parses `text` by the grammar above. `None` if it does not match.
     pub fn parse(text: &str) -> Option<Dec> {
         let (neg, body) = match text.strip_prefix('-') {

@@ -15,10 +15,10 @@ Overall: **incomplete**
 |---|---|---|---|
 | REQ-001 content loaded | - | 100000 rows, 14 columns, 2 frozen, chips with icon and text | not run |
 | AC-1 scroll end to end for 30 s, p95 frame time | - | < 33 ms | not run |
-| AC-2 sort by deviation, p95 frame time | - | < 33 ms | not run |
-| AC-2 type a 6-character filter, p95 frame time | - | < 33 ms | not run |
+| AC-2 sort by deviation: UI-thread frame time while the background sort is pending, p95 | - | < 33 ms | not run |
+| AC-2 type a 6-character filter: UI-thread frame time while the background filter is pending, p95 | - | < 33 ms | not run |
 | AC-3 exact decimal storage | - | stored "0.0500" | not run |
-| AC-4 keyboard sequence | - | all steps | not run |
+| AC-4 keyboard sequence (model) | - | all steps | not run |
 | AC-5 screen-reader announcements (manual) | see log | table, headers, value and status for 5 cells | not run |
 
 ## Recommendation

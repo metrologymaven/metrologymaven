@@ -40,6 +40,8 @@ fn ac5_failing_report_snapshot() {
         content: Some(FULL),
         series,
         scroll_seconds: Some(30.25),
+        sort_shown: Some(0.5),
+        filter_shown: Some(0.125),
         exact: Some("0.05".into()),
         keyboard: Some((107, 108)),
         screen_reader: Outcome::Fail,
@@ -56,6 +58,8 @@ fn pending_report_snapshot() {
         content: None,
         series: BTreeMap::new(),
         scroll_seconds: None,
+        sort_shown: None,
+        filter_shown: None,
         exact: None,
         keyboard: None,
         screen_reader: Outcome::NotRun,
@@ -75,6 +79,8 @@ fn short_scroll_is_not_run_and_passing_report_has_no_fallback() {
         content: Some(FULL),
         series,
         scroll_seconds: Some(30.0),
+        sort_shown: Some(0.75),
+        filter_shown: Some(0.25),
         exact: Some("0.0500".into()),
         keyboard: Some((108, 108)),
         screen_reader: Outcome::Pass,
@@ -96,7 +102,30 @@ fn short_scroll_is_not_run_and_passing_report_has_no_fallback() {
     // A non-finite or negative sample voids the series rather than passing it.
     r.content = Some(FULL);
     r.series.insert(Phase::Sort, vec![1.0, f64::NAN]);
-    assert!(render(&r).contains("| AC-2 sort by deviation, p95 frame time | - | < 33 ms | not run |"));
+    assert!(render(&r).contains("| AC-2 sort by deviation: UI-thread frame time while the background sort is pending, p95 | - | < 33 ms | not run |"));
+}
+
+/// AC-2: a sort or filter whose result was never shown is "not run (result not shown)",
+/// however good its frame times were.
+#[test]
+fn result_not_shown_snapshot() {
+    let mut series = BTreeMap::new();
+    for p in [Phase::Scroll, Phase::Sort, Phase::Filter] {
+        series.insert(p, vec![1.0, 2.0]);
+    }
+    let r = Results {
+        env: env("x", "y", true),
+        content: Some(FULL),
+        series,
+        scroll_seconds: Some(30.0),
+        sort_shown: None,
+        filter_shown: Some(f64::NAN),
+        exact: Some("0.0500".into()),
+        keyboard: Some((95, 95)),
+        screen_reader: Outcome::Pass,
+        limitations: vec![],
+    };
+    assert_eq!(render(&r), expected("expected-not-shown.txt"));
 }
 
 #[test]

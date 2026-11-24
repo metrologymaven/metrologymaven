@@ -189,7 +189,7 @@ impl Status {
     /// `|2 dev - upper - lower| * 4 > 3 (upper - lower)`: warn; else pass.
     pub fn of(dev: Option<Dec>, upper: Dec, lower: Dec) -> Status {
         let Some(d) = dev else { return Status::NotMeasured };
-        let (d, u, l) = (d.scaled, upper.scaled, lower.scaled);
+        let (d, u, l) = (d.scaled(), upper.scaled(), lower.scaled());
         if d > u || d < l {
             Status::Fail
         } else if (2 * d - u - l).abs() * 4 > 3 * (u - l) {

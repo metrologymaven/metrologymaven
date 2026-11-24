@@ -15,16 +15,16 @@ Overall: **fail**
 |---|---|---|---|
 | REQ-001 content loaded | 100000 rows, 14 columns, 2 frozen, status chips: icon and text | 100000 rows, 14 columns, 2 frozen, chips with icon and text | pass |
 | AC-1 scroll end to end for 30 s, p95 frame time | 40.000 ms (n = 3) over 30.250 s | < 33 ms | fail |
-| AC-2 sort by deviation, p95 frame time | 6.000 ms (n = 2) | < 33 ms | pass |
-| AC-2 type a 6-character filter, p95 frame time | 33.000 ms (n = 1) | < 33 ms | fail |
+| AC-2 sort by deviation: UI-thread frame time while the background sort is pending, p95 | 6.000 ms (n = 2), result shown after 0.500 s | < 33 ms | pass |
+| AC-2 type a 6-character filter: UI-thread frame time while the background filter is pending, p95 | 33.000 ms (n = 1), result shown after 0.125 s | < 33 ms | fail |
 | AC-3 exact decimal storage | stored "0.05" | stored "0.0500" | fail |
-| AC-4 keyboard sequence | 107 of 108 steps | all steps | fail |
+| AC-4 keyboard sequence (model) | 107 of 108 steps | all steps | fail |
 | AC-5 screen-reader announcements (manual) | see log | table, headers, value and status for 5 cells | fail |
 
 ## Recommendation
 
 - AC-1 scroll: fail, measured 40.000 ms (n = 3) over 30.250 s.
-- AC-2 filter: fail, measured 33.000 ms (n = 1).
+- AC-2 filter: fail, measured 33.000 ms (n = 1), result shown after 0.125 s.
 - AC-3 exact decimal: fail, measured stored "0.05".
 - AC-4 keyboard: fail, measured 107 of 108 steps.
 - AC-5 screen reader: fail (manual check; see the log below).
