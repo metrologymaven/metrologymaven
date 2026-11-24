@@ -138,6 +138,7 @@ python fixtures/hal/idl/base/desc/make_fixtures.py --check
 python fixtures/hal/idl/base/err/make_fixtures.py --check
 python fixtures/hal/idl/base/health/make_fixtures.py --check
 python fixtures/hal/idl/gen/fmt/make_fixtures.py --check
+python fixtures/hal/idl/neg/make_fixtures.py --check
 python fixtures/hal/idl/profile/make_fixtures.py --check
 python fixtures/hal/idl/stamp/make_fixtures.py --check
 python fixtures/io/cad/step/hdr/make_cases.py --check
