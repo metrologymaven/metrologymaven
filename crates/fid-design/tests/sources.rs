@@ -133,11 +133,12 @@ fn ac4_paid_tool() {
     assert!(stdout(&t).contains("SOURCE-PAID-TOOL mockup-paid-v1"), "{}", stdout(&t));
 }
 
-/// Unknown UX spec node and unsupported export format error paths.
+/// Unknown UX spec node, unsupported export format, and `.penpot`-only (no open export) error paths.
 #[test]
 fn unknown_node_and_bad_format() {
     run_case("unknown-node");
     run_case("bad-format");
+    run_case("penpot-only");
 }
 
 /// Shipped `design/sources.json`, `design/CONTRIBUTING.md` and `.github/ISSUE_TEMPLATE/design-proposal.yml`.

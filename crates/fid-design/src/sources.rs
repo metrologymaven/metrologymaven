@@ -430,9 +430,12 @@ impl CheckCtx<'_> {
             }
             Some(CValue::Arr(exps)) => {
                 let mut seen_paths = BTreeSet::new();
+                let mut has_open_export = false;
+                let mut all_exports_schema_ok = true;
                 for exp in exps {
                     let CValue::Obj(e) = exp else {
                         schema(f, subj, "each export must be a JSON object");
+                        all_exports_schema_ok = false;
                         continue;
                     };
                     let ekeys: Vec<&str> = e.keys().map(String::as_str).collect();
@@ -465,16 +468,22 @@ impl CheckCtx<'_> {
                         }
                     };
                     let Some(path) = path else {
+                        all_exports_schema_ok = false;
                         continue;
                     };
-                    let ext_ok = match file_extension(path) {
+                    let (is_open, ext_ok) = match file_extension(path) {
                         Some(ext) => {
-                            OPEN_EXTENSIONS.contains(&ext.as_str())
-                                || resolved_tool.is_some_and(|t| t.export_extensions.contains(&ext))
+                            let is_open = OPEN_EXTENSIONS.contains(&ext.as_str());
+                            let tool_ext = resolved_tool.is_some_and(|t| t.export_extensions.contains(&ext));
+                            (is_open, is_open || tool_ext)
                         }
-                        None => false,
+                        None => (false, false),
                     };
+                    if is_open {
+                        has_open_export = true;
+                    }
                     if !ext_ok {
+                        all_exports_schema_ok = false;
                         schema(
                             f,
                             subj,
@@ -507,6 +516,13 @@ impl CheckCtx<'_> {
                             }
                         }
                     }
+                }
+                if all_exports_schema_ok && !has_open_export {
+                    f.push(Finding::new(
+                        EXPORT_MISSING,
+                        subj,
+                        "source has no committed open-format export (svg, pdf, or png)",
+                    ));
                 }
             }
             _ => schema(f, subj, "`exports` must be an array of {path, sha256}"),

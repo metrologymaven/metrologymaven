@@ -66,5 +66,15 @@
     "findings": [
       "SOURCES-SCHEMA mockup-fig-v1"
     ]
+  },
+  "penpot-only": {
+    "root": "penpot-only",
+    "exit": 1,
+    "tools": 3,
+    "sources": 1,
+    "exports_checked": 1,
+    "findings": [
+      "SOURCE-EXPORT-MISSING report-penpot-only-v1"
+    ]
   }
 }

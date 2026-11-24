@@ -249,6 +249,28 @@ def build_cases():
         ),
     }
 
+    # REQ-002: tool-only export (.penpot without svg/pdf/png) fails with SOURCE-EXPORT-MISSING.
+    cases["penpot-only"] = {
+        "exports/report-summary.penpot": PENPOT_EXPORT,
+        "sources.json": js(
+            {
+                "format": "design-sources@1",
+                "tools": BASE_TOOLS,
+                "sources": [
+                    {
+                        "id": "report-penpot-only-v1",
+                        "node": "UX.REPORT.MOCK",
+                        "tool": "penpot",
+                        "location": "https://design.penpot.app/#/view/synthetic-report-summary",
+                        "exports": [
+                            {"path": "exports/report-summary.penpot", "sha256": sha(PENPOT_EXPORT)},
+                        ],
+                    },
+                ],
+            }
+        ),
+    }
+
     return cases
 
 
@@ -310,6 +332,14 @@ LABELS = {
         "exports_checked": 1,
         "findings": ["SOURCES-SCHEMA mockup-fig-v1"],
     },
+    "penpot-only": {
+        "root": "penpot-only",
+        "exit": 1,
+        "tools": 3,
+        "sources": 1,
+        "exports_checked": 1,
+        "findings": ["SOURCE-EXPORT-MISSING report-penpot-only-v1"],
+    },
 }
 
 
@@ -335,10 +365,15 @@ def oracle_check(case_dir: pathlib.Path):
         if not exps:
             findings.append(f"SOURCE-EXPORT-MISSING {sid}")
         allowed = set(OPEN_EXTS) | set(tool.get("export_extensions", []) if tool else [])
+        has_open = False
+        all_ext_ok = True
         for exp in exps:
             rel = exp["path"]
             ext = rel.rsplit("/", 1)[-1].rsplit(".", 1)[-1].lower() if "." in rel.rsplit("/", 1)[-1] else ""
+            if ext in OPEN_EXTS:
+                has_open = True
             if ext not in allowed:
+                all_ext_ok = False
                 findings.append(f"SOURCES-SCHEMA {sid}")
             p = case_dir / rel
             if not p.is_file():
@@ -347,6 +382,8 @@ def oracle_check(case_dir: pathlib.Path):
                 exports_checked += 1
                 if sha(p.read_bytes()) != exp["sha256"]:
                     findings.append(f"SOURCE-EXPORT-DIGEST {sid}")
+        if exps and all_ext_ok and not has_open:
+            findings.append(f"SOURCE-EXPORT-MISSING {sid}")
     findings = sorted(set(findings))
     return {
         "exit": 1 if findings else 0,
