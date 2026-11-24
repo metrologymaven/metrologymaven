@@ -2,6 +2,7 @@
 //! `fid-design pkg-diff --from <dir> --to <dir> [--json]`,
 //! `fid-design tokens-check --root <dir> [--json]`,
 //! `fid-design status-check --root <dir> [--json]`,
+//! `fid-design space-check --root <dir> [--json]`,
 //! `fid-design palettes-check --root <dir> [--baseline <digests>] [--json]`,
 //! `fid-design color-check --root <dir> [--baseline <digests>] [--out <file>] [--json]`,
 //! `fid-design princ-check [--file <md>] [--json]` and
@@ -20,7 +21,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 const USAGE: &str =
-    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design tokens-check --root <design dir> [--json]\n       fid-design status-check --root <design dir> [--json]\n       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]\n       fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]\n       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]
+    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design tokens-check --root <design dir> [--json]\n       fid-design status-check --root <design dir> [--json]\n       fid-design space-check --root <design dir> [--json]\n       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]\n       fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]\n       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]
        fid-design icons-prov --root <design dir> --attribution <file> [--json]
        fid-design icons-registry --manifest <file> --root <design dir> [--json]
        fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]
@@ -310,6 +311,10 @@ fn main() -> ExitCode {
             Err(e) => fail(e),
         },
         ("status-check", Some(root), None, None) => match fid_design::status::check(root) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        },
+        ("space-check", Some(root), None, None) => match fid_design::space::check(root) {
             Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
             Err(e) => fail(e),
         },

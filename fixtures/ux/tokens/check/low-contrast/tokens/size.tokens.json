@@ -1,0 +1,11 @@
+{
+  "size": {
+    "$type": "dimension",
+    "target": {
+      "min": {
+        "$description": "Minimum width and height of an interactive target (WCAG 2.2 SC 2.5.8). The value here is the light theme in comfortable density; tokens/density/<mode>.json gives target_min per theme, at least 24 px everywhere and at least 44 px in the floor theme.",
+        "$value": "32px"
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "bindings": {
+    "sem.space.gap.lg": "{prim.space.6}",
+    "sem.space.gap.md": "{prim.space.4}",
+    "sem.space.gap.sm": "{prim.space.2}",
+    "sem.space.gap.xs": "{prim.space.1}",
+    "sem.space.inset.lg": "{prim.space.4}",
+    "sem.space.inset.md": "{prim.space.3}",
+    "sem.space.inset.sm": "{prim.space.2}",
+    "sem.space.inset.xs": "{prim.space.1}",
+    "sem.space.stack.lg": "{prim.space.8}",
+    "sem.space.stack.md": "{prim.space.4}",
+    "sem.space.stack.sm": "{prim.space.2}"
+  },
+  "density": "comfortable",
+  "format": "fid-design-density@1",
+  "target_min": {
+    "dark": "32px",
+    "floor": "48px",
+    "hc": "32px",
+    "light": "32px"
+  }
+}
