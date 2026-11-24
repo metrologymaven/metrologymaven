@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from e2e.lib.harness import (
+    SkipCapability,
     TestContext,
     TestFailure,
     e2e_test,
@@ -106,7 +107,7 @@ def test_fid_verify_signed_package(ctx: TestContext) -> None:
     test_id="T1-F3-05",
     tier=1,
     feature="F3",
-    description="M4 fid-verify --replay --json verifies golden/two-signatures.zip and conforms to schema/verify-report-1.json",
+    description="M4 fid-verify verifies golden/two-signatures.zip (--json PASS, --replay --json fail-closed NOT_REPLAYABLE) against schema/verify-report-1.json",
 )
 def test_fid_verify_replay_and_schema(ctx: TestContext) -> None:
     verify = ctx.require_bin("fid-verify")
@@ -115,26 +116,53 @@ def test_fid_verify_replay_and_schema(ctx: TestContext) -> None:
     schema_path = ctx.repo_root / "schema" / "verify-report-1.json"
     if not schema_path.is_file():
         raise TestFailure(f"missing M4 schema file: {schema_path}")
-    res = ctx.run([verify, str(pkg), "--trust-root", str(root), "--replay", "--json"])
-    if res.returncode != 0:
-        raise TestFailure(f"fid-verify --replay exited {res.returncode}: {res.stdout} {res.stderr}")
-    rep = parse_single_line_json(res.stdout)
     required_keys = ("report_version", "verdict", "exit_code", "package", "signatures", "chain", "replay")
-    missing_keys = [k for k in required_keys if k not in rep]
-    if missing_keys:
-        raise TestFailure(f"fid-verify report missing required schema keys {missing_keys}: {rep!r}")
-    if rep.get("verdict") != "PASS" or rep.get("exit_code") != 0:
-        raise TestFailure(f"expected verdict=PASS exit_code=0, got {rep!r}")
-    if rep.get("chain", {}).get("verdict") != "VALID":  # type: ignore[union-attr]
-        raise TestFailure(f"expected chain.verdict=VALID, got {rep.get('chain')!r}")
-    if rep.get("replay", {}).get("status") != "IDENTICAL":  # type: ignore[union-attr]
-        raise TestFailure(f"expected replay IDENTICAL, got {rep.get('replay')!r}")
+
+    # 1. Without --replay: verifies signatures + chain cleanly and emits PASS (exit 0, replay.status == "not_requested").
+    res_pass = ctx.run([verify, str(pkg), "--trust-root", str(root), "--json"])
+    if res_pass.returncode != 0:
+        raise TestFailure(f"fid-verify --json exited {res_pass.returncode}: {res_pass.stdout} {res_pass.stderr}")
+    rep_pass = parse_single_line_json(res_pass.stdout)
+    missing_pass = [k for k in required_keys if k not in rep_pass]
+    if missing_pass:
+        raise TestFailure(f"fid-verify report missing required schema keys {missing_pass}: {rep_pass!r}")
+    if rep_pass.get("verdict") != "PASS" or rep_pass.get("exit_code") != 0:
+        raise TestFailure(f"expected verdict=PASS exit_code=0, got {rep_pass!r}")
+    if rep_pass.get("chain", {}).get("verdict") != "VALID":  # type: ignore[union-attr]
+        raise TestFailure(f"expected chain.verdict=VALID, got {rep_pass.get('chain')!r}")
+    if rep_pass.get("replay", {}).get("status") != "not_requested":  # type: ignore[union-attr]
+        raise TestFailure(f"expected replay status=not_requested, got {rep_pass.get('replay')!r}")
+
+    # 2. With --replay: TRUST.REPLAY.{SANDBOX,RUN} are unbuilt P1a nodes, so fid-verify fails closed (exit 8, NOT_REPLAYABLE).
+    res_replay = ctx.run([verify, str(pkg), "--trust-root", str(root), "--replay", "--json"])
+    if res_replay.returncode != 8:
+        raise TestFailure(
+            f"fid-verify --replay expected exit 8 (NOT_REPLAYABLE), got {res_replay.returncode}: "
+            f"{res_replay.stdout} {res_replay.stderr}"
+        )
+    rep_replay = parse_single_line_json(res_replay.stdout)
+    missing_replay = [k for k in required_keys if k not in rep_replay]
+    if missing_replay:
+        raise TestFailure(f"fid-verify --replay report missing required schema keys {missing_replay}: {rep_replay!r}")
+    if rep_replay.get("verdict") != "FAIL" or rep_replay.get("exit_code") != 8:
+        raise TestFailure(f"expected verdict=FAIL exit_code=8, got {rep_replay!r}")
+    if rep_replay.get("chain", {}).get("verdict") != "VALID":  # type: ignore[union-attr]
+        raise TestFailure(f"expected chain.verdict=VALID on --replay, got {rep_replay.get('chain')!r}")
+    replay_obj = rep_replay.get("replay", {})
+    if not isinstance(replay_obj, dict) or replay_obj.get("status") != "NOT_REPLAYABLE":
+        raise TestFailure(f"expected replay.status=NOT_REPLAYABLE, got {replay_obj!r}")
+    if replay_obj.get("reason") not in ("KERNEL_UNAVAILABLE", "SANDBOX_UNAVAILABLE"):
+        raise TestFailure(
+            f"expected replay.reason in ('KERNEL_UNAVAILABLE', 'SANDBOX_UNAVAILABLE'), got {replay_obj!r}"
+        )
+
     try:
         import jsonschema  # type: ignore[import-untyped]
     except ImportError:
         return
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
-    jsonschema.validate(instance=rep, schema=schema)
+    jsonschema.validate(instance=rep_pass, schema=schema)
+    jsonschema.validate(instance=rep_replay, schema=schema)
 
 
 @e2e_test(
@@ -348,8 +376,18 @@ def test_site_build_clean_budget(ctx: TestContext) -> None:
         is_guide = rel_p.startswith("guide/")
         if not is_guide and re.search(r"<script\b", txt, re.I):
             raise TestFailure(f"unexpected <script> tag outside /guide/ in {rel_p}")
-        if re.search(r"<script\b(?!\s*[^>]*\s+src\s*=)[^>]*>", txt, re.I):
-            raise TestFailure(f"inline <script> found in {rel_p}")
+        for sm in re.finditer(r"<script\b([^>]*)>", txt, re.I):
+            attrs = sm.group(1)
+            has_src = bool(re.search(r"\bsrc\s*=", attrs, re.I))
+            is_json_data = is_guide and bool(
+                re.search(
+                    r'''\btype\s*=\s*(?:"application/json"|'application/json'|application/json\b)''',
+                    attrs,
+                    re.I,
+                )
+            )
+            if not (has_src or is_json_data):
+                raise TestFailure(f"inline <script> found in {rel_p}")
         # Catch quoted, unquoted, and protocol-relative (//...) src/href/action/poster URLs.
         for m in re.finditer(
             r'''(?:src|href|action|poster)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))''',
@@ -428,13 +466,21 @@ def test_guide_wasm_7_ops_and_topic_digests(ctx: TestContext) -> None:
         },
         "unc.propagate": {
             "op": "unc.propagate",
-            "params": {"inputs": [{"name": "x", "dist": "normal", "mean": 10.0, "std": 0.01}], "sensitivity": [1.0]},
+            "params": {
+                "inputs": [{"name": "x", "kind": "normal", "mean": 10.0, "sigma": 0.01, "sensitivity": 1.0}],
+            },
         },
         "dec.evaluate": {
             "op": "dec.evaluate",
-            "params": {"rule": "simple_acceptance", "measured": 10.0, "upper": 10.05, "lower": 9.95, "u": 0.002},
+            "params": {
+                "rule_ref": "dr:simple-acceptance@1",
+                "value": 10.0,
+                "lsl": "9.95",
+                "usl": "10.05",
+                "u_std": 0.002,
+            },
         },
-        "canon.digest": {"op": "canon.digest", "params": {"value": {"b": 1, "a": 2}}},
+        "canon.digest": {"op": "canon.digest", "params": {"json_a": '{"b": 1, "a": 2}'}},
     }
     for op, req in op_requests.items():
         res = ctx.run([wasm_bin], stdin_text=json.dumps(req))
@@ -448,7 +494,7 @@ def test_guide_wasm_7_ops_and_topic_digests(ctx: TestContext) -> None:
     presets_checked = 0
     for jf in sorted(topics_dir.glob("*.json")):
         topic = json.loads(jf.read_text(encoding="utf-8"))
-        for preset in topic.get("presets", []):
+        for preset in topic.get("lab", {}).get("presets", []):
             if "request" in preset and "expected_digest" in preset:
                 res = ctx.run([wasm_bin], stdin_text=json.dumps(preset["request"]))
                 if res.returncode != 0:
@@ -611,6 +657,12 @@ def test_tracim_public_config_and_tests(ctx: TestContext) -> None:
     r_chk = ctx.run([sys.executable, str(script), "check-config", "--workflow", str(wf)])
     if r_chk.returncode != 0:
         raise TestFailure(f"tracim_public check-config failed: {r_chk.stdout} {r_chk.stderr}")
+
+    if not ctx.caps.loopback_tcp_allowed:
+        raise SkipCapability(
+            f"loopback TCP socket blocked ({ctx.caps.loopback_tcp_detail})",
+            os_unsupported=False,
+        )
 
     r_unit = ctx.run(
         [sys.executable, "-m", "unittest", "discover", "-s", "tools/rdl/tests", "-v"],

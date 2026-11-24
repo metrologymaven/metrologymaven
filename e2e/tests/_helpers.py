@@ -304,7 +304,7 @@ def write_site_a11y_tokens(workdir: Path, filename: str = "site-tokens.json") ->
                 "ruby.soft": "#f6e3e7",
                 "steel": "#2f5f8a",
                 "steel.soft": "#e2ecf5",
-                "ok": "#2e7d4f",
+                "ok": "#256a41",
                 "ok.soft": "#e1f1e7",
                 "warn": "#9a5a08",
                 "warn.soft": "#f8ecd9",
@@ -439,7 +439,20 @@ def prepare_scope_root(ctx: TestContext, dest_name: str = "scope_work") -> Path:
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(cargo_toml, dst)
 
-    for top in ("suite", "fixtures", "house-rules", "acceptance", "kernel-build", "scripts", "vendor", "docs", "ci"):
+    for top in (
+        "suite",
+        "fixtures",
+        "house-rules",
+        "acceptance",
+        "kernel-build",
+        "scripts",
+        "vendor",
+        "docs",
+        "ci",
+        "guide",
+        "release",
+        "site",
+    ):
         src_top = ctx.repo_root / top
         if not src_top.is_dir():
             continue
