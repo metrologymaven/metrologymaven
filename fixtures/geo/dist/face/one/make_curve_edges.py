@@ -317,6 +317,16 @@ def solve(q, inside, boundary):
     return ans, untrimmed, edge_d
 
 
+def offset(rng, lo, hi):
+    """A seeded offset m * 10^-k (k in [lo, hi]) and a direction (sin, cos), computed in
+    Decimal so that no platform libm enters the fixture bytes."""
+    m = rng.randint(100, 999)
+    k = rng.randint(lo, hi)
+    off = float(D(m) / D(10) ** (k + 2))
+    s, c = sin_cos(D(rng.randint(0, 999_999)) * 2 * PI / 1_000_000)
+    return off, (float(s), float(c))
+
+
 def make(name, builder, rng):
     body, inside, boundary, on_boundary, box, verts = builder()
     queries = []
@@ -327,14 +337,12 @@ def make(name, builder, rng):
     for k in range(40):
         e = k % n_edges
         b = on_boundary((e, rng.uniform(0.05, 0.95)))
-        off = 10 ** rng.uniform(-7, -3)
-        ang = rng.uniform(0, 2 * math.pi)
-        pts.append(("near_edge", [b[0] + off * math.cos(ang), b[1] + off * math.sin(ang), rng.uniform(-1e-3, 1e-3)]))
+        off, (s, c) = offset(rng, 3, 7)
+        pts.append(("near_edge", [b[0] + off * c, b[1] + off * s, rng.uniform(-1e-3, 1e-3)]))
     for k in range(12):
         v = verts[k % len(verts)]
-        off = 10 ** rng.uniform(-6, -2)
-        ang = rng.uniform(0, 2 * math.pi)
-        pts.append(("near_vertex", [v[0] + off * math.cos(ang), v[1] + off * math.sin(ang), rng.uniform(-0.01, 0.01)]))
+        off, (s, c) = offset(rng, 2, 6)
+        pts.append(("near_vertex", [v[0] + off * c, v[1] + off * s, rng.uniform(-0.01, 0.01)]))
     for i, (gen, p) in enumerate(pts):
         (d, foot, feat), (ud, ufoot), edge_d = solve(p, inside, boundary)
         foot_f = f3(foot)
