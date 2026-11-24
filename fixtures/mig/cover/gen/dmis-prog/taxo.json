@@ -1,0 +1,36 @@
+{
+  "schema": "mig-taxonomy@1",
+  "format_id": "dmis-prog",
+  "version": "1.0.0",
+  "reviewer_attestation": {
+    "date": "2026-11-24",
+    "reviewer": "Metrology Maven maintainers",
+    "statement": "Construct descriptions authored in original project wording for this fixture."
+  },
+  "constructs": [
+    {
+      "id": "stmt.dmismn",
+      "kind": "statement",
+      "dmis_keyword": "DMISMN",
+      "description": "Program header."
+    },
+    {
+      "id": "stmt.goto",
+      "kind": "statement",
+      "dmis_keyword": "GOTO",
+      "description": "Move to a point."
+    },
+    {
+      "id": "stmt.feat",
+      "kind": "statement",
+      "dmis_keyword": "FEAT",
+      "description": "Feature definition."
+    },
+    {
+      "id": "stmt.endfil",
+      "kind": "statement",
+      "dmis_keyword": "ENDFIL",
+      "description": "End of program."
+    }
+  ]
+}

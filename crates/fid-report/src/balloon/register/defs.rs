@@ -159,6 +159,12 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
                     obj([
                         ("type", strs(&["string", "null"])),
                         ("maxLength", num(MAX_ZONE_BYTES)),
+                        (
+                            "description",
+                            text(
+                                "Drawing zone, at most 16 bytes of UTF-8 (maxLength counts characters; the handler checks bytes).",
+                            ),
+                        ),
                         ("default", CValue::Null),
                         ("x-untrusted", CValue::Bool(true)),
                     ]),

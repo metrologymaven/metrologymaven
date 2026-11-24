@@ -1,0 +1,25 @@
+{
+  "schema": "mig-corpus@1",
+  "format_id": "dmis-prog",
+  "name": "DMIS programs demo corpus",
+  "entries": [
+    {
+      "catalogue_id": "mig-dmis-prog-a",
+      "sha256": "sha256:44d9160cb5826ddf8cec7333e4787fc81b858d5fd78ea3f7b35ee5180fcc87b0",
+      "format_id": "dmis-prog",
+      "visibility": "public"
+    },
+    {
+      "catalogue_id": "mig-dmis-prog-b",
+      "sha256": "sha256:20dcee78ff493b974c20bbbb167c71330d0c65e4c544dce5b291056e4cc6eea7",
+      "format_id": "dmis-prog",
+      "visibility": "public"
+    },
+    {
+      "catalogue_id": "mig-dmis-prog-c",
+      "sha256": "sha256:75779f89a447f2e8bebd262c2282d1903cb256df827da735a1d3639758b6d813",
+      "format_id": "dmis-prog",
+      "visibility": "public"
+    }
+  ]
+}

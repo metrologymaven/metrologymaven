@@ -1,6 +1,6 @@
 [package]
 name = "fid-mig"
-description = "Metrology Maven migration: the `mig-ladder@1` ladder and its stage-independence check (MIG.LADDER.DEF); the `mig-sources@1` incumbent source register, its sources check and `migrate.list_sources@1` (MIG.SRC.REG); migration corpus manifests and the corpus check (MIG.COVER.CORPUS)"
+description = "Metrology Maven migration: the `mig-ladder@1` ladder and its stage-independence check (MIG.LADDER.DEF); the `mig-sources@1` incumbent source register, its sources check and `migrate.list_sources@1` (MIG.SRC.REG); migration corpus manifests and the corpus check (MIG.COVER.CORPUS); coverage tables and their drift check, `migrate.generate_coverage@1` (MIG.COVER.GEN)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
