@@ -1,0 +1,3 @@
+Synthetic test fixtures for spec node OUTR.DOCS.QA (CC-BY-4.0).
+All text and HTML pages are project-authored and synthetic; off-origin URLs use
+reserved example domains. Generated deterministically by make_fixtures.py.
