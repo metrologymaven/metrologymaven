@@ -309,6 +309,15 @@ fn ac3_navigation_links_load_via_file_url_offline() {
         }
         let expected: BTreeSet<String> = EXPECTED_HTML_PAGES.iter().map(|p| (*p).to_string()).collect();
         assert_eq!(loaded_targets, expected);
+    } else {
+        // Written straight to the stderr handle (not `eprintln!`) so libtest's output capture
+        // does not hide it: a skipped browser pass must be visible in the CI log.
+        use std::io::Write as _;
+        let _ = writeln!(
+            std::io::stderr(),
+            "NOTICE ac3_navigation_links_load_via_file_url_offline: SKIPPED the headless-browser part of \
+             AC-3 (no google-chrome, chromium or chromium-browser on PATH); only the on-disk link check ran"
+        );
     }
 }
 

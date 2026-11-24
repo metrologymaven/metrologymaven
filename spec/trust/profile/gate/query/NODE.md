@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-profile]
+built_pr: 486
+updated: 2026-11-22
 ---
 
 # TRUST.PROFILE.GATE.QUERY: Read-only profile query API and GUI gating flags

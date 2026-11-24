@@ -98,6 +98,7 @@ use fid_outreach::bench::recipe;
 use fid_outreach::copy_guard;
 use fid_outreach::doc_run;
 use fid_outreach::docs_build;
+use fid_outreach::dress;
 use fid_outreach::guide_check;
 use fid_outreach::launch_gate;
 use fid_outreach::launch_plan;
@@ -124,6 +125,7 @@ commands:
   qa a11y --root <dir> --tokens <file> --out <file> [--config <file>]
   doc-run --guide <file> --repo <dir> [--json]
   docs-build --src <dir> --ref <dir> --release <tag> --out <dir> [--guides <file>]
+  dress-render --list <file> --out <file> [--incumbents <file>]
   guide-check --root <dir> --name <file> [--publish --out <dir>] [--json]
   asset-check --root <dir> --allow <file> --origin <url> [--exclude <glob>]... [--json]
   mod-check --log <file> --roster <file> --today <YYYY-MM-DD> [--repo-root <dir>] [--json]
@@ -147,6 +149,7 @@ fn main() -> ExitCode {
         (Some("qa"), Some("a11y")) => qa_a11y(args.get(2..).unwrap_or(&[])),
         (Some("doc-run"), _) => doc_run_cmd(args.get(1..).unwrap_or(&[])),
         (Some("docs-build"), _) => docs_build_cmd(args.get(1..).unwrap_or(&[])),
+        (Some("dress-render"), _) => dress_render_cmd(args.get(1..).unwrap_or(&[])),
         (Some("guide-check"), _) => guide_check_cmd(args.get(1..).unwrap_or(&[])),
         (Some("asset-check"), _) => asset_check_cmd(args.get(1..).unwrap_or(&[])),
         (Some(cmd @ ("mod-check" | "mod-stats")), _) => moderation_cmd(cmd, args.get(1..).unwrap_or(&[])),
@@ -1012,6 +1015,52 @@ fn docs_build_cmd(args: &[String]) -> ExitCode {
         Err(e) => {
             eprintln!("docs-build: {e}");
             ExitCode::from(e.exit_code())
+        }
+    }
+}
+
+fn dress_render_cmd(args: &[String]) -> ExitCode {
+    let mut list: Option<PathBuf> = None;
+    let mut out: Option<PathBuf> = None;
+    let mut incumbents: Option<PathBuf> = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--list" => {
+                let Some(v) = it.next() else { return usage() };
+                if list.replace(PathBuf::from(v)).is_some() {
+                    return usage();
+                }
+            }
+            "--out" => {
+                let Some(v) = it.next() else { return usage() };
+                if out.replace(PathBuf::from(v)).is_some() {
+                    return usage();
+                }
+            }
+            "--incumbents" => {
+                let Some(v) = it.next() else { return usage() };
+                if incumbents.replace(PathBuf::from(v)).is_some() {
+                    return usage();
+                }
+            }
+            _ => return usage(),
+        }
+    }
+    let (Some(list), Some(out)) = (list, out) else {
+        return usage();
+    };
+    match dress::render_to_file(&list, &out, incumbents.as_deref()) {
+        Ok(res) => {
+            for f in &res.findings {
+                println!("{f}");
+            }
+            println!("dress-render: {} entry/entries, {} finding(s)", res.entries.len(), res.findings.len());
+            ExitCode::from(res.exit_code())
+        }
+        Err(e) => {
+            eprintln!("dress-render: {e}");
+            ExitCode::from(2)
         }
     }
 }

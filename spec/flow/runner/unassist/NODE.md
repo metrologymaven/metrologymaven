@@ -18,7 +18,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-accept]
+built_pr: 469
+updated: 2026-11-22
 ---
 
 # FLOW.RUNNER.UNASSIST: Unassisted-run principal check

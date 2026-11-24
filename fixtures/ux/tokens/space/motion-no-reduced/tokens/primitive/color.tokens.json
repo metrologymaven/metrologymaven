@@ -1,0 +1,27 @@
+{
+  "prim": {
+    "color": {
+      "$type": "color",
+      "neutral": {
+        "0": {
+          "$value": "#ffffff"
+        },
+        "100": {
+          "$value": "#eeeeee"
+        },
+        "1000": {
+          "$value": "#000000"
+        },
+        "200": {
+          "$value": "#cccccc"
+        },
+        "50": {
+          "$value": "#f5f5f5"
+        },
+        "600": {
+          "$value": "#555555"
+        }
+      }
+    }
+  }
+}

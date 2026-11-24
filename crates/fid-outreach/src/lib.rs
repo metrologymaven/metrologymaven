@@ -21,6 +21,8 @@
 //!   the revision it documents (spec node `OUTR.DOCS.CONTRIB`).
 //! - [`docs_build`]: builds one static release edition of the docs portal with its shared page
 //!   frame, release banner and `nav.toml` navigation tree (spec node `OUTR.DOCS.FRAME.NAV`).
+//! - [`dress`]: trade-dress distinctness list check and Markdown renderer (spec node
+//!   `OUTR.BRAND.GUIDE.DRESS`).
 //! - [`guide_check`]: brand-guideline family-name token check and publish guard (spec node
 //!   `OUTR.BRAND.GUIDE.NAME`).
 //! - [`moderation`]: private moderation log check and quarterly counts (spec node
@@ -37,6 +39,7 @@ pub mod bench;
 pub mod copy_guard;
 pub mod doc_run;
 pub mod docs_build;
+pub mod dress;
 pub mod guide_check;
 pub mod launch_gate;
 pub mod launch_plan;

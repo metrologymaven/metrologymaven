@@ -1,0 +1,10 @@
+{
+  "bindings": {
+    "sem.border.subtle": "{prim.color.neutral.600}",
+    "sem.surface.base": "{prim.color.neutral.0}",
+    "sem.surface.raised": "{prim.color.neutral.50}",
+    "sem.surface.sunken": "{prim.color.neutral.100}"
+  },
+  "format": "fid-design-theme@1",
+  "theme": "hc"
+}
