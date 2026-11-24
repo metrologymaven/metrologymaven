@@ -25,14 +25,19 @@ const CARDS: [&str; 3] = [
 
 /// Tolerances against the Decimal reference (the same minimum computed two ways), each about 10
 /// times the worst difference on the fixture (printed by `ac3_matches_reference`). Relative to
-/// the reference radius: centre distance and radius difference (worst 7.8e-11 and 7.6e-11).
+/// the reference radius: centre distance and radius difference (worst 7.8e-11 and 7.6e-11,
+/// re-run for #575).
 const TOL_LEN_REL: f64 = 1e-9;
-/// Normal angle of the 3D circle, radians (worst 8.1e-11, case `c3-fixed-r`: its fixed-radius
-/// solve stops on the cost rule with gradient norm 2.1e-9, so a last-bit change of the
-/// `ls_lin::PlaneLs` start normal moves it; 1.7e-12 before `ls_lin` switched to
-/// `fid_num::la::sym_eig` in #575).
-const TOL_NORMAL: f64 = 1e-9;
-/// Residual RMS, relative (worst 5.3e-13).
+/// Normal angle of the 3D circle, radians, every case but `c3-fixed-r` (worst 8.7e-13; worst
+/// over all cases 1.7e-12 before #575).
+const TOL_NORMAL: f64 = 2e-11;
+/// Normal angle of case `c3-fixed-r` only, radians (8.1e-11). Its fixed-radius solve stops on
+/// the cost rule of `KRN.LSQ.RND` (`fid_solv::nlls`, `tol_cost`) after 4 iterations with
+/// gradient norm 2.1e-9, short of the minimum, so a last-bit change of the `ls_lin::PlaneLs`
+/// start normal (#575, `fid_num::la::sym_eig`) moves the end point; it was at most 1.7e-12 before.
+/// A tighter stop rule for circle3 belongs to `KRN.LSQ.RND`.
+const TOL_NORMAL_C3_FIXED_R: f64 = 2e-10;
+/// Residual RMS, relative (worst 5.3e-13, re-run for #575).
 const TOL_RMS_REL: f64 = 1e-11;
 /// AC-3's literal bound on the relative radius error of converged cases [unverified].
 const AC3_RADIUS_REL: f64 = 1e-6;
@@ -184,12 +189,15 @@ fn ac3_matches_reference() {
         let drms = (f.stats.rms - c.one("ref_rms")).abs() / c.one("ref_rms");
         assert!(dc <= TOL_LEN_REL, "{}: centre {dc:e}", c.name);
         assert!(dr <= TOL_LEN_REL, "{}: radius {dr:e}", c.name);
-        assert!(dn <= TOL_NORMAL, "{}: normal {dn:e}", c.name);
+        let tol_n = if c.name == "c3-fixed-r" { TOL_NORMAL_C3_FIXED_R } else { TOL_NORMAL };
+        assert!(dn <= tol_n, "{}: normal {dn:e}", c.name);
         assert!(drms <= TOL_RMS_REL, "{}: rms {drms:e}", c.name);
         if c.get("fixed_r").is_some() {
             assert_eq!(rad, c.one("fixed_r"), "{}: REQ-006 fixed radius", c.name);
         }
-        for (w, x) in worst.iter_mut().zip([dc, dr, dn, drms]) {
+        // The normal's worst excludes `c3-fixed-r`, which has its own tolerance.
+        let dn_w = if c.name == "c3-fixed-r" { 0.0 } else { dn };
+        for (w, x) in worst.iter_mut().zip([dc, dr, dn_w, drms]) {
             *w = w.max(x);
         }
         n += 1;
