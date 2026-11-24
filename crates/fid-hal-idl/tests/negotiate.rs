@@ -186,11 +186,14 @@ fn malformed_range_fails_declaration_invalid_naming_the_entry() {
     assert_eq!(as_triple(&e), expected_error("decl_bad_range.json"));
 }
 
+/// An edit that breaks one offer check.
+type Edit = fn(&mut CapabilityDeclaration);
+
 #[test]
 fn negotiate_repeats_the_offer_checks_for_code_built_declarations() {
     let table = support("support_v1.json");
     let base = decl("decl_gocator.json");
-    let cases: [(fn(&mut CapabilityDeclaration), &str, &str); 5] = [
+    let cases: [(Edit, &str, &str); 5] = [
         (|d| d.capabilities[0].name = "line scan".into(), "/capabilities", "capability_name_invalid"),
         (|d| d.capabilities[0].features.push("intensity".into()), "LineScan", "duplicate_feature"),
         (|d| d.capabilities[0].features.push("Raw Profiles".into()), "LineScan", "feature_invalid"),
