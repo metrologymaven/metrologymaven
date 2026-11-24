@@ -51,7 +51,7 @@ GROUPS = [
 ]
 FAMILY = ["class.w3", "class.m1", "class.s1", "class.a0"]
 STATE_APART = (["state.stale", "state.not-evaluated"], ["state.conforms", "state.nonconforms"])
-# Family members' silhouettes must differ by at most 1/10 (a shared outer shape).
+# Family members' silhouettes must differ by at most 1/10 [unverified] (a shared outer shape).
 FAMILY_SAME = (1, 10)
 
 ROOTS = [

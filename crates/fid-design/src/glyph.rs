@@ -40,7 +40,7 @@
 //! the same metric on silhouettes:
 //!
 //! - the W3, M1, S1 and A0 class icons ([`FAMILY_MEMBERS`]) must share an outer shape: every
-//!   pair differs by at most [`FAMILY_SAME`] (1/10); else `GLYPH-FAMILY <a> <b>`;
+//!   pair differs by at most [`FAMILY_SAME`] (1/10 [unverified]); else `GLYPH-FAMILY <a> <b>`;
 //! - no other class icon may use it: each differs from every family member by at least the
 //!   threshold; else `GLYPH-FAMILY <other> <member>`;
 //! - the stale and not-evaluated glyphs differ from the conforms and nonconforms glyphs by at

@@ -5,7 +5,7 @@
   "references": [
     "The UX.ICONS.CLASS and UX.ICONS spec nodes in this repository",
     "The icon style guide (icons/STYLE.md) in this repository",
-    "The side-effect classes of the project constitution (spec/CONSTITUTION.md); drawn from plain geometric shapes on the project grid, no other source"
+    "The out-of-tolerance stripe pattern of the UX.ICONS.CLASS spec node; drawn from plain diagonal lines on the project grid, no other source"
   ],
   "statement_version": "originality-statement@1"
 }
