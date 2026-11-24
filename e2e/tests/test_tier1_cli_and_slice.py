@@ -50,8 +50,9 @@ def test_fid_help_json(ctx: TestContext) -> None:
     if res.returncode != 0:
         raise TestFailure(f"fid --help --json exited {res.returncode}: {res.stderr}")
     tree = parse_single_line_json(res.stdout)
-    if tree.get("schema") != "cli-tree-v1":
-        raise TestFailure(f"expected schema=cli-tree-v1, got {tree.get('schema')!r}")
+    ver = tree.get("version")
+    if not isinstance(ver, str) or not ver.strip():
+        raise TestFailure(f"expected non-empty version in CliTree JSON, got {ver!r}")
     digest = str(tree.get("manifest_digest", ""))
     if not digest.startswith("sha256:") or len(digest) != 71:
         raise TestFailure(f"invalid manifest_digest: {digest!r}")
@@ -202,10 +203,12 @@ def test_fid_bus_dispatch_and_rdl_tracim(ctx: TestContext) -> None:
     r_help = ctx.run([fid, "rdl", "submit-tracim", "--help"])
     if r_help.returncode != 0:
         raise TestFailure(f"fid rdl submit-tracim --help failed (exit {r_help.returncode}): {r_help.stderr}")
+    if "submit-tracim" not in r_help.stdout or "Command:" not in r_help.stdout:
+        raise TestFailure(f"unexpected rdl submit-tracim --help output:\n{r_help.stdout}")
 
     # 2. Verify registry command dispatch does not hit pre-M4 placeholder stub.
     r_disp = ctx.run([fid, "project", "list-features", "--json"])
-    if r_disp.returncode not in (0, 8):
+    if r_disp.returncode != 0:
         raise TestFailure(
             f"fid project list-features --json failed (exit {r_disp.returncode}): "
             f"stdout={r_disp.stdout!r} stderr={r_disp.stderr!r}"
@@ -213,8 +216,11 @@ def test_fid_bus_dispatch_and_rdl_tracim(ctx: TestContext) -> None:
     env = parse_single_line_json(r_disp.stdout)
     if "AUTO.CLI.DISPATCH" in json.dumps(env):
         raise TestFailure(f"fid still returns pre-M4 placeholder: {env!r}")
+    assert_envelope(env, command_id="project.list_features@1")
     if env.get("outcome") not in ("computed", "committed", "dry_run"):
         raise TestFailure(f"expected successful dispatch outcome, got {env!r}")
+    if not isinstance(env.get("result"), dict):
+        raise TestFailure(f"expected non-empty result dict in envelope, got {env!r}")
 
 
 # ===========================================================================
@@ -389,46 +395,53 @@ def test_slice_custom_input_job(ctx: TestContext) -> None:
     test_id="T1-F2-05",
     tier=1,
     feature="F2",
-    description="M3/VS0 2D PDF auto-ballooning wedge extracts 15 callouts from vector_bracket.pdf",
+    description="M3/VS0 fid-slice --balloon extracts 15 callouts from vector_bracket.pdf matching truth",
 )
 def test_slice_vs0_pdf_balloon_text_and_propose(ctx: TestContext) -> None:
-    fid = ctx.require_bin("fid")
+    fid_slice = ctx.require_bin("fid-slice")
     pdf_path = ctx.repo_root / "fixtures" / "rpt" / "balloon" / "auto" / "vector_bracket.pdf"
     truth_path = ctx.repo_root / "fixtures" / "rpt" / "balloon" / "auto" / "vector_bracket.truth.json"
     truth = json.loads(truth_path.read_text(encoding="utf-8"))
+    out_dir = ctx.workdir / "balloon_extract"
 
-    res = ctx.run(
-        [
-            fid,
-            "report",
-            "extract-drawing-text",
-            "--sheet",
-            str(pdf_path),
-            "--include-frame-boxes",
-            "--json",
-        ]
-    )
+    res = ctx.run([fid_slice, "--balloon", str(pdf_path), "--out", str(out_dir), "--json"])
     if res.returncode != 0:
         raise TestFailure(
-            f"fid report extract-drawing-text failed (exit {res.returncode}): "
+            f"fid-slice --balloon failed (exit {res.returncode}): "
             f"stdout={res.stdout!r} stderr={res.stderr!r}"
         )
     env = parse_single_line_json(res.stdout)
     assert_envelope(env, outcome="computed")
     payload = env.get("result")
-    if not isinstance(payload, dict) or len(payload.get("runs", [])) != truth["callout_count"]:
-        raise TestFailure(f"expected {truth['callout_count']} runs, got {payload!r}")
+    if not isinstance(payload, dict):
+        raise TestFailure(f"expected dict result from fid-slice --balloon, got {payload!r}")
+    expected_count = int(truth["callout_count"])
+    csv_path = out_dir / "form3-starter.csv"
+    if not csv_path.is_file():
+        raise TestFailure(f"expected form3-starter.csv in {out_dir}")
+    with csv_path.open("r", encoding="utf-8", newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    if len(rows) != expected_count:
+        raise TestFailure(f"expected {expected_count} callout rows in form3-starter.csv, got {len(rows)}")
+    for count_key in ("balloon_count", "callout_count"):
+        if count_key in payload and payload[count_key] != expected_count:
+            raise TestFailure(f"expected {count_key}={expected_count}, got {payload[count_key]!r}")
 
 
 @e2e_test(
     test_id="T1-F2-06",
     tier=1,
     feature="F2",
-    description="M3/VS0 fid-slice ballooning / report export-balloon-pack produces ballooned.pdf + form3-starter.csv",
+    description="M3/VS0 fid-slice --balloon exports valid ballooned.pdf (%PDF-) + 15-row form3-starter.csv",
 )
 def test_slice_vs0_balloon_pack_export(ctx: TestContext) -> None:
     fid_slice = ctx.require_bin("fid-slice")
     pdf_path = ctx.repo_root / "fixtures" / "rpt" / "balloon" / "auto" / "vector_bracket.pdf"
+    truth = json.loads(
+        (ctx.repo_root / "fixtures" / "rpt" / "balloon" / "auto" / "vector_bracket.truth.json").read_text(
+            encoding="utf-8"
+        )
+    )
     out_dir = ctx.workdir / "balloon_out"
     res = ctx.run([fid_slice, "--balloon", str(pdf_path), "--out", str(out_dir), "--json"])
     if res.returncode != 0:
@@ -437,5 +450,18 @@ def test_slice_vs0_balloon_pack_export(ctx: TestContext) -> None:
         )
     env = parse_single_line_json(res.stdout)
     assert_envelope(env, outcome="computed")
-    if not (out_dir / "ballooned.pdf").is_file() or not (out_dir / "form3-starter.csv").is_file():
+    ballooned_pdf = out_dir / "ballooned.pdf"
+    form3_csv = out_dir / "form3-starter.csv"
+    if not ballooned_pdf.is_file() or not form3_csv.is_file():
         raise TestFailure(f"expected ballooned.pdf and form3-starter.csv in {out_dir}")
+    pdf_bytes = ballooned_pdf.read_bytes()
+    if len(pdf_bytes) <= 100 or not pdf_bytes.startswith(b"%PDF-"):
+        raise TestFailure(f"invalid ballooned.pdf: len={len(pdf_bytes)}, header={pdf_bytes[:16]!r}")
+    with form3_csv.open("r", encoding="utf-8", newline="") as fh:
+        reader = csv.DictReader(fh)
+        fieldnames = reader.fieldnames or []
+        rows = list(reader)
+    if len(fieldnames) < 3:
+        raise TestFailure(f"invalid form3-starter.csv headers: {fieldnames!r}")
+    if len(rows) != truth["callout_count"]:
+        raise TestFailure(f"expected {truth['callout_count']} callout rows in form3-starter.csv, got {len(rows)}")

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import math
+import re
+import zipfile
 from pathlib import Path
 
 from e2e.lib.harness import (
@@ -13,7 +16,7 @@ from e2e.lib.harness import (
     e2e_test,
     parse_single_line_json,
 )
-from e2e.tests._helpers import mcp_init_messages, run_mcp_session
+from e2e.tests._helpers import mcp_init_messages, run_mcp_session, write_disclosure_profiles_index
 
 
 # ===========================================================================
@@ -280,38 +283,53 @@ def test_slice_bogus_flag(ctx: TestContext) -> None:
     test_id="T2-F2-05",
     tier=2,
     feature="F2",
-    description="M3 scanned_only.pdf yields raster_only + report.raster_sheet_needs_ocr and zero fabricated balloons",
+    description="M3 fid-slice --balloon on scanned_only.pdf yields raster_only / OCR notice and zero fabricated balloons",
 )
 def test_slice_vs0_scanned_only_raster_warning(ctx: TestContext) -> None:
-    fid = ctx.require_bin("fid")
+    fid_slice = ctx.require_bin("fid-slice")
     pdf = ctx.repo_root / "fixtures" / "rpt" / "balloon" / "auto" / "scanned_only.pdf"
-    res = ctx.run([fid, "report", "propose-balloons", "--drawing", str(pdf), "--json"])
+    out_dir = ctx.workdir / "scan_out"
+    res = ctx.run([fid_slice, "--balloon", str(pdf), "--out", str(out_dir), "--json"])
     if res.returncode != 0:
-        raise TestFailure(f"propose-balloons on scanned_only.pdf failed (exit {res.returncode}): {res.stdout} {res.stderr}")
+        raise TestFailure(f"fid-slice --balloon on scanned_only.pdf failed (exit {res.returncode}): {res.stdout} {res.stderr}")
     env = parse_single_line_json(res.stdout)
-    assert_envelope(env, outcome="committed")
-    r_obj = env.get("result", {})
-    if not isinstance(r_obj, dict) or r_obj.get("proposals") != []:
-        raise TestFailure(f"expected empty proposals for raster_only without OCR, got {r_obj!r}")
-    if "report.raster_sheet_needs_ocr" not in json.dumps(r_obj):
-        raise TestFailure(f"expected report.raster_sheet_needs_ocr diagnostic in {r_obj!r}")
+    assert_envelope(env, outcome="computed")
+    r_obj = env.get("result")
+    if not isinstance(r_obj, dict):
+        raise TestFailure(f"expected dict result, got {r_obj!r}")
+    if r_obj.get("proposals", []) != [] or r_obj.get("balloon_count", 0) != 0:
+        raise TestFailure(f"expected zero fabricated balloons for raster_only, got {r_obj!r}")
+    csv_path = out_dir / "form3-starter.csv"
+    if csv_path.is_file():
+        with csv_path.open("r", encoding="utf-8", newline="") as fh:
+            if list(csv.DictReader(fh)):
+                raise TestFailure("expected 0 data rows in form3-starter.csv for scanned_only.pdf")
+    dumped = json.dumps(r_obj).lower()
+    if "report.raster_sheet_needs_ocr" not in dumped and "raster_only" not in dumped:
+        raise TestFailure(f"expected raster_only / report.raster_sheet_needs_ocr diagnostic in {r_obj!r}")
 
 
 @e2e_test(
     test_id="T2-F2-06",
     tier=2,
     feature="F2",
-    description="M3 export-balloon-pack refuses path escape (--out ../outside) with io.root_violation",
+    description="M3 fid-slice --balloon refuses path escape (--out ../outside) with root violation",
 )
 def test_slice_vs0_export_path_escape_refused(ctx: TestContext) -> None:
-    fid = ctx.require_bin("fid")
+    fid_slice = ctx.require_bin("fid-slice")
     pdf = ctx.repo_root / "fixtures" / "rpt" / "balloon" / "auto" / "vector_bracket.pdf"
-    res = ctx.run([fid, "report", "export-balloon-pack", "--drawing", str(pdf), "--out", "../outside", "--json"])
+    safe_sub = ctx.workdir / "export_root"
+    safe_sub.mkdir(parents=True, exist_ok=True)
+    outside_target = ctx.workdir / "outside"
+    res = ctx.run([fid_slice, "--balloon", str(pdf), "--out", "../outside", "--json"], cwd=safe_sub)
     if res.returncode == 0:
         raise TestFailure(f"expected refusal on --out ../outside, got exit 0: {res.stdout}")
+    if outside_target.exists():
+        raise TestFailure(f"path escape created directory outside export root: {outside_target}")
     env = parse_single_line_json(res.stdout)
     assert_envelope(env, outcome="failed")
-    if "root" not in json.dumps(env).lower():
+    dumped = json.dumps(env).lower()
+    if "root" not in dumped and "escape" not in dumped and "outside" not in dumped:
         raise TestFailure(f"expected io.root_violation / root_escape error, got {env!r}")
 
 
@@ -351,73 +369,114 @@ def test_pkg_conformance_106_malformed(ctx: TestContext) -> None:
 )
 def test_fid_verify_signature_failures(ctx: TestContext) -> None:
     verify = ctx.require_bin("fid-verify")
-    pkg = ctx.repo_root / "fixtures" / "troot" / "packages" / "two-signatures.zip"
+    pkg = ctx.repo_root / "fixtures" / "pkg" / "golden" / "two-signatures.zip"
     root = ctx.repo_root / "fixtures" / "troot" / "roots" / "both.json"
     rev = ctx.repo_root / "fixtures" / "troot" / "revoked" / "revoked-before.json"
+
+    # Baseline isolation: golden/two-signatures.zip passes with both.json when not revoked.
+    r_ok = ctx.run([verify, str(pkg), "--trust-root", str(root), "--json"])
+    if r_ok.returncode != 0 or parse_single_line_json(r_ok.stdout).get("verdict") != "PASS":
+        raise TestFailure(f"baseline golden/two-signatures.zip did not pass before --revoked: {r_ok.stdout} {r_ok.stderr}")
+
+    # 1. Revoked signer key -> exit 1 + FAIL + REVOKED
     res = ctx.run([verify, str(pkg), "--trust-root", str(root), "--revoked", str(rev), "--json"])
     if res.returncode != 1:
         raise TestFailure(f"expected bitmask exit 1 for revoked signature, got {res.returncode}: {res.stdout} {res.stderr}")
     rep = parse_single_line_json(res.stdout)
-    if rep.get("verdict") != "FAIL":
-        raise TestFailure(f"expected verdict=FAIL, got {rep!r}")
+    if rep.get("verdict") != "FAIL" or "REVOKED" not in json.dumps(rep):
+        raise TestFailure(f"expected verdict=FAIL with REVOKED status, got {rep!r}")
 
-    # Untrusted / empty trust root also yields exit 1
+    # 2. Untrusted / empty trust root -> exit 1 + FAIL
     empty_root = ctx.repo_root / "fixtures" / "troot" / "roots" / "empty.json"
     r_untrusted = ctx.run([verify, str(pkg), "--trust-root", str(empty_root), "--json"])
     if r_untrusted.returncode != 1:
         raise TestFailure(f"expected exit 1 on empty trust root, got {r_untrusted.returncode}")
+    if parse_single_line_json(r_untrusted.stdout).get("verdict") != "FAIL":
+        raise TestFailure(f"expected FAIL on empty trust root: {r_untrusted.stdout}")
+
+    # 3. Faulty signatures fixture -> bit 1 set + FAIL
+    faults_pkg = ctx.repo_root / "fixtures" / "troot" / "packages" / "faults.zip"
+    r_faults = ctx.run([verify, str(faults_pkg), "--trust-root", str(root), "--json"])
+    if r_faults.returncode == 0 or (r_faults.returncode & 1) == 0:
+        raise TestFailure(f"expected signature failure bit 1 on faults.zip, got {r_faults.returncode}: {r_faults.stdout}")
+    if parse_single_line_json(r_faults.stdout).get("verdict") != "FAIL":
+        raise TestFailure(f"expected verdict=FAIL on faults.zip: {r_faults.stdout}")
 
 
 @e2e_test(
     test_id="T2-F3-03",
     tier=2,
     feature="F3",
-    description="M4 fid-verify detects broken hash chain / linkage (bitmask bit 2 set)",
+    description="M4 fid-verify detects broken hash chain / linkage (bitmask bit 2 set, chain.verdict=BROKEN)",
 )
 def test_fid_verify_broken_chain_bitmask(ctx: TestContext) -> None:
     verify = ctx.require_bin("fid-verify")
-    pkg = ctx.repo_root / "fixtures" / "troot" / "packages" / "faults.zip"
     root = ctx.repo_root / "fixtures" / "troot" / "roots" / "both.json"
-    res = ctx.run([verify, str(pkg), "--trust-root", str(root), "--json"])
-    if res.returncode == 0 or (res.returncode & 0x0F) == 0:
-        raise TestFailure(f"expected FAIL bitmask (1..15) on faults.zip, got exit {res.returncode}: {res.stdout}")
-    rep = parse_single_line_json(res.stdout)
-    if rep.get("verdict") != "FAIL":
-        raise TestFailure(f"expected verdict=FAIL on faults.zip, got {rep!r}")
+    chain_fixtures = (
+        ctx.repo_root / "fixtures" / "chain" / "tamper" / "modified.zip",
+        ctx.repo_root / "fixtures" / "chain" / "reslink" / "broken-at-5.zip",
+    )
+    for pkg in chain_fixtures:
+        res = ctx.run([verify, str(pkg), "--trust-root", str(root), "--json"])
+        if res.returncode == 0 or (res.returncode & 2) == 0:
+            raise TestFailure(
+                f"expected FAIL bitmask bit 2 (chain/linkage) on {pkg.name}, "
+                f"got exit {res.returncode}: {res.stdout} {res.stderr}"
+            )
+        rep = parse_single_line_json(res.stdout)
+        if rep.get("verdict") != "FAIL":
+            raise TestFailure(f"expected verdict=FAIL on {pkg.name}, got {rep!r}")
+        chain_verdict = rep.get("chain", {}).get("verdict")  # type: ignore[union-attr]
+        if chain_verdict != "BROKEN":
+            raise TestFailure(f"expected chain.verdict=BROKEN on {pkg.name}, got {rep.get('chain')!r}")
 
 
 @e2e_test(
     test_id="T2-F3-04",
     tier=2,
     feature="F3",
-    description="M4 fid-verify exits 64 on malformed or truncated package",
+    description="M4 fid-verify exits 64 on malformed or truncated package with structured diagnostics",
 )
 def test_fid_verify_malformed_exit_64(ctx: TestContext) -> None:
     verify = ctx.require_bin("fid-verify")
-    mal = ctx.repo_root / "fixtures" / "pkg" / "malformed" / "truncated" / "package.zip"
-    res = ctx.run([verify, str(mal), "--json"])
-    if res.returncode != 64:
-        raise TestFailure(f"expected exit 64 for malformed package, got {res.returncode}: {res.stdout} {res.stderr}")
+    for case in ("truncated_tail", "crc_mismatch"):
+        mal = ctx.repo_root / "fixtures" / "pkg" / "malformed" / case / "package.zip"
+        if not mal.is_file():
+            raise TestFailure(f"missing malformed fixture: {mal}")
+        res = ctx.run([verify, str(mal), "--json"])
+        if res.returncode != 64:
+            raise TestFailure(
+                f"expected exit 64 for {case}, got {res.returncode}: {res.stdout} {res.stderr}"
+            )
+        diag = (res.stdout + "\n" + res.stderr).strip()
+        if not diag:
+            raise TestFailure(f"fid-verify exited 64 on {case} with empty stdout and stderr")
+        if res.stdout.strip():
+            rep = parse_single_line_json(res.stdout)
+            if rep.get("verdict") not in ("ERROR", "FAIL") and "error" not in rep:
+                raise TestFailure(f"unexpected JSON error payload on {case}: {rep!r}")
 
 
 @e2e_test(
     test_id="T2-F3-05",
     tier=2,
     feature="F3",
-    description="M4 fid-verify exits 65 on invalid CLI flags",
+    description="M4 fid-verify exits 65 on invalid CLI flags with diagnostic stderr",
 )
 def test_fid_verify_usage_exit_65(ctx: TestContext) -> None:
     verify = ctx.require_bin("fid-verify")
     res = ctx.run([verify, "--bogus-flag"])
     if res.returncode != 65:
         raise TestFailure(f"expected exit 65 for invalid flags, got {res.returncode}: {res.stderr}")
+    if not res.stderr.strip():
+        raise TestFailure("fid-verify exited 65 with empty stderr diagnostic")
 
 
 @e2e_test(
     test_id="T2-F3-06",
     tier=2,
     feature="F3",
-    description="M4 fid-verify rejects unsigned package and tampered ZIP payload",
+    description="M4 fid-verify rejects unsigned package and 1-byte tampered ZIP payload",
 )
 def test_fid_verify_unsigned_and_tampered(ctx: TestContext) -> None:
     verify = ctx.require_bin("fid-verify")
@@ -429,6 +488,32 @@ def test_fid_verify_unsigned_and_tampered(ctx: TestContext) -> None:
     rep = parse_single_line_json(res.stdout)
     if rep.get("verdict") != "FAIL":
         raise TestFailure(f"expected verdict=FAIL for unsigned package, got {rep!r}")
+
+    # 1-byte raw tamper of signed golden/two-signatures.zip
+    golden_signed = ctx.repo_root / "fixtures" / "pkg" / "golden" / "two-signatures.zip"
+    raw = bytearray(golden_signed.read_bytes())
+    raw[len(raw) // 2] ^= 0x01
+    raw_tampered = ctx.workdir / "raw_tampered.zip"
+    raw_tampered.write_bytes(bytes(raw))
+    r_raw = ctx.run([verify, str(raw_tampered), "--trust-root", str(root), "--json"])
+    if r_raw.returncode == 0:
+        raise TestFailure(f"fid-verify accepted 1-byte tampered ZIP: {r_raw.stdout}")
+
+    # Valid-ZIP 1-byte payload tamper inside results/records.json -> digest/signature/chain failure
+    zip_tampered = ctx.workdir / "payload_tampered.zip"
+    with zipfile.ZipFile(golden_signed, "r") as zin, zipfile.ZipFile(zip_tampered, "w", zipfile.ZIP_DEFLATED) as zout:
+        for info in zin.infolist():
+            data = bytearray(zin.read(info.filename))
+            if info.filename == "results/records.json" and data:
+                data[-2] = ord(" ") if data[-2] != ord(" ") else ord("\t")
+            zout.writestr(info, bytes(data))
+    r_pay = ctx.run([verify, str(zip_tampered), "--trust-root", str(root), "--json"])
+    if r_pay.returncode == 0:
+        raise TestFailure(f"fid-verify accepted valid-ZIP tampered results/records.json: {r_pay.stdout}")
+    if r_pay.stdout.strip():
+        rep_pay = parse_single_line_json(r_pay.stdout)
+        if rep_pay.get("verdict") == "PASS":
+            raise TestFailure(f"tampered payload yielded PASS: {rep_pay!r}")
 
 
 # ===========================================================================
@@ -458,13 +543,14 @@ def test_mcp_unknown_profile_exit_2(ctx: TestContext) -> None:
     test_id="T2-F4-02",
     tier=2,
     feature="F4",
-    description="M4 fid-mcp --bridge --headless exits 2 (mode_conflict)",
+    description="M4 fid mcp --bridge --headless exits 2 (mode_conflict)",
+    capabilities_required=("c_toolchain",),
 )
 def test_mcp_mode_conflict_exit_2(ctx: TestContext) -> None:
-    mcp = ctx.require_bin("fid-mcp")
-    res = ctx.run([mcp, "--bridge", "--headless"])
+    fid = ctx.require_bin("fid")
+    res = ctx.run([fid, "mcp", "--bridge", "--headless"])
     if res.returncode != 2:
-        raise TestFailure(f"expected exit 2 on --bridge --headless, got {res.returncode}: {res.stderr}")
+        raise TestFailure(f"expected exit 2 on fid mcp --bridge --headless, got {res.returncode}: {res.stderr}")
     if "mode_conflict" not in res.stderr:
         raise TestFailure(f"expected mode_conflict on stderr, got {res.stderr!r}")
 
@@ -473,11 +559,12 @@ def test_mcp_mode_conflict_exit_2(ctx: TestContext) -> None:
     test_id="T2-F4-03",
     tier=2,
     feature="F4",
-    description="M4 fid-mcp --project /raw/path exits 3 (raw_path_refused)",
+    description="M4 fid mcp --headless --project /raw/path exits 3 (raw_path_refused)",
+    capabilities_required=("c_toolchain",),
 )
 def test_mcp_raw_path_refused_exit_3(ctx: TestContext) -> None:
-    mcp = ctx.require_bin("fid-mcp")
-    res = ctx.run([mcp, "--headless", "--project", "/raw/filesystem/path"])
+    fid = ctx.require_bin("fid")
+    res = ctx.run([fid, "mcp", "--headless", "--project", "/raw/filesystem/path"])
     if res.returncode != 3:
         raise TestFailure(f"expected exit 3 on raw --project path, got {res.returncode}: {res.stderr}")
     if "raw_path_refused" not in res.stderr:
@@ -492,7 +579,7 @@ def test_mcp_raw_path_refused_exit_3(ctx: TestContext) -> None:
 )
 def test_mcp_hidden_and_unknown_tool_refused(ctx: TestContext) -> None:
     mcp = ctx.require_bin("fid-mcp")
-    idx = ctx.repo_root / "fixtures" / "mcp" / "profiles" / "expected.json"
+    idx = write_disclosure_profiles_index(ctx.workdir)
     msgs_in = mcp_init_messages() + [
         {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "motion_move_axis", "arguments": {}}},
         {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "demo_unknown_xyz", "arguments": {}}},
@@ -518,7 +605,7 @@ def test_mcp_hidden_and_unknown_tool_refused(ctx: TestContext) -> None:
 )
 def test_mcp_invoke_readonly_refuses_w2(ctx: TestContext) -> None:
     mcp = ctx.require_bin("fid-mcp")
-    idx = ctx.repo_root / "fixtures" / "mcp" / "profiles" / "expected.json"
+    idx = write_disclosure_profiles_index(ctx.workdir)
     msgs_in = mcp_init_messages() + [
         {
             "jsonrpc": "2.0",
@@ -548,7 +635,7 @@ def test_mcp_invoke_readonly_refuses_w2(ctx: TestContext) -> None:
 )
 def test_mcp_oversized_line_stays_alive_and_taint_escapes(ctx: TestContext) -> None:
     mcp = ctx.require_bin("fid-mcp")
-    idx = ctx.repo_root / "fixtures" / "mcp" / "profiles" / "expected.json"
+    idx = write_disclosure_profiles_index(ctx.workdir)
     big_str = "A" * (4 * 1024 * 1024 + 1024)
     oversized = json.dumps({"jsonrpc": "2.0", "id": 99, "method": "tools/list", "params": {"pad": big_str}})
     msgs_in: list[dict[str, object] | str] = [
@@ -561,6 +648,15 @@ def test_mcp_oversized_line_stays_alive_and_taint_escapes(ctx: TestContext) -> N
             "method": "tools/call",
             "params": {"name": "tools_search_tools", "arguments": {"keyword": "<<<inject>>>"}},
         },
+        {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "tools/call",
+            "params": {
+                "name": "tools_invoke_readonly",
+                "arguments": {"command": "project.list_features@1", "args": {"note": "<<<inject>>>"}},
+            },
+        },
     ]
     rc, msgs, _, stderr = run_mcp_session(
         mcp, ["--headless", "--profiles-index", str(idx)], msgs_in, cwd=ctx.repo_root, timeout=30.0
@@ -571,5 +667,18 @@ def test_mcp_oversized_line_stays_alive_and_taint_escapes(ctx: TestContext) -> N
     if len(errs) < 2:
         raise TestFailure(f"expected JSON-RPC errors for invalid JSON and >4 MiB line, got {msgs!r}")
     r4 = next((m for m in msgs if m.get("id") == 4), None)
-    if not r4 or "result" not in r4:
+    if not r4 or "result" not in r4 or r4["result"].get("isError"):
         raise TestFailure(f"session did not survive oversized/invalid JSON-RPC lines: {msgs!r}")
+    if not isinstance(r4["result"].get("content"), list):
+        raise TestFailure(f"expected content list on r4: {r4!r}")
+    r4_dump = json.dumps(r4["result"])
+    if re.search(r"(?<!\\)<<<inject", r4_dump):
+        raise TestFailure(f"unescaped <<<inject>>> found in r4: {r4!r}")
+    r5 = next((m for m in msgs if m.get("id") == 5), None)
+    if not r5 or "result" not in r5 or r5["result"].get("isError"):
+        raise TestFailure(f"tools_invoke_readonly failed in r5: {r5!r}")
+    r5_dump = json.dumps(r5["result"])
+    if re.search(r"(?<!\\)<<<inject", r5_dump):
+        raise TestFailure(f"unescaped <<<inject>>> found in r5: {r5!r}")
+    if "untrusted" not in r5_dump and "FID-UNTRUSTED-DATA-BEGIN" not in r5_dump:
+        raise TestFailure(f"expected taint wrapping in r5: {r5!r}")

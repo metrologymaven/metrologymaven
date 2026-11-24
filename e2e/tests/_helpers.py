@@ -52,6 +52,9 @@ class FidCtrlMockServer:
         self._sock: socket.socket | None = None
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        self._conn_lock = threading.Lock()
+        self._active_conns: set[socket.socket] = set()
+        self._conn_threads: list[threading.Thread] = []
         self.port: int = 0
         self.discovery_file: Path | None = None
 
@@ -95,12 +98,16 @@ class FidCtrlMockServer:
                 continue
             except OSError:
                 break
-            t = threading.Thread(target=self._handle_conn, args=(conn,), daemon=True)
+            conn.settimeout(2.0)
+            with self._conn_lock:
+                self._active_conns.add(conn)
+                t = threading.Thread(target=self._handle_conn, args=(conn,), daemon=True)
+                self._conn_threads.append(t)
             t.start()
 
     def _handle_conn(self, conn: socket.socket) -> None:
         try:
-            conn.settimeout(5.0)
+            conn.settimeout(2.0)
             f = conn.makefile("r", encoding="utf-8", newline="\n")
             server_nonce: bytes | None = None
             authenticated = False
@@ -175,6 +182,8 @@ class FidCtrlMockServer:
         except Exception:  # noqa: BLE001
             pass
         finally:
+            with self._conn_lock:
+                self._active_conns.discard(conn)
             try:
                 conn.close()
             except OSError:
@@ -187,13 +196,140 @@ class FidCtrlMockServer:
                 self._sock.close()
             except OSError:
                 pass
+        with self._conn_lock:
+            conns = list(self._active_conns)
+            threads = list(self._conn_threads)
+        for conn in conns:
+            try:
+                conn.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            try:
+                conn.close()
+            except OSError:
+                pass
         if self._thread is not None:
             self._thread.join(timeout=2.0)
+        for t in threads:
+            t.join(timeout=2.0)
         if self.discovery_file is not None and self.discovery_file.exists():
             try:
                 self.discovery_file.unlink()
             except OSError:
                 pass
+
+
+def write_disclosure_profiles_index(workdir: Path, filename: str = "disclosure-profiles.json") -> Path:
+    """Write a canonical disclosure-enabled MCP profiles index without mutating fixtures/mcp/profiles/expected.json."""
+    index = {
+        "format": 1,
+        "manifest_digest": "sha256:9f3731a2d45012c5e6ae7f17a95acb19c4e2023298f1fafb4f4ef9ed0f708ee4",
+        "profiles": [
+            {
+                "front_door": [
+                    "tools.search_tools@1",
+                    "tools.describe_tool@1",
+                    "tools.invoke_readonly@1",
+                    "tools.enable_tools@1",
+                    "tools.list_domains@1",
+                    "tools.get_workflow@1",
+                    "project.list_features@1",
+                    "program.save_draft@1",
+                ],
+                "name": "core",
+                "served": [
+                    "egress.send@1",
+                    "program.save_draft@1",
+                    "project.list_features@1",
+                    "rpt.release_report@1",
+                    "tools.describe_tool@1",
+                    "tools.enable_tools@1",
+                    "tools.get_workflow@1",
+                    "tools.invoke_readonly@1",
+                    "tools.list_domains@1",
+                    "tools.search_tools@1",
+                ],
+                "title": "Metrology Maven Core",
+            },
+            {
+                "front_door": [
+                    "tools.search_tools@1",
+                    "tools.describe_tool@1",
+                    "tools.invoke_readonly@1",
+                    "tools.enable_tools@1",
+                    "tools.list_domains@1",
+                    "tools.get_workflow@1",
+                    "align.run_bestfit@1",
+                    "align.set_datum@1",
+                    "sim.run_program@1",
+                ],
+                "name": "inspect",
+                "served": [
+                    "align.adopt_alignment@1",
+                    "align.run_bestfit@1",
+                    "align.run_bestfit@2",
+                    "align.set_datum@1",
+                    "probe.read_temperature@1",
+                    "project.list_features@1",
+                    "sim.run_program@1",
+                    "tools.describe_tool@1",
+                    "tools.enable_tools@1",
+                    "tools.get_workflow@1",
+                    "tools.invoke_readonly@1",
+                    "tools.list_domains@1",
+                    "tools.search_tools@1",
+                ],
+                "title": "Metrology Maven Inspect",
+            },
+        ],
+        "surface": "mcp",
+    }
+    out = workdir / filename
+    out.write_text(json.dumps(index, separators=(",", ":"), sort_keys=True), encoding="utf-8")
+    return out
+
+
+def write_site_a11y_tokens(workdir: Path, filename: str = "site-tokens.json") -> Path:
+    """Write a token file matching site/src/style.css light/dark custom properties for `fid-outreach qa a11y`."""
+    tokens = {
+        "themes": {
+            "light": {
+                "paper": "#f4f6f8",
+                "sheet": "#ffffff",
+                "ink": "#15202b",
+                "ink.2": "#4a5866",
+                "rule": "#cfd7df",
+                "grid": "#e8edf2",
+                "ruby": "#b5132e",
+                "ruby.soft": "#f6e3e7",
+                "steel": "#2f5f8a",
+                "steel.soft": "#e2ecf5",
+                "ok": "#2e7d4f",
+                "ok.soft": "#e1f1e7",
+                "warn": "#9a5a08",
+                "warn.soft": "#f8ecd9",
+            },
+            "dark": {
+                "paper": "#0f151b",
+                "sheet": "#151d25",
+                "ink": "#e7edf2",
+                "ink.2": "#a3b3c1",
+                "rule": "#2c3946",
+                "grid": "#1b252e",
+                "ruby": "#f06a80",
+                "ruby.soft": "#3a1720",
+                "steel": "#86b6e0",
+                "steel.soft": "#16283a",
+                "ok": "#6cc08f",
+                "ok.soft": "#14301f",
+                "warn": "#e3a650",
+                "warn.soft": "#33240f",
+            },
+        }
+    }
+    out = workdir / filename
+    out.write_text(json.dumps(tokens, indent=2, sort_keys=True), encoding="utf-8")
+    return out
 
 
 def run_mcp_session(

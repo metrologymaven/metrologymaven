@@ -42,6 +42,14 @@ python e2e/run_e2e.py --tier 4 --keep-workdirs
 - **F6**: Spec Tooling, RDL/Tracim, `xtask` Gates, Scan & Release Flows (`scope.py`, `grow.*`, `tracim_public.py`, `xtask`, `SCAN.CMP.DEV.PRIM`, `ECO.REL.PROC.FLOW`)
 - **F7**: Docs, Templates, Spec Drift & `generated/` Consistency (`check_spec_drift.py`, `docs/`, `README.md`, `.github/`, `release/`, `generated/`)
 
+## Coverage Summary
+
+- **Tier 1 (42 tests)**: 6 happy-path tests per feature area (`F1`–`F7`)
+- **Tier 2 (40 tests)**: boundary, negative, and error-handling tests across `F1`–`F7` (`>=5` per feature)
+- **Tier 3 (23 tests)**: pairwise cross-feature combinations covering all `21/21` `C(7,2)` `F1`–`F7` pairs
+- **Tier 4 (7 tests)**: end-to-end real-world application scenarios (`T4-S1`..`T4-S7`)
+- **Total**: **112** opaque-box E2E tests
+
 ## Integrity & Dual-Environment Rules
 
 - Unimplemented target contracts (such as M2/M3/M4/M5 deliverables on pre-integration branches) **fail cleanly** instead of skipping.
