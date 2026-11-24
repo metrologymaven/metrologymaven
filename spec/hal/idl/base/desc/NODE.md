@@ -78,7 +78,7 @@ Project-authored fixtures under `fixtures/hal/idl/base/desc/` (CC-BY-4.0); golde
 
 ## Open questions
 
-- None.
+- `set_configuration` carries an opaque `Configuration` (`configuration/0`, checked against the driver's `config-schema/0`). A driver's config schema could declare a compensation-like or calibration-like setting that the AC-4 schema walk cannot see. This is a REQ-HAL.IDL.BASE.DESC-003 follow-up for `HAL.IDL.BASE.CFG` (forbid or flag such settings) and for `Device-core@1` item DC-06 (check that `set_configuration` leaves the calibration state unchanged).
 
 ## Children
 

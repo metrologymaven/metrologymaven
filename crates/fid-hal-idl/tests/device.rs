@@ -135,6 +135,14 @@ fn ac4_no_request_carries_a_calibration_write_field() {
     let desc = DevicePackage::description();
     assert_eq!(calibration_fields_in_requests(&desc), Vec::<(String, String)>::new());
 
+    // Closed list: any new request field fails here until someone reviews it against REQ-003.
+    let mut all_request_fields = BTreeSet::new();
+    for op in &desc.operations {
+        property_names(&op.request, &desc.defs, &mut all_request_fields, 0);
+    }
+    let want: BTreeSet<String> = ["configuration", "session_id"].iter().map(|s| s.to_string()).collect();
+    assert_eq!(all_request_fields, want);
+
     // The only calibration operation reads.
     for op in &desc.operations {
         if CALIBRATION_WORDS.iter().any(|w| op.name.contains(w)) {
@@ -308,11 +316,36 @@ fn malformed_instances_are_refused_with_a_pointer() {
         (format!(r#"{{"make":{TEXT},"model":{TEXT}}}"#), ("/driver_id", "field_missing")),
         (format!(r#"{{"driver_id":"Drv","make":{TEXT},"model":{TEXT}}}"#), ("/driver_id", "driver_id_invalid")),
         (format!(r#"{{"driver_id":7,"make":{TEXT},"model":{TEXT}}}"#), ("/driver_id", "wrong_type")),
-        (format!(r#"{{"driver_id":"drv.a","make":{TEXT},"model":{TEXT},"serial":null}}"#), ("/serial", "wrong_type")),
-        (format!(r#"{{"driver_id":"drv.a","make":"x","model":{TEXT}}}"#), ("/make", "wrong_type")),
+        (format!(r#"{{"driver_id":"drv.a","make":{TEXT},"model":{TEXT},"serial":null}}"#), ("/serial", "not_object")),
+        (format!(r#"{{"driver_id":"drv.a","make":"x","model":{TEXT}}}"#), ("/make", "not_object")),
         (format!(r#"{{"driver_id":"drv.a","make":{TEXT},"model":{TEXT},"hint":"x"}}"#), ("/hint", "field_unknown")),
     ];
     for (json, (ptr, reason)) in cases {
+        assert_eq!(instance_err(&json), (ptr.to_string(), reason), "{json}");
+    }
+
+    // Errors inside a DeviceText name the inner field.
+    let inner: [(String, (&str, &str)); 4] = [
+        (
+            format!(r#"{{"driver_id":"drv.a","make":{{"bytes":7,"truncated":false}},"model":{TEXT}}}"#),
+            ("/make/bytes", "wrong_type"),
+        ),
+        (
+            format!(r#"{{"driver_id":"drv.a","make":{{"bytes":"x","truncated":0}},"model":{TEXT}}}"#),
+            ("/make/truncated", "wrong_type"),
+        ),
+        (
+            format!(r#"{{"driver_id":"drv.a","make":{TEXT},"model":{{"bytes":"x"}}}}"#),
+            ("/model/truncated", "field_missing"),
+        ),
+        (
+            format!(
+                r#"{{"driver_id":"drv.a","make":{TEXT},"model":{TEXT},"serial":{{"bytes":"x","truncated":false,"note":"x"}}}}"#
+            ),
+            ("/serial/note", "field_unknown"),
+        ),
+    ];
+    for (json, (ptr, reason)) in inner {
         assert_eq!(instance_err(&json), (ptr.to_string(), reason), "{json}");
     }
 

@@ -182,6 +182,9 @@ pub struct DeviceInstance {
     pub driver_id: DriverId,
 }
 
+/// Keys of a `DeviceText` wire object.
+const TEXT_FIELDS: [&str; 2] = ["bytes", "truncated"];
+
 const INSTANCE_FIELDS: [&str; 5] = ["driver_id", "firmware", "make", "model", "serial"];
 
 impl DeviceInstance {
@@ -893,9 +896,21 @@ impl Fields {
         self.map.remove(k).ok_or_else(|| DeviceRecordError::new(self.p(k), "field_missing"))
     }
 
+    /// A `DeviceText` wire object; errors inside it carry the inner pointer
+    /// (`/<k>/bytes`, `/<k>/truncated` or `/<k>/<unknown key>`).
     fn text(&mut self, k: &str) -> Result<DeviceText, DeviceRecordError> {
-        let v = self.take(k)?;
-        DeviceText::from_value(v).map_err(|_| DeviceRecordError::new(self.p(k), "wrong_type"))
+        let ptr = self.p(k);
+        let mut inner = Fields::new(self.take(k)?, &ptr, &TEXT_FIELDS)?;
+        let bytes = inner.take("bytes")?;
+        if !matches!(bytes, CValue::Str(_)) {
+            return Err(DeviceRecordError::new(inner.p("bytes"), "wrong_type"));
+        }
+        let truncated = inner.take("truncated")?;
+        if !matches!(truncated, CValue::Bool(_)) {
+            return Err(DeviceRecordError::new(inner.p("truncated"), "wrong_type"));
+        }
+        let checked = CValue::Obj(BTreeMap::from([("bytes".to_string(), bytes), ("truncated".to_string(), truncated)]));
+        DeviceText::from_value(checked).map_err(|_| DeviceRecordError::new(ptr, "wrong_type"))
     }
 
     fn opt_text(&mut self, k: &str) -> Result<Option<DeviceText>, DeviceRecordError> {
