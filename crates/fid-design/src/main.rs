@@ -16,7 +16,8 @@
 //! `fid-design fonts-check --root <design dir> --allowlist <file> [--json]`,
 //! `fid-design page-check (--root <design dir> | --file <pages.json>) [--json]`, and
 //! `fid-design icons-lint --root <icons dir> [--json]`.
-//! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage.
+//! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage (`icons-lint` also
+//! exits 2 for a root holding no SVG).
 
 use std::io::Write;
 use std::path::PathBuf;

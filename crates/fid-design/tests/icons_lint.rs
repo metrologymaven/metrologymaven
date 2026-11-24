@@ -184,9 +184,74 @@ fn shipped_style_guide_and_examples() {
         assert!(f.is_empty(), "STYLE.md example {i} failed icons-lint: {f:?}");
     }
 
-    // Shipped design/icons/ directory passes icons-lint (0 SVGs so far, STYLE.md ignored).
+    // The 16 px example follows the guide's own 16 px rules: its ticks are 2 px long, and every
+    // straight horizontal or vertical 1 px stroke runs on a `.5` centreline.
+    let sixteen = blocks.iter().find(|b| b.contains("viewBox=\"0 0 16 16\"")).expect("16 px example");
+    let half = |v: f64| (v - v.floor() - 0.5).abs() < 1e-9;
+    let mut ticks = 0;
+    for line in sixteen.lines().filter(|l| l.contains("<path")) {
+        let d = line.split("d=\"").nth(1).and_then(|r| r.split('"').next()).expect("path d");
+        for seg in d.split('M').filter(|x| !x.is_empty()) {
+            let (head, axis, end) = if let Some((h, e)) = seg.split_once('V') {
+                (h, 'V', e)
+            } else if let Some((h, e)) = seg.split_once('H') {
+                (h, 'H', e)
+            } else {
+                panic!("16 px example path segment {seg:?} is not a straight H/V stroke");
+            };
+            let nums: Vec<f64> = head.split_whitespace().map(|n| n.parse().unwrap()).collect();
+            let (x, y, e): (f64, f64, f64) = (nums[0], nums[1], end.trim().parse().unwrap());
+            let (centre, from) = if axis == 'V' { (x, y) } else { (y, x) };
+            assert!(half(centre), "16 px stroke {seg:?} is not on a .5 centreline");
+            assert!(((e - from).abs() - 2.0).abs() < 1e-9, "16 px tick {seg:?} is not 2 px long");
+            ticks += 1;
+        }
+    }
+    assert_eq!(ticks, 4, "16 px example has four cardinal ticks");
+    for c in sixteen.lines().filter(|l| l.contains("<circle")) {
+        for key in ["cx=\"", "cy=\""] {
+            let v: f64 = c.split(key).nth(1).and_then(|r| r.split('"').next()).unwrap().parse().unwrap();
+            assert!(half(v), "16 px circle centre {v} is not on a .5 centreline: {c}");
+        }
+    }
+
+    // Shipped design/icons/ holds no SVG yet (STYLE.md is not an icon): an empty root is not a
+    // pass but an `ICON-NO-SVG` finding with exit 2, since nothing was checked.
     let o = run(&["icons-lint", "--root", "design/icons", "--json"]);
-    assert_eq!(o.status.code(), Some(0), "{}", stdout(&o));
+    assert_eq!(o.status.code(), Some(2), "{}", stdout(&o));
+    let report = json_out(&o);
+    assert_eq!(finding_keys(&report), ["ICON-NO-SVG ."]);
+    assert_eq!(get(&report, "ok"), &CValue::Bool(false));
+}
+
+/// A root with no SVG at all is a finding with exit 2, in JSON and text output alike; one SVG
+/// (even a failing one) is checked normally.
+#[test]
+fn root_without_svgs_is_a_finding_with_exit_2() {
+    let dir = std::env::temp_dir().join(format!("fid-design-icons-empty-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(dir.join("svg")).unwrap();
+    std::fs::write(dir.join("README.md"), "no icons yet\n").unwrap();
+    let root = dir.to_string_lossy().into_owned();
+
+    let o = run(&["icons-lint", "--root", &root, "--json"]);
+    assert_eq!(o.status.code(), Some(2), "{}", stdout(&o));
+    assert_eq!(finding_keys(&json_out(&o)), ["ICON-NO-SVG ."]);
+    let o = run(&["icons-lint", "--root", &root]);
+    assert_eq!(o.status.code(), Some(2));
+    assert!(stdout(&o).contains("ICON-NO-SVG"), "{}", stdout(&o));
+
+    // Upper-case extensions are SVGs too, and name their masters.
+    std::fs::write(
+        dir.join("svg").join("dot.16.SVG"),
+        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><rect x="7" y="7" width="2" height="2"/></svg>"#,
+    )
+    .unwrap();
+    let o = run(&["icons-lint", "--root", &root, "--json"]);
+    assert_eq!(o.status.code(), Some(1), "{}", stdout(&o));
+    assert_eq!(finding_keys(&json_out(&o)), ["ICON-MASTER-MISSING 24"]);
+
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 /// Forbidden elements, DTD/entity expansion, external refs, transforms, stroke widths and paths.
@@ -219,6 +284,16 @@ fn svg_profile_and_hardening_checks() {
         let codes = lint(&svg, Some(16));
         assert!(codes.contains(&icons_lint::ELEMENT), "{tag}: {codes:?}");
     }
+
+    // `<svg>` only as the root: a nested `<svg>` (its own viewport) is ICON-ELEMENT svg.
+    let nested = r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><svg viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12"/></svg></svg>"#;
+    assert_eq!(lint(nested, Some(16)), [icons_lint::ELEMENT]);
+    let mut f = Vec::new();
+    lint_svg_str("t.svg", nested, Some(16), &mut f);
+    assert!(f.iter().any(|x| x.subject == "svg" && x.detail.contains("nested")), "{f:?}");
+    let deep =
+        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><g><g><svg/></g></g></svg>"#;
+    assert_eq!(lint(deep, Some(16)), [icons_lint::ELEMENT]);
 
     // DTD and custom entity expansion refused with ICON-EXTERNAL-REF.
     let dtd = r#"<!DOCTYPE svg [<!ENTITY x "a">]><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"/>"#;

@@ -22,7 +22,8 @@
 //!   commands must sit on the 0.5 px grid within `1e-6`: `ICON-OFF-GRID`.
 //! - Directory runs check that every icon has both `16` and `24` masters: `ICON-MASTER-MISSING`.
 //!
-//! Exit codes: 0 no findings, 1 findings, 2 unreadable input or bad usage.
+//! Exit codes: 0 no findings, 1 findings, 2 unreadable input, bad usage, or a root holding no
+//! SVG at all (reported as an `ICON-NO-SVG` finding: there was nothing to check).
 
 use crate::finding::{findings_text, findings_value, read_text, Finding};
 use crate::review::guard::{defects, path_defect};
@@ -42,6 +43,8 @@ pub const OFF_GRID: &str = "ICON-OFF-GRID";
 pub const VIEWBOX: &str = "ICON-VIEWBOX";
 pub const MASTER_MISSING: &str = "ICON-MASTER-MISSING";
 pub const EXTERNAL_REF: &str = "ICON-EXTERNAL-REF";
+/// The root holds no `.svg` file, so nothing was checked (exit 2, not a silent pass).
+pub const NO_SVG: &str = "ICON-NO-SVG";
 
 /// Largest SVG file accepted (256 KiB, UX.ICONS.GRID Build prompt).
 pub const MAX_SVG_BYTES: u64 = 256 * 1024;
@@ -767,16 +770,20 @@ pub fn parse_path_anchors(d: &str) -> Result<Vec<(f64, f64)>, String> {
     Ok(anchors)
 }
 
+/// Splits `<stem>.16.svg` / `<stem>.24.svg` / `<stem>.svg` into the stem and master size. The
+/// suffix is matched without regard to ASCII case (`Target.16.SVG` is the 16 px master of
+/// `Target`), the same way files are selected for linting; the stem keeps its case.
 fn master_from_name(rel: &str) -> (String, Option<u32>) {
-    if let Some(stem) = rel.strip_suffix(".16.svg") {
-        (stem.to_string(), Some(16))
-    } else if let Some(stem) = rel.strip_suffix(".24.svg") {
-        (stem.to_string(), Some(24))
-    } else if let Some(stem) = rel.strip_suffix(".svg") {
-        (stem.to_string(), None)
-    } else {
-        (rel.to_string(), None)
+    let lower = rel.to_ascii_lowercase();
+    // ASCII lowercasing keeps byte offsets, and the suffixes are ASCII, so `get` cuts `rel` at
+    // the same place (it returns `None` rather than panic on a non-boundary).
+    let stem = |suffix: &str| rel.get(..rel.len() - suffix.len()).unwrap_or(rel).to_string();
+    for (suffix, size) in [(".16.svg", Some(16)), (".24.svg", Some(24)), (".svg", None)] {
+        if lower.ends_with(suffix) {
+            return (stem(suffix), size);
+        }
     }
+    (rel.to_string(), None)
 }
 
 fn check_grid_coord(file: &str, what: &str, v: f64, f: &mut Vec<Finding>) {
@@ -862,6 +869,15 @@ pub fn lint_svg_str(file: &str, text: &str, expected_master: Option<u32>, f: &mu
                 ELEMENT,
                 &el.name,
                 format!("{file}: element <{}> is not allowed in the icon SVG profile", el.name),
+            ));
+        }
+        // `<svg>` is allowed only as the root element: a nested `<svg>` would open a second
+        // viewport with its own `viewBox` and size, escaping the master's grid.
+        if idx != 0 && el.name == "svg" {
+            f.push(Finding::new(
+                ELEMENT,
+                "svg",
+                format!("{file}: nested <svg> is not allowed; <svg> must be the root"),
             ));
         }
 
@@ -1136,10 +1152,12 @@ pub fn check(root: &Path) -> Result<Report, String> {
         f.extend(wf.into_iter().map(|w| Finding::new(ATTR, w.subject, w.detail)));
 
         let mut masters: BTreeMap<String, (bool, bool)> = BTreeMap::new();
+        let mut saw_svg = false;
         for e in entries {
             if e.is_dir || !e.rel.to_ascii_lowercase().ends_with(".svg") {
                 continue;
             }
+            saw_svg = true;
             if let Some(d) = path_defect(&e.rel) {
                 f.push(Finding::new(ATTR, &e.rel, format!("icon path refused: {d}")));
                 continue;
@@ -1154,6 +1172,10 @@ pub fn check(root: &Path) -> Result<Report, String> {
                 _ => {}
             }
             files.push(e.rel);
+        }
+
+        if !saw_svg {
+            f.push(Finding::new(NO_SVG, ".", "the root holds no .svg file, so nothing was checked"));
         }
 
         for (stem, (has_16, has_24)) in masters {
@@ -1175,8 +1197,13 @@ pub fn check(root: &Path) -> Result<Report, String> {
 }
 
 impl Report {
+    /// 0 no findings, 1 findings, 2 when the root held no SVG (`ICON-NO-SVG`).
     pub fn exit_code(&self) -> u8 {
-        u8::from(!self.findings.is_empty())
+        if self.findings.iter().any(|x| x.code == NO_SVG) {
+            2
+        } else {
+            u8::from(!self.findings.is_empty())
+        }
     }
 
     pub fn to_cvalue(&self) -> CValue {
@@ -1232,5 +1259,15 @@ mod tests {
         assert!(parse_path_anchors("L1 1").is_err());
         assert!(parse_path_anchors("").is_err());
         assert!(parse_path_anchors("M1 1 A2 2 0 2 0 4 4").is_err());
+    }
+
+    #[test]
+    fn master_from_name_ignores_case() {
+        assert_eq!(master_from_name("svg/target.16.svg"), ("svg/target".to_string(), Some(16)));
+        assert_eq!(master_from_name("svg/Target.16.SVG"), ("svg/Target".to_string(), Some(16)));
+        assert_eq!(master_from_name("svg/target.24.Svg"), ("svg/target".to_string(), Some(24)));
+        assert_eq!(master_from_name("svg/Target.SVG"), ("svg/Target".to_string(), None));
+        assert_eq!(master_from_name("svg/target.png"), ("svg/target.png".to_string(), None));
+        assert_eq!(master_from_name("svg/\u{e9}t\u{e9}.16.SVG"), ("svg/\u{e9}t\u{e9}".to_string(), Some(16)));
     }
 }
