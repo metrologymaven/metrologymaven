@@ -1,8 +1,0 @@
-{
-  "licence_declared": "Llama-3.3-Community",
-  "name": "open-llama-70b",
-  "publisher": "Example Open Weights Lab",
-  "quantisation": "Q4_K_M",
-  "version": "2026.1",
-  "weights_sha256": "sha256:dd241d325d99fcf58837f583c9c1871072da6139156fe003e2396ea2de723f50"
-}

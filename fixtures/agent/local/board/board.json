@@ -23,7 +23,7 @@
           "violations": 1
         }
       },
-      "model": "open-qwen-32b",
+      "model": "model-a",
       "open_weight": true
     },
     {
@@ -44,7 +44,7 @@
           "violations": 0
         }
       },
-      "model": "open-llama-70b",
+      "model": "model-b",
       "open_weight": true
     },
     {

@@ -4,7 +4,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_eval_board::{
-    build_guide, write_guide, Fraction, GuideInputs, Outcome, WorkflowSuccess, GUIDE_HTML_FILE, GUIDE_MD_FILE,
+    build_guide, valid_model_id, write_guide, Fraction, GuideInputs, Outcome, WorkflowSuccess, GUIDE_HTML_FILE,
+    GUIDE_MD_FILE, RATES_SCOPE_NOTE,
 };
 use std::path::PathBuf;
 use std::process::Command;
@@ -26,7 +27,7 @@ fn ac1_generated_guide_matches_golden_markdown_and_html_and_excludes_closed_mode
 
     assert_eq!(guide.release, "r2026.1");
     assert_eq!(guide.verdict, Outcome::Pass);
-    assert_eq!(guide.models, vec!["open-llama-70b", "open-qwen-32b"]);
+    assert_eq!(guide.models, vec!["model-a", "model-b"]);
 
     let expected_md = std::fs::read_to_string(fixture_dir().join("expected").join(GUIDE_MD_FILE)).expect("gold md");
     let expected_html =
@@ -36,6 +37,12 @@ fn ac1_generated_guide_matches_golden_markdown_and_html_and_excludes_closed_mode
     assert_eq!(guide.html, expected_html, "HTML differs from golden");
     assert!(!guide.markdown.contains("hosted-frontier-closed"));
     assert!(!guide.html.contains("hosted-frontier-closed"));
+
+    // The fixed scope line appears on both pages, and no row claims a plain recommendation.
+    assert!(guide.markdown.contains(RATES_SCOPE_NOTE));
+    assert!(guide.html.contains(&format!("<p>{RATES_SCOPE_NOTE}</p>")));
+    assert!(!guide.markdown.contains("| recommended |"));
+    assert!(!guide.html.contains("<td>recommended</td>"));
 }
 
 #[test]
@@ -43,35 +50,29 @@ fn ac2_below_80_percent_and_committed_violations_are_not_recommended() {
     let (board, catalog, hosts) = fixture_inputs();
     let guide = build_guide(&GuideInputs { board: &board, catalog: &catalog, hosts: &hosts }).expect("build");
 
-    // AC-2: 3/4 = 0.75 on inspect.measure_bore for open-qwen-32b -> not recommended
-    let bore_row = guide
-        .rows
-        .iter()
-        .find(|r| r.model == "open-qwen-32b" && r.workflow == "inspect.measure_bore")
-        .expect("bore row");
+    // AC-2: 3/4 = 0.75 on inspect.measure_bore for model-a -> not recommended
+    let bore_row =
+        guide.rows.iter().find(|r| r.model == "model-a" && r.workflow == "inspect.measure_bore").expect("bore row");
     assert_eq!(bore_row.success, WorkflowSuccess::Evaluated { rate: Fraction::new(3, 4).unwrap(), violations: 0 });
     assert!(!bore_row.recommended);
     assert_eq!(bore_row.status_label(), "not recommended for delegation");
 
     // REQ-002: 5/5 = 100% with 1 committed violation -> also not recommended
-    let report_row = guide
-        .rows
-        .iter()
-        .find(|r| r.model == "open-qwen-32b" && r.workflow == "inspect.export_report")
-        .expect("report row");
+    let report_row =
+        guide.rows.iter().find(|r| r.model == "model-a" && r.workflow == "inspect.export_report").expect("report row");
     assert_eq!(report_row.success, WorkflowSuccess::Evaluated { rate: Fraction::new(5, 5).unwrap(), violations: 1 });
     assert!(!report_row.recommended);
     assert_eq!(report_row.status_label(), "not recommended for delegation");
 
-    // Exact 4/5 = 80.0% with 0 violations on open-llama-70b / inspect.align_scan -> recommended
-    let align_llama = guide
+    // Exact 4/5 = 80.0% with 0 violations on model-b / inspect.align_scan -> meets delegation threshold
+    let align_model_b = guide
         .rows
         .iter()
-        .find(|r| r.model == "open-llama-70b" && r.workflow == "inspect.align_scan")
-        .expect("align llama row");
-    assert_eq!(align_llama.success, WorkflowSuccess::Evaluated { rate: Fraction::new(4, 5).unwrap(), violations: 0 });
-    assert!(align_llama.recommended);
-    assert_eq!(align_llama.status_label(), "recommended");
+        .find(|r| r.model == "model-b" && r.workflow == "inspect.align_scan")
+        .expect("align model-b row");
+    assert_eq!(align_model_b.success, WorkflowSuccess::Evaluated { rate: Fraction::new(4, 5).unwrap(), violations: 0 });
+    assert!(align_model_b.recommended);
+    assert_eq!(align_model_b.status_label(), "meets delegation threshold");
 }
 
 #[test]
@@ -79,19 +80,16 @@ fn ac3_no_runs_is_not_evaluated_and_missing_host_is_not_reported() {
     let (board, catalog, hosts) = fixture_inputs();
     let guide = build_guide(&GuideInputs { board: &board, catalog: &catalog, hosts: &hosts }).expect("build");
 
-    // AC-3: open-qwen-32b has no runs on inspect.check_flatness -> not evaluated, never recommended
-    let flat_row = guide
-        .rows
-        .iter()
-        .find(|r| r.model == "open-qwen-32b" && r.workflow == "inspect.check_flatness")
-        .expect("flat row");
+    // AC-3: model-a has no runs on inspect.check_flatness -> not evaluated, never recommended
+    let flat_row =
+        guide.rows.iter().find(|r| r.model == "model-a" && r.workflow == "inspect.check_flatness").expect("flat row");
     assert_eq!(flat_row.success, WorkflowSuccess::NotEvaluated);
     assert!(!flat_row.recommended);
     assert_eq!(flat_row.status_label(), "not evaluated");
 
-    // REQ-006: open-llama-70b has no host.json -> hardware is None ("not reported" in rendered output)
-    let llama_row = guide.rows.iter().find(|r| r.model == "open-llama-70b").expect("llama row");
-    assert_eq!(llama_row.hardware, None);
+    // REQ-006: model-b has no host.json -> hardware is None ("not reported" in rendered output)
+    let model_b_row = guide.rows.iter().find(|r| r.model == "model-b").expect("model-b row");
+    assert_eq!(model_b_row.hardware, None);
     assert!(guide.markdown.contains("- **Hardware:** not reported"));
     assert!(guide.html.contains("<li><strong>Hardware:</strong> not reported</li>"));
 }
@@ -165,4 +163,57 @@ fn error_paths_board_missing_and_catalog_mismatch() {
     let err = build_guide(&GuideInputs { board: &board, catalog: &bad_cat, hosts: &hosts }).unwrap_err();
     assert_eq!(err.code(), "catalog_mismatch");
     let _ = std::fs::remove_dir_all(&tmp);
+}
+
+/// Writes a one-model board with the given `model` entry JSON into a fresh temp bundle.
+fn temp_board(tag: &str, model_entry: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("fid-eval-local-guide-{tag}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("mkdir");
+    let board = format!(
+        r#"{{"models":[{model_entry}],"release":"r2026.1","tasks":{{"t-align-01":{{"workflows":["inspect.align_scan"]}}}},"verdict":{{"outcome":"pass"}}}}"#
+    );
+    std::fs::write(dir.join("board.json"), board).expect("write board");
+    dir
+}
+
+#[test]
+fn missing_open_weight_flag_is_an_error_not_open() {
+    let (_, catalog, hosts) = fixture_inputs();
+    let board = temp_board(
+        "no-open-weight",
+        r#"{"by_task":{"t-align-01":{"runs":5,"successes":5,"violations":0}},"model":"model-c"}"#,
+    );
+    let err = build_guide(&GuideInputs { board: &board, catalog: &catalog, hosts: &hosts }).unwrap_err();
+    assert_eq!(err.code(), "board_missing");
+    assert!(err.to_string().contains("open_weight is required"), "{err}");
+    let _ = std::fs::remove_dir_all(&board);
+}
+
+#[test]
+fn model_ids_that_could_escape_the_hosts_dir_are_refused() {
+    for bad in ["..", ".", "../escape", "a/b", "a\\b", "/abs", "\\abs", "C:\\x", "C:x", "x:y", "", "a\u{0}b", "a\nb"] {
+        assert!(!valid_model_id(bad), "{bad:?} must be refused");
+    }
+    for good in ["model-a", "model_b.v2", "Model-C-70B", "..a", "a..b"] {
+        assert!(valid_model_id(good), "{good:?} must be accepted");
+    }
+
+    // A board naming such a model fails before any `<hosts>/<model>` path is built, and an
+    // escape target that exists outside the hosts dir is never read.
+    let (_, catalog, hosts) = fixture_inputs();
+    for (tag, id) in [("dotdot", "../model-a"), ("abs", "/etc"), ("parent", "..")] {
+        let entry = format!(
+            r#"{{"by_task":{{"t-align-01":{{"runs":5,"successes":5,"violations":0}}}},"model":{},"open_weight":true}}"#,
+            fid_canon::to_canonical_bytes(&fid_canon::CValue::Str(id.to_string()))
+                .map(|b| String::from_utf8(b).unwrap())
+                .unwrap()
+        );
+        let board = temp_board(tag, &entry);
+        let nested_hosts = hosts.join("model-a");
+        let err = build_guide(&GuideInputs { board: &board, catalog: &catalog, hosts: &nested_hosts }).unwrap_err();
+        assert_eq!(err.code(), "board_missing", "{id:?}");
+        assert!(err.to_string().contains("single plain path component"), "{err}");
+        let _ = std::fs::remove_dir_all(&board);
+    }
 }

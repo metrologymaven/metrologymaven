@@ -17,6 +17,11 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 LICENSE = "CC-BY-4.0"
+# Fixed line required on every generated page (written here independently of the Rust code).
+SCOPE_NOTE = (
+    "Success rates are board results for the release named above and the tasks it lists; "
+    "they are not general accuracy claims about any model."
+)
 
 
 def sha256_str(tag: str) -> str:
@@ -63,7 +68,7 @@ def build_all():
                     "t-bore-01": {"runs": 4, "successes": 3, "violations": 0},
                     "t-report-01": {"runs": 5, "successes": 5, "violations": 1},
                 },
-                "model": "open-qwen-32b",
+                "model": "model-a",
                 "open_weight": True,
             },
             {
@@ -72,7 +77,7 @@ def build_all():
                     "t-bore-01": {"runs": 4, "successes": 4, "violations": 0},
                     "t-flat-01": {"runs": 5, "successes": 2, "violations": 0},
                 },
-                "model": "open-llama-70b",
+                "model": "model-b",
                 "open_weight": True,
             },
             {
@@ -94,38 +99,38 @@ def build_all():
         "verdict": {"outcome": "pass"},
     }
 
-    qwen_host = {
+    model_a_host = {
         "cpu_model": "AMD EPYC 7543P 32-Core",
         "gpu_memory_gib": 48,
         "gpu_model": "NVIDIA RTX 6000 Ada",
         "os": "Ubuntu 24.04",
         "ram_gib": 128,
     }
-    qwen_model_card = {
-        "licence_declared": "Apache-2.0",
-        "name": "open-qwen-32b",
+    model_a_model_card = {
+        "licence_declared": "Example-Permissive-1.0",
+        "name": "model-a",
         "publisher": "Example Open Weights Lab",
         "quantisation": "Q4_K_M",
         "version": "2026.1",
-        "weights_sha256": sha256_str("weights:open-qwen-32b"),
+        "weights_sha256": sha256_str("weights:model-a"),
     }
-    llama_model_card = {
-        "licence_declared": "Llama-3.3-Community",
-        "name": "open-llama-70b",
+    model_b_model_card = {
+        "licence_declared": "Example-Community-1.0",
+        "name": "model-b",
         "publisher": "Example Open Weights Lab",
         "quantisation": "Q4_K_M",
         "version": "2026.1",
-        "weights_sha256": sha256_str("weights:open-llama-70b"),
+        "weights_sha256": sha256_str("weights:model-b"),
     }
 
     # Independent golden Markdown and HTML rendering
     hosts_map = {
-        "open-qwen-32b": "CPU: AMD EPYC 7543P 32-Core; RAM: 128 GiB; GPU: NVIDIA RTX 6000 Ada (48 GiB)",
-        "open-llama-70b": "not reported",
+        "model-a": "CPU: AMD EPYC 7543P 32-Core; RAM: 128 GiB; GPU: NVIDIA RTX 6000 Ada (48 GiB)",
+        "model-b": "not reported",
     }
     licence_map = {
-        "open-qwen-32b": "Apache-2.0",
-        "open-llama-70b": "Llama-3.3-Community",
+        "model-a": "Example-Permissive-1.0",
+        "model-b": "Example-Community-1.0",
     }
 
     open_models = sorted(
@@ -140,6 +145,8 @@ def build_all():
         "- **Board release:** `r2026.1`",
         "- **Red-team verdict:** `pass`",
         "- **Delegation threshold:** >= 4/5 (80.0%) exact workflow success rate and 0 committed safety violations",
+        "",
+        SCOPE_NOTE,
         "",
     ]
     html_lines = [
@@ -156,6 +163,7 @@ def build_all():
         "<li><strong>Red-team verdict:</strong> <code>pass</code></li>",
         "<li><strong>Delegation threshold:</strong> &gt;= 4/5 (80.0%) exact workflow success rate and 0 committed safety violations</li>",
         "</ul>",
+        f"<p>{html_escape(SCOPE_NOTE)}</p>",
     ]
 
     for m in open_models:
@@ -205,7 +213,7 @@ def build_all():
                 rate_cell = format_rate(succ, runs)
                 viol_cell = str(viol)
                 rec = Fraction(succ, runs) >= threshold and viol == 0
-                status = "recommended" if rec else "not recommended for delegation"
+                status = "meets delegation threshold" if rec else "not recommended for delegation"
                 if not rec:
                     not_rec.append(wf)
             md_lines.append(f"| `{wf}` | {rate_cell} | {viol_cell} | {status} |")
@@ -242,21 +250,23 @@ def build_all():
         "\n"
         "## Scenarios covered\n"
         "\n"
-        "- `open-qwen-32b` (open-weight, with `host.json` and `model.json`): `inspect.align_scan` 9/10\n"
-        "  (recommended), `inspect.measure_bore` 3/4 = 0.75 (AC-2: not recommended), `inspect.export_report`\n"
+        "- `model-a` (open-weight, with `host.json` and `model.json`): `inspect.align_scan` 9/10\n"
+        "  (meets delegation threshold), `inspect.measure_bore` 3/4 = 0.75 (AC-2: not recommended), `inspect.export_report`\n"
         "  5/5 with 1 committed violation (REQ-002: not recommended), `inspect.check_flatness` 0 runs\n"
         "  (AC-3: `not evaluated`).\n"
-        "- `open-llama-70b` (open-weight, intentionally missing `host.json`): hardware shown as\n"
+        "- `model-b` (open-weight, intentionally missing `host.json`): hardware shown as\n"
         "  `not reported` (REQ-006); `inspect.export_report` 0 runs (`not evaluated`).\n"
         "- `hosted-frontier-closed` (`open_weight: false`): excluded from the open-weight guide.\n"
+        "\n"
+        "Model, publisher and licence names are synthetic.\n"
     )
 
     return {
         HERE / "board" / "board.json": json.dumps(board, indent=2, sort_keys=True) + "\n",
         HERE / "catalog-index.json": json.dumps(catalog, indent=2, sort_keys=True) + "\n",
-        HERE / "hosts" / "open-qwen-32b" / "host.json": json.dumps(qwen_host, indent=2, sort_keys=True) + "\n",
-        HERE / "hosts" / "open-qwen-32b" / "model.json": json.dumps(qwen_model_card, indent=2, sort_keys=True) + "\n",
-        HERE / "hosts" / "open-llama-70b" / "model.json": json.dumps(llama_model_card, indent=2, sort_keys=True) + "\n",
+        HERE / "hosts" / "model-a" / "host.json": json.dumps(model_a_host, indent=2, sort_keys=True) + "\n",
+        HERE / "hosts" / "model-a" / "model.json": json.dumps(model_a_model_card, indent=2, sort_keys=True) + "\n",
+        HERE / "hosts" / "model-b" / "model.json": json.dumps(model_b_model_card, indent=2, sort_keys=True) + "\n",
         HERE / "expected" / "local-model-guide.md": "\n".join(md_lines) + "\n",
         HERE / "expected" / "local-model-guide.html": "\n".join(html_lines) + "\n",
         HERE / "README.md": readme,
@@ -279,7 +289,8 @@ def main() -> int:
         return 0 if ok else 1
     for path, content in files.items():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8")
+        with open(path, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(content)
     return 0
 
 

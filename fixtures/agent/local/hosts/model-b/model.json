@@ -1,0 +1,8 @@
+{
+  "licence_declared": "Example-Community-1.0",
+  "name": "model-b",
+  "publisher": "Example Open Weights Lab",
+  "quantisation": "Q4_K_M",
+  "version": "2026.1",
+  "weights_sha256": "sha256:41a00611e5f3601cd9b593d7ebb669330980b5244574c9d980ad1f1d461d39dc"
+}
