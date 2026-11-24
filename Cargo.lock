@@ -1698,6 +1698,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-io-pmi"
+version = "0.0.1"
+dependencies = [
+ "fid-io-step",
+]
+
+[[package]]
 name = "fid-io-reg"
 version = "0.0.1"
 dependencies = [
