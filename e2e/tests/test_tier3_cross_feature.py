@@ -1079,7 +1079,8 @@ def test_t3_mcp_and_site_outreach(ctx: TestContext) -> None:
 def test_t3_mcp_and_docs_schemas(ctx: TestContext) -> None:
     mcp = ctx.require_bin("fid-mcp")
     exp_idx = ctx.repo_root / "fixtures" / "mcp" / "profiles" / "expected.json"
-    r_prof = ctx.run([mcp, "--profiles-index", str(exp_idx), "--server", "core", "--print-profile"])
+    exp_manifest = ctx.repo_root / "fixtures" / "mcp" / "profiles" / "manifest.json"
+    r_prof = ctx.run([mcp, "--profiles-index", str(exp_idx), "--manifest", str(exp_manifest), "--server", "core", "--print-profile"])
     if r_prof.returncode != 0 or r_prof.stdout.strip() != "profile=core served=8 front_door=6":
         raise TestFailure(f"fid-mcp --print-profile unexpected: {r_prof.stdout} {r_prof.stderr}")
 

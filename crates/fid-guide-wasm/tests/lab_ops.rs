@@ -266,3 +266,30 @@ fn cli_stdout_emits_single_newline_terminated_json_line() {
     let CValue::Obj(map) = val else { panic!("expected JSON object") };
     assert_eq!(map.get("ok"), Some(&CValue::Bool(true)));
 }
+
+#[test]
+fn tier5_gdt_zone_eval_zero_tolerance_overflow_and_unknown_keys() {
+    // 1. Zero tolerance with non-zero usage must NOT report utilization_pct: 0.
+    let (res_zero, _) = run_ok(
+        r#"{"op":"gdt.zone_eval","params":{"unit":"mm","shape":"cylinder","tolerance":0.0,"points":[[0,0,0],[5,0,0]]}}"#,
+    );
+    let CValue::Obj(m0) = res_zero else { panic!("obj") };
+    assert_eq!(m0.get("contains"), Some(&CValue::Bool(false)));
+    assert_eq!(m0.get("utilization_pct"), Some(&CValue::Null));
+
+    // 2. Tiny positive tolerance overflowing ratio * 100.0 returns null utilization_pct instead of crashing.
+    let (res_ovf, _) = run_ok(
+        r#"{"op":"gdt.zone_eval","params":{"unit":"um","shape":"cylinder","tolerance":1e-305,"points":[[0,0,0],[1000,0,0]]}}"#,
+    );
+    let CValue::Obj(m1) = res_ovf else { panic!("obj") };
+    assert_eq!(m1.get("contains"), Some(&CValue::Bool(false)));
+    assert_eq!(m1.get("utilization_pct"), Some(&CValue::Null));
+
+    // 3. Unknown parameter key rejected.
+    let (code, body) = dispatch(
+        br#"{"op":"gdt.zone_eval","params":{"unit":"mm","shape":"cylinder","tolerance":0.1,"axis_dir":[0,0,0],"points":[[0,0,0]]}}"#,
+    );
+    assert_eq!(code, EXIT_OP_ERROR);
+    let s = std::str::from_utf8(&body).unwrap();
+    assert!(s.contains("unknown parameter"), "body={s}");
+}

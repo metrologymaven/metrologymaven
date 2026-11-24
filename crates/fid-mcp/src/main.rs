@@ -54,7 +54,9 @@ fn load_index(path: Option<&str>, proj: &Projection) -> Result<ProfileIndex, Str
     match path {
         Some(p) => {
             let bytes = read_bounded(p, MAX_INDEX_BYTES, "profile_parse")?;
-            ProfileIndex::from_canonical_bytes(&bytes).map_err(|e| e.to_string())
+            let idx = ProfileIndex::from_canonical_bytes(&bytes).map_err(|e| e.to_string())?;
+            idx.validate_against(proj).map_err(|e| e.to_string())?;
+            Ok(idx)
         }
         None => embedded_profile_index(proj).map_err(|e| e.to_string()),
     }

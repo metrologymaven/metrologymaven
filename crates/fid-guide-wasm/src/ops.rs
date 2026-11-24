@@ -294,6 +294,15 @@ pub fn gdt_zone_eval(params: &BTreeMap<String, CValue>) -> Result<CValue, LabErr
     let unit = opt_str(params, "unit")?.unwrap_or("mm");
     let scale_to_m = unit_to_metres(unit)?;
     let shape_name = req_str(params, "shape")?;
+    for key in params.keys() {
+        let allowed =
+            matches!(key.as_str(), "unit" | "shape" | "dialect" | "tolerance" | "origin" | "direction" | "points")
+                || (shape_name == "circle" && key == "plane")
+                || (shape_name == "offset" && matches!(key.as_str(), "disposition_shift" | "deviations"));
+        if !allowed {
+            return Err(LabError::new("invalid_param", format!("unknown parameter `{key}` for shape `{shape_name}`")));
+        }
+    }
     let tolerance_val = req_f64(params, "tolerance")?;
     if tolerance_val < 0.0 {
         return Err(LabError::new("invalid_param", "tolerance must be non-negative"));
@@ -384,7 +393,20 @@ pub fn gdt_zone_eval(params: &BTreeMap<String, CValue>) -> Result<CValue, LabErr
 
     let usage_unit = usage.size_m / scale_to_m;
     let margin_unit = tolerance_val - usage_unit;
-    let ratio = if tolerance_val > 0.0 { usage_unit / tolerance_val } else { 0.0 };
+    let utilization_val = if tolerance_val == 0.0 {
+        if usage_unit == 0.0 {
+            c_f64(0.0)?
+        } else {
+            CValue::Null
+        }
+    } else {
+        let pct = (usage_unit / tolerance_val) * 100.0;
+        if pct.is_finite() {
+            c_f64(pct)?
+        } else {
+            CValue::Null
+        }
+    };
 
     let mut out = BTreeMap::new();
     out.insert("shape".to_string(), c_str(shape.name()));
@@ -396,7 +418,7 @@ pub fn gdt_zone_eval(params: &BTreeMap<String, CValue>) -> Result<CValue, LabErr
     out.insert("driving_index".to_string(), c_u64(u64::from(usage.driving_index))?);
     out.insert("contains".to_string(), c_bool(contains));
     out.insert("margin".to_string(), c_f64(margin_unit)?);
-    out.insert("utilization_pct".to_string(), c_f64(ratio * 100.0)?);
+    out.insert("utilization_pct".to_string(), utilization_val);
     out.insert("interpretation_status".to_string(), c_str("provisional"));
     out.insert("standards_ref".to_string(), c_str("ASME Y14.5-2018; ISO 1101:2017"));
     Ok(CValue::Obj(out))

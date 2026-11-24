@@ -631,3 +631,24 @@ fn replay_after_broken_chain_records_not_replayable_journal_invalid() {
     assert_eq!(as_str(&replay["status"]), "NOT_REPLAYABLE");
     assert_eq!(as_str(&replay["reason"]), "JOURNAL_INVALID");
 }
+
+#[test]
+fn tier5_help_precedence_end_of_options_and_trust_root_open_error_copy() {
+    // 1. --help before or after unknown option prints usage and exits 0.
+    let (code, stdout, stderr) = run_cli(&["--help", "--unknown"]);
+    assert_eq!(code, 0, "stderr={stderr}");
+    assert!(stdout.contains("usage:"), "stdout={stdout}");
+
+    // 2. -- end-of-options allows dash-prefixed package name instead of unknown option (65).
+    let (code, _, stderr) = run_cli(&["--", "-nonexistent.fpkg"]);
+    assert_eq!(code, 70, "expected pkg.io (70), got code={code} stderr={stderr}");
+    assert!(!stderr.contains("unknown option"), "stderr={stderr}");
+
+    // 3. Unreadable / directory --trust-root reports "cannot open trust root" (not "cannot open the package").
+    let (code, stdout, stderr) =
+        run_cli(&["fixtures/pkg/golden/results.fpkg", "--trust-root", "fixtures/troot/roots", "--json"]);
+    assert_eq!(code, 70, "stdout={stdout} stderr={stderr}");
+    let combined = format!("{stdout}\n{stderr}");
+    assert!(combined.contains("cannot open trust root"), "combined={combined}");
+    assert!(!combined.contains("cannot open the package"), "combined={combined}");
+}

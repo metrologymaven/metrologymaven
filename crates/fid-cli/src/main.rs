@@ -204,8 +204,14 @@ fn canon(args: &[String]) -> ExitCode {
                 Err(e) => return read_error(want_json, "stdin", &e),
             }
         }
-        Some(path) => match std::fs::read(path) {
-            Ok(b) => b,
+        Some(path) => match std::fs::File::open(path) {
+            Ok(f) => {
+                let mut buf = Vec::new();
+                match f.take(fid_canon::MAX_INPUT_BYTES as u64 + 1).read_to_end(&mut buf) {
+                    Ok(_) => buf,
+                    Err(e) => return read_error(want_json, path, &e),
+                }
+            }
             Err(e) => return read_error(want_json, path, &e),
         },
     };

@@ -5,7 +5,8 @@
 //! or verifies an existing `.zip` Result Package (`--verify`).
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::io::Read;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use fid_canon::{to_canonical_bytes, CValue};
@@ -115,6 +116,20 @@ fn main() -> ExitCode {
         }
     }
 
+    let mode_count = usize::from(demo)
+        + usize::from(balloon_demo)
+        + usize::from(balloon_pdf.is_some())
+        + usize::from(input.is_some())
+        + usize::from(verify.is_some());
+    if mode_count > 1 {
+        return fail(
+            want_json,
+            CMD_RUN,
+            ErrorCode::UsageError,
+            "mutually exclusive mode flags: choose one of --demo, --input, --verify, --balloon, or --balloon-demo",
+        );
+    }
+
     if balloon_demo || balloon_pdf.is_some() {
         let Some(dir) = out_dir else {
             return fail(
@@ -151,11 +166,9 @@ fn main() -> ExitCode {
     }
 
     let job = if let Some(path) = input {
-        let bytes = match std::fs::read(&path) {
+        let bytes = match read_bounded_file(&path, fid_canon::MAX_INPUT_BYTES) {
             Ok(b) => b,
-            Err(e) => {
-                return fail(want_json, CMD_RUN, ErrorCode::NotFound, &format!("reading {}: {e}", path.display()));
-            }
+            Err((code, msg)) => return fail(want_json, CMD_RUN, code, &msg),
         };
         match JobSpec::from_json(&bytes) {
             Ok(j) => j,
@@ -187,12 +200,26 @@ fn main() -> ExitCode {
     ExitCode::SUCCESS
 }
 
-fn run_verify(path: &PathBuf, want_json: bool) -> ExitCode {
-    let bytes = match std::fs::read(path) {
+fn read_bounded_file(path: &Path, max_bytes: usize) -> Result<Vec<u8>, (ErrorCode, String)> {
+    let f = std::fs::File::open(path).map_err(|e| (ErrorCode::NotFound, format!("reading {}: {e}", path.display())))?;
+    let limit = u64::try_from(max_bytes).unwrap_or(u64::MAX).saturating_add(1);
+    let mut bytes = Vec::new();
+    f.take(limit)
+        .read_to_end(&mut bytes)
+        .map_err(|e| (ErrorCode::NotFound, format!("reading {}: {e}", path.display())))?;
+    if bytes.len() > max_bytes {
+        return Err((
+            ErrorCode::ValidationError,
+            format!("{} exceeds maximum input size of {max_bytes} bytes", path.display()),
+        ));
+    }
+    Ok(bytes)
+}
+
+fn run_verify(path: &Path, want_json: bool) -> ExitCode {
+    let bytes = match read_bounded_file(path, fid_canon::MAX_INPUT_BYTES) {
         Ok(b) => b,
-        Err(e) => {
-            return fail(want_json, CMD_VERIFY, ErrorCode::NotFound, &format!("reading {}: {e}", path.display()));
-        }
+        Err((code, msg)) => return fail(want_json, CMD_VERIFY, code, &msg),
     };
     match verify_package_bytes(&bytes) {
         Ok(members) => {

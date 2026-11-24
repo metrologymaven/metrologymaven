@@ -269,6 +269,58 @@ class ScopeFixtureTest(unittest.TestCase):
         self.assertEqual(code_slug, 1, out_slug)
         self.assertIn("commercial_repo must be a repository slug", out_slug)
 
+    def test_tier5_list_typed_scalars_backslash_builtin_frozen_milestone_and_id_escape(self) -> None:
+        # 1. List-typed scalars must return structured ERROR (exit 1) without TypeError traceback.
+        for field_line, repl in [
+            ("level: 2", "level: [2]"),
+            ("id: ALPHA.ONE", "id: [ALPHA, ONE]"),
+            ("status: leaf", "status: [leaf]"),
+            ("parent: ALPHA", "parent: [ALPHA]"),
+        ]:
+            vtree = self.copy_fixture("valid")
+            a1 = vtree / "spec" / "alpha" / "one" / "NODE.md"
+            a1.write_text(a1.read_text(encoding="utf-8").replace(field_line, repl, 1), encoding="utf-8")
+            code, out, err = run_scope("--root", str(vtree), "check")
+            self.assertEqual(code, 1, f"{repl}: out={out} err={err}")
+            self.assertNotIn("Traceback", out + err)
+            self.assertIn("ERROR", out)
+
+        # 2. Backslash traversal in built_in must be rejected.
+        vtree2 = self.copy_fixture("valid")
+        a1_2 = vtree2 / "spec" / "alpha" / "one" / "NODE.md"
+        a1_2.write_text(
+            a1_2.read_text(encoding="utf-8").replace("status: leaf", "status: leaf\nbuilt_in: [spec/..\\spec]", 1),
+            encoding="utf-8",
+        )
+        code2, out2, _ = run_scope("--root", str(vtree2), "check")
+        self.assertEqual(code2, 1, out2)
+        self.assertIn("built_in path", out2)
+
+        # 3. frozen + built_in node included in cmd_milestone Build progress & waves, and id: ../escaped rejected.
+        vtree3 = self.copy_fixture("valid")
+        (vtree3 / "crates" / "mm-frozen").mkdir(parents=True, exist_ok=True)
+        (vtree3 / "crates" / "mm-frozen" / "Cargo.toml").write_text("[package]\nname='mm-frozen'\n", encoding="utf-8")
+        a1_3 = vtree3 / "spec" / "alpha" / "one" / "NODE.md"
+        a1_3.write_text(
+            a1_3.read_text(encoding="utf-8").replace("status: leaf", "status: frozen\nbuilt_in: [mm-frozen]", 1),
+            encoding="utf-8",
+        )
+        ms_dir = vtree3 / "milestones"
+        ms_dir.mkdir(parents=True, exist_ok=True)
+        ms_file = ms_dir / "m1.md"
+        ms_file.write_text("---\nid: m1\ntitle: M1\ntargets: [ALPHA.ONE]\nexclude: []\n---\n", encoding="utf-8")
+        code3, out3, err3 = run_scope("--root", str(vtree3), "milestone", "milestones/m1.md")
+        self.assertEqual(code3, 0, out3 + err3)
+        ms_out = (vtree3 / "generated" / "milestones" / "m1.md").read_text(encoding="utf-8")
+        self.assertIn("ALPHA.ONE", ms_out)
+        self.assertIn("**1** of **1**", ms_out)
+
+        ms_esc = ms_dir / "esc.md"
+        ms_esc.write_text("---\nid: ../escaped\ntitle: Esc\ntargets: [ALPHA.ONE]\nexclude: []\n---\n", encoding="utf-8")
+        code4, out4, err4 = run_scope("--root", str(vtree3), "milestone", "milestones/esc.md")
+        self.assertNotEqual(code4, 0, out4 + err4)
+        self.assertFalse((vtree3 / "generated" / "escaped.md").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

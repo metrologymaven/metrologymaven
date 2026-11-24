@@ -156,11 +156,16 @@ fn tools_invoke_readonly_preserves_tainted_text_with_custom_bus() {
         InProcessMcpBus::new(inner, Some("root:p/min.fid".to_string())),
         MemoryAuditSink::default(),
     );
-    let req = "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"arguments\":{\"args\":{},\"command\":\"project.list_features@1\"},\"name\":\"tools_invoke_readonly\"}}\n";
+    let req = concat!(
+        "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{\"capabilities\":{},\"clientInfo\":{\"name\":\"t\",\"version\":\"1\"},\"protocolVersion\":\"2025-06-18\"}}\n",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n",
+        "{\"id\":2,\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"arguments\":{\"args\":{},\"command\":\"project.list_features@1\"},\"name\":\"tools_invoke_readonly\"}}\n",
+    );
     let mut out = Vec::new();
     sess.run_stdio(Cursor::new(req.as_bytes()), &mut out).unwrap();
 
-    let reply = parse(std::str::from_utf8(&out).unwrap().trim().as_bytes()).unwrap();
+    let last_line = std::str::from_utf8(&out).unwrap().lines().last().unwrap();
+    let reply = parse(last_line.as_bytes()).unwrap();
     let CValue::Obj(reply_m) = reply else { panic!("reply obj") };
     let CValue::Obj(res) = &reply_m["result"] else { panic!("res obj") };
     assert_eq!(res.get("isError"), Some(&CValue::Bool(false)));
@@ -188,4 +193,84 @@ fn embedded_manifest_projects_min_classes_commands_including_rpt_release_report(
             "embedded manifest missing {required}"
         );
     }
+}
+
+#[test]
+fn tier5_framing_budget_exhaustion_fails_closed_without_smuggling() {
+    let bin = env!("CARGO_BIN_EXE_fid-mcp");
+    let mut child = Command::new(bin)
+        .args(["--headless", "--project", "root:projects/min.fid"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    // > 4 MiB message + > 32 MiB discard budget with NO newline, followed by a valid initialize frame.
+    let mut payload = vec![b'a'; MAX_MESSAGE_BYTES + fid_mcp::framing::DISCARD_BUDGET_BYTES + 16_384];
+    payload.extend_from_slice(b"\n{\"id\":99,\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{}}\n");
+    {
+        let mut stdin = child.stdin.take().unwrap();
+        let _ = stdin.write_all(&payload);
+    }
+    let out = child.wait_with_output().unwrap();
+    assert!(!out.status.success(), "must fail closed on framing budget exhaustion");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert_eq!(lines.len(), 1, "expected exactly 1 -32600 reply and no smuggled reply, got: {stdout}");
+    let reply = parse(lines[0].as_bytes()).unwrap();
+    let CValue::Obj(m) = reply else { panic!("reply obj") };
+    let CValue::Obj(err) = &m["error"] else { panic!("error obj") };
+    assert_eq!(err.get("code"), Some(&CValue::Num(-32600.0)));
+}
+
+#[test]
+fn tier5_crlf_at_max_message_bytes_accepted_and_uninitialized_call_rejected() {
+    let bin = env!("CARGO_BIN_EXE_fid-mcp");
+    let mut child = Command::new(bin)
+        .args(["--headless", "--project", "root:projects/min.fid"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    let prefix = "{\"id\":5,\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{\"pad\":\"";
+    let suffix = "\"}}\r\n";
+    let pad = "a".repeat(MAX_MESSAGE_BYTES - prefix.len() - (suffix.len() - 2));
+    let huge_ok = format!("{prefix}{pad}{suffix}");
+    assert_eq!(huge_ok.len(), MAX_MESSAGE_BYTES + 2);
+    let transcript = concat!(
+        "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"arguments\":{},\"name\":\"tools_search_tools\"}}\n",
+        "{\"id\":1.5,\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{}}\n",
+        "{\"id\":2,\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{}}\n",
+        "{\"id\":3,\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{}}\n",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n",
+        "{\"id\":4,\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"arguments\":{},\"name\":\"align_set_datum\"}}\n",
+    );
+    {
+        let mut stdin = child.stdin.take().unwrap();
+        stdin.write_all(transcript.as_bytes()).unwrap();
+        stdin.write_all(huge_ok.as_bytes()).unwrap();
+    }
+    let out = child.wait_with_output().unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let lines: Vec<&str> = stdout.lines().collect();
+    // 1: uninit tools/call -> -32002; 2: fractional id -> -32600; 3: init #2 -> ok; 4: dup init -> -32600;
+    // 5: disabled align_set_datum -> PolicyRefused (isError: true); 6: huge_ok CRLF -> dup init -32600 (parsed, not framed error).
+    assert_eq!(lines.len(), 6, "stdout={stdout}");
+    let r0 = parse(lines[0].as_bytes()).unwrap();
+    let CValue::Obj(m0) = r0 else { panic!() };
+    let CValue::Obj(e0) = &m0["error"] else { panic!() };
+    assert_eq!(e0.get("code"), Some(&CValue::Num(-32002.0)));
+
+    let r1 = parse(lines[1].as_bytes()).unwrap();
+    let CValue::Obj(m1) = r1 else { panic!() };
+    let CValue::Obj(e1) = &m1["error"] else { panic!() };
+    assert_eq!(e1.get("code"), Some(&CValue::Num(-32600.0)));
+
+    let r4 = parse(lines[4].as_bytes()).unwrap();
+    let CValue::Obj(m4) = r4 else { panic!() };
+    let CValue::Obj(res4) = &m4["result"] else { panic!() };
+    assert_eq!(res4.get("isError"), Some(&CValue::Bool(true)));
 }

@@ -84,7 +84,11 @@ fn rpc_notification(method: &str, params: Option<CValue>) -> CValue {
 }
 
 fn is_valid_rpc_id(v: &CValue) -> bool {
-    matches!(v, CValue::Str(_) | CValue::Num(_) | CValue::I64(_) | CValue::U64(_))
+    match v {
+        CValue::Str(_) | CValue::I64(_) | CValue::U64(_) => true,
+        CValue::Num(n) => n.is_finite() && n.fract() == 0.0,
+        _ => false,
+    }
 }
 
 fn id_key(v: &CValue) -> String {
@@ -101,6 +105,7 @@ pub struct Session<B, A> {
     pub bus: B,
     pub audit: A,
     pub initialized: bool,
+    initialize_requested: bool,
     active_jobs: BTreeMap<String, String>,
 }
 
@@ -118,6 +123,7 @@ impl<B: McpBus, A: AuditSink> Session<B, A> {
             bus,
             audit,
             initialized: false,
+            initialize_requested: false,
             active_jobs: BTreeMap::new(),
         }
     }
@@ -138,6 +144,22 @@ impl<B: McpBus, A: AuditSink> Session<B, A> {
                         &mut writer,
                         &rpc_error(CValue::Null, -32600, "Invalid Request: message exceeds 4 MiB limit"),
                     )?;
+                }
+                FrameLine::BudgetExhausted => {
+                    write_canonical_line(
+                        &mut writer,
+                        &rpc_error(
+                            CValue::Null,
+                            -32600,
+                            "Invalid Request: oversized unterminated frame exceeds discard budget",
+                        ),
+                    )?;
+                    self.cancel_all_active_jobs();
+                    writer.flush()?;
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "oversized_frame_unterminated: exceeded discard budget",
+                    ));
                 }
                 FrameLine::Line(bytes) => {
                     if bytes.iter().all(u8::is_ascii_whitespace) {
@@ -193,7 +215,7 @@ impl<B: McpBus, A: AuditSink> Session<B, A> {
         if has_id && !is_valid_rpc_id(&id) {
             return write_canonical_line(
                 writer,
-                &rpc_error(CValue::Null, -32600, "Invalid Request: id must be string or number"),
+                &rpc_error(CValue::Null, -32600, "Invalid Request: id must be string or integer"),
             );
         }
         let Some(CValue::Str(method)) = map.get("method") else {
@@ -245,9 +267,16 @@ impl<B: McpBus, A: AuditSink> Session<B, A> {
     ) -> io::Result<()> {
         match method {
             "initialize" => {
+                if self.initialize_requested || self.initialized {
+                    return write_canonical_line(
+                        writer,
+                        &rpc_error(id, -32600, "Invalid Request: session already initialized"),
+                    );
+                }
                 if !matches!(params, CValue::Obj(_) | CValue::Null) {
                     return write_canonical_line(writer, &rpc_error(id, -32602, "Invalid params: expected object"));
                 }
+                self.initialize_requested = true;
                 let res = obj(vec![
                     (
                         "_meta",
@@ -266,13 +295,21 @@ impl<B: McpBus, A: AuditSink> Session<B, A> {
             }
             "ping" => write_canonical_line(writer, &rpc_result(id, obj(vec![]))),
             "tools/list" => {
+                if !self.initialized {
+                    return write_canonical_line(writer, &rpc_error(id, -32002, "Server not initialized"));
+                }
                 if !matches!(params, CValue::Obj(_) | CValue::Null) {
                     return write_canonical_line(writer, &rpc_error(id, -32602, "Invalid params: expected object"));
                 }
                 let tools: Vec<CValue> = self.disclosure.listed_tools().into_iter().map(tool_to_mcp_wire).collect();
                 write_canonical_line(writer, &rpc_result(id, obj(vec![("tools", CValue::Arr(tools))])))
             }
-            "tools/call" => self.handle_tools_call(id, params, writer),
+            "tools/call" => {
+                if !self.initialized {
+                    return write_canonical_line(writer, &rpc_error(id, -32002, "Server not initialized"));
+                }
+                self.handle_tools_call(id, params, writer)
+            }
             _ => write_canonical_line(writer, &rpc_error(id, -32601, &format!("Method not found: {method}"))),
         }
     }
@@ -327,6 +364,22 @@ impl<B: McpBus, A: AuditSink> Session<B, A> {
                     let res = call_tool_result(&err_env, None, &warnings);
                     return write_canonical_line(writer, &rpc_result(id, res));
                 };
+
+                // Enforce progressive disclosure: direct `tools/call` requires the tool to be
+                // in the profile's `front_door` or enabled via `tools_enable_tools` (`AUTO.MCP.DISC`).
+                if !self.disclosure.is_enabled(sp.command_id.as_str()) {
+                    let env = Envelope::failed(
+                        sp.command_id.as_str(),
+                        ErrorCode::PolicyRefused,
+                        &format!(
+                            "policy_refused: tool `{name}` (`{}`) is not enabled in this session; enable it with `tools_enable_tools`",
+                            sp.command_id.as_str()
+                        ),
+                        None,
+                    );
+                    let res = call_tool_result(&env, None, &warnings);
+                    return write_canonical_line(writer, &rpc_result(id, res));
+                }
 
                 // Read-only headless fallback check (REQ-AUTO.MCP.MODES.HEADLESS-005).
                 if let Some(holder) = &self.config.read_only_holder {
@@ -492,8 +545,8 @@ mod tests {
         input.push_str("{\"id\":5,\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"arguments\":{\"command\":\"demo.unknown@1\"},\"name\":\"tools_describe_tool\"}}\n");
         // Invoke W2 via tools_invoke_readonly -> policy_refused naming align_set_datum.
         input.push_str("{\"id\":6,\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"arguments\":{\"args\":{\"offset\":{\"unit\":\"mm\",\"value\":\"1\"},\"source\":\"root:in/a.pts\"},\"command\":\"align.set_datum@1\"},\"name\":\"tools_invoke_readonly\"}}\n");
-        // Enable align.set_datum@1 -> emits notifications/tools/list_changed + result.
-        input.push_str("{\"id\":7,\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"arguments\":{\"commands\":[\"align.set_datum@1\"]},\"name\":\"tools_enable_tools\"}}\n");
+        // Enable align.set_datum@1 and project.list_features@1 -> emits notifications/tools/list_changed + result.
+        input.push_str("{\"id\":7,\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"arguments\":{\"commands\":[\"align.set_datum@1\",\"project.list_features@1\"]},\"name\":\"tools_enable_tools\"}}\n");
         // List tools again -> contains align_set_datum.
         input.push_str("{\"id\":8,\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"params\":{}}\n");
         // Call align_set_datum with override claim and raw path -> raw_path_refused + warning!
@@ -556,6 +609,8 @@ mod tests {
     fn standalone_mcp_bus_fails_closed_and_runs_genuine_canon() {
         let mut sess = make_standalone_session();
         let input = concat!(
+            "{\"id\":0,\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{\"capabilities\":{},\"clientInfo\":{\"name\":\"test\",\"version\":\"1\"},\"protocolVersion\":\"2025-06-18\"}}\n",
+            "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n",
             "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"arguments\":{\"args\":{},\"command\":\"align.run_bestfit@1\"},\"name\":\"tools_invoke_readonly\"}}\n",
             "{\"id\":2,\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"arguments\":{\"commands\":[\"align.set_datum@1\"]},\"name\":\"tools_enable_tools\"}}\n",
             "{\"id\":3,\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"arguments\":{\"offset\":{\"unit\":\"mm\",\"value\":\"1\"},\"source\":\"root:in/a.pts\"},\"name\":\"align_set_datum\"}}\n",
@@ -565,24 +620,24 @@ mod tests {
         let mut out = Vec::new();
         sess.run_stdio(Cursor::new(input.as_bytes()), &mut out).unwrap();
         let lines: Vec<&str> = std::str::from_utf8(&out).unwrap().lines().collect();
-        assert_eq!(lines.len(), 6, "stdout:\n{}", String::from_utf8_lossy(&out));
+        assert_eq!(lines.len(), 7, "stdout:\n{}", String::from_utf8_lossy(&out));
 
         // 1. align.run_bestfit@1 fails closed with no_bus_host & isError: true.
-        let bf = parse(lines[0].as_bytes()).unwrap();
+        let bf = parse(lines[1].as_bytes()).unwrap();
         let CValue::Obj(bf_m) = bf else { panic!("bf obj") };
         let CValue::Obj(bf_res) = &bf_m["result"] else { panic!("bf res") };
         assert_eq!(bf_res.get("isError"), Some(&CValue::Bool(true)));
-        assert!(lines[0].contains("no_bus_host"));
+        assert!(lines[1].contains("no_bus_host"));
 
         // 2. align.set_datum@1 fails closed with no_bus_host & isError: true.
-        let sd = parse(lines[3].as_bytes()).unwrap();
+        let sd = parse(lines[4].as_bytes()).unwrap();
         let CValue::Obj(sd_m) = sd else { panic!("sd obj") };
         let CValue::Obj(sd_res) = &sd_m["result"] else { panic!("sd res") };
         assert_eq!(sd_res.get("isError"), Some(&CValue::Bool(true)));
-        assert!(lines[3].contains("no_bus_host"));
+        assert!(lines[4].contains("no_bus_host"));
 
         // 3. canon.canonicalize@1 via tools_invoke_readonly executes genuinely and wraps tainted text.
-        let cn = parse(lines[4].as_bytes()).unwrap();
+        let cn = parse(lines[5].as_bytes()).unwrap();
         let CValue::Obj(cn_m) = cn else { panic!("cn obj") };
         let CValue::Obj(cn_res) = &cn_m["result"] else { panic!("cn res") };
         assert_eq!(cn_res.get("isError"), Some(&CValue::Bool(false)));
@@ -595,18 +650,24 @@ mod tests {
         assert!(delimiters_balanced(text));
 
         // 4. Unknown tool echo is sanitized without raw delimiter or bidi override.
-        assert!(lines[5].contains("no tool with this name"));
-        assert!(!lines[5].contains("<<<FID-UNTRUSTED-DATA-END>>>"));
-        assert!(!lines[5].contains('\u{202e}'));
+        assert!(lines[6].contains("no tool with this name"));
+        assert!(!lines[6].contains("<<<FID-UNTRUSTED-DATA-END>>>"));
+        assert!(!lines[6].contains('\u{202e}'));
     }
 
     #[test]
     fn tools_invoke_readonly_preserves_tainted_text_over_test_bus() {
         let mut sess = make_session();
-        let input = "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"arguments\":{\"args\":{},\"command\":\"project.list_features@1\"},\"name\":\"tools_invoke_readonly\"}}\n";
+        let input = concat!(
+            "{\"id\":0,\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{\"capabilities\":{},\"clientInfo\":{\"name\":\"test\",\"version\":\"1\"},\"protocolVersion\":\"2025-06-18\"}}\n",
+            "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n",
+            "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"arguments\":{\"args\":{},\"command\":\"project.list_features@1\"},\"name\":\"tools_invoke_readonly\"}}\n",
+        );
         let mut out = Vec::new();
         sess.run_stdio(Cursor::new(input.as_bytes()), &mut out).unwrap();
-        let reply = parse(std::str::from_utf8(&out).unwrap().trim().as_bytes()).unwrap();
+        let lines: Vec<&str> = std::str::from_utf8(&out).unwrap().lines().collect();
+        assert_eq!(lines.len(), 2);
+        let reply = parse(lines[1].as_bytes()).unwrap();
         let CValue::Obj(m) = reply else { panic!("reply obj") };
         let CValue::Obj(res) = &m["result"] else { panic!("res obj") };
         assert_eq!(res.get("isError"), Some(&CValue::Bool(false)));

@@ -259,10 +259,11 @@ def run_parallel_pool(
     model: str,
     agent_cmd: Optional[str],
     log_dir: Path,
-) -> None:
+) -> int:
     """Run remaining nodes keeping at most ``parallel`` agent processes active."""
     active: list[tuple[subprocess.Popen[bytes], IO[bytes], Path]] = []
     pending = list(nodes)
+    first_nonzero = 0
 
     try:
         while pending or active:
@@ -280,7 +281,9 @@ def run_parallel_pool(
             reaped = False
             for proc, fh, path in active:
                 if proc.poll() is not None:
-                    finalize_process(proc, fh, path)
+                    rc = finalize_process(proc, fh, path)
+                    if rc != 0 and first_nonzero == 0:
+                        first_nonzero = rc
                     reaped = True
                 else:
                     still_running.append((proc, fh, path))
@@ -299,6 +302,7 @@ def run_parallel_pool(
             except OSError:
                 pass
         raise
+    return first_nonzero
 
 
 def run_scope_check(root: Path) -> int:
@@ -345,7 +349,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     canary_log = log_path_for_node(log_dir, canary)
     print(f"-> expanding {canary}", flush=True)
     canary_msg = f"Follow prompts/expand-node.md exactly. TARGET: {canary}"
-    run_single_agent(
+    canary_rc = run_single_agent(
         root,
         args.agent,
         canary_msg,
@@ -355,10 +359,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
     if not check_auth_ok(canary_log, args.agent):
         return 2
+    if canary_rc != 0:
+        return canary_rc
 
     # Run remaining nodes up to --parallel concurrently.
     if len(nodes) > 1:
-        run_parallel_pool(
+        pool_rc = run_parallel_pool(
             root,
             nodes[1:],
             args.parallel,
@@ -367,6 +373,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             args.agent_cmd,
             log_dir,
         )
+        if pool_rc != 0:
+            return pool_rc
 
     print("All expansions finished. Logs: generated/logs/", flush=True)
 
@@ -375,7 +383,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(f"-> level check for level {next_level}", flush=True)
         lc_log = log_dir / f"level-check-{next_level}.log"
         lc_msg = f"Follow prompts/level-check.md exactly. LEVEL: {next_level}"
-        run_single_agent(
+        lc_rc = run_single_agent(
             root,
             args.agent,
             lc_msg,
@@ -383,7 +391,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             args.agent_cmd,
             lc_log,
         )
-        check_auth_ok(lc_log, args.agent)
+        if not check_auth_ok(lc_log, args.agent):
+            return 2
+        if lc_rc != 0:
+            return lc_rc
 
     return run_scope_check(root)
 

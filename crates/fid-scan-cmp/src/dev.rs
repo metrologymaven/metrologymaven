@@ -399,6 +399,9 @@ fn evaluate_validated(
                             return Ok(DevResult::NoMatch(NoMatchReason::Angle));
                         }
                     }
+                    if !hit.sign_defined {
+                        return Err(DevError::ProjectionFailed { reason: "sign_undefined" });
+                    }
                     if !hit.signed_distance.is_finite() {
                         return Err(DevError::NonFiniteQuery { index: None });
                     }
@@ -845,7 +848,7 @@ mod tests {
             if dot3(normal, foot_res.foot) < 0.0 {
                 normal = [-normal[0], -normal[1], -normal[2]];
             }
-            let signed = cad_sign(p, foot_res.foot, 1e-15, &[(normal, core::f64::consts::TAU)])?;
+            let signed = cad_sign(p, foot_res.foot, 0.0, &[(normal, core::f64::consts::TAU)])?;
             Ok(Some(CadHit {
                 foot: foot_res.foot,
                 normal,
@@ -1292,5 +1295,31 @@ mod tests {
         )
         .unwrap_err();
         assert_eq!(err_idx, DevError::InvalidNormal { index: Some(777) });
+    }
+
+    #[test]
+    fn tier5_cad_shortest_with_undefined_sign_fails_closed() {
+        struct UndefinedSignCad {
+            frame: FrameRef,
+        }
+        impl CadNominal for UndefinedSignCad {
+            fn frame(&self) -> FrameRef {
+                self.frame
+            }
+            fn project_cad(&self, _: [f64; 3], _: f64) -> Result<Option<CadHit>, DevError> {
+                Ok(Some(CadHit {
+                    foot: [0.0, 0.0, 0.0],
+                    normal: [0.0, 0.0, 1.0],
+                    signed_distance: -42.5,
+                    sign_defined: false,
+                    on_open_boundary: true,
+                }))
+            }
+        }
+        let cad = UndefinedSignCad { frame: frame(99) };
+        let params =
+            DevParams { max_distance: 100.0, max_angle: core::f64::consts::FRAC_PI_2, method: Method::Shortest };
+        let err = deviation([0.0, 0.0, 1.0], None, NominalRef::Cad(&cad), &params).unwrap_err();
+        assert_eq!(err, DevError::ProjectionFailed { reason: "sign_undefined" });
     }
 }

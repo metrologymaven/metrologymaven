@@ -593,17 +593,155 @@ impl ProfileIndex {
                 Some(CValue::Str(t)) => t.clone(),
                 _ => return Err(err(format!("missing `title` in profile `{name}`"))),
             };
+            if title.is_empty() || title.chars().count() > MAX_TITLE_CHARS {
+                return Err(err(format!("profile `{name}` `title` must be 1..={MAX_TITLE_CHARS} characters")));
+            }
+            if let Some(ch) = first_forbidden(&title) {
+                return Err(err(format!(
+                    "profile `{name}` `title` contains forbidden character U+{:04X}",
+                    u32::from(ch)
+                )));
+            }
             let served_vec = parse_cvalue_cmd_array(po.get("served"), "served", &name)?;
             let mut served = BTreeSet::new();
             for id in served_vec {
                 served.insert(id);
             }
             let front_door = parse_cvalue_cmd_array(po.get("front_door"), "front_door", &name)?;
+            if let Some(sixteenth) = front_door.get(MAX_FRONT_DOOR) {
+                return Err(ProfileError::ProfileInvalid {
+                    profile: name.clone(),
+                    entry: Some(sixteenth.as_str().to_string()),
+                    detail: format!("front_door exceeds maximum of {MAX_FRONT_DOOR} tools"),
+                });
+            }
+            let mut front_door_set = BTreeSet::new();
+            for entry in &front_door {
+                if !served.contains(entry) {
+                    return Err(ProfileError::ProfileInvalid {
+                        profile: name.clone(),
+                        entry: Some(entry.as_str().to_string()),
+                        detail: "front_door command is not served by this profile".to_string(),
+                    });
+                }
+                if !front_door_set.insert(entry.clone()) {
+                    return Err(ProfileError::ProfileInvalid {
+                        profile: name.clone(),
+                        entry: Some(entry.as_str().to_string()),
+                        detail: "duplicate command in front_door".to_string(),
+                    });
+                }
+            }
+            for id in &served {
+                if domain_of(id) == DISCLOSURE_DOMAIN && !front_door_set.contains(id) {
+                    return Err(ProfileError::ProfileInvalid {
+                        profile: name.clone(),
+                        entry: Some(id.as_str().to_string()),
+                        detail: format!("front_door must include every `{DISCLOSURE_DOMAIN}.*` disclosure command"),
+                    });
+                }
+            }
+            for req_id in ["tools.search_tools@1", "tools.describe_tool@1"] {
+                if !front_door_set.iter().any(|id| id.as_str() == req_id) {
+                    return Err(ProfileError::ProfileInvalid {
+                        profile: name.clone(),
+                        entry: Some(req_id.to_string()),
+                        detail: format!("front_door must include required disclosure command `{req_id}`"),
+                    });
+                }
+            }
             profiles.push(ResolvedProfile { name, title, served, front_door });
         }
         profiles.sort_by(|a, b| a.name.cmp(&b.name));
 
         Ok(ProfileIndex { manifest_digest, profiles })
+    }
+
+    /// Validates this loaded [`ProfileIndex`] against a manifest [`Projection`], ensuring
+    /// `manifest_digest` matches, every served/front-door command is projectable on MCP,
+    /// `front_door` bounds/uniqueness hold, and all `tools.*` disclosure commands are exposed.
+    pub fn validate_against(&self, projection: &Projection) -> Result<(), ProfileError> {
+        if self.manifest_digest != projection.manifest_digest {
+            return Err(ProfileError::ProfileInvalid {
+                profile: "*".to_string(),
+                entry: None,
+                detail: format!(
+                    "manifest_digest mismatch: index has {}, manifest has {}",
+                    self.manifest_digest, projection.manifest_digest
+                ),
+            });
+        }
+        let mut projectable_set: BTreeSet<CommandId> = BTreeSet::new();
+        let mut disclosure_cmds: Vec<CommandId> = Vec::new();
+        for sp in &projection.commands {
+            if is_projectable_mcp(sp) {
+                if domain_of(&sp.command_id) == DISCLOSURE_DOMAIN {
+                    disclosure_cmds.push(sp.command_id.clone());
+                }
+                projectable_set.insert(sp.command_id.clone());
+            }
+        }
+        disclosure_cmds.sort();
+
+        for profile in &self.profiles {
+            if profile.title.is_empty() || profile.title.chars().count() > MAX_TITLE_CHARS {
+                return Err(ProfileError::ProfileInvalid {
+                    profile: profile.name.clone(),
+                    entry: None,
+                    detail: format!("`title` must be 1..={MAX_TITLE_CHARS} characters"),
+                });
+            }
+            if let Some(ch) = first_forbidden(&profile.title) {
+                return Err(ProfileError::ProfileInvalid {
+                    profile: profile.name.clone(),
+                    entry: None,
+                    detail: format!("`title` contains forbidden character U+{:04X}", u32::from(ch)),
+                });
+            }
+            if let Some(sixteenth) = profile.front_door.get(MAX_FRONT_DOOR) {
+                return Err(ProfileError::ProfileInvalid {
+                    profile: profile.name.clone(),
+                    entry: Some(sixteenth.as_str().to_string()),
+                    detail: format!("front_door exceeds maximum of {MAX_FRONT_DOOR} tools"),
+                });
+            }
+            for cmd in &profile.served {
+                if !projectable_set.contains(cmd) {
+                    return Err(ProfileError::ProfileInvalid {
+                        profile: profile.name.clone(),
+                        entry: Some(cmd.as_str().to_string()),
+                        detail: "served command is unknown or not projectable on MCP".to_string(),
+                    });
+                }
+            }
+            let mut front_door_set = BTreeSet::new();
+            for entry in &profile.front_door {
+                if !profile.served.contains(entry) {
+                    return Err(ProfileError::ProfileInvalid {
+                        profile: profile.name.clone(),
+                        entry: Some(entry.as_str().to_string()),
+                        detail: "front_door command is not served by this profile".to_string(),
+                    });
+                }
+                if !front_door_set.insert(entry.clone()) {
+                    return Err(ProfileError::ProfileInvalid {
+                        profile: profile.name.clone(),
+                        entry: Some(entry.as_str().to_string()),
+                        detail: "duplicate command in front_door".to_string(),
+                    });
+                }
+            }
+            for req_tool in &disclosure_cmds {
+                if !front_door_set.contains(req_tool) {
+                    return Err(ProfileError::ProfileInvalid {
+                        profile: profile.name.clone(),
+                        entry: Some(req_tool.as_str().to_string()),
+                        detail: format!("front_door must include every `{DISCLOSURE_DOMAIN}.*` disclosure command"),
+                    });
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Sorted list of known profile names.
@@ -666,6 +804,19 @@ pub struct ServerSelectionArgs {
     pub help: bool,
 }
 
+fn require_non_empty_arg(flag: &str, val: Option<&String>, desc: &str) -> Result<String, ProfileError> {
+    match val {
+        Some(v) if !v.is_empty() => Ok(v.clone()),
+        Some(_) => Err(ProfileError::ProfileParse {
+            source: "cli".to_string(),
+            detail: format!("{flag} requires a non-empty {desc}"),
+        }),
+        None => {
+            Err(ProfileError::ProfileParse { source: "cli".to_string(), detail: format!("{flag} requires a {desc}") })
+        }
+    }
+}
+
 /// Parses `--server <profile>` and `AUTO.MCP` runtime flags from command-line arguments
 /// (excluding argv[0]).
 pub fn parse_server_args(args: &[String]) -> Result<ServerSelectionArgs, ProfileError> {
@@ -678,13 +829,7 @@ pub fn parse_server_args(args: &[String]) -> Result<ServerSelectionArgs, Profile
             parsed.help = true;
             i += 1;
         } else if arg == "--server" {
-            let Some(val) = args.get(i + 1) else {
-                return Err(ProfileError::ProfileParse {
-                    source: "cli".to_string(),
-                    detail: "--server requires a profile name".to_string(),
-                });
-            };
-            parsed.server = Some(val.clone());
+            parsed.server = Some(require_non_empty_arg("--server", args.get(i + 1), "profile name")?);
             i += 2;
         } else if let Some(val) = arg.strip_prefix("--server=") {
             if val.is_empty() {
@@ -696,13 +841,7 @@ pub fn parse_server_args(args: &[String]) -> Result<ServerSelectionArgs, Profile
             parsed.server = Some(val.to_string());
             i += 1;
         } else if arg == "--profiles-index" {
-            let Some(val) = args.get(i + 1) else {
-                return Err(ProfileError::ProfileParse {
-                    source: "cli".to_string(),
-                    detail: "--profiles-index requires a path".to_string(),
-                });
-            };
-            parsed.profiles_index = Some(val.clone());
+            parsed.profiles_index = Some(require_non_empty_arg("--profiles-index", args.get(i + 1), "path")?);
             i += 2;
         } else if let Some(val) = arg.strip_prefix("--profiles-index=") {
             if val.is_empty() {
@@ -723,13 +862,7 @@ pub fn parse_server_args(args: &[String]) -> Result<ServerSelectionArgs, Profile
             parsed.bridge = true;
             i += 1;
         } else if arg == "--project" {
-            let Some(val) = args.get(i + 1) else {
-                return Err(ProfileError::ProfileParse {
-                    source: "cli".to_string(),
-                    detail: "--project requires a root handle".to_string(),
-                });
-            };
-            parsed.project = Some(val.clone());
+            parsed.project = Some(require_non_empty_arg("--project", args.get(i + 1), "root handle")?);
             i += 2;
         } else if let Some(val) = arg.strip_prefix("--project=") {
             if val.is_empty() {
@@ -741,13 +874,7 @@ pub fn parse_server_args(args: &[String]) -> Result<ServerSelectionArgs, Profile
             parsed.project = Some(val.to_string());
             i += 1;
         } else if arg == "--manifest" {
-            let Some(val) = args.get(i + 1) else {
-                return Err(ProfileError::ProfileParse {
-                    source: "cli".to_string(),
-                    detail: "--manifest requires a path".to_string(),
-                });
-            };
-            parsed.manifest = Some(val.clone());
+            parsed.manifest = Some(require_non_empty_arg("--manifest", args.get(i + 1), "path")?);
             i += 2;
         } else if let Some(val) = arg.strip_prefix("--manifest=") {
             if val.is_empty() {
@@ -759,13 +886,7 @@ pub fn parse_server_args(args: &[String]) -> Result<ServerSelectionArgs, Profile
             parsed.manifest = Some(val.to_string());
             i += 1;
         } else if arg == "--agent" {
-            let Some(val) = args.get(i + 1) else {
-                return Err(ProfileError::ProfileParse {
-                    source: "cli".to_string(),
-                    detail: "--agent requires a name".to_string(),
-                });
-            };
-            parsed.agent = Some(val.clone());
+            parsed.agent = Some(require_non_empty_arg("--agent", args.get(i + 1), "name")?);
             i += 2;
         } else if let Some(val) = arg.strip_prefix("--agent=") {
             if val.is_empty() {

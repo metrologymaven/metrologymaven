@@ -177,7 +177,7 @@ def page(path: str, title: str, desc: str, body: str, d, extra_head: str = "") -
 </main>
 <footer class="foot"><div class="wrap">
 <span>Metrology Maven · open-source dimensional metrology · code MIT OR Apache-2.0, spec CC-BY-4.0</span>
-<span><a href="{REPO}">GitHub</a> · <a href="mailto:{CONTACT}">{CONTACT}</a> · built from <a href="{REPO}/commit/{d['rev']}"><span class="mono">{d['rev']}</span></a> on {d['date']}</span>
+<span><a href="{REPO}">GitHub</a> · <a href="mailto:{CONTACT}">{CONTACT}</a> · built from <a href="{REPO}/commit/{e(d['rev'])}"><span class="mono">{e(d['rev'])}</span></a> on {e(d['date'])}</span>
 </div></footer>
 </body>
 </html>
@@ -291,7 +291,7 @@ def app_page(a, d):
     for dom in a["domains"]:
         n = d["by_id"].get(dom)
         c = per[dom]
-        rows.append(f'<tr><td><span class="mono">{dom}</span> {e(n.meta.get("title", "") if n else "")}</td>'
+        rows.append(f'<tr><td><span class="mono">{e(dom)}</span> {e(n.meta.get("title", "") if n else "")}</td>'
                     f'<td class="n">{c["leaf"]}</td><td class="n">{c["built"]}</td><td class="n">{c["open"]}</td></tr>')
         gaps += [x for x in d["nodes"] if x.id.split(".")[0] == dom and x.status == "open"]
     seeds = ""
@@ -301,7 +301,7 @@ def app_page(a, d):
             c = d["seed_rows"][f]
             tot = sum(c.values()) or 1
             srows.append(f'<tr><td>{e(f.removesuffix(".md"))}</td><td class="n">{c["covered"]}</td><td class="n">{c["out of scope"]}</td>'
-                         f'<td class="n">{c["uncovered"]}</td><td><div class="bar"><i style="width:{100 * c["covered"] / tot:.0f}%"></i></div></td></tr>')
+                         f'<td class="n">{c["uncovered"]}</td><td>{_pct_bar(100 * c["covered"] / tot)}</td></tr>')
         seeds = f"""<h3>Industry workflow coverage mapped into the spec</h3>
 <p class="muted">Reference workflow inventories in <code>seeds/</code> are traced to the spec nodes that will cover them. "Specified" means written down as a work order, not built.</p>
 <div class="tbl"><table><thead><tr><th>Workflow inventory</th><th>Specified</th><th>Out of scope</th><th>Not yet</th><th>Share specified</th></tr></thead><tbody>{"".join(srows)}</tbody></table></div>"""
@@ -317,11 +317,11 @@ def app_page(a, d):
 <h1>Metrology Maven {e(a["name"])}</h1>
 <p class="lead">{e(a["pitch"])}</p>
 <p>Workflow focus: <b>{e(a["workflow"])}</b></p>
-<p>{status_pill} <span class="pill p">Work starts in {a["phase"]}</span></p>
+<p>{status_pill} <span class="pill p">Work starts in {e(a["phase"])}</span></p>
 </section>
 <section class="sheet">{fcf("S", "STATUS", "GENERATED")}
 <h2>Where it stands</h2>
-<p class="muted">Generated from the spec tree at <span class="mono">{d['rev']}</span>. "Ready" means a work order is written and can be built; it does not mean the feature exists yet. This app also builds on the <a href="/apps/">shared core domains</a>.</p>
+<p class="muted">Generated from the spec tree at <span class="mono">{e(d['rev'])}</span>. "Ready" means a work order is written and can be built; it does not mean the feature exists yet. This app also builds on the <a href="/apps/">shared core domains</a>.</p>
 <div class="tbl"><table><thead><tr><th>Domain</th><th>Ready to build</th><th>Built</th><th>Still open</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>
 {seeds}
 <h3>Known gaps</h3>
@@ -370,9 +370,9 @@ def status(d):
     mx = max(d["per"][x.id]["nodes"] for x in d["domains"]) or 1
     for x in d["domains"]:
         c = d["per"][x.id]
-        rows.append(f'<tr><td><span class="mono">{x.id}</span></td><td>{e(x.meta.get("title", ""))}</td><td class="n">{x.meta.get("phase", "")}</td>'
+        rows.append(f'<tr><td><span class="mono">{e(x.id)}</span></td><td>{e(x.meta.get("title", ""))}</td><td class="n">{e(x.meta.get("phase", ""))}</td>'
                     f'<td class="n">{c["nodes"]}</td><td class="n">{c["leaf"]}</td><td class="n">{c["built"]}</td><td class="n">{c["open"]}</td>'
-                    f'<td><div class="bar"><i style="width:{100 * c["leaf"] / mx:.0f}%"></i></div></td></tr>')
+                    f'<td>{_pct_bar(100 * c["leaf"] / mx)}</td></tr>')
     srows = "".join(f'<tr><td>{e(f.removesuffix(".md"))}</td><td class="n">{c["covered"]}</td><td class="n">{c["out of scope"]}</td><td class="n">{c["uncovered"]}</td></tr>'
                     for f, c in sorted(d["seed_rows"].items()))
     acc = sum(1 for x in d["decisions"] if x.get("status") == "accepted")
@@ -381,7 +381,7 @@ def status(d):
     body = f"""
 <section class="hero">{fcf("S", "STATUS", d['rev'], d['date'])}
 <h1>Project status</h1>
-<p class="lead">Generated from the repository at commit <a class="mono" href="{REPO}/commit/{d['rev']}">{d['rev']}</a> on {d['date']}. Nothing on this page is written by hand.</p>{notice(d)}</section>
+<p class="lead">Generated from the repository at commit <a class="mono" href="{REPO}/commit/{e(d['rev'])}">{e(d['rev'])}</a> on {e(d['date'])}. Nothing on this page is written by hand.</p>{notice(d)}</section>
 <section class="sheet">{fcf("1", "SPEC TREE BY DOMAIN")}
 <div class="stats"><div class="stat"><b>{len(d['nodes']):,}</b><small>nodes</small></div><div class="stat"><b>{d['leaves']:,}</b><small>leaves (ready to build)</small></div><div class="stat"><b>{d['built']:,}</b><small>leaves built in code</small></div><div class="stat"><b>{d['open']}</b><small>open nodes</small></div><div class="stat"><b>{acc}/{len(d['decisions'])}</b><small>decisions accepted</small></div></div>
 <div class="tbl"><table><thead><tr><th>ID</th><th>Domain</th><th>Starts</th><th>Nodes</th><th>Leaves</th><th>Built</th><th>Open</th><th>Leaves</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>
@@ -463,6 +463,16 @@ def _subtree_counts(node_id: str, d) -> tuple[int, int, int]:
     return leaves, built, open_n
 
 
+def _pct_bar(pct: float) -> str:
+    w = max(0.0, min(100.0, pct))
+    return (
+        f'<svg class="pct-svg" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true">'
+        f'<rect class="pct-bg" x="0" y="0" width="100" height="8"/>'
+        f'<rect class="pct-fill" x="0" y="0" width="{w:.1f}" height="8"/>'
+        f'</svg>'
+    )
+
+
 def _scale_bar(lo_m: float, hi_m: float, tier: str) -> str:
     """Logarithmic bar from 1e-10 m (0.1 nm) to 1e2 m (100 m) using CSP-safe SVG attributes."""
     log_min, log_max = -10.0, 2.0
@@ -525,7 +535,7 @@ def render_field_map_section(fmap: dict, d) -> str:
         f'<div class="tier-filter" data-field-map-filter role="group" aria-label="Filter metrology pillars by scope tier">{"".join(buttons)}</div>'
         f'<div class="grid">{"".join(cards)}</div>'
         f'<p class="muted"><small>Scale bar spans logarithmic length scale 0.1 nm (left) to 100 m (right). '
-        f'Counts reflect live repository revision <span class="mono">{d["rev"]}</span> under '
+        f'Counts reflect live repository revision <span class="mono">{e(d["rev"])}</span> under '
         f'<a href="{REPO}/blob/main/decisions/D-054-dimensional-metrology-scope-and-field-guide.md">Decision D-054</a>.</small></p>'
     )
 
@@ -706,7 +716,8 @@ def main() -> int:
     budget = 500_000
     worst = max((p.stat().st_size, p) for p in DIST.rglob("*.html"))
     wasm_msg = f", WASM kernel {d['wasm_size']:,} bytes" if d["wasm_sha256"] else ", no WASM binary staged"
-    print(f"built {len(pages)} pages into {DIST.relative_to(ROOT)} (largest {worst[1].relative_to(DIST)}: {worst[0]:,} bytes{wasm_msg})")
+    dist_lbl = DIST.relative_to(ROOT) if DIST.is_relative_to(ROOT) else DIST
+    print(f"built {len(pages)} pages into {dist_lbl} (largest {worst[1].relative_to(DIST)}: {worst[0]:,} bytes{wasm_msg})")
     if worst[0] > budget:
         print(f"ERROR page over the {budget:,}-byte budget (REQ-OUTR.SITE-010)")
         return 1

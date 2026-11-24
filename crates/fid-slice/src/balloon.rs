@@ -8,7 +8,8 @@
 //! 5. `RPT.BALLOON.AUTO.EXPORT` (deterministic vector-overlaid `ballooned.pdf` + AS9102 `form3-starter.csv`)
 
 use std::collections::BTreeMap;
-use std::path::{Component, Path};
+use std::path::{Component, Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use fid_gdt::chars::dprof::DprofState;
 use fid_gdt::chars::spec::{PlanId, SpecState};
@@ -71,7 +72,9 @@ fn validate_export_out_dir(out_dir: &Path) -> Result<(), SliceError> {
             format!("export directory '{}' escapes export root via '..'", out_dir.display()),
         ));
     }
-    if !out_dir.is_absolute() {
+    let (canon_root, mut cur) = if out_dir.is_absolute() {
+        (None, PathBuf::new())
+    } else {
         if out_dir.components().any(|c| matches!(c, Component::Prefix(_) | Component::RootDir)) {
             return Err(SliceError::new(
                 "io.root_violation",
@@ -80,45 +83,65 @@ fn validate_export_out_dir(out_dir: &Path) -> Result<(), SliceError> {
         }
         let cwd = std::env::current_dir()
             .map_err(|e| SliceError::new("io.root_violation", format!("resolving current directory: {e}")))?;
-        let canon_root = std::fs::canonicalize(&cwd)
+        let canon = std::fs::canonicalize(&cwd)
             .map_err(|e| SliceError::new("io.root_violation", format!("canonicalizing export root: {e}")))?;
-        let mut cur = cwd;
-        for comp in out_dir.components() {
-            let Component::Normal(seg) = comp else {
-                continue;
-            };
-            cur.push(seg);
-            match std::fs::symlink_metadata(&cur) {
-                Ok(meta) => {
-                    let canon_cur = std::fs::canonicalize(&cur).map_err(|e| {
-                        SliceError::new(
-                            "io.root_violation",
-                            format!(
-                                "export directory '{}' cannot be resolved inside export root: {e}",
-                                out_dir.display()
-                            ),
-                        )
-                    })?;
-                    if !canon_cur.starts_with(&canon_root) {
+        (Some(canon), cwd)
+    };
+
+    let check_path = |probe: &Path, is_leaf: bool| -> Result<(), SliceError> {
+        match std::fs::symlink_metadata(probe) {
+            Ok(meta) => {
+                let canon_cur = std::fs::canonicalize(probe).map_err(|e| {
+                    SliceError::new(
+                        "io.root_violation",
+                        format!("export directory '{}' cannot be resolved inside export root: {e}", out_dir.display()),
+                    )
+                })?;
+                if let Some(root) = &canon_root {
+                    if !canon_cur.starts_with(root) {
                         return Err(SliceError::new(
                             "io.root_violation",
                             format!("export directory '{}' escapes export root", out_dir.display()),
                         ));
                     }
-                    if meta.file_type().is_symlink() && !canon_cur.is_dir() {
-                        return Err(SliceError::new(
-                            "io.root_violation",
-                            format!("export directory '{}' traverses non-directory symlink", out_dir.display()),
-                        ));
-                    }
                 }
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => break,
-                Err(e) => {
+                if meta.file_type().is_symlink() && (is_leaf || !canon_cur.is_dir()) {
                     return Err(SliceError::new(
                         "io.root_violation",
-                        format!("inspecting export directory '{}': {e}", out_dir.display()),
+                        format!("export directory '{}' traverses symlink", out_dir.display()),
                     ));
                 }
+                Ok(())
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(SliceError::new(
+                "io.root_violation",
+                format!("inspecting export directory '{}': {e}", out_dir.display()),
+            )),
+        }
+    };
+
+    let comps: Vec<Component<'_>> = out_dir.components().collect();
+    for (idx, comp) in comps.iter().enumerate() {
+        let is_leaf = idx + 1 == comps.len();
+        match comp {
+            Component::Prefix(_) | Component::RootDir => {
+                cur.push(comp.as_os_str());
+            }
+            Component::CurDir => {
+                if !cur.as_os_str().is_empty() {
+                    check_path(&cur, is_leaf)?;
+                }
+            }
+            Component::Normal(seg) => {
+                cur.push(seg);
+                check_path(&cur, is_leaf)?;
+            }
+            Component::ParentDir => {
+                return Err(SliceError::new(
+                    "io.root_violation",
+                    format!("export directory '{}' escapes export root via '..'", out_dir.display()),
+                ));
             }
         }
     }
@@ -274,12 +297,19 @@ pub fn run_balloon_file(
 /// (`12 dimensions + 3 GD&T frames`), writing `ballooned.pdf` and `form3-starter.csv` into `out_dir`.
 pub fn run_balloon_demo(out_dir: &Path) -> Result<BalloonSliceOutput, SliceError> {
     validate_export_out_dir(out_dir)?;
-    std::fs::create_dir_all(out_dir)
-        .map_err(|e| SliceError::new("io_error", format!("creating {}: {e}", out_dir.display())))?;
-    let demo_pdf = out_dir.join("vector_bracket.pdf");
-    std::fs::write(&demo_pdf, DEMO_DRAWING_PDF)
-        .map_err(|e| SliceError::new("io_error", format!("writing {}: {e}", demo_pdf.display())))?;
-    run_balloon_file(&demo_pdf, out_dir, Dialect::Asme, AuthoredUnit::Mm)
+    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
+    let stage_dir = std::env::temp_dir().join(format!("fid_slice_demo_{}_{nanos}", std::process::id()));
+    std::fs::create_dir_all(&stage_dir)
+        .map_err(|e| SliceError::new("io_error", format!("creating {}: {e}", stage_dir.display())))?;
+    let demo_pdf = stage_dir.join("vector_bracket.pdf");
+    let write_res = std::fs::write(&demo_pdf, DEMO_DRAWING_PDF);
+    if let Err(e) = write_res {
+        let _ = std::fs::remove_dir_all(&stage_dir);
+        return Err(SliceError::new("io_error", format!("writing {}: {e}", demo_pdf.display())));
+    }
+    let res = run_balloon_file(&demo_pdf, out_dir, Dialect::Asme, AuthoredUnit::Mm);
+    let _ = std::fs::remove_dir_all(&stage_dir);
+    res
 }
 
 fn proposal_to_row(p: &BalloonProposal) -> BalloonSummaryRow {

@@ -198,7 +198,8 @@ def test_fid_verify_zero_network_crates(ctx: TestContext) -> None:
 def test_mcp_print_profile_core(ctx: TestContext) -> None:
     mcp = ctx.require_bin("fid-mcp")
     idx = ctx.repo_root / "fixtures" / "mcp" / "profiles" / "expected.json"
-    res = ctx.run([mcp, "--profiles-index", str(idx), "--server", "core", "--print-profile"])
+    manifest = ctx.repo_root / "fixtures" / "mcp" / "profiles" / "manifest.json"
+    res = ctx.run([mcp, "--profiles-index", str(idx), "--manifest", str(manifest), "--server", "core", "--print-profile"])
     if res.returncode != 0:
         raise TestFailure(f"fid-mcp core --print-profile exited {res.returncode}: {res.stderr}")
     if res.stdout.strip() != "profile=core served=8 front_door=6":
@@ -214,7 +215,8 @@ def test_mcp_print_profile_core(ctx: TestContext) -> None:
 def test_mcp_print_profile_inspect(ctx: TestContext) -> None:
     mcp = ctx.require_bin("fid-mcp")
     idx = ctx.repo_root / "fixtures" / "mcp" / "profiles" / "expected.json"
-    res = ctx.run([mcp, "--profiles-index", str(idx), "--server", "inspect", "--print-profile"])
+    manifest = ctx.repo_root / "fixtures" / "mcp" / "profiles" / "manifest.json"
+    res = ctx.run([mcp, "--profiles-index", str(idx), "--manifest", str(manifest), "--server", "inspect", "--print-profile"])
     if res.returncode != 0:
         raise TestFailure(f"fid-mcp inspect --print-profile exited {res.returncode}: {res.stderr}")
     if res.stdout.strip() != "profile=inspect served=11 front_door=7":

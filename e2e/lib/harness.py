@@ -240,6 +240,8 @@ def execute_suite(
     tests = registered_tests()
     if tier_filter is not None:
         tests = [t for t in tests if t.tier == tier_filter]
+    else:
+        tests = [t for t in tests if t.tier in (1, 2, 3, 4)]
     if feature_filter is not None:
         tests = [t for t in tests if t.feature == feature_filter]
 

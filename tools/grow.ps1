@@ -15,7 +15,9 @@
 #>
 param(
   [int]$Level = -1,
+  [ValidateRange(0, [int]::MaxValue)]
   [int]$Limit = 0,
+  [ValidateRange(1, 64)]
   [int]$Parallel = 3,
   [ValidateSet("claude", "codex")]
   [string]$Agent = "claude",
@@ -53,7 +55,9 @@ function Get-AgentCommand([string]$message) {
     if ($Model) { $a += @("--model", $Model) }
     return @{ Exe = "claude"; Args = $a }
   }
-  return @{ Exe = "codex"; Args = @("exec", "--full-auto", $message) }
+  $a = @("exec", "--full-auto", $message)
+  if ($Model) { $a += @("--model", $Model) }
+  return @{ Exe = "codex"; Args = $a }
 }
 
 $agentJob = {

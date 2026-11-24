@@ -188,3 +188,23 @@ fn usage_errors_are_exit_2_envelopes() {
         assert_eq!(env.error.unwrap().code, ErrorCode::UsageError, "{args:?}");
     }
 }
+
+#[test]
+fn tier5_ctrl_help_leading_json_and_inline_eq_flags() {
+    for help_args in [&["ctrl", "--help"][..], &["ctrl", "status", "--help"][..], &["ctrl", "ping", "-h"][..]] {
+        let r = fid(help_args, &[]);
+        assert_eq!(r.code, 0, "{help_args:?}: stderr={}", r.stderr);
+        assert!(r.stdout.contains("fid ctrl status"), "{help_args:?}: stdout={}", r.stdout);
+    }
+
+    // Leading --json and --flag=value syntax do not produce UsageError (2); without running app -> exit 6 (NotRun).
+    let root = temp_dir("t5-inline");
+    let rt = root.join("run");
+    let tok = token(&root);
+    let rt_flag = format!("--runtime-dir={}", rt.display());
+    let tok_flag = format!("--token-file={}", tok.display());
+    let r = fid(&["ctrl", "--json", "status", &rt_flag, &tok_flag], &[]);
+    assert_eq!(r.code, 6, "expected NotRun (6), got {} stderr={}", r.code, r.stderr);
+    let env = one_envelope(&r);
+    assert_eq!(env.outcome, Outcome::NotRun);
+}

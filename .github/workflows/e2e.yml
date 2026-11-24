@@ -46,10 +46,15 @@ jobs:
       - name: Run Tier 1-4 E2E suite (strict)
         shell: bash
         run: python e2e/run_e2e.py --strict --out "$RUNNER_TEMP/e2e-report.json"
+      - name: Run Tier 5 adversarial E2E suite (strict)
+        shell: bash
+        run: python e2e/run_e2e.py --strict --tier 5 --out "$RUNNER_TEMP/e2e-tier5-report.json"
       - name: Upload E2E report artifact
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: e2e-report-${{ matrix.os }}
-          path: ${{ runner.temp }}/e2e-report.json
+          path: |
+            ${{ runner.temp }}/e2e-report.json
+            ${{ runner.temp }}/e2e-tier5-report.json
           if-no-files-found: warn

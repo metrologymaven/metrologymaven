@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Opaque-box E2E test runner for Metrology Maven (Tiers 1-4, F1-F7).
+"""Opaque-box E2E test runner for Metrology Maven (Tiers 1-4 default, Tier 5 opt-in, F1-F7).
 
 Usage:
-    python e2e/run_e2e.py [--mode auto|strict] [--tier 1|2|3|4|all]
+    python e2e/run_e2e.py [--mode auto|strict] [--tier 1|2|3|4|5|all]
                           [--feature F1..F7] [--out <report.json>] [--keep-workdirs]
 """
 
@@ -42,9 +42,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     ap.add_argument(
         "--tier",
-        choices=("1", "2", "3", "4", "all"),
+        choices=("1", "2", "3", "4", "5", "all"),
         default="all",
-        help="Filter by test tier (1, 2, 3, 4, or all)",
+        help="Filter by test tier (1, 2, 3, 4, 5, or all [Tiers 1-4])",
     )
     ap.add_argument(
         "--feature",

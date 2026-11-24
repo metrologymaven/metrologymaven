@@ -2,9 +2,8 @@
 //! [`fid_bus_api::InProcessBus`] adapter for `fid-mcp`.
 
 use crate::adapter::{BusCall, McpBus};
-use crate::framing::MAX_MESSAGE_BYTES;
 use fid_bus_api::{BusApiError, BusEnvelope, ChannelKind, CommandBus, CommandCall, InProcessBus, PrincipalInfo};
-use fid_canon::{digest, parse_with_limits, to_canonical_bytes, CValue};
+use fid_canon::{digest, to_canonical_bytes, CValue};
 use fid_surface::{project, Envelope, ErrorCode, Outcome, Projection};
 
 use crate::profiles::{parse_profile_bytes, resolve_profiles, ProfileError, ProfileIndex, CORE_PROFILE_TOML};
@@ -133,7 +132,7 @@ pub fn embedded_manifest_bytes() -> Vec<u8> {
             "exposed",
             false,
             "Canonicalize JSON",
-            "Parse JSON and return RFC 8785 canonical JSON and its SHA-256 digest.",
+            "Canonicalize a JSON value and return RFC 8785 canonical JSON and its SHA-256 digest.",
             obj(vec![
                 ("properties", obj(vec![("input", obj(vec![]))])),
                 ("required", arr(vec![s("input")])),
@@ -449,21 +448,8 @@ fn invoke_canon_canonicalize(full: &str, params: &CValue) -> Envelope {
     let CValue::Obj(map) = params else {
         return Envelope::failed(full, ErrorCode::ValidationError, "arguments must be an object", None);
     };
-    let Some(raw_input) = map.get("input") else {
+    let Some(target_val) = map.get("input") else {
         return Envelope::failed(full, ErrorCode::ValidationError, "missing required parameter `input`", None);
-    };
-    let parsed_val;
-    let target_val = match raw_input {
-        CValue::Str(raw) => match parse_with_limits(raw.as_bytes(), MAX_MESSAGE_BYTES, fid_canon::MAX_DEPTH) {
-            Ok(v) => {
-                parsed_val = v;
-                &parsed_val
-            }
-            Err(e) => {
-                return Envelope::failed(full, ErrorCode::ValidationError, &format!("canon_parse: {e}"), None);
-            }
-        },
-        other => other,
     };
     let bytes = match to_canonical_bytes(target_val) {
         Ok(b) => b,

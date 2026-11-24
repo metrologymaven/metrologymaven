@@ -345,12 +345,19 @@ def test_scenario_4_spec_site_guide_qa_pipeline(ctx: TestContext) -> None:
     csp_map = parse_single_line_json(r_node.stdout)
     for route in ("/", "/status/", "/apps/", "/guide-fake/"):
         csp = str(csp_map.get(route, ""))
-        if "script-src 'none'" not in csp or "wasm-unsafe-eval" in csp or "unsafe-inline" in csp or "unsafe-eval" in csp:
+        if (
+            not re.search(r"(?:^|;\s*)script-src\s+'none'\s*(?:;|$)", csp)
+            or not re.search(r"(?:^|;\s*)style-src\s+'self'\s*(?:;|$)", csp)
+            or "wasm-unsafe-eval" in csp
+            or "unsafe-inline" in csp
+            or "unsafe-eval" in csp
+        ):
             raise TestFailure(f"unexpected non-guide CSP for {route}: {csp!r}")
     for route in ("/guide", "/guide/", "/guide/fits/"):
         csp = str(csp_map.get(route, ""))
         if (
-            "script-src 'self' 'wasm-unsafe-eval'" not in csp
+            not re.search(r"(?:^|;\s*)script-src\s+'self'\s+'wasm-unsafe-eval'\s*(?:;|$)", csp)
+            or not re.search(r"(?:^|;\s*)style-src\s+'self'\s*(?:;|$)", csp)
             or "unsafe-inline" in csp
             or re.search(r"(?<!wasm-)unsafe-eval", csp)
         ):

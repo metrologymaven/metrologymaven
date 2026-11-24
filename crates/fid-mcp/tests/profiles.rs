@@ -105,9 +105,17 @@ fn ac5_unserved_projectable_command_fails_command_unserved() {
 fn ac6_cli_unknown_profile_exits_2_lists_known_and_writes_no_stdout() {
     let bin = env!("CARGO_BIN_EXE_fid-mcp");
     let index_path = fixtures_dir().join("expected.json");
+    let manifest_path = fixtures_dir().join("manifest.json");
 
     let out = Command::new(bin)
-        .args(["--profiles-index", index_path.to_str().expect("utf-8 path"), "--server", "nosuch"])
+        .args([
+            "--profiles-index",
+            index_path.to_str().expect("utf-8 path"),
+            "--manifest",
+            manifest_path.to_str().expect("utf-8 path"),
+            "--server",
+            "nosuch",
+        ])
         .output()
         .expect("run fid-mcp");
 
@@ -123,20 +131,34 @@ fn ac6_cli_unknown_profile_exits_2_lists_known_and_writes_no_stdout() {
 fn cli_default_server_selects_core_and_named_server_selects_inspect() {
     let bin = env!("CARGO_BIN_EXE_fid-mcp");
     let index_path = fixtures_dir().join("expected.json");
+    let manifest_path = fixtures_dir().join("manifest.json");
 
     let default_out = Command::new(bin)
-        .args(["--profiles-index", index_path.to_str().expect("utf-8 path"), "--print-profile"])
+        .args([
+            "--profiles-index",
+            index_path.to_str().expect("utf-8 path"),
+            "--manifest",
+            manifest_path.to_str().expect("utf-8 path"),
+            "--print-profile",
+        ])
         .output()
         .expect("run fid-mcp default");
-    assert!(default_out.status.success());
+    assert!(default_out.status.success(), "stderr: {}", String::from_utf8_lossy(&default_out.stderr));
     let stdout = String::from_utf8_lossy(&default_out.stdout);
     assert!(stdout.contains("profile=core "), "default must select core, got: {stdout}");
 
     let inspect_out = Command::new(bin)
-        .args(["--profiles-index", index_path.to_str().expect("utf-8 path"), "--server=inspect", "--print-profile"])
+        .args([
+            "--profiles-index",
+            index_path.to_str().expect("utf-8 path"),
+            "--manifest",
+            manifest_path.to_str().expect("utf-8 path"),
+            "--server=inspect",
+            "--print-profile",
+        ])
         .output()
         .expect("run fid-mcp inspect");
-    assert!(inspect_out.status.success());
+    assert!(inspect_out.status.success(), "stderr: {}", String::from_utf8_lossy(&inspect_out.stderr));
     let stdout2 = String::from_utf8_lossy(&inspect_out.stdout);
     assert!(stdout2.contains("profile=inspect "), "must select inspect, got: {stdout2}");
 }
@@ -211,4 +233,66 @@ front_door = [
     let err = resolve_profiles(&proj, &[core.clone(), core]).expect_err("duplicate profile must fail");
     assert_eq!(err.code(), "profile_invalid");
     assert!(matches!(err, ProfileError::ProfileInvalid { ref profile, .. } if profile == "core"));
+}
+
+#[test]
+fn tier5_tampered_profiles_index_rejected_for_digest_front_door_and_missing_tools() {
+    let proj = load_projection("manifest.json");
+    let expected = fs::read_to_string(fixtures_dir().join("expected.json")).expect("read expected.json");
+    let parsed = ProfileIndex::from_canonical_bytes(expected.as_bytes()).expect("valid expected.json");
+    assert!(parsed.validate_against(&proj).is_ok());
+
+    // Wrong manifest_digest must fail validate_against.
+    let bad_digest = expected.replacen(
+        &proj.manifest_digest,
+        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        1,
+    );
+    let idx_bad_digest = ProfileIndex::from_canonical_bytes(bad_digest.as_bytes()).expect("syntactically valid");
+    assert_eq!(idx_bad_digest.validate_against(&proj).expect_err("mismatched digest").code(), "profile_invalid");
+
+    // > MAX_FRONT_DOOR entries in front_door must be rejected.
+    let mut big_fd = Vec::new();
+    for i in 0..=MAX_FRONT_DOOR {
+        big_fd.push(format!("\"fake.cmd_{i}@1\""));
+    }
+    let tampered_fd = expected.replacen("\"front_door\":[", &format!("\"front_door\":[{},", big_fd.join(",")), 1);
+    let err = ProfileIndex::from_canonical_bytes(tampered_fd.as_bytes()).expect_err("over-cap front_door");
+    assert_eq!(err.code(), "profile_invalid");
+
+    // Front door entry outside served must be rejected.
+    let unserved_fd = expected.replacen("\"front_door\":[", "\"front_door\":[\"motion.move_axis@1\",", 1);
+    let err = ProfileIndex::from_canonical_bytes(unserved_fd.as_bytes()).expect_err("unserved front_door");
+    assert_eq!(err.code(), "profile_invalid");
+
+    // Missing required discovery tool in served must be rejected.
+    let missing_discovery = expected.replacen("\"tools.search_tools@1\",", "", 1);
+    let err = ProfileIndex::from_canonical_bytes(missing_discovery.as_bytes()).expect_err("missing search_tools");
+    assert_eq!(err.code(), "profile_invalid");
+}
+
+#[test]
+fn tier5_cli_empty_flag_values_rejected_for_both_forms() {
+    let bin = env!("CARGO_BIN_EXE_fid-mcp");
+    for args in [
+        vec!["--server", ""],
+        vec!["--server="],
+        vec!["--profiles-index", ""],
+        vec!["--profiles-index="],
+        vec!["--manifest", ""],
+        vec!["--manifest="],
+        vec!["--project", ""],
+        vec!["--project="],
+        vec!["--agent", ""],
+        vec!["--agent="],
+    ] {
+        let out = Command::new(bin).args(&args).output().expect("run fid-mcp");
+        assert_eq!(
+            out.status.code(),
+            Some(i32::from(EXIT_USAGE)),
+            "args={args:?} stderr={}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert!(out.stdout.is_empty(), "args={args:?} wrote stdout");
+    }
 }

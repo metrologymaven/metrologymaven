@@ -249,3 +249,44 @@ fn embedded_tree_roundtrip_and_malformed_refusal() {
         assert!(parse_tree(bad).is_err(), "expected error for {bad:?}");
     }
 }
+
+#[test]
+fn tier5_resolve_args_preserves_flag_values_and_leading_json() {
+    let tree = embedded_tree().unwrap();
+    let to_vec = |xs: &[&str]| xs.iter().map(|s| (*s).to_string()).collect::<Vec<_>>();
+
+    // --reason --help must NOT trigger CommandHelp.
+    match resolve_args(&tree, &to_vec(&["project", "list-features", "--reason", "--help"])) {
+        ResolveOutcome::Invoke { command_id, rest, .. } => {
+            assert_eq!(command_id, "project.list_features@1");
+            assert_eq!(rest, to_vec(&["--reason", "--help"]));
+        }
+        other => panic!("expected Invoke, got {other:?}"),
+    }
+
+    // --reason --major 2 must NOT consume --major as the major selector.
+    match resolve_args(&tree, &to_vec(&["project", "list-features", "--reason", "--major", "2"])) {
+        ResolveOutcome::Invoke { major, rest, .. } => {
+            assert_eq!(major, 1);
+            assert_eq!(rest, to_vec(&["--reason", "--major", "2"]));
+        }
+        other => panic!("expected Invoke, got {other:?}"),
+    }
+
+    // Leading --json before domain or ctrl subcommand is accepted.
+    match resolve_args(&tree, &to_vec(&["--json", "project", "list-features"])) {
+        ResolveOutcome::Invoke { command_id, json, .. } => {
+            assert_eq!(command_id, "project.list_features@1");
+            assert!(json);
+        }
+        other => panic!("expected Invoke with json=true, got {other:?}"),
+    }
+    match resolve_args(&tree, &to_vec(&["--json", "ctrl", "status"])) {
+        ResolveOutcome::HostSubcommand { name, rest } => {
+            assert_eq!(name, "ctrl");
+            assert!(rest.iter().any(|s| s == "--json"));
+            assert!(rest.iter().any(|s| s == "status"));
+        }
+        other => panic!("expected HostSubcommand, got {other:?}"),
+    }
+}

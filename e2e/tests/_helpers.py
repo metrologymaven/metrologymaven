@@ -236,7 +236,7 @@ def write_disclosure_profiles_index(workdir: Path, filename: str = "disclosure-p
     """Write a canonical disclosure-enabled MCP profiles index without mutating fixtures/mcp/profiles/expected.json."""
     index = {
         "format": 1,
-        "manifest_digest": "sha256:9f3731a2d45012c5e6ae7f17a95acb19c4e2023298f1fafb4f4ef9ed0f708ee4",
+        "manifest_digest": "sha256:19cc843d4349bf4b6dc038e71a055366731627ba04c6d7cf8d024c3a2e970c97",
         "profiles": [
             {
                 "front_door": [

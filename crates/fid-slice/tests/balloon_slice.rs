@@ -94,3 +94,18 @@ fn balloon_rejects_parent_dir_escape_without_creating_directory() {
     assert_eq!(demo_err.code, "io.root_violation");
     assert!(!d.0.join("outside_demo").exists());
 }
+
+#[test]
+fn tier5_balloon_demo_does_not_clobber_existing_pdf_in_out_dir() {
+    let d = TmpDir::new("no_clobber");
+    let sentinel = d.0.join("vector_bracket.pdf");
+    std::fs::write(&sentinel, b"%SENTINEL-DO-NOT-CLOBBER").expect("write sentinel");
+
+    let out = run_balloon_demo(&d.0).expect("run_balloon_demo");
+    assert_eq!(out.rows.len(), 15);
+    assert_eq!(
+        std::fs::read(&sentinel).expect("read sentinel"),
+        b"%SENTINEL-DO-NOT-CLOBBER",
+        "run_balloon_demo must not clobber pre-existing vector_bracket.pdf in out_dir"
+    );
+}

@@ -17,12 +17,20 @@ pub const DISCARD_BUDGET_BYTES: usize = 32 * 1024 * 1024;
 pub enum FrameLine {
     /// Complete `\n`-terminated line (without `\n` or trailing `\r`), `<= MAX_MESSAGE_BYTES`.
     Line(Vec<u8>),
-    /// Line exceeded `MAX_MESSAGE_BYTES`; remainder up to `\n` was discarded.
+    /// Line exceeded `MAX_MESSAGE_BYTES`; remainder up to `\n` (or EOF) was discarded.
     TooLarge,
+    /// Line exceeded `MAX_MESSAGE_BYTES + DISCARD_BUDGET_BYTES` without `\n`; stream is desynchronized.
+    BudgetExhausted,
     /// Clean EOF on a line boundary.
     Eof,
     /// EOF reached mid-line without trailing `\n`.
     PartialEof(Vec<u8>),
+}
+
+enum DiscardOutcome {
+    FoundNewline,
+    Eof,
+    BudgetExhausted,
 }
 
 /// Bounded newline-delimited reader over `R: BufRead`.
@@ -57,30 +65,36 @@ impl<R: BufRead> LineReader<R> {
                 };
             }
             if let Some(pos) = available.iter().position(|&b| b == b'\n') {
-                let take = pos;
+                let mut take = pos;
+                if take > 0 && available[take - 1] == b'\r' {
+                    take -= 1;
+                } else if take == 0 && buf.last() == Some(&b'\r') {
+                    buf.pop();
+                }
                 if buf.len().saturating_add(take) > max_bytes {
                     self.inner.consume(pos + 1);
                     return Ok(FrameLine::TooLarge);
                 }
                 buf.extend_from_slice(&available[..take]);
                 self.inner.consume(pos + 1);
-                if buf.last() == Some(&b'\r') {
-                    buf.pop();
-                }
                 return Ok(FrameLine::Line(buf));
             }
             let chunk_len = available.len();
-            if buf.len().saturating_add(chunk_len) > max_bytes {
+            let next_len = buf.len().saturating_add(chunk_len);
+            let allow_trailing_cr = next_len == max_bytes.saturating_add(1) && available.last() == Some(&b'\r');
+            if next_len > max_bytes && !allow_trailing_cr {
                 self.inner.consume(chunk_len);
-                self.discard_to_newline(DISCARD_BUDGET_BYTES)?;
-                return Ok(FrameLine::TooLarge);
+                return match self.discard_to_newline(DISCARD_BUDGET_BYTES)? {
+                    DiscardOutcome::FoundNewline | DiscardOutcome::Eof => Ok(FrameLine::TooLarge),
+                    DiscardOutcome::BudgetExhausted => Ok(FrameLine::BudgetExhausted),
+                };
             }
             buf.extend_from_slice(available);
             self.inner.consume(chunk_len);
         }
     }
 
-    fn discard_to_newline(&mut self, budget: usize) -> io::Result<()> {
+    fn discard_to_newline(&mut self, budget: usize) -> io::Result<DiscardOutcome> {
         let mut discarded = 0usize;
         while discarded < budget {
             let available = match self.inner.fill_buf() {
@@ -89,17 +103,18 @@ impl<R: BufRead> LineReader<R> {
                 Err(e) => return Err(e),
             };
             if available.is_empty() {
-                return Ok(());
+                return Ok(DiscardOutcome::Eof);
             }
             if let Some(pos) = available.iter().position(|&b| b == b'\n') {
+                let within_budget = discarded.saturating_add(pos) < budget;
                 self.inner.consume(pos + 1);
-                return Ok(());
+                return Ok(if within_budget { DiscardOutcome::FoundNewline } else { DiscardOutcome::BudgetExhausted });
             }
             let n = available.len();
             discarded = discarded.saturating_add(n);
             self.inner.consume(n);
         }
-        Ok(())
+        Ok(DiscardOutcome::BudgetExhausted)
     }
 }
 

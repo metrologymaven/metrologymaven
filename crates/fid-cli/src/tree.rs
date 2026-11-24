@@ -10,7 +10,7 @@
 //!
 //! No registry command path is hard-coded here (REQ-AUTO.CLI.TREE-002, AC-5).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue};
@@ -542,17 +542,20 @@ pub enum ResolveOutcome {
 /// Resolves CLI argv (excluding `argv[0]`) against `tree` (REQ-AUTO.CLI.TREE-002..005).
 pub fn resolve_args(tree: &CliTree, args: &[String]) -> ResolveOutcome {
     let json = args.iter().any(|a| a == "--json");
+    let (args, prefix_json): (&[String], bool) =
+        if args.len() >= 2 && args[0] == "--json" { (&args[1..], true) } else { (args, false) };
     match args.first().map(String::as_str) {
         None => return ResolveOutcome::RootHelp { json: false },
         Some("--version" | "-V") => return ResolveOutcome::Version,
         Some("--help" | "-h" | "help") => return ResolveOutcome::RootHelp { json },
         Some(host) if RESERVED_HOST_SUBCOMMANDS.contains(&host) => {
-            return ResolveOutcome::HostSubcommand { name: host.to_string(), rest: args[1..].to_vec() };
+            let mut rest = args[1..].to_vec();
+            if prefix_json && !rest.iter().any(|a| a == "--json") {
+                rest.push("--json".to_string());
+            }
+            return ResolveOutcome::HostSubcommand { name: host.to_string(), rest };
         }
         Some(flag) if flag.starts_with('-') => {
-            if flag == "--json" && args.len() == 2 && matches!(args[1].as_str(), "--help" | "-h") {
-                return ResolveOutcome::RootHelp { json: true };
-            }
             return ResolveOutcome::UsageError { message: format!("unknown option `{flag}`"), suggestion: None, json };
         }
         Some(_) => {}
@@ -588,13 +591,39 @@ pub fn resolve_args(tree: &CliTree, args: &[String]) -> ResolveOutcome {
         return ResolveOutcome::UsageError { message, suggestion, json };
     };
 
-    // Parse `--major <N>` and `--help` from remaining args.
+    // Parse `--major <N>` and `--help` from remaining args without stealing flag values.
+    let mut value_flags: BTreeSet<String> = [
+        "--project",
+        "--branch",
+        "--wait-timeout",
+        "--timeout",
+        "--reason",
+        "--params",
+        "--expected-head",
+        "--runtime-dir",
+        "--token-file",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect();
+    for m in &cmd.majors {
+        for p in &m.params {
+            if !p.ty.split('|').any(|t| t == "boolean") {
+                value_flags.insert(format!("--{}", p.name.replace('_', "-")));
+            }
+        }
+    }
+
     let mut requested_major: Option<u32> = None;
     let mut want_help = false;
     let mut rest = Vec::new();
     let mut i = 2;
     while i < args.len() {
         match args[i].as_str() {
+            "--" => {
+                rest.extend_from_slice(&args[i..]);
+                break;
+            }
             "--help" | "-h" => {
                 want_help = true;
                 i += 1;
@@ -636,6 +665,11 @@ pub fn resolve_args(tree: &CliTree, args: &[String]) -> ResolveOutcome {
                         };
                     }
                 }
+            }
+            s if value_flags.contains(s) && i + 1 < args.len() => {
+                rest.push(args[i].clone());
+                rest.push(args[i + 1].clone());
+                i += 2;
             }
             _ => {
                 rest.push(args[i].clone());

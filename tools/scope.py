@@ -111,13 +111,24 @@ class Node:
         self.path = path
         self.meta = meta
         self.body = body
-        self.id = meta.get("id", "")
-        self.parent = meta.get("parent", "")
-        self.status = meta.get("status", "")
-        try:
-            self.level = int(meta.get("level", "-1"))
-        except ValueError:
+        self.bad_scalars: list[str] = []
+        for sk in ("id", "parent", "status", "level", "title", "kind", "phase", "size", "decision", "needs_expert"):
+            if sk in meta and isinstance(meta[sk], list):
+                self.bad_scalars.append(sk)
+        raw_id = meta.get("id", "")
+        self.id = raw_id if isinstance(raw_id, str) else ""
+        raw_parent = meta.get("parent", "")
+        self.parent = raw_parent if isinstance(raw_parent, str) else ""
+        raw_status = meta.get("status", "")
+        self.status = raw_status if isinstance(raw_status, str) else ""
+        raw_level = meta.get("level", "-1")
+        if isinstance(raw_level, bool) or not isinstance(raw_level, (str, int)):
             self.level = -1
+        else:
+            try:
+                self.level = int(raw_level)
+            except (ValueError, TypeError):
+                self.level = -1
         self.reqs = [m.group(1) for line in body.splitlines() if (m := REQ_RE.match(line))]
         self.children: list[Node] = []
 
@@ -236,6 +247,8 @@ def validate(nodes: list[Node], seeds, oos, rep: Report) -> dict[str, Node]:
 
     for n in nodes:
         w, m = n.where, n.meta
+        for sk in n.bad_scalars:
+            rep.err(w, f"field '{sk}' must be a scalar value, not a list")
         for k in REQUIRED:
             if k not in m or (m[k] == "" and k != "parent"):
                 rep.err(w, f"missing field '{k}'")
@@ -251,7 +264,8 @@ def validate(nodes: list[Node], seeds, oos, rep: Report) -> dict[str, Node]:
         if n.id and n.id.split(".")[-1].lower() in WINDOWS_RESERVED:
             rep.err(w, f"id segment '{n.id.split('.')[-1]}' is a reserved Windows device name; folders "
                        "with that name cannot be checked out on Windows")
-        if m.get("status") not in STATUSES:
+        status_val = m.get("status")
+        if not isinstance(status_val, str) or status_val not in STATUSES:
             rep.err(w, f"status must be one of {sorted(STATUSES)}")
         built = n.lst("built_in")
         if built:
@@ -259,14 +273,17 @@ def validate(nodes: list[Node], seeds, oos, rep: Report) -> dict[str, Node]:
             if crepo:
                 rep.err(w, f"built_in is forbidden in the public repository: node belongs to private "
                            f"commercial repo '{crepo}' (D-053)")
-            if m.get("status") not in ("leaf", "frozen"):
+            if status_val not in ("leaf", "frozen"):
                 rep.err(w, "built_in is only allowed on a leaf (or frozen) node")
             for c in built:
-                if "/" in c:
+                if not isinstance(c, str) or "\\" in c:
+                    rep.err(w, f"built_in path '{c}' is not an existing directory inside the repository")
+                elif "/" in c:
                     # A non-crate implementation (e.g. a stdlib Python package under tools/):
                     # a repo-relative directory that must exist and stay inside the repo.
+                    segs = c.split("/")
                     p = (ROOT / c).resolve()
-                    if c.startswith("/") or ".." in c.split("/") or ROOT.resolve() not in p.parents or not p.is_dir():
+                    if c.startswith("/") or ".." in segs or ROOT.resolve() not in p.parents or not p.is_dir():
                         rep.err(w, f"built_in path '{c}' is not an existing directory inside the repository")
                 elif not re.fullmatch(r"[a-z0-9_-]+", c) or not (CRATES / c / "Cargo.toml").exists():
                     rep.err(w, f"built_in names crate '{c}', which does not exist under crates/ "
@@ -275,8 +292,9 @@ def validate(nodes: list[Node], seeds, oos, rep: Report) -> dict[str, Node]:
             rep.err(w, "built_pr must be a pull-request number")
         if m.get("built_pr") and not built:
             rep.warn(w, "built_pr is set but built_in is empty")
-        if m.get("needs_expert"):
-            if m["needs_expert"] not in EXPERT_AREAS:
+        needs_exp = m.get("needs_expert")
+        if needs_exp:
+            if not isinstance(needs_exp, str) or needs_exp not in EXPERT_AREAS:
                 rep.err(w, f"needs_expert must be one of {sorted(EXPERT_AREAS)}")
             if m.get("status") != "open":
                 rep.warn(w, "needs_expert is set on a node that is no longer open; remove it")
@@ -729,7 +747,10 @@ def cmd_milestone(args) -> int:
                 scope |= subtree(d) - excluded
                 changed = True
 
-    leaves = sorted(x for x in scope if by_id[x].status == "leaf")
+    leaves = sorted(
+        x for x in scope
+        if by_id[x].status == "leaf" or (by_id[x].status == "frozen" and by_id[x].lst("built_in"))
+    )
     open_nodes = sorted(x for x in scope if by_id[x].status == "open")
     dec_nodes = sorted(x for x in scope if by_id[x].status == "decision")
     decisions = sorted({by_id[x].meta.get("decision", "") for x in dec_nodes} - {""})
@@ -762,8 +783,15 @@ def cmd_milestone(args) -> int:
         remaining -= set(wave)
 
     mid = meta.get("id", path.stem)
+    if not isinstance(mid, str) or not re.fullmatch(r"[A-Za-z0-9._-]+", mid) or ".." in mid:
+        print(f"ERROR {rel(path)}: invalid milestone id {mid!r} (must match [A-Za-z0-9._-]+ without '..')", file=sys.stderr)
+        return 1
     out_dir = GEN / "milestones"
     out_dir.mkdir(parents=True, exist_ok=True)
+    out = (out_dir / f"{mid}.md").resolve()
+    if not out.is_relative_to(out_dir.resolve()):
+        print(f"ERROR {rel(path)}: milestone output path escapes {rel(out_dir)}", file=sys.stderr)
+        return 1
     lines = [f"# Milestone {mid}: {meta.get('title', '')}", "",
              "_Generated by `tools/scope.py milestone`. Do not edit; edit the milestone file instead._", "",
              f"Source: [{path.name}](../../milestones/{path.name})", "",
@@ -794,7 +822,6 @@ def cmd_milestone(args) -> int:
         lines += [f"- {'[B] ' if by_id[x].lst('built_in') else ''}{link(by_id[x], out_dir)} {by_id[x].meta.get('title', '')} "
                   f"({by_id[x].meta.get('size', '')}, {by_id[x].meta.get('phase', '')})" for x in w] + [""]
     lines += ["## Still to expand (open)", ""] + [f"- {x} {by_id[x].meta.get('title', '')}" for x in open_nodes] + [""]
-    out = out_dir / f"{mid}.md"
     text = "\n".join(lines).replace("](../spec/", "](../../spec/")
     out.write_text(text, encoding="utf-8", newline="\n")
     print(f"{mid}: {len(scope)} nodes, {len(leaves)} leaves in {len([w for w in waves if w[0] != 'CYCLE'])} waves, "

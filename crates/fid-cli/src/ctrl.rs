@@ -73,12 +73,35 @@ fn usage(id: &str, msg: &str) -> Box<Envelope> {
     Box::new(Envelope::failed(id, ErrorCode::UsageError, msg, None))
 }
 
-fn parse(args: &[String], env: &dyn Fn(&str) -> Option<String>) -> Result<Args, Box<Envelope>> {
-    let verb = match args.first().map(String::as_str) {
-        Some("status") => Verb::Status,
-        Some("ping") => Verb::Ping,
-        Some(other) => return Err(usage(crate::CLI_COMMAND_ID, &format!("unknown ctrl subcommand `{other}`"))),
-        None => return Err(usage(crate::CLI_COMMAND_ID, "expected `fid ctrl status` or `fid ctrl ping`")),
+enum CtrlAction {
+    Help,
+    Run(Args),
+}
+
+fn parse(args: &[String], env: &dyn Fn(&str) -> Option<String>) -> Result<CtrlAction, Box<Envelope>> {
+    let mut verb: Option<Verb> = None;
+    let mut opt_start = 0usize;
+    for (idx, a) in args.iter().enumerate() {
+        match a.as_str() {
+            "--json" => continue,
+            "-h" | "--help" => return Ok(CtrlAction::Help),
+            "status" => {
+                verb = Some(Verb::Status);
+                opt_start = idx + 1;
+                break;
+            }
+            "ping" => {
+                verb = Some(Verb::Ping);
+                opt_start = idx + 1;
+                break;
+            }
+            other => {
+                return Err(usage(crate::CLI_COMMAND_ID, &format!("unknown ctrl subcommand `{other}`")));
+            }
+        }
+    }
+    let Some(verb) = verb else {
+        return Err(usage(crate::CLI_COMMAND_ID, "expected `fid ctrl status` or `fid ctrl ping`"));
     };
     let id = verb.id();
     let mut runtime_dir = None;
@@ -86,30 +109,72 @@ fn parse(args: &[String], env: &dyn Fn(&str) -> Option<String>) -> Result<Args, 
     let mut instance = None;
     let mut timeout = DEFAULT_TIMEOUT;
     let mut count = 1u32;
-    let mut it = args[1..].iter();
+    let mut want_help = false;
+    let mut first_err: Option<Box<Envelope>> = None;
+    let mut it = args[opt_start..].iter();
     while let Some(a) = it.next() {
-        let mut value = |name: &str| it.next().cloned().ok_or_else(|| usage(id, &format!("{name} needs a value")));
-        match a.as_str() {
-            "--json" => {}
-            "--runtime-dir" => runtime_dir = Some(PathBuf::from(value("--runtime-dir")?)),
-            "--token-file" => token = Some(PathBuf::from(value("--token-file")?)),
-            "--instance" => instance = Some(value("--instance")?),
-            "--timeout-ms" => {
-                let v = value("--timeout-ms")?;
-                match v.parse::<u64>() {
+        let (flag, inline) = match a.split_once('=') {
+            Some((f, v)) if a.starts_with("--") => (f, Some(v)),
+            _ => (a.as_str(), None),
+        };
+        let mut take_val = |name: &str| -> Result<String, Box<Envelope>> {
+            match inline {
+                Some(v) => Ok(v.to_string()),
+                None => it.next().cloned().ok_or_else(|| usage(id, &format!("{name} needs a value"))),
+            }
+        };
+        match flag {
+            "--json" if inline.is_none() => {}
+            "-h" | "--help" if inline.is_none() => want_help = true,
+            "--runtime-dir" => match take_val("--runtime-dir") {
+                Ok(v) => runtime_dir = Some(PathBuf::from(v)),
+                Err(e) if first_err.is_none() => first_err = Some(e),
+                Err(_) => {}
+            },
+            "--token-file" => match take_val("--token-file") {
+                Ok(v) => token = Some(PathBuf::from(v)),
+                Err(e) if first_err.is_none() => first_err = Some(e),
+                Err(_) => {}
+            },
+            "--instance" => match take_val("--instance") {
+                Ok(v) => instance = Some(v),
+                Err(e) if first_err.is_none() => first_err = Some(e),
+                Err(_) => {}
+            },
+            "--timeout-ms" => match take_val("--timeout-ms") {
+                Ok(v) => match v.parse::<u64>() {
                     Ok(ms) if (1..=MAX_TIMEOUT_MS).contains(&ms) => timeout = Duration::from_millis(ms),
-                    _ => return Err(usage(id, "--timeout-ms must be an integer from 1 to 600000")),
-                }
-            }
-            "--count" if matches!(verb, Verb::Ping) => {
-                let v = value("--count")?;
-                match v.parse::<u32>() {
+                    _ if first_err.is_none() => {
+                        first_err = Some(usage(id, "--timeout-ms must be an integer from 1 to 600000"));
+                    }
+                    _ => {}
+                },
+                Err(e) if first_err.is_none() => first_err = Some(e),
+                Err(_) => {}
+            },
+            "--count" if matches!(verb, Verb::Ping) => match take_val("--count") {
+                Ok(v) => match v.parse::<u32>() {
                     Ok(n) if (1..=MAX_PINGS).contains(&n) => count = n,
-                    _ => return Err(usage(id, "--count must be an integer from 1 to 100")),
+                    _ if first_err.is_none() => {
+                        first_err = Some(usage(id, "--count must be an integer from 1 to 100"));
+                    }
+                    _ => {}
+                },
+                Err(e) if first_err.is_none() => first_err = Some(e),
+                Err(_) => {}
+            },
+            other => {
+                if first_err.is_none() {
+                    first_err = Some(usage(id, &format!("unknown option `{other}`")));
                 }
             }
-            other => return Err(usage(id, &format!("unknown option `{other}`"))),
         }
+    }
+    if want_help {
+        return Ok(CtrlAction::Help);
+    }
+    if let Some(e) = first_err {
+        return Err(e);
     }
     let runtime_dir = runtime_dir
         .or_else(|| env(RUNTIME_DIR_ENV).filter(|s| !s.is_empty()).map(PathBuf::from))
@@ -117,7 +182,11 @@ fn parse(args: &[String], env: &dyn Fn(&str) -> Option<String>) -> Result<Args, 
     let token_path = token
         .or_else(|| env(TOKEN_FILE_ENV).filter(|s| !s.is_empty()).map(PathBuf::from))
         .ok_or_else(|| usage(id, "no token file: pass --token-file or set FID_CTRL_TOKEN_FILE"))?;
-    Ok(Args { verb, target: Target { runtime_dir, token_path, instance_id: instance, timeout }, count })
+    Ok(CtrlAction::Run(Args {
+        verb,
+        target: Target { runtime_dir, token_path, instance_id: instance, timeout },
+        count,
+    }))
 }
 
 fn obj(fields: Vec<(&str, CValue)>) -> CValue {
@@ -234,13 +303,20 @@ pub fn run(
     stderr: &mut dyn Write,
 ) -> ExitCode {
     let json = args.iter().any(|a| a == "--json");
-    let out = Output::new(json, stdout, stderr);
-    let env = match parse(args, env) {
-        Ok(a) => match a.verb {
-            Verb::Status => status(&a.target),
-            Verb::Ping => ping(&a.target, a.count),
-        },
-        Err(e) => *e,
-    };
-    out.finish(&env)
+    match parse(args, env) {
+        Ok(CtrlAction::Help) => {
+            if writeln!(stdout, "{USAGE}").is_err() {
+                return ExitCode::Internal;
+            }
+            ExitCode::Success
+        }
+        Ok(CtrlAction::Run(a)) => {
+            let env = match a.verb {
+                Verb::Status => status(&a.target),
+                Verb::Ping => ping(&a.target, a.count),
+            };
+            Output::new(json, stdout, stderr).finish(&env)
+        }
+        Err(e) => Output::new(json, stdout, stderr).finish(&e),
+    }
 }

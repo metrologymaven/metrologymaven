@@ -543,7 +543,8 @@ def test_fid_verify_unsigned_and_tampered(ctx: TestContext) -> None:
 def test_mcp_unknown_profile_exit_2(ctx: TestContext) -> None:
     mcp = ctx.require_bin("fid-mcp")
     idx = ctx.repo_root / "fixtures" / "mcp" / "profiles" / "expected.json"
-    res = ctx.run([mcp, "--profiles-index", str(idx), "--server", "nosuch", "--print-profile"])
+    manifest = ctx.repo_root / "fixtures" / "mcp" / "profiles" / "manifest.json"
+    res = ctx.run([mcp, "--profiles-index", str(idx), "--manifest", str(manifest), "--server", "nosuch", "--print-profile"])
     if res.returncode != 2:
         raise TestFailure(f"expected exit 2 on unknown profile, got {res.returncode}")
     if res.stdout != "":

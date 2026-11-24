@@ -84,7 +84,26 @@ fn parse_args(args: &[String]) -> Result<Action, (VerifyError, bool)> {
     let mut time_budget: Option<String> = None;
 
     let mut it = raw.iter().copied();
+    let mut end_of_options = false;
+    let mut first_err: Option<VerifyError> = None;
+    let mut record_err = |e: VerifyError| {
+        if first_err.is_none() {
+            first_err = Some(e);
+        }
+    };
     while let Some(arg) = it.next() {
+        if !end_of_options && arg == "--" {
+            end_of_options = true;
+            continue;
+        }
+        if end_of_options {
+            if package.is_some() {
+                record_err(VerifyError::usage("more than one <package> argument"));
+            } else {
+                package = Some(arg.to_string());
+            }
+            continue;
+        }
         let (flag, inline) = match arg.split_once('=') {
             Some((f, v)) if arg.starts_with("--") => (f, Some(v)),
             _ => (arg, None),
@@ -94,84 +113,120 @@ fn parse_args(args: &[String]) -> Result<Action, (VerifyError, bool)> {
             "--version" if inline.is_none() => version = true,
             "--json" if inline.is_none() => {
                 if json {
-                    return Err((VerifyError::usage("repeated --json flag"), true));
+                    record_err(VerifyError::usage("repeated --json flag"));
                 }
                 json = true;
             }
             "--replay" if inline.is_none() => {
                 if replay {
-                    return Err((VerifyError::usage("repeated --replay flag"), json));
+                    record_err(VerifyError::usage("repeated --replay flag"));
                 }
                 replay = true;
             }
             "--fail-fast" if inline.is_none() => {
                 if fail_fast {
-                    return Err((VerifyError::usage("repeated --fail-fast flag"), json));
+                    record_err(VerifyError::usage("repeated --fail-fast flag"));
                 }
                 fail_fast = true;
             }
             "--trust-root" => {
                 if trust_root.is_some() {
-                    return Err((VerifyError::usage("repeated --trust-root"), json));
+                    record_err(VerifyError::usage("repeated --trust-root"));
+                } else {
+                    match take_value(flag, inline, &mut it) {
+                        Ok(v) => trust_root = Some(v.to_string()),
+                        Err(e) => record_err(e),
+                    }
                 }
-                trust_root = Some(take_value(flag, inline, &mut it).map_err(|e| (e, json))?.to_string());
             }
             "--revoked" => {
                 if revoked.is_some() {
-                    return Err((VerifyError::usage("repeated --revoked"), json));
+                    record_err(VerifyError::usage("repeated --revoked"));
+                } else {
+                    match take_value(flag, inline, &mut it) {
+                        Ok(v) => revoked = Some(v.to_string()),
+                        Err(e) => record_err(e),
+                    }
                 }
-                revoked = Some(take_value(flag, inline, &mut it).map_err(|e| (e, json))?.to_string());
             }
             "--keys" => {
                 if keys.is_some() {
-                    return Err((VerifyError::usage("repeated --keys"), json));
+                    record_err(VerifyError::usage("repeated --keys"));
+                } else {
+                    match take_value(flag, inline, &mut it) {
+                        Ok(v) => keys = Some(v.to_string()),
+                        Err(e) => record_err(e),
+                    }
                 }
-                keys = Some(take_value(flag, inline, &mut it).map_err(|e| (e, json))?.to_string());
             }
             "--as-of" => {
                 if as_of.is_some() {
-                    return Err((VerifyError::usage("repeated --as-of"), json));
+                    record_err(VerifyError::usage("repeated --as-of"));
+                } else {
+                    match take_value(flag, inline, &mut it) {
+                        Ok(v) => as_of = Some(v.to_string()),
+                        Err(e) => record_err(e),
+                    }
                 }
-                as_of = Some(take_value(flag, inline, &mut it).map_err(|e| (e, json))?.to_string());
             }
             "--rep1" => {
                 if rep1.is_some() {
-                    return Err((VerifyError::usage("repeated --rep1"), json));
+                    record_err(VerifyError::usage("repeated --rep1"));
+                } else {
+                    match take_value(flag, inline, &mut it) {
+                        Ok(v) => rep1 = Some(v.to_string()),
+                        Err(e) => record_err(e),
+                    }
                 }
-                rep1 = Some(take_value(flag, inline, &mut it).map_err(|e| (e, json))?.to_string());
             }
             "--kernel-cache" => {
                 if kernel_cache.is_some() {
-                    return Err((VerifyError::usage("repeated --kernel-cache"), json));
+                    record_err(VerifyError::usage("repeated --kernel-cache"));
+                } else {
+                    match take_value(flag, inline, &mut it) {
+                        Ok(v) => kernel_cache = Some(v.to_string()),
+                        Err(e) => record_err(e),
+                    }
                 }
-                kernel_cache = Some(take_value(flag, inline, &mut it).map_err(|e| (e, json))?.to_string());
             }
             "--memory-limit" => {
                 if memory_limit.is_some() {
-                    return Err((VerifyError::usage("repeated --memory-limit"), json));
+                    record_err(VerifyError::usage("repeated --memory-limit"));
+                } else {
+                    match take_value(flag, inline, &mut it) {
+                        Ok(v) => memory_limit = Some(v.to_string()),
+                        Err(e) => record_err(e),
+                    }
                 }
-                memory_limit = Some(take_value(flag, inline, &mut it).map_err(|e| (e, json))?.to_string());
             }
             "--time-budget" => {
                 if time_budget.is_some() {
-                    return Err((VerifyError::usage("repeated --time-budget"), json));
+                    record_err(VerifyError::usage("repeated --time-budget"));
+                } else {
+                    match take_value(flag, inline, &mut it) {
+                        Ok(v) => time_budget = Some(v.to_string()),
+                        Err(e) => record_err(e),
+                    }
                 }
-                time_budget = Some(take_value(flag, inline, &mut it).map_err(|e| (e, json))?.to_string());
             }
             _ if arg.starts_with('-') => {
-                return Err((VerifyError::usage(format!("unknown option {arg:?}")), json));
+                record_err(VerifyError::usage(format!("unknown option {arg:?}")));
             }
             _ => {
                 if package.is_some() {
-                    return Err((VerifyError::usage("more than one <package> argument"), json));
+                    record_err(VerifyError::usage("more than one <package> argument"));
+                } else {
+                    package = Some(arg.to_string());
                 }
-                package = Some(arg.to_string());
             }
         }
     }
 
     if help {
         return Ok(Action::Help);
+    }
+    if let Some(err) = first_err {
+        return Err((err, json));
     }
     if version {
         if package.is_some()

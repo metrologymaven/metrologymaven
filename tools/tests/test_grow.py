@@ -342,6 +342,60 @@ class GrowDriverTest(unittest.TestCase):
         self.assertEqual(len(events), 4)
         self.assertLessEqual(max(e["active_at_start"] for e in events), 2)
 
+    def test_tier5_level_check_auth_failure_and_worker_nonzero_exit_propagate(self) -> None:
+        # 1. Level-check auth failure must exit 2 (not 0 from scope.py check).
+        tree = self.copy_tree()
+        state_dir = self.make_state_dir()
+        agent_script = state_dir / "fail_lc_agent.py"
+        agent_script.write_text(
+            "import sys\n"
+            "msg = ' '.join(sys.argv[1:])\n"
+            "if 'level-check.md' in msg:\n"
+            "    print('Invalid API key', flush=True)\n"
+            "    sys.exit(1)\n"
+            "sys.exit(0)\n",
+            encoding="utf-8",
+        )
+        code, out, err = run_grow(
+            "--root",
+            str(tree),
+            "--agent-cmd",
+            str(agent_script),
+            "--parallel",
+            "2",
+        )
+        self.assertEqual(code, 2, out + err)
+
+        # 2. Worker non-zero exit without auth banner must propagate non-zero (not masked by scope.py check).
+        agent_fail = state_dir / "fail_worker.py"
+        agent_fail.write_text(
+            "import sys\n"
+            "msg = ' '.join(sys.argv[1:])\n"
+            "if 'two' in msg or 'three' in msg:\n"
+            "    print('worker failed', flush=True)\n"
+            "    sys.exit(3)\n"
+            "sys.exit(0)\n",
+            encoding="utf-8",
+        )
+        code2, out2, err2 = run_grow(
+            "--root",
+            str(tree),
+            "--agent-cmd",
+            str(agent_fail),
+            "--parallel",
+            "2",
+            "--no-level-check",
+        )
+        self.assertEqual(code2, 3, out2 + err2)
+
+    def test_tier5_grow_ps1_hardening_present(self) -> None:
+        ps1 = (ROOT / "tools" / "grow.ps1").read_text(encoding="utf-8")
+        self.assertIn("[ValidateRange(1, 64)]", ps1)
+        self.assertIn('[ValidateSet("claude", "codex")]', ps1)
+        # Ensure codex branch includes $Model propagation.
+        codex_tail = ps1.split('Exe = "claude"', 1)[1].split("$agentJob", 1)[0]
+        self.assertIn("--model", codex_tail)
+
 
 if __name__ == "__main__":
     unittest.main()

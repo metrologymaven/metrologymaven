@@ -170,8 +170,14 @@ impl DisclosureState {
         out
     }
 
-    fn is_enabled(&self, cid: &str) -> bool {
+    /// True iff command ID `cid` is currently enabled (in `front_door` or `enabled_extra`).
+    pub fn is_enabled(&self, cid: &str) -> bool {
         self.front_door_cmds.contains(cid) || self.enabled_extra.contains(cid)
+    }
+
+    /// True iff MCP tool `tool_name` is served and currently enabled.
+    pub fn is_tool_enabled(&self, tool_name: &str) -> bool {
+        self.by_mcp_name.get(tool_name).is_some_and(|cid| self.is_enabled(cid))
     }
 
     /// `tools.search_tools@1`: R0 search over served projectable commands.
@@ -330,9 +336,12 @@ impl DisclosureState {
         }
 
         let mut enabled_names = Vec::with_capacity(target_cids.len());
+        let mut seen_enabled = BTreeSet::new();
         for cid in &target_cids {
-            if let Some(t) = self.served_tools.get(cid) {
-                enabled_names.push(s(&t.name));
+            if seen_enabled.insert(cid.as_str()) {
+                if let Some(t) = self.served_tools.get(cid) {
+                    enabled_names.push(s(&t.name));
+                }
             }
         }
         let mut res = BTreeMap::new();

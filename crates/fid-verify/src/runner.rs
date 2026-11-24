@@ -199,8 +199,10 @@ fn map_troot_error(e: TrootError) -> VerifyError {
 }
 
 fn read_rep1_bytes(opener: &dyn PackageOpener, handle: &str) -> Result<Vec<u8>, VerifyError> {
-    let src =
-        opener.open_package(handle).map_err(|e| VerifyError::internal("pkg.io", Some("io"), format!("rep1: {e}")))?;
+    let src = opener.open_package(handle).map_err(|e| {
+        let msg = e.to_string().replacen("cannot open the package", "cannot open rep1", 1);
+        VerifyError::internal("pkg.io", Some("io"), format!("rep1: {msg}"))
+    })?;
     let limit = u64::try_from(MAX_TABLE_BYTES).unwrap_or(u64::MAX).saturating_add(1);
     let mut buf = Vec::new();
     src.take(limit)
@@ -217,9 +219,10 @@ fn read_rep1_bytes(opener: &dyn PackageOpener, handle: &str) -> Result<Vec<u8>, 
 }
 
 fn read_trust_bytes(opener: &dyn PackageOpener, handle: &str, what: &str) -> Result<Vec<u8>, VerifyError> {
-    let src = opener
-        .open_package(handle)
-        .map_err(|e| map_troot_error(TrootError { reason: "io", detail: format!("{what}: {e}") }))?;
+    let src = opener.open_package(handle).map_err(|e| {
+        let msg = e.to_string().replacen("cannot open the package", &format!("cannot open {what}"), 1);
+        map_troot_error(TrootError { reason: "io", detail: format!("{what}: {msg}") })
+    })?;
     let limit = u64::try_from(MAX_FILE_BYTES).unwrap_or(u64::MAX).saturating_add(1);
     let mut buf = Vec::new();
     src.take(limit)

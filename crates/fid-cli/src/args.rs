@@ -295,7 +295,15 @@ fn parse_param_value(param: &CliParam, raw: &str, is_path_like: bool) -> Result<
             if raw.is_empty() { Vec::new() } else { raw.split(',').map(|s| ParamValue::Str(s.to_string())).collect() };
         return Ok(ParamValue::List(parts));
     }
-    if (type_is(&param.ty, "object") || type_allows(&param.ty, "any") || param.ty.starts_with('#'))
+    if type_is(&param.ty, "object") {
+        let parsed = parse_with_limits(raw.as_bytes(), MAX_PARAMS_BYTES, MAX_PARAMS_DEPTH)
+            .map_err(|e| usage("usage_error", format!("parameter `{}` invalid JSON object: {e}", param.name)))?;
+        if !matches!(parsed, CValue::Obj(_)) {
+            return Err(usage("usage_error", format!("parameter `{}` expects a JSON object", param.name)));
+        }
+        return Ok(ParamValue::Json(parsed));
+    }
+    if (type_allows(&param.ty, "any") || param.ty.starts_with('#'))
         && (raw.trim_start().starts_with('{') || raw.trim_start().starts_with('['))
     {
         let parsed = parse_with_limits(raw.as_bytes(), MAX_PARAMS_BYTES, MAX_PARAMS_DEPTH)
@@ -665,5 +673,14 @@ mod tests {
         assert_eq!(p2.flags.token_file, None);
         assert!(p2.flags.app);
         assert_eq!(p2.flags.runtime_dir.as_deref(), Some("/tmp/rt"));
+    }
+
+    #[test]
+    fn tier5_object_param_rejects_non_json_string() {
+        let major = sample_major(vec![param("meta", "object")]);
+        let reader = StdParamsReader;
+        let args: Vec<String> = ["--meta", "foo"].iter().map(|s| (*s).to_string()).collect();
+        let err = parse_command_args(&major, &args, true, &mut Cursor::new(b"" as &[u8]), None, &reader).unwrap_err();
+        assert!(matches!(err, ArgError::Usage(_)), "unexpected {err:?}");
     }
 }

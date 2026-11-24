@@ -67,6 +67,9 @@ th{font:600 11.5px var(--mono);letter-spacing:.05em;text-transform:uppercase;col
 td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 .bar{height:8px;background:var(--steel-soft);min-width:80px;position:relative}
 .bar i{position:absolute;inset:0 auto 0 0;background:var(--steel);color:var(--sheet)}
+.pct-svg{display:block;width:100%;min-width:80px;height:8px}
+.pct-bg{fill:var(--steel-soft)}
+.pct-fill{fill:var(--steel)}
 ul.clean{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:5px}
 .two{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
 .col{border:1.5px solid var(--ink);padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--sheet)}
