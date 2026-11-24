@@ -59,7 +59,7 @@ fn open(rel: &str) -> Reader {
 }
 
 fn open_at(path: &str) -> Reader {
-    let bytes = std::fs::read(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
+    let bytes = std::fs::read(path).unwrap_or_else(|e| panic!("{path}: {e}"));
     Reader(PackageReader::open(Cursor::new(bytes)).unwrap_or_else(|e| panic!("{path}: {e}")))
 }
 
