@@ -24,6 +24,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-fit" = "kernel"
 # Construction contract (KRN.CONS.DECL): KNP-1, only fid-fit, fid-kci, fid-num, fid-types.
 "fid-construct" = "kernel"
+# Outlier policies and point selection (KRN.OUT.POL first): KNP-1, only fid-fit, fid-kci, fid-num, fid-types.
+"fid-filter" = "kernel"
 "fid-scan-cmp" = "kernel"
 # Mesh quality report (SCAN.POLY.QUAL) and mesh-operation contract (SCAN.MESHOP.PROV): KNP-1,
 # only fid-geo-types, fid-kci, fid-num and fid-types.
