@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-verify]
 satisfies: [REQ-TRUST.VERIFY-001, REQ-TRUST.VERIFY-002, REQ-TRUST.VERIFY-003, REQ-TRUST.VERIFY-007]
 covers: []
 depends_on: [TRUST.VERIFY.REPORT, TRUST.PKG.READER]

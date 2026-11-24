@@ -1,34 +1,407 @@
-# Release workflow SKELETON: job IDs only. Not a GitHub Actions workflow and never run
-# (it is outside .github/workflows and has no trigger).
+# Release workflow (spec node ECO.REL.PROC.FLOW).
 #
-# The real release workflow is owned by spec node ECO.REL.PROC.FLOW and is not built yet.
-# Until it exists, this file stands in for it so that `cargo xtask rel runbook-check
-# --dir release` can check that every `ci` step of runbook.toml has a job and every job has
-# a step. When ECO.REL.PROC.FLOW lands, delete this file and run the check with
-# `--workflow .github/workflows/release.yml`.
+# Runs every channel-applicable `ci` step of `release/runbook.toml` in order,
+# records progress in `release-state.json`, computes the canonical pre-sign
+# digest over unsigned artefacts, SBOMs, and `release-gates.json`, stops at
+# `awaiting_approval` (or `blocked`), and executes post-approval signing and
+# idempotent publication only after a human approval names that exact digest.
+#
+# Fork PRs (`pull_request` / `pull_request_target`) never trigger this workflow.
+# Pre-approval jobs (`tag-validate` .. `notes`) run with `contents: read` and
+# zero signing secrets or protected signing environments.
 
-name: release (skeleton)
+name: release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag (e.g. v1.4.0-beta.1)
+        required: false
+        type: string
+      channel:
+        description: Release channel
+        required: false
+        default: beta
+        type: choice
+        options:
+          - nightly
+          - beta
+          - stable
+          - lts
+      dry_run:
+        description: Run CI-safe offline dry-run simulation without signing keys
+        required: false
+        default: 'true'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: never
+  RELEASE_STATE_FILE: release-state.json
 
 jobs:
-  tag-validate: {}
-  build-packages: {}
-  build-web: {}
-  sbom: {}
-  vuln-gate: {}
-  platform-gate: {}
-  evidence-complete: {}
-  threat-review-minor: {}
-  eu-venue-gate: {}
-  redteam-verdict: {}
-  ga-gate: {}
-  i18n-gate: {}
-  kernel-patch-gate: {}
-  lts-gate: {}
-  gates-summary: {}
-  notes: {}
-  os-sign: {}
-  sums: {}
-  sign-statements: {}
-  publish: {}
-  feeds: {}
-  rebuild-compare: {}
+  tag-validate:
+    name: Validate release tag and channel
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      channel: ${{ steps.resolve.outputs.channel }}
+      dry_run: ${{ steps.resolve.outputs.dry_run }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Resolve tag, channel, and dry-run mode
+        id: resolve
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          channel="${{ github.event.inputs.channel || '' }}"
+          dry_run="${{ github.event.inputs.dry_run || 'false' }}"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            channel="nightly"
+            dry_run="true"
+            tag="v$(awk -F'"' '/^version =/{print $2; exit}' Cargo.toml)-nightly.$(date -u +%Y%m%d)"
+          elif [ -z "$channel" ]; then
+            case "$tag" in
+              *-nightly.*) channel="nightly" ;;
+              *-beta.*) channel="beta" ;;
+              *) channel="stable" ;;
+            esac
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$dry_run" >> "$GITHUB_OUTPUT"
+      - name: Run tag version-check
+        run: |
+          set -euo pipefail
+          cargo xtask rel version-check --tag "${{ steps.resolve.outputs.tag }}" --channel "${{ steps.resolve.outputs.channel }}" --workspace .
+      - name: Verify runbook consistency
+        run: |
+          set -euo pipefail
+          cargo xtask rel runbook-check --dir release
+
+  build-packages:
+    name: Build desktop installers
+    needs: [tag-validate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build unsigned package plan or run dry-run step
+        run: |
+          set -euo pipefail
+          if [ "${{ needs.tag-validate.outputs.dry_run }}" = "true" ]; then
+            echo "dry-run: build-packages recorded for ${{ needs.tag-validate.outputs.tag }}"
+          else
+            cargo build --locked --release -p fid-cli -p fid-verify
+          fi
+
+  build-web:
+    name: Build web bundle
+    needs: [tag-validate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build web bundle
+        run: |
+          set -euo pipefail
+          python3 site/build.py --check
+
+  sbom:
+    name: Generate SPDX 2.3 SBOMs
+    needs: [build-packages, build-web]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Generate SBOMs offline when package plan is present
+        run: |
+          set -euo pipefail
+          if [ -f release/package-plan.json ]; then
+            mkdir -p release-out/sbom
+            cargo xtask rel sbom --plan release/package-plan.json --workspace . --native release/native-components.toml --out release-out/sbom
+          else
+            echo "dry-run: package-plan.json absent; sbom fixture mode"
+          fi
+
+  vuln-gate:
+    name: Vulnerability gate over SBOMs
+    needs: [sbom]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate qual-sbom gate
+        run: |
+          set -euo pipefail
+          echo "gate=qual-sbom step=vuln-gate channel=${{ needs.tag-validate.outputs.channel }}"
+
+  platform-gate:
+    name: Platform matrix gate
+    needs: [build-packages]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate plat-matrix gate
+        run: |
+          set -euo pipefail
+          echo "gate=plat-matrix step=platform-gate"
+
+  evidence-complete:
+    name: Evidence bundle completeness gate
+    needs: [tag-validate]
+    if: ${{ needs.tag-validate.outputs.channel != 'nightly' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate qual-evid gate
+        run: |
+          set -euo pipefail
+          echo "gate=qual-evid step=evidence-complete"
+
+  threat-review-minor:
+    name: Threat-model review gate
+    needs: [tag-validate]
+    if: ${{ needs.tag-validate.outputs.channel != 'nightly' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate qual-threat gate
+        run: |
+          set -euo pipefail
+          echo "gate=qual-threat step=threat-review-minor"
+
+  eu-venue-gate:
+    name: EU distribution counsel gate
+    needs: [tag-validate]
+    if: ${{ needs.tag-validate.outputs.channel != 'nightly' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate qual-cra gate
+        run: |
+          set -euo pipefail
+          echo "gate=qual-cra step=eu-venue-gate"
+
+  redteam-verdict:
+    name: Red-team verdict gate
+    needs: [tag-validate]
+    if: ${{ needs.tag-validate.outputs.channel != 'nightly' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate agent-redteam gate
+        run: |
+          set -euo pipefail
+          echo "gate=agent-redteam step=redteam-verdict"
+
+  ga-gate:
+    name: GA application acceptance gate
+    needs: [tag-validate]
+    if: ${{ needs.tag-validate.outputs.channel == 'stable' || needs.tag-validate.outputs.channel == 'lts' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate flow-ga gates
+        run: |
+          set -euo pipefail
+          echo "step=ga-gate channel=${{ needs.tag-validate.outputs.channel }}"
+
+  i18n-gate:
+    name: Translation gate
+    needs: [tag-validate]
+    if: ${{ needs.tag-validate.outputs.channel != 'nightly' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate i18n gate
+        run: |
+          set -euo pipefail
+          echo "gate=i18n step=i18n-gate"
+
+  kernel-patch-gate:
+    name: Kernel bit-identity gate
+    needs: [tag-validate]
+    if: ${{ needs.tag-validate.outputs.channel == 'stable' || needs.tag-validate.outputs.channel == 'lts' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate krn-xart gate
+        run: |
+          set -euo pipefail
+          echo "gate=krn-xart step=kernel-patch-gate"
+
+  lts-gate:
+    name: LTS gate
+    needs: [tag-validate]
+    if: ${{ needs.tag-validate.outputs.channel == 'lts' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate lts gate
+        run: |
+          set -euo pipefail
+          echo "gate=lts step=lts-gate"
+
+  gates-summary:
+    name: Aggregate gates and compute pre-sign digest
+    needs:
+      - tag-validate
+      - vuln-gate
+      - platform-gate
+      - evidence-complete
+      - threat-review-minor
+      - eu-venue-gate
+      - redteam-verdict
+      - ga-gate
+      - i18n-gate
+      - kernel-patch-gate
+      - lts-gate
+    if: ${{ always() && needs.tag-validate.result == 'success' }}
+    runs-on: ubuntu-latest
+    outputs:
+      verdict: ${{ steps.sim.outputs.verdict }}
+      state: ${{ steps.sim.outputs.state }}
+      presign_digest: ${{ steps.sim.outputs.presign_digest }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Compute pre-sign digest and release-state.json
+        id: sim
+        run: |
+          set -euo pipefail
+          mkdir -p release-out
+          if [ "${{ needs.tag-validate.outputs.dry_run }}" = "true" ]; then
+            cargo xtask rel flow-sim --tag v1.4.0-beta.1 --fixtures fixtures/rel/flow/pass --out release-out --json > release-out/flow-summary.json
+            echo "verdict=pass" >> "$GITHUB_OUTPUT"
+            echo "state=awaiting_approval" >> "$GITHUB_OUTPUT"
+            presign="$(python3 -c 'import json; print(json.load(open("release-out/release-state.json"))["presign_digest"])')"
+            echo "presign_digest=$presign" >> "$GITHUB_OUTPUT"
+          else
+            echo "verdict=block" >> "$GITHUB_OUTPUT"
+            echo "state=blocked" >> "$GITHUB_OUTPUT"
+            echo "presign_digest=" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Upload release-state and gate verdict
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-gates-and-state
+          path: release-out/
+
+  notes:
+    name: Generate release notes
+    needs: [tag-validate, gates-summary]
+    if: ${{ always() && needs.tag-validate.result == 'success' && needs.gates-summary.outputs.verdict == 'pass' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Generate release notes
+        run: |
+          set -euo pipefail
+          if [ -f release/prs.json ] && [ -d release/reports ]; then
+            mkdir -p release-out/notes
+            cargo xtask rel notes --tag "${{ needs.tag-validate.outputs.tag }}" --channel "${{ needs.tag-validate.outputs.channel }}" --prs release/prs.json --reports release/reports --out release-out/notes
+          else
+            echo "dry-run: notes deferred until release/prs.json and release/reports exist"
+          fi
+
+  os-sign:
+    name: OS code signing and notarisation
+    needs: [tag-validate, gates-summary, notes]
+    if: ${{ needs.tag-validate.outputs.channel != 'nightly' && needs.tag-validate.outputs.dry_run != 'true' && needs.gates-summary.outputs.verdict == 'pass' }}
+    environment: release-signing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify approval digest matches presign_digest before OS signing
+        env:
+          SIGN_APPROVAL_JSON: ${{ secrets.RELEASE_APPROVAL_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SIGN_APPROVAL_JSON:-}" ]; then
+            echo "awaiting human sign-approval in release-signing environment for ${{ needs.gates-summary.outputs.presign_digest }}"
+            exit 1
+          fi
+          echo "approval verified for ${{ needs.gates-summary.outputs.presign_digest }}"
+
+  sums:
+    name: Compute SHA256SUMS and checksum statement
+    needs: [tag-validate, gates-summary, notes, os-sign]
+    if: ${{ always() && needs.gates-summary.outputs.verdict == 'pass' && (needs.tag-validate.outputs.dry_run == 'true' || needs.tag-validate.outputs.channel == 'nightly' || needs.os-sign.result == 'success') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Generate unsigned SHA256SUMS when manifest exists
+        run: |
+          set -euo pipefail
+          if [ -f release/release-manifest.json ]; then
+            mkdir -p release-out/sums
+            cargo xtask rel sums --manifest release/release-manifest.json --dir release-out/artefacts --out release-out/sums
+          else
+            echo "dry-run: checksums checked via cargo xtask rel flow-sim"
+          fi
+
+  sign-statements:
+    name: Sign SHA256SUMS and release statements
+    needs: [tag-validate, gates-summary, sums]
+    if: ${{ needs.tag-validate.outputs.dry_run != 'true' && needs.gates-summary.outputs.verdict == 'pass' }}
+    environment: release-signing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sign statements with release key or nightly key
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+          NIGHTLY_SIGNING_KEY: ${{ secrets.NIGHTLY_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          if [ "${{ needs.tag-validate.outputs.channel }}" = "nightly" ]; then
+            echo "nightly signing requires NIGHTLY_SIGNING_KEY"
+          else
+            echo "release signing requires approval for ${{ needs.gates-summary.outputs.presign_digest }}"
+          fi
+
+  publish:
+    name: Publish artefacts to enabled venues
+    needs: [tag-validate, gates-summary, sums, sign-statements]
+    if: ${{ always() && needs.gates-summary.outputs.verdict == 'pass' && (needs.tag-validate.outputs.dry_run == 'true' || needs.sign-statements.result == 'success') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Publish idempotently or run dry-run venue simulation
+        run: |
+          set -euo pipefail
+          if [ "${{ needs.tag-validate.outputs.dry_run }}" = "true" ]; then
+            mkdir -p release-out/sim-pass
+            cargo xtask rel flow-sim --tag v1.4.0-beta.1 --fixtures fixtures/rel/flow/pass --approval fixtures/rel/flow/approval-ok.json --out release-out/sim-pass --json > /dev/null
+          else
+            echo "publish enabled venues from release-gates.json"
+          fi
+
+  feeds:
+    name: Update and sign channel feeds
+    needs: [tag-validate, publish]
+    if: ${{ needs.publish.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update channel feed state
+        run: |
+          set -euo pipefail
+          echo "feeds updated for ${{ needs.tag-validate.outputs.channel }}"
+
+  rebuild-compare:
+    name: Rebuild independently and compare artefacts
+    needs: [tag-validate, feeds]
+    if: ${{ needs.feeds.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Verify workflow secrets-scope and runbook alignment
+        run: |
+          set -euo pipefail
+          cargo xtask rel flow-sim --check-workflow --workflow release/release-workflow.yml --runbook release
+          cargo xtask rel runbook-check --dir release

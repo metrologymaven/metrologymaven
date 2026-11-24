@@ -93,6 +93,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # MCP surface (AUTO.MCP.PROJ): tool projection over fid-surface (services) and the tool-call adapter;
 # a [surfaces] crate in lint-allowlist.toml, so it never links the bus.
 "fid-mcp" = "services"
+# Standalone offline verifier CLI and verify.package@1 (TRUST.VERIFY.CLI, TRUST.VERIFY.REPORT):
+# services so it can expose a library and #[fid_command] while remaining isolated from fid-cli/fid-mcp.
+"fid-verify" = "services"
 "fid-report-pdf" = "services"
 # Report model (RPT.MODEL): document, pages, blocks and report commands.
 "fid-report" = "services"

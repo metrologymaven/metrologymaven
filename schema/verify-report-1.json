@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.io/schema/verify-report-1.json",
+  "title": "Metrology Maven Verification Report v1",
+  "description": "Composed offline verification report emitted by fid-verify --json and verify.package@1 (spec nodes TRUST.VERIFY.REPORT, TRUST.VERIFY.CLI).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "report_version",
+    "tool",
+    "package",
+    "signatures",
+    "chain",
+    "replay",
+    "verdict",
+    "exit_code",
+    "limitations"
+  ],
+  "properties": {
+    "report_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format_version", "evidence_tier", "profile_digest", "members", "signature_count"],
+      "properties": {
+        "format_version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+        },
+        "evidence_tier": { "enum": ["results", "features", "points"] },
+        "profile_digest": { "$ref": "#/$defs/prefixed_digest" },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "media_type", "length", "sha256", "status"],
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "media_type": { "type": "string", "minLength": 1 },
+              "length": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
+              "sha256": { "$ref": "#/$defs/hex64" },
+              "status": { "enum": ["ok", "digest_mismatch", "limit", "malformed", "io"] }
+            }
+          }
+        },
+        "signature_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "signatures": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["checked", "skipped", "not_available"] },
+        "package_status": { "enum": ["SIGNED", "UNSIGNED"] },
+        "statement_sha256": { "$ref": "#/$defs/hex64" },
+        "signatures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["index", "envelope", "claimed_keyid", "status", "notes"],
+            "properties": {
+              "index": { "type": "integer", "minimum": 0 },
+              "envelope": { "type": "string" },
+              "claimed_keyid": { "type": "string" },
+              "fingerprint": { "$ref": "#/$defs/hex64" },
+              "key_label": { "type": "string" },
+              "status": {
+                "enum": [
+                  "VALID_TRUSTED",
+                  "VALID_UNTRUSTED",
+                  "REVOKED",
+                  "EXPIRED",
+                  "INVALID",
+                  "UNKNOWN_KEY"
+                ]
+              },
+              "detail": { "type": "string" },
+              "notes": { "type": "array", "items": { "type": "string" } },
+              "claimed_signed_at": { "type": "string" },
+              "claimed_meaning_code": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "chain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["checked", "skipped", "not_available"] },
+        "verdict": { "enum": ["VALID", "BROKEN"] },
+        "entries_verified": { "type": "integer", "minimum": 0 },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["index", "kind", "detail"],
+            "properties": {
+              "index": { "type": "integer", "minimum": 0 },
+              "kind": {
+                "enum": [
+                  "HASH_MISMATCH",
+                  "LINK_MISMATCH",
+                  "SEQUENCE_GAP",
+                  "SEQUENCE_REPEAT",
+                  "TRUNCATED",
+                  "UNANCHORED"
+                ]
+              },
+              "detail": { "type": "string" }
+            }
+          }
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "status", "signatures"],
+            "properties": {
+              "path": { "type": "string" },
+              "index": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
+              "stream": { "type": "string" },
+              "head_sha256": { "$ref": "#/$defs/prefixed_digest" },
+              "status": { "enum": ["MATCH", "MISMATCH", "OUT_OF_RANGE", "MALFORMED"] },
+              "error_code": { "type": "string" },
+              "detail": { "type": "string" },
+              "signature": { "$ref": "#/$defs/checkpoint_sig" },
+              "signatures": { "type": "array", "items": { "$ref": "#/$defs/checkpoint_sig" } }
+            }
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["record_id", "status"],
+            "properties": {
+              "record_id": { "type": "string" },
+              "status": { "enum": ["LINKED", "UNLINKED", "MISLINKED"] },
+              "entry_index": { "type": "integer", "minimum": 0 },
+              "reason": { "type": "string" }
+            }
+          }
+        },
+        "unlinked": { "type": "array", "items": { "type": "string" } },
+        "mislinked": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "replay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "enum": [
+            "not_requested",
+            "not_applicable",
+            "skipped",
+            "not_available",
+            "IDENTICAL",
+            "EQUIVALENT",
+            "DIVERGENT",
+            "NOT_REPLAYABLE"
+          ]
+        },
+        "reason": { "type": "string" },
+        "detail": { "type": "string" },
+        "kernel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["manifest_digest"],
+          "properties": {
+            "manifest_digest": { "$ref": "#/$defs/prefixed_digest" },
+            "artifact_digest": { "$ref": "#/$defs/prefixed_digest" },
+            "origin": { "enum": ["package", "bundled", "cache"] }
+          }
+        },
+        "rep1_version": { "type": "string" },
+        "rep1_digest": { "$ref": "#/$defs/prefixed_digest" },
+        "rep1_production": { "type": "boolean" },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["record_id", "outcome"],
+            "properties": {
+              "record_id": { "type": "string" },
+              "outcome": { "type": "string" },
+              "first_diff": { "type": "string" },
+              "reason": { "type": "string" },
+              "detail": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "verdict": { "enum": ["PASS", "FAIL", "ERROR"] },
+    "exit_code": { "type": "integer", "minimum": 0, "maximum": 255 },
+    "limitations": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "hex64": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "prefixed_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "checkpoint_sig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claimed_keyid", "status", "notes", "claimed_signed_at"],
+      "properties": {
+        "claimed_keyid": { "type": "string" },
+        "fingerprint": { "$ref": "#/$defs/hex64" },
+        "key_label": { "type": "string" },
+        "status": {
+          "enum": ["VALID_TRUSTED", "VALID_UNTRUSTED", "REVOKED", "EXPIRED", "INVALID", "UNKNOWN_KEY"]
+        },
+        "detail": { "type": "string" },
+        "notes": { "type": "array", "items": { "type": "string" } },
+        "claimed_signed_at": { "type": "string" }
+      }
+    }
+  }
+}

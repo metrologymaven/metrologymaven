@@ -1,0 +1,56 @@
+name: bad-fork-trigger
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  tag-validate:
+    runs-on: ubuntu-latest
+  build-packages:
+    runs-on: ubuntu-latest
+  build-web:
+    runs-on: ubuntu-latest
+  sbom:
+    runs-on: ubuntu-latest
+  vuln-gate:
+    runs-on: ubuntu-latest
+  platform-gate:
+    runs-on: ubuntu-latest
+  evidence-complete:
+    runs-on: ubuntu-latest
+  threat-review-minor:
+    runs-on: ubuntu-latest
+  eu-venue-gate:
+    runs-on: ubuntu-latest
+  redteam-verdict:
+    runs-on: ubuntu-latest
+  ga-gate:
+    runs-on: ubuntu-latest
+  i18n-gate:
+    runs-on: ubuntu-latest
+  kernel-patch-gate:
+    runs-on: ubuntu-latest
+  lts-gate:
+    runs-on: ubuntu-latest
+  gates-summary:
+    runs-on: ubuntu-latest
+  notes:
+    runs-on: ubuntu-latest
+  os-sign:
+    environment: release-signing
+    runs-on: ubuntu-latest
+  sums:
+    runs-on: ubuntu-latest
+  sign-statements:
+    environment: release-signing
+    runs-on: ubuntu-latest
+  publish:
+    runs-on: ubuntu-latest
+  feeds:
+    runs-on: ubuntu-latest
+  rebuild-compare:
+    runs-on: ubuntu-latest

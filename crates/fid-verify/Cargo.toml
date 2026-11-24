@@ -1,0 +1,27 @@
+[package]
+name = "fid-verify"
+description = "Standalone offline verifier for Metrology Maven Result Packages (spec nodes TRUST.VERIFY.CLI, TRUST.VERIFY.REPORT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MIT OR Apache-2.0"
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-verify"
+path = "src/main.rs"
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-chain = { path = "../fid-chain" }
+fid-pkg = { path = "../fid-pkg" }
+fid-registry = { path = "../fid-registry" }
+fid-rep = { path = "../fid-rep" }
+fid-sign-core = { path = "../fid-sign-core" }
+fid-trust-canon = { path = "../fid-trust-canon" }
+fid-types = { path = "../fid-types" }
+fid-vreplay = { path = "../fid-vreplay" }
+
+[lints]
+workspace = true

@@ -51,7 +51,8 @@ const USAGE: &str = "usage: cargo xtask layers [--workspace <dir>] [--map <layer
        \n                     cargo xtask rel runbook-render [--dir <release dir>] [--out <file>]
        \n                     cargo xtask rel sbom --plan <package-plan.json> [--workspace <dir>] --native <toml> \
                      --out <dir> [--artefacts <dir>] [--commit-time <YYYY-MM-DDThh:mm:ssZ>]
-       \n                     cargo xtask rel keys-check [--keys <dir>] [--doc <KEYS.md>] [--date <YYYY-MM-DD>]";
+       \n                     cargo xtask rel keys-check [--keys <dir>] [--doc <KEYS.md>] [--date <YYYY-MM-DD>]
+       \n                     cargo xtask rel flow-sim [--tag <tag>] --fixtures <dir> [--approval <json>] [--out <dir>] [--json] | --check-workflow";
 const APPS_POLICY_USAGE: &str = "usage: cargo xtask apps-policy --workspace <dir> --registry-manifests <dir> \
                                  --apps-status <json> [--config apps-policy.toml]";
 const KERNEL_ALLOW_USAGE: &str =
@@ -115,6 +116,7 @@ fn main() -> ExitCode {
         Some("rel") if args.get(1).map(String::as_str) == Some("sbom") => rel_sbom(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("keys-check") => keys_check(&args[2..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("notes") => fid_xtask::rel::notes::cli(&args[2..]),
+        Some("rel") if args.get(1).map(String::as_str) == Some("flow-sim") => fid_xtask::rel::flow::cli(&args[2..]),
         _ => {
             eprintln!("{USAGE}");
             eprintln!("{LINT_USAGE}");

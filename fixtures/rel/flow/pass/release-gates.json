@@ -1,0 +1,1 @@
+{"channel":"beta","disabled_venues":["eu-mirror"],"gates":[{"id":"qual-evid","status":"pass"}],"release":"v1.4.0-beta.1","venues":["eu-mirror","github-releases","s3-cdn"],"verdict":"pass"}

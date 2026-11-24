@@ -2120,6 +2120,7 @@ dependencies = [
  "fid-surface",
  "fid-unc",
  "fid-uuid",
+ "fid-verify",
 ]
 
 [[package]]
@@ -2432,6 +2433,21 @@ dependencies = [
  "fid-rdl",
  "fid-types",
  "toml",
+]
+
+[[package]]
+name = "fid-verify"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-chain",
+ "fid-pkg",
+ "fid-registry",
+ "fid-rep",
+ "fid-sign-core",
+ "fid-trust-canon",
+ "fid-types",
+ "fid-vreplay",
 ]
 
 [[package]]

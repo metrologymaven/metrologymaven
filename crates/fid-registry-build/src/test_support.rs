@@ -79,6 +79,7 @@ pub fn all_defs() -> Result<Vec<(String, CommandDef)>, String> {
     );
     extra("fid-pkg", fid_pkg::reader::declarations().into_iter().map(|d| d.def).collect());
     extra("fid-sign-core", fid_sign_core::troot::declarations().into_iter().map(|d| d.def).collect());
+    extra("fid-verify", fid_verify::command::command_defs());
     extra("fid-report (bind)", fid_report::bind::declarations().into_iter().map(|d| d.def).collect());
     let reg = io_registry()?;
     let format = FormatId::new(TEST_EXPORT_FORMAT).map_err(|e| err("format id", e))?;

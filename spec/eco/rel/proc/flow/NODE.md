@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-xtask, release/]
 satisfies: [REQ-ECO.REL.PROC-002]
 covers: []
 depends_on: [ECO.CI.WF, ECO.REL.PROC.VERSION, ECO.REL.PROC.CHANNEL, ECO.REL.PROC.GATES, ECO.REL.PROC.NOTES]

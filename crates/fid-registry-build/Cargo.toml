@@ -67,12 +67,13 @@ fid-gdt = { path = "../fid-gdt", optional = true }
 fid-io-reg = { path = "../fid-io-reg", optional = true }
 fid-pkg = { path = "../fid-pkg", optional = true }
 fid-sign-core = { path = "../fid-sign-core", optional = true }
+fid-verify = { path = "../fid-verify", optional = true }
 fid-rdl = { path = "../fid-rdl", optional = true }
 
 [features]
 # `test_support::all_defs`: every declared command of the workspace. Only `[dev-dependencies]`
 # enable it.
-test-support = ["dep:fid-gdt", "dep:fid-io-reg", "dep:fid-pkg", "dep:fid-rdl", "dep:fid-sign-core"]
+test-support = ["dep:fid-gdt", "dep:fid-io-reg", "dep:fid-pkg", "dep:fid-rdl", "dep:fid-sign-core", "dep:fid-verify"]
 
 [dev-dependencies]
 # Error values for the bus-catalogue mapping test of fid-geo-cmd's errors.
