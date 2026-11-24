@@ -141,6 +141,53 @@ fn extra_error_fixtures() {
     run_case("missing-consent");
 }
 
+/// Wider phone formats: `.` separators, 3-4 local numbers and trunk-prefixed national
+/// groupings, each reported without echoing the number.
+#[test]
+fn phone_formats_dots_local_and_international() {
+    for (case, number) in [
+        ("phone-dots", "555.019.2834"),
+        ("phone-local", "555-0192"),
+        ("phone-uk", "07700 900123"),
+        ("phone-de", "030 12345678"),
+    ] {
+        let o = run_case(case);
+        assert!(!stdout(&o).contains(number), "{case}: phone leaked: {}", stdout(&o));
+    }
+}
+
+/// A name part of 3+ characters from the key (here a surname alone) is a name finding, and is
+/// never echoed.
+#[test]
+fn name_part_from_key_is_found() {
+    let o = run_case("has-name-part");
+    assert!(!stdout(&o).contains("Kestrel"), "{}", stdout(&o));
+    let tmp = temp("name-part");
+    std::fs::write(tmp.join("notes.md"), "Spoke with nadia about the probe.\n").unwrap();
+    let o = run(&["research-check", "--root", tmp.to_str().unwrap(), "--key", &fix("key.csv"), "--json"]);
+    assert_eq!(o.status.code(), Some(1), "{}", stdout(&o));
+    assert_eq!(finding_keys(&json_out(&o)), ["RESEARCH-PII name"]);
+    // A part inside a longer word is not a match ("Jordanian" is not "Jordan").
+    std::fs::write(tmp.join("notes.md"), "Jordanian standards were compared.\n").unwrap();
+    let o = run(&["research-check", "--root", tmp.to_str().unwrap(), "--key", &fix("key.csv"), "--json"]);
+    assert_eq!(o.status.code(), Some(0), "{}", stdout(&o));
+}
+
+/// Without `--key` the report says names were not checked: a notice in text output and on
+/// stderr with `--json`, and `names_checked: false` in the JSON.
+#[test]
+fn running_without_key_says_names_were_not_checked() {
+    let t = run(&["research-check", "--root", &fix("has-name")]);
+    assert_eq!(t.status.code(), Some(0), "{}", stdout(&t));
+    assert!(stdout(&t).contains("names were NOT checked"), "{}", stdout(&t));
+    let j = run(&["research-check", "--root", &fix("has-name"), "--json"]);
+    assert!(String::from_utf8_lossy(&j.stderr).contains("names were NOT checked"));
+    assert_eq!(get(&json_out(&j), "names_checked"), &CValue::Bool(false));
+    let k = run(&["research-check", "--root", &fix("has-name"), "--key", &fix("key.csv"), "--json"]);
+    assert_eq!(get(&json_out(&k), "names_checked"), &CValue::Bool(true));
+    assert!(!String::from_utf8_lossy(&k.stderr).contains("NOT checked"));
+}
+
 /// Shipped `design/research/{plan,protocol,consent,data-handling}.md` pass research-check and
 /// cover every requirement REQ-001..005.
 #[test]
@@ -163,7 +210,8 @@ fn shipped_research_docs_pass_and_cover_requirements() {
         "JOB.ACC.01",
         "JOB.ACC.02",
         "JOB.ACC.03",
-        "severity.md",
+        // Severity scale owner (its file is not published yet, so no path is linked).
+        "UX.RESEARCH.USAB",
         "System Usability Scale",
         "P-<study>-<NN>",
     ] {

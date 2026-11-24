@@ -13,6 +13,9 @@ Produces:
 - `has-email/` (AC-2: RESEARCH-PII email)
 - `has-name/` (AC-3: RESEARCH-PII name, matching a name in key.csv)
 - `has-phone/` (RESEARCH-PII phone)
+- `phone-dots/`, `phone-local/`, `phone-uk/`, `phone-de/` (RESEARCH-PII phone: `555.019.2834`,
+  `555-0192`, `07700 900123`, `030 12345678`)
+- `has-name-part/` (RESEARCH-PII name: a surname alone from key.csv)
 - `screenshot/` (AC-4: RESEARCH-IMAGE-PROVENANCE, PNG without capture sidecar)
 - `incumbent/` (RESEARCH-INCUMBENT)
 - `missing-consent/` (RESEARCH-CONSENT-REF)
@@ -78,6 +81,24 @@ HAS_PHONE_NOTES = """\
 Callback number recorded by mistake: +1-555-019-2834.
 """
 
+PHONE_NOTES = {
+    "phone-dots": "Callback recorded by mistake: 555.019.2834.",
+    "phone-local": "Desk extension noted by mistake: 555-0192.",
+    "phone-uk": "Mobile noted by mistake: 07700 900123.",
+    "phone-de": "Office line noted by mistake: 030 12345678.",
+}
+
+
+def phone_notes(text: str) -> str:
+    return f"# Inquiry notes with leaked phone number (synthetic, CC-BY-4.0)\n\n{text}\n"
+
+
+HAS_NAME_PART_NOTES = """\
+# Inquiry notes with a name part from key.csv (synthetic, CC-BY-4.0)
+
+Kestrel preferred the compact tolerance view.
+"""
+
 INCUMBENT_NOTES = """\
 ---
 incumbent-artefact: true
@@ -138,6 +159,11 @@ LABELS = {
         "exit": 1,
         "findings": ["RESEARCH-PII phone"],
     },
+    "phone-dots": {"root": "phone-dots", "key": "key.csv", "exit": 1, "findings": ["RESEARCH-PII phone"]},
+    "phone-local": {"root": "phone-local", "key": "key.csv", "exit": 1, "findings": ["RESEARCH-PII phone"]},
+    "phone-uk": {"root": "phone-uk", "key": "key.csv", "exit": 1, "findings": ["RESEARCH-PII phone"]},
+    "phone-de": {"root": "phone-de", "key": "key.csv", "exit": 1, "findings": ["RESEARCH-PII phone"]},
+    "has-name-part": {"root": "has-name-part", "key": "key.csv", "exit": 1, "findings": ["RESEARCH-PII name"]},
     "screenshot": {
         "root": "screenshot",
         "key": "key.csv",
@@ -169,11 +195,24 @@ def expected_files():
         "has-email/notes.md": HAS_EMAIL_NOTES.encode("utf-8"),
         "has-name/notes.md": HAS_NAME_NOTES.encode("utf-8"),
         "has-phone/notes.md": HAS_PHONE_NOTES.encode("utf-8"),
+        **{f"{case}/notes.md": phone_notes(text).encode("utf-8") for case, text in PHONE_NOTES.items()},
+        "has-name-part/notes.md": HAS_NAME_PART_NOTES.encode("utf-8"),
         "screenshot/shot.png": PNG_BYTES,
         "incumbent/flagged.md": INCUMBENT_NOTES.encode("utf-8"),
         "missing-consent/session.json": js(MISSING_CONSENT_SESSION),
         "expected.json": js(LABELS),
     }
+
+
+# Independent phone patterns (hand-written from the review of #451, not from the Rust detector):
+# `+<cc>` international, 3-3-4 with `-`, space or `.`, a 3-4 local number with `-` or space,
+# and a trunk-prefixed national number (`0` + 1..4 digits, then 1..3 more groups, 9+ digits).
+PHONE_PATTERNS = [
+    r"\+\d{1,3}(?:[-\s.]\d{2,5}){2,4}",
+    r"(?<![\w.])\d{3}[-.\s]\d{3}[-.\s]\d{4}(?!\w)",
+    r"(?<![\w.])\d{3}[-\s]\d{4}(?![\w]|\.\d)",
+    r"(?<![\w.])0\d{1,4}(?:[-\s]\d{2,8}){1,3}(?![\w]|\.\d)(?<=\d)",
+]
 
 
 def oracle_check(root_dir: pathlib.Path, key_csv: pathlib.Path):
@@ -201,11 +240,13 @@ def oracle_check(root_dir: pathlib.Path, key_csv: pathlib.Path):
         text = p.read_text(encoding="utf-8")
         if re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", text):
             findings.append("RESEARCH-PII email")
-        if re.search(r"\+\d{1,3}[-\s]\d{3}[-\s]\d{3}[-\s]\d{4}", text):
+        if any(re.search(pat, text) for pat in PHONE_PATTERNS):
             findings.append("RESEARCH-PII phone")
         low = text.lower()
         for nm in names:
-            if nm in low:
+            # The full name, or any part of it with 3+ characters, as whole words.
+            words = [nm] + [w for w in nm.split() if len(w) >= 3]
+            if any(re.search(r"(?<!\w)" + re.escape(w) + r"(?!\w)", low) for w in words):
                 findings.append("RESEARCH-PII name")
         if "incumbent-artefact: true" in low:
             findings.append(f"RESEARCH-INCUMBENT {rel}")

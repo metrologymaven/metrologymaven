@@ -154,7 +154,14 @@ fn main() -> ExitCode {
             return usage();
         }
         return match fid_design::research::check(root, args.key.as_deref()) {
-            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Ok(r) => {
+                // Without `--key` names cannot be checked; say so even when stdout is JSON (the
+                // text report carries the same notice, and the JSON has `names_checked: false`).
+                if !r.names_checked && args.json {
+                    let _ = writeln!(std::io::stderr(), "{}", fid_design::research::NO_KEY_NOTICE);
+                }
+                finish(r.to_json(), r.to_text(), args.json, r.exit_code())
+            }
             Err(e) => fail(e),
         };
     }

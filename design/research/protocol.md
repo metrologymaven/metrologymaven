@@ -107,8 +107,9 @@ For every usability test session (`UX.RESEARCH.USAB`, `usab-session@1`):
 
 ## 5. Severity scale reference
 
-Issues observed during research sessions are rated on the four-level severity scale defined in
-`design/research/severity.md` (`UX.RESEARCH.USAB`):
+Issues observed during research sessions are rated on the four-level severity scale owned by
+spec node `UX.RESEARCH.USAB` (not yet published as a file; until it is, the summary below is
+the working scale):
 
 - **Level 1 (Blocks task):** prevents completing the task or causes an incorrect measurement
   or wrong conformance decision.
