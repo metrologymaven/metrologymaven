@@ -24,7 +24,7 @@ pub mod prepare;
 pub mod record;
 
 pub use exec::branch::{
-    finalise, open_run_target, ExecError, FinalOutcome, RunBus, RunTarget, SetupCause, SetupStage,
+    finalise, open_run_target, step_allowed, ExecError, FinalOutcome, RunBus, RunTarget, SetupCause, SetupStage,
     CREATE_BRANCH_COMMAND, CREATE_RUN_COMMAND, FINALISE_RUN_COMMAND,
 };
 pub use ledger::{run_started, Applied, RunEntry, RunLedger, RUN_COMMAND, RUN_STARTED};

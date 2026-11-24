@@ -1,4 +1,9 @@
-//! The run's own branch and Run entity (spec node `AUTO.RUN.EXEC.BRANCH`).
+//! The run's own branch and Run entity (spec node `AUTO.RUN.EXEC.BRANCH`). Partial build: see
+//! the leaf's Open questions for the acceptance criteria still open.
+//!
+//! **Heads.** A branch's head is its last entry, `None` for a branch with no entry of its own
+//! (as `fid_bus::Bus` reads it, `RecordJournal::branch_head`); the bus guards a commit to such a
+//! branch against [`fid_journal::GENESIS_PREV`].
 //!
 //! **Opening a run** ([`open_run_target`]), first failure returned, nothing later attempted:
 //!
@@ -7,17 +12,17 @@
 //!    under the principal it was prepared for.
 //! 2. **Fork point** (REQ-001). The principal's current working branch comes from the bus
 //!    ([`RunBus::working_branch`]: the session's open branch for a person, the agent's own
-//!    branch for an agent), and its head is the fork point. A working branch with no head is
+//!    branch for an agent), and its head is the fork point. A working branch with no entry is
 //!    refused.
 //! 3. **Branch.** `journal.create_branch@1` `{"from": <fork point>, "name": "run/<run_id>"}`
 //!    ([`crate::run_branch`]) is committed on the working branch under the principal, with
 //!    `expected_head` set to the fork point, so the branch starts at exactly the head that was
 //!    read: if the working branch moved meanwhile, the bus refuses the call and no branch
-//!    exists. The new branch must then have the fork point as its head (nothing landed on it).
-//! 4. **Run entity** (REQ-002). `project.create_run@1` `{"record": <run record>}`, the
+//!    exists. The new branch must then have no entry of its own.
+//! 4. **Run entity** (REQ-002, partly). `project.create_run@1` `{"record": <run record>}`, the
 //!    plan's record with its branch named ([`RunRecord::with_branch`]), is committed on the run
-//!    branch under the principal with `expected_head` set to the fork point, so it is the
-//!    branch's first entry or nothing.
+//!    branch under the principal with `expected_head` set to [`fid_journal::GENESIS_PREV`], so
+//!    it is the branch's first entry or nothing.
 //!
 //! Any failure in 1 to 4 is `run_setup_failed` naming the stage and the cause
 //! ([`ExecError::RunSetupFailed`]). The steps run in this order, so a Run entity never exists
@@ -26,17 +31,24 @@
 //!
 //! **Routing** (REQ-003). The returned [`RunTarget`] commits only to `run/<run_id>`, always
 //! under the run's principal ([`RunTarget::commit`]); a commit addressed to any other branch is
-//! refused with `wrong_branch` before the bus is called.
+//! refused with `wrong_branch` before the bus is called. A run step may not create, protect,
+//! promote or otherwise manage branches (any `journal.*` command) nor write the Run entity
+//! (`project.create_run@1`, `project.finalise_run@1`): those are refused with
+//! `command_not_allowed` before the bus is called; only [`open_run_target`] and [`finalise`]
+//! issue the last two.
 //!
-//! **Finalising** (REQ-005, [`finalise`]). The Run entity is read back from the run branch; if
-//! its outcome is no longer `pending` the call is `already_final` and nothing is written.
-//! Otherwise `project.finalise_run@1` `{"outcome": <outcome>, "run": "<run_id>"}` is committed
-//! on the run branch with `expected_head` set to the head that was read, so two racing
-//! finalisations cannot both pass the check: the second is refused by the bus.
+//! **Finalising** (REQ-005, [`finalise`]). The run branch's head is read first (no head: the
+//! Run entity was never written, `not_found`), then the Run entity; if its outcome is no
+//! longer `pending` the call is `already_final` and nothing is written. Otherwise
+//! `project.finalise_run@1` `{"outcome": <outcome>, "run": "<run_id>"}` is committed on the run
+//! branch with `expected_head` set to the head read before the entity, so any commit to the run
+//! branch after that read (another finalisation included) makes the bus refuse this one. That
+//! guard holds only as far as the bus enforces `expected_head` and the (not yet defined)
+//! finalise handler refuses a non-pending entity; the entity fold that would make it
+//! authoritative is a CORE obligation (NODE.md).
 //!
 //! **The bus** is reached through [`RunBus`], which the host wires to the command bus
-//! (`fid_bus::Bus` with a router that commits each call on the branch named here;
-//! `AUTO.RUN.EXEC.CMD`). Nothing here writes to a journal directly.
+//! (`fid_bus::Bus`; `AUTO.RUN.EXEC.CMD`). Nothing here writes to a journal directly.
 //!
 //! **Not settled by this leaf** (NODE.md, Open questions): the parameter documents of
 //! `project.create_run@1` and `project.finalise_run@1` are this module's; CORE.PRJ.CONT.HIER's
@@ -56,6 +68,7 @@ use fid_bus::principal::{Principal, PrincipalRef};
 use fid_bus::{CommandResult, Invocation};
 use fid_canon::{CValue, Digest as EntryHash};
 use fid_journal::branch::BranchName;
+use fid_journal::GENESIS_PREV;
 use fid_program::Uuid7;
 use fid_types::CommandId;
 use std::collections::BTreeMap;
@@ -69,16 +82,23 @@ pub const CREATE_RUN_COMMAND: &str = "project.create_run@1";
 pub const FINALISE_RUN_COMMAND: &str = "project.finalise_run@1";
 
 /// The command bus as a run's setup and finalisation use it (module docs).
+///
+/// **Adapter obligations** (the host's wiring to `fid_bus::Bus`, `AUTO.RUN.EXEC.CMD`):
+/// [`RunBus::execute`] must run the call under the principal the bus derives from the call's
+/// channel and refuse it (without running it) when that principal's kind or identity differs
+/// from the `principal` passed; it must route the commit to exactly `branch` (never to the
+/// session's open branch or any other), and the call's state view must be the view of
+/// `branch` at its head, so `expected_head` and the handler judge that branch.
 pub trait RunBus {
     /// The branch `principal` currently works on (its session's open branch; for an agent,
     /// its own branch).
     fn working_branch(&self, principal: &Principal) -> Result<String, BusError>;
-    /// The head of `branch`; for a branch with no entry of its own, the head it was created
-    /// at. `None` if there is no such branch or it has no head.
+    /// The hash of the last entry on `branch`; `None` if it has no entry of its own (a branch
+    /// just created) or does not exist, as `fid_bus::RecordJournal::branch_head`.
     fn branch_head(&self, branch: &str) -> Result<Option<EntryHash>, BusError>;
     /// The Run entity of run `run_id` as committed on `branch`, if any.
     fn run_record(&self, branch: &str, run_id: Uuid7) -> Result<Option<RunRecord>, BusError>;
-    /// Runs `inv` through the bus under `principal`, committed on `branch`.
+    /// Runs `inv` through the bus under `principal`, committed on exactly `branch` (trait docs).
     fn execute(&self, principal: &Principal, branch: &str, inv: &Invocation) -> Result<CommandResult, BusError>;
 }
 
@@ -166,6 +186,11 @@ pub enum ExecError {
         /// The branch the commit was addressed to.
         got: String,
     },
+    /// `command_not_allowed`: a run step may not issue this command (module docs).
+    CommandNotAllowed {
+        /// The command `name@major`.
+        command: String,
+    },
     /// `already_final`: the run's outcome is written already (REQ-005).
     AlreadyFinal {
         /// The outcome on record.
@@ -181,6 +206,7 @@ impl ExecError {
         match self {
             ExecError::RunSetupFailed { .. } => "run_setup_failed",
             ExecError::WrongBranch { .. } => "wrong_branch",
+            ExecError::CommandNotAllowed { .. } => "command_not_allowed",
             ExecError::AlreadyFinal { .. } => "already_final",
             ExecError::Bus(e) => e.code().as_str(),
         }
@@ -198,6 +224,9 @@ impl fmt::Display for ExecError {
             }
             ExecError::WrongBranch { expected, got } => {
                 write!(f, "wrong_branch: the run commits only to {expected}, not {got}")
+            }
+            ExecError::CommandNotAllowed { command } => {
+                write!(f, "command_not_allowed: a run step may not issue {command}")
             }
             ExecError::AlreadyFinal { outcome } => write!(f, "already_final: the run is {}", outcome.as_str()),
             ExecError::Bus(e) => write!(f, "{e}"),
@@ -253,12 +282,29 @@ impl RunTarget {
         }
     }
 
-    /// Commits `inv` of the run, addressed to `branch`, under the run's principal: refused
-    /// with `wrong_branch` before the bus is called unless `branch` is the run branch.
+    /// Commits step `inv` of the run, addressed to `branch`, under the run's principal: refused
+    /// before the bus is called with `wrong_branch` unless `branch` is the run branch, and with
+    /// `command_not_allowed` for a branch command or a Run entity write (module docs).
     pub fn commit(&self, bus: &dyn RunBus, branch: &str, inv: &Invocation) -> Result<CommandResult, ExecError> {
         self.route(branch)?;
+        if !step_allowed(&inv.command) {
+            return Err(ExecError::CommandNotAllowed { command: inv.command.as_str().to_owned() });
+        }
+        self.send(bus, inv)
+    }
+
+    fn send(&self, bus: &dyn RunBus, inv: &Invocation) -> Result<CommandResult, ExecError> {
         bus.execute(&self.principal, self.branch.as_str(), inv).map_err(ExecError::Bus)
     }
+}
+
+/// Whether a run step may issue `command` through [`RunTarget::commit`]: never a `journal.*`
+/// command (branch creation, protection, co-editing, promotion and its requests) nor one of
+/// the two Run entity writes of this module, at any major version.
+pub fn step_allowed(command: &CommandId) -> bool {
+    let name = command.name();
+    let entity_write = [CREATE_RUN_COMMAND, FINALISE_RUN_COMMAND].iter().any(|c| c.split('@').next() == Some(name));
+    !(name.starts_with("journal.") || entity_write)
 }
 
 fn command(id: &str) -> Result<CommandId, &'static str> {
@@ -326,8 +372,8 @@ pub fn open_run_target(bus: &dyn RunBus, plan: &RunPlan, principal: &Principal) 
     let result = bus.execute(principal, &working, &inv).map_err(|e| setup(stage, None, SetupCause::Bus(e)))?;
     committed(result).map_err(|w| refused(stage, None, w))?;
     let head = bus.branch_head(name.as_str()).map_err(|e| setup(stage, Some(&name), SetupCause::Bus(e)))?;
-    if head != Some(fork_point) {
-        return Err(refused(stage, Some(&name), "the run branch does not start at the fork point"));
+    if head.is_some() {
+        return Err(refused(stage, Some(&name), "the new run branch already has an entry"));
     }
 
     // 4. Run entity, the branch's first entry.
@@ -335,7 +381,7 @@ pub fn open_run_target(bus: &dyn RunBus, plan: &RunPlan, principal: &Principal) 
     let entity = record.clone().with_branch(name.as_str());
     let create_run = command(CREATE_RUN_COMMAND).map_err(|w| refused(stage, Some(&name), w))?;
     let mut inv = Invocation::new(create_run, obj([("record", entity.to_value())]));
-    inv.expected_head = Some(fork_point);
+    inv.expected_head = Some(GENESIS_PREV);
     let result =
         bus.execute(principal, name.as_str(), &inv).map_err(|e| setup(stage, Some(&name), SetupCause::Bus(e)))?;
     let run_entry = committed(result).map_err(|w| refused(stage, Some(&name), w))?;
@@ -347,16 +393,19 @@ pub fn open_run_target(bus: &dyn RunBus, plan: &RunPlan, principal: &Principal) 
 /// `already_final` if the entity's outcome is not `pending`. Returns the entry hash.
 pub fn finalise(bus: &dyn RunBus, target: &RunTarget, outcome: FinalOutcome) -> Result<EntryHash, ExecError> {
     let branch = target.branch();
-    let record = bus.run_record(branch, target.run_id).map_err(ExecError::Bus)?.ok_or_else(|| {
+    let missing = || {
         ExecError::Bus(BusError::NotFound(
             NotFoundReason::UnknownEntity,
             Detail::new(&format!("no Run entity {} on {branch}", target.run_id)),
         ))
-    })?;
+    };
+    // The head first: every commit after this read, a racing finalisation included, makes the
+    // guarded commit below fail.
+    let head = bus.branch_head(branch).map_err(ExecError::Bus)?.ok_or_else(missing)?;
+    let record = bus.run_record(branch, target.run_id).map_err(ExecError::Bus)?.ok_or_else(missing)?;
     if record.outcome() != Outcome::Pending {
         return Err(ExecError::AlreadyFinal { outcome: record.outcome() });
     }
-    let head = bus.branch_head(branch).map_err(ExecError::Bus)?;
     let id = command(FINALISE_RUN_COMMAND)
         .map_err(|w| ExecError::Bus(BusError::NotFound(NotFoundReason::UnknownCommand, Detail::new(w))))?;
     let params = obj([
@@ -364,7 +413,7 @@ pub fn finalise(bus: &dyn RunBus, target: &RunTarget, outcome: FinalOutcome) -> 
         ("run", CValue::Str(target.run_id.to_string())),
     ]);
     let mut inv = Invocation::new(id, params);
-    inv.expected_head = head;
-    let result = target.commit(bus, branch, &inv)?;
+    inv.expected_head = Some(head);
+    let result = target.send(bus, &inv)?;
     committed(result).map_err(|w| ExecError::Bus(BusError::Internal(InternalReason::InvariantViolated, Detail::new(w))))
 }

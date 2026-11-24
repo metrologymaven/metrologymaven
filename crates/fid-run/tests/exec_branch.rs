@@ -8,7 +8,8 @@
 //! hand-labelled from the leaf's requirements.
 //!
 //! The bus is a test bus ([`TestBus`]) that keeps branch heads, entries and Run entities, honours
-//! `expected_head`, applies the creation rules a branch and a Run entity have (a new name, a
+//! `expected_head` as `fid_bus::Bus` does (a branch's head is its last entry; a branch with no
+//! entry is guarded against `GENESIS_PREV`), applies the creation rules a branch and a Run entity have (a new name, a
 //! known head; one entity per run; an outcome written once), and can be told to fail one
 //! command.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
@@ -20,10 +21,11 @@ use fid_bus::error::{BusError, ConflictReason, Detail, InternalReason, NotFoundR
 use fid_bus::principal::{Principal, PrincipalRef};
 use fid_bus::{CommandResult, Invocation};
 use fid_canon::{CValue, Digest as EntryHash};
+use fid_journal::GENESIS_PREV;
 use fid_program::Uuid7;
 use fid_run::{
-    finalise, open_run_target, run_branch, ExecError, FinalOutcome, Outcome, RunBus, RunFlags, RunRecord, SetupCause,
-    SetupStage, CREATE_BRANCH_COMMAND, CREATE_RUN_COMMAND, FINALISE_RUN_COMMAND,
+    finalise, open_run_target, run_branch, step_allowed, ExecError, FinalOutcome, Outcome, RunBus, RunFlags, RunRecord,
+    RunTarget, SetupCause, SetupStage, CREATE_BRANCH_COMMAND, CREATE_RUN_COMMAND, FINALISE_RUN_COMMAND,
 };
 use fid_types::CommandId;
 use std::cell::{Cell, RefCell};
@@ -37,12 +39,15 @@ struct Entry {
     command: String,
     principal: PrincipalRef,
     params: CValue,
+    expected_head: Option<EntryHash>,
     hash: EntryHash,
 }
 
 #[derive(Default, Clone)]
 struct State {
+    /// The last entry of each branch that has one.
     heads: BTreeMap<String, EntryHash>,
+    /// Branches created by `journal.create_branch@1`, with the head they start at.
     created_from: BTreeMap<String, EntryHash>,
     entries: Vec<Entry>,
     /// Run entities by (branch, run ID text).
@@ -123,12 +128,11 @@ impl TestBus {
             c if c == CREATE_BRANCH_COMMAND => {
                 let name = st(member(p, "name")).to_owned();
                 let from = st(member(p, "from"));
-                if s.heads.contains_key(&name) {
+                if s.heads.contains_key(&name) || s.created_from.contains_key(&name) {
                     return Err(refuse("branch exists"));
                 }
                 let known = s.heads.values().chain(s.created_from.values()).copied().find(|d| d.to_string() == from);
                 let from = known.ok_or_else(|| refuse("unknown head"))?;
-                s.heads.insert(name.clone(), from);
                 s.created_from.insert(name, from);
             }
             c if c == CREATE_RUN_COMMAND => {
@@ -185,10 +189,10 @@ impl RunBus for TestBus {
             return Err(BusError::Internal(InternalReason::HandlerFailed, Detail::new("test bus fails this command")));
         }
         let mut s = self.state.borrow_mut();
-        let head = *s
-            .heads
-            .get(branch)
-            .ok_or_else(|| BusError::NotFound(NotFoundReason::UnknownBranch, Detail::new(branch)))?;
+        if !s.heads.contains_key(branch) && !s.created_from.contains_key(branch) {
+            return Err(BusError::NotFound(NotFoundReason::UnknownBranch, Detail::new(branch)));
+        }
+        let head = s.heads.get(branch).copied().unwrap_or(GENESIS_PREV);
         if inv.expected_head.is_some_and(|e| e != head) {
             return Err(BusError::Conflict(ConflictReason::ExpectedHeadMismatch, Detail::new(branch)));
         }
@@ -202,6 +206,7 @@ impl RunBus for TestBus {
             command: inv.command.as_str().to_owned(),
             principal: principal.reference(),
             params: inv.params.clone(),
+            expected_head: inv.expected_head,
             hash,
         });
         next.heads.insert(branch.to_owned(), hash);
@@ -240,12 +245,15 @@ fn ac1_person_on_main_gets_run_branch_and_run_entity_first() {
     assert_eq!(on_main[0].command, CREATE_BRANCH_COMMAND);
     assert_eq!(st(member(&on_main[0].params, "name")), name);
     assert_eq!(st(member(&on_main[0].params, "from")), h(1).to_string());
+    assert_eq!(on_main[0].expected_head, Some(h(1)));
 
     // The run branch's first (and only) entry is project.create_run@1 with the record.
     let on_run = bus.on(&name);
     assert_eq!(on_run.len(), 1);
     assert_eq!(on_run[0].command, CREATE_RUN_COMMAND);
     assert_eq!(on_run[0].hash, t.run_entry());
+    // Guarded as the first entry of an empty branch, as fid_bus::Bus guards one.
+    assert_eq!(on_run[0].expected_head, Some(GENESIS_PREV));
     let rec = member(&on_run[0].params, "record");
     assert_eq!(st(member(rec, "program_digest")), ex.s("program_digest"));
     assert_eq!(st(member(member(member(rec, "inputs"), "scan"), "sha256")), ex.s("scan_sha256"));
@@ -298,10 +306,11 @@ fn ac3_failed_run_entity_write_is_run_setup_failed_and_leaves_no_entity() {
         }
         other => panic!("{other:?}"),
     }
-    // No Run entity on any branch; the empty run branch stays at the fork point.
+    // No Run entity on any branch; the run branch exists, created at the fork point, empty.
     assert_eq!(bus.run_entities(), 0);
     assert!(bus.on(&name).is_empty());
-    assert_eq!(bus.head(&name), Some(h(1)));
+    assert_eq!(bus.head(&name), None);
+    assert_eq!(bus.state.borrow().created_from.get(&name), Some(&h(1)));
     assert!(e.to_string().contains(&name));
 }
 
@@ -504,4 +513,151 @@ fn same_plan_same_target_and_entries() {
         (t, entries)
     };
     assert_eq!(run(), run());
+}
+
+// ------------------------------------------------------------------ review fixes
+
+#[test]
+fn run_entity_write_on_a_branch_that_already_has_an_entry_is_refused() {
+    // A bus that reports an entry on the new branch: the module refuses before writing.
+    struct Busy(TestBus);
+    impl RunBus for Busy {
+        fn working_branch(&self, p: &Principal) -> Result<String, BusError> {
+            self.0.working_branch(p)
+        }
+        fn branch_head(&self, b: &str) -> Result<Option<EntryHash>, BusError> {
+            if b.starts_with("run/") {
+                Ok(Some(h(3)))
+            } else {
+                self.0.branch_head(b)
+            }
+        }
+        fn run_record(&self, b: &str, id: Uuid7) -> Result<Option<RunRecord>, BusError> {
+            self.0.run_record(b, id)
+        }
+        fn execute(&self, p: &Principal, b: &str, i: &Invocation) -> Result<CommandResult, BusError> {
+            self.0.execute(p, b, i)
+        }
+    }
+    let w = World::at("released");
+    let plan = released_plan(&w, &w.alice);
+    let bus = Busy(TestBus::new());
+    let e = open_run_target(&bus, &plan, &w.alice).unwrap_err();
+    assert!(matches!(e, ExecError::RunSetupFailed { stage: SetupStage::CreateBranch, branch: Some(_), .. }));
+    assert_eq!(bus.0.run_entities(), 0);
+}
+
+/// A bus on which another finalisation of the same run lands between `finalise`'s head read
+/// and its commit (inside `run_record`, which still returns the pending entity it read first).
+struct Racer<'a> {
+    inner: TestBus,
+    competitor: &'a Principal,
+    raced: Cell<bool>,
+}
+
+impl RunBus for Racer<'_> {
+    fn working_branch(&self, p: &Principal) -> Result<String, BusError> {
+        self.inner.working_branch(p)
+    }
+    fn branch_head(&self, b: &str) -> Result<Option<EntryHash>, BusError> {
+        self.inner.branch_head(b)
+    }
+    fn run_record(&self, b: &str, id: Uuid7) -> Result<Option<RunRecord>, BusError> {
+        let seen = self.inner.run_record(b, id)?;
+        if !self.raced.replace(true) {
+            let params = CValue::Obj(BTreeMap::from([
+                ("outcome".to_owned(), CValue::Str("failed".into())),
+                ("run".to_owned(), CValue::Str(id.to_string())),
+            ]));
+            let inv = Invocation::new(CommandId::parse(FINALISE_RUN_COMMAND).unwrap(), params);
+            self.inner.execute(self.competitor, b, &inv).unwrap();
+        }
+        Ok(seen)
+    }
+    fn execute(&self, p: &Principal, b: &str, i: &Invocation) -> Result<CommandResult, BusError> {
+        self.inner.execute(p, b, i)
+    }
+}
+
+#[test]
+fn racing_finalisation_is_refused_by_the_head_guard() {
+    let w = World::at("released");
+    let plan = released_plan(&w, &w.alice);
+    let inner = TestBus::new();
+    let t = open_run_target(&inner, &plan, &w.alice).unwrap();
+    let bus = Racer { inner, competitor: &w.alice, raced: Cell::new(false) };
+    let e = finalise(&bus, &t, FinalOutcome::Succeeded).unwrap_err();
+    assert_eq!(e.code(), "conflict");
+    assert!(matches!(e, ExecError::Bus(BusError::Conflict(ConflictReason::ExpectedHeadMismatch, _))));
+    // Only the competitor's outcome is on record, from exactly one finalise entry.
+    let rec = bus.inner.run_record(t.branch(), t.run_id()).unwrap().unwrap();
+    assert_eq!(rec.outcome(), Outcome::Failed);
+    let fins = bus.inner.on(t.branch()).into_iter().filter(|e| e.command == FINALISE_RUN_COMMAND).count();
+    assert_eq!(fins, 1);
+}
+
+#[test]
+fn finalise_commits_with_the_head_read_first() {
+    let w = World::at("released");
+    let plan = released_plan(&w, &w.alice);
+    let bus = TestBus::new();
+    let t = open_run_target(&bus, &plan, &w.alice).unwrap();
+    finalise(&bus, &t, FinalOutcome::Cancelled).unwrap();
+    let on_run = bus.on(t.branch());
+    assert_eq!(on_run[1].expected_head, Some(t.run_entry()));
+}
+
+#[test]
+fn finalise_without_a_run_branch_head_is_not_found() {
+    let w = World::at("released");
+    let plan = released_plan(&w, &w.alice);
+    let bus = TestBus::new();
+    let t = open_run_target(&bus, &plan, &w.alice).unwrap();
+    bus.state.borrow_mut().heads.remove(t.branch());
+    let calls = bus.calls.get();
+    let e = finalise(&bus, &t, FinalOutcome::Succeeded).unwrap_err();
+    assert!(matches!(e, ExecError::Bus(BusError::NotFound(NotFoundReason::UnknownEntity, _))));
+    assert_eq!(bus.calls.get(), calls);
+}
+
+fn target(bus: &TestBus, w: &World) -> RunTarget {
+    open_run_target(bus, &released_plan(w, &w.alice), &w.alice).unwrap()
+}
+
+#[test]
+fn run_steps_may_not_manage_branches_or_write_the_run_entity() {
+    let w = World::at("released");
+    let bus = TestBus::new();
+    let t = target(&bus, &w);
+    let before = (bus.calls.get(), bus.entries().len());
+    for id in [
+        "journal.create_branch@1",
+        "journal.protect_branch@1",
+        "journal.set_branch_coediting@1",
+        "journal.promote_branch@1",
+        "journal.promote_protected_branch@1",
+        "journal.request_promote_branch@1",
+        "journal.create_branch@2",
+        "project.create_run@2",
+        "project.finalise_run@9",
+        CREATE_RUN_COMMAND,
+        FINALISE_RUN_COMMAND,
+    ] {
+        let cmd = CommandId::parse(id).unwrap();
+        assert!(!step_allowed(&cmd), "{id}");
+        let inv = Invocation::new(cmd, CValue::Obj(BTreeMap::new()));
+        let e = t.commit(&bus, t.branch(), &inv).unwrap_err();
+        assert_eq!(e.code(), "command_not_allowed", "{id}");
+        assert_eq!(e, ExecError::CommandNotAllowed { command: id.to_owned() });
+        assert_eq!(t.route(t.branch()), Ok(()));
+    }
+    assert_eq!((bus.calls.get(), bus.entries().len()), before);
+    // The run entity is still pending: a step cannot finalise it.
+    assert_eq!(bus.run_record(t.branch(), t.run_id()).unwrap().unwrap().outcome(), Outcome::Pending);
+    // Ordinary step commands pass (and wrong_branch is still checked first).
+    for id in ["test.step@1", "project.create_part@1", "journalx.step@1", "project.create_runs@1"] {
+        assert!(step_allowed(&CommandId::parse(id).unwrap()), "{id}");
+    }
+    let inv = Invocation::new(CommandId::parse(CREATE_RUN_COMMAND).unwrap(), CValue::Obj(BTreeMap::new()));
+    assert_eq!(t.commit(&bus, "main", &inv).unwrap_err().code(), "wrong_branch");
 }
