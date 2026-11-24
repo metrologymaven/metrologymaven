@@ -306,3 +306,29 @@ fn bad_usage_and_unreadable_exit_2() {
         assert_eq!(run(&args).status.code(), Some(2), "{args:?}");
     }
 }
+
+/// Non-UTF-8 / unreadable files and capture sidecars carrying a key name in their path must
+/// still exit 2 and MUST redact the key name from stderr.
+#[test]
+fn stderr_redacts_key_names_on_unreadable_or_non_utf8_paths() {
+    let d1 = temp("non-utf8-note");
+    let sub = d1.join("Jordan Kestrel");
+    std::fs::create_dir_all(&sub).unwrap();
+    std::fs::write(sub.join("notes.md"), [0xff, 0xfe, 0xfd]).unwrap();
+    let o1 = run(&["research-check", "--root", d1.to_str().unwrap(), "--key", &fix("key.csv")]);
+    assert_eq!(o1.status.code(), Some(2));
+    let err1 = String::from_utf8_lossy(&o1.stderr);
+    assert!(err1.contains("<withheld>"), "expected redaction in stderr: {err1}");
+    assert!(!err1.contains("Jordan"), "key leaked in stderr: {err1}");
+    assert!(!err1.contains("Kestrel"), "key leaked in stderr: {err1}");
+
+    let d2 = temp("non-utf8-sidecar");
+    std::fs::copy(repo().join(FX).join("screenshot/shot.png"), d2.join("Nadia Oakhurst.png")).unwrap();
+    std::fs::write(d2.join("Nadia Oakhurst.png.capture.json"), [0xff, 0xfe, 0xfd]).unwrap();
+    let o2 = run(&["research-check", "--root", d2.to_str().unwrap(), "--key", &fix("key.csv")]);
+    assert_eq!(o2.status.code(), Some(2));
+    let err2 = String::from_utf8_lossy(&o2.stderr);
+    assert!(err2.contains("<withheld>"), "expected redaction in stderr: {err2}");
+    assert!(!err2.contains("Nadia"), "key leaked in stderr: {err2}");
+    assert!(!err2.contains("Oakhurst"), "key leaked in stderr: {err2}");
+}

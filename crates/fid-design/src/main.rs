@@ -75,6 +75,8 @@ fn parse_args(args: &[String]) -> Option<Args> {
         match a.as_str() {
             "--json" => out.json = true,
             "--root" => out.root = Some(PathBuf::from(it.next()?)),
+            "--rules" => out.rules = Some(PathBuf::from(it.next()?)),
+            "--package" => out.package = Some(PathBuf::from(it.next()?)),
             "--allowlist" => out.allowlist = Some(PathBuf::from(it.next()?)),
             "--spec" => out.spec = Some(PathBuf::from(it.next()?)),
             "--key" => out.key = Some(PathBuf::from(it.next()?)),

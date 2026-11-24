@@ -187,6 +187,37 @@ fn redact_path(rel: &str, keys: &[KeyEntry]) -> String {
         .join("/")
 }
 
+/// Redacts private key names from an error message (supporting both `/` and `\` path segments).
+fn redact_error(msg: &str, keys: &[KeyEntry]) -> String {
+    if keys.is_empty() {
+        return msg.to_string();
+    }
+    let out: String = msg
+        .split_inclusive(['/', '\\'])
+        .map(|part| {
+            let (body, sep) = if let Some(b) = part.strip_suffix('/') {
+                (b, "/")
+            } else if let Some(b) = part.strip_suffix('\\') {
+                (b, "\\")
+            } else {
+                (part, "")
+            };
+            let norm = normalise_words(body);
+            if keys.iter().any(|k| k.found_in(&norm) || norm.contains(&k.norm)) {
+                format!("{WITHHELD}{sep}")
+            } else {
+                part.to_string()
+            }
+        })
+        .collect();
+    let norm_out = normalise_words(&out);
+    if keys.iter().any(|k| k.found_in(&norm_out) || norm_out.contains(&k.norm)) {
+        WITHHELD.to_string()
+    } else {
+        out
+    }
+}
+
 /// Detects whether a line contains an e-mail address without flagging `@<version>` IDs.
 pub fn line_has_email(line: &str) -> bool {
     let bytes = line.as_bytes();
@@ -441,9 +472,15 @@ fn is_raster_image(rel: &str) -> bool {
         .is_some_and(|(stem, ext)| !stem.is_empty() && RASTER_EXTS.contains(&ext.to_ascii_lowercase().as_str()))
 }
 
-fn check_capture_sidecar(root: &Path, img_rel: &str, shown_rel: &str, f: &mut Vec<Finding>) -> Result<(), String> {
+fn check_capture_sidecar(
+    root: &Path,
+    img_rel: &str,
+    shown_rel: &str,
+    keys: &[KeyEntry],
+    f: &mut Vec<Finding>,
+) -> Result<(), String> {
     let sidecar = format!("{img_rel}{CAPTURE_SUFFIX}");
-    let text = match crate::review::kind(root, &sidecar)? {
+    let text = match crate::review::kind(root, &sidecar).map_err(|e| redact_error(&e, keys))? {
         crate::review::Kind::Missing => {
             f.push(Finding::new(
                 IMAGE_PROVENANCE,
@@ -452,7 +489,9 @@ fn check_capture_sidecar(root: &Path, img_rel: &str, shown_rel: &str, f: &mut Ve
             ));
             return Ok(());
         }
-        crate::review::Kind::File => read_text(&root.join(&sidecar), MAX_JSON_BYTES)?,
+        crate::review::Kind::File => {
+            read_text(&root.join(&sidecar), MAX_JSON_BYTES).map_err(|e| redact_error(&e, keys))?
+        }
         _ => {
             f.push(Finding::new(IMAGE_PROVENANCE, shown_rel, "capture sidecar is not a regular file"));
             return Ok(());
@@ -616,7 +655,7 @@ pub fn check(root: &Path, key_path: Option<&Path>) -> Result<Report, String> {
     };
 
     let mut wf = Vec::new();
-    let entries = walk::walk(root, "", &mut wf)?;
+    let entries = walk::walk(root, "", &mut wf).map_err(|e| redact_error(&e, &keys))?;
     for w in wf {
         let subj = redact_path(&w.subject, &keys);
         f.push(Finding::new(SCHEMA, subj, w.detail));
@@ -648,7 +687,7 @@ pub fn check(root: &Path, key_path: Option<&Path>) -> Result<Report, String> {
         if e.rel.ends_with(CAPTURE_SUFFIX) {
             capture_files.push(e.rel.clone());
         }
-        let text = read_text(&e.path, MAX_FILE_BYTES)?;
+        let text = read_text(&e.path, MAX_FILE_BYTES).map_err(|err| redact_error(&err, &keys))?;
         files_scanned += 1;
         scan_text_file(&shown, &text, &keys, &mut f);
 
@@ -666,7 +705,7 @@ pub fn check(root: &Path, key_path: Option<&Path>) -> Result<Report, String> {
 
     for img in &raster_files {
         let shown = redact_path(img, &keys);
-        check_capture_sidecar(root, img, &shown, &mut f)?;
+        check_capture_sidecar(root, img, &shown, &keys, &mut f)?;
     }
     for cap in &capture_files {
         let img = &cap[..cap.len() - CAPTURE_SUFFIX.len()];
