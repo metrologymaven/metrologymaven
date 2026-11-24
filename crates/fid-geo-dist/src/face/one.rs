@@ -487,6 +487,10 @@ fn on_surface_lip(s: SurfRef<'_>, c: &Curve2, t0: f64, t1: f64) -> Result<f64, F
     }
 }
 
+/// A boundary line of a NURBS domain: direction of the fixed parameter, its value, the range
+/// of the other parameter and the control points on the line.
+type DomainLine = (usize, f64, [f64; 2], Vec<Option<[f64; 3]>>);
+
 /// Pole points of a NURBS face: a boundary line of the parameter domain whose control
 /// points all coincide (within `2^-40` of the largest coordinate) is a single point of the
 /// surface; it belongs to the face when a trimming segment ends on that line (within
@@ -505,7 +509,7 @@ fn pole_lines(n: &NurbsSurface, trim: &TrimIndex) -> Result<Vec<([f64; 3], [f64;
     let at = |i: usize, j: usize| -> Option<[f64; 3]> { ctrl.get(i * n_v + j).copied() };
     let mut out = Vec::new();
     // (direction of the fixed parameter, its value, the other range, control points)
-    let lines = [
+    let lines: [DomainLine; 4] = [
         (0, u0, [v0, v1], (0..n_v).map(|j| at(0, j)).collect()),
         (0, u1, [v0, v1], (0..n_v).map(|j| at(n_u.saturating_sub(1), j)).collect()),
         (1, v0, [u0, u1], (0..n_u).map(|i| at(i, 0)).collect()),
