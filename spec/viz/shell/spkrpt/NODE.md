@@ -68,6 +68,7 @@ The third D-005 spike: a WYSIWYG page canvas in egui of the kind the report desi
 ## Open questions
 
 - RPT.DESIGN owns the real designer; its maintainers should review the spike criteria.
+- Build status (not marked `built_in`): the prototype, harness and report renderer are in `fid-spike-ui` (module `rpt`, example `rptcanvas`, fixture `fixtures/viz/report-canvas-200` from `make_canvas.py`). AC-3 (keyboard move and resize, on the model) and AC-5 (fail wording in the report) are tested in CI. Open: AC-1 and AC-2 need a timed run on the PLAT H1 machine with a GPU; AC-4 needs the manual Japanese IME check on Windows (during that run, also record whether Escape pressed during IME composition cancels the composition without ending the edit; the report's IME log has a line for it); the screen-reader check of REQ-VIZ.SHELL.SPKRPT-005 is manual too. No timings exist yet.
 
 ## Children
 

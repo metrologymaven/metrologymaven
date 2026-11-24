@@ -15,8 +15,9 @@
 //! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]`,
 //! `fid-design icons-lint --root <icons dir> [--json]`,
 //! `fid-design fonts-check --root <design dir> --allowlist <file> [--json]`,
-//! `fid-design page-check (--root <design dir> | --file <pages.json>) [--json]` and
-//! `fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]`.
+//! `fid-design page-check (--root <design dir> | --file <pages.json>) [--json]`,
+//! `fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]` and
+//! `fid-design research-check --root <dir> [--key <private csv>] [--json]`.
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage (`icons-lint` also
 //! exits 2 for a root holding no SVG).
 
@@ -43,11 +44,13 @@ const USAGE: &str =
        fid-design icons-lint --root <icons dir> [--json]
        fid-design fonts-check --root <design dir> --allowlist <file> [--json]
        fid-design page-check (--root <design dir> | --file <pages.json>) [--json]
-       fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]";
+       fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]
+       fid-design research-check --root <dir> [--key <private csv>] [--json]";
 
 #[derive(Default)]
 struct Args {
     root: Option<PathBuf>,
+    key: Option<PathBuf>,
     rules: Option<PathBuf>,
     package: Option<PathBuf>,
     allowlist: Option<PathBuf>,
@@ -78,6 +81,7 @@ fn parse_args(args: &[String]) -> Option<Args> {
         match a.as_str() {
             "--json" => out.json = true,
             "--root" => out.root = Some(PathBuf::from(it.next()?)),
+            "--key" => out.key = Some(PathBuf::from(it.next()?)),
             "--rules" => out.rules = Some(PathBuf::from(it.next()?)),
             "--package" => out.package = Some(PathBuf::from(it.next()?)),
             "--allowlist" => out.allowlist = Some(PathBuf::from(it.next()?)),
@@ -169,7 +173,8 @@ fn main() -> ExitCode {
             || args.attribution.is_some()
             || args.manifest.is_some()
             || args.rules.is_some()
-            || args.package.is_some();
+            || args.package.is_some()
+            || args.key.is_some();
         let (Some(root), Some(allowlist)) = (&args.root, &args.allowlist) else {
             return usage();
         };
@@ -194,7 +199,8 @@ fn main() -> ExitCode {
             || args.pr.is_some()
             || args.all
             || args.attribution.is_some()
-            || args.manifest.is_some();
+            || args.manifest.is_some()
+            || args.key.is_some();
         let Some(root) = &args.root else {
             return usage();
         };
@@ -212,7 +218,42 @@ fn main() -> ExitCode {
             Err(e) => fail(e),
         };
     }
-    if args.rules.is_some() || args.package.is_some() || args.allowlist.is_some() {
+    if cmd == "research-check" {
+        let others = princ_flags
+            || screen_flags
+            || args.from.is_some()
+            || args.to.is_some()
+            || args.baseline.is_some()
+            || args.out.is_some()
+            || args.changed.is_some()
+            || args.deny_names.is_some()
+            || args.base.is_some()
+            || args.pr.is_some()
+            || args.all
+            || args.attribution.is_some()
+            || args.manifest.is_some()
+            || args.rules.is_some()
+            || args.package.is_some()
+            || args.allowlist.is_some();
+        let Some(root) = &args.root else {
+            return usage();
+        };
+        if others {
+            return usage();
+        }
+        return match fid_design::research::check(root, args.key.as_deref()) {
+            Ok(r) => {
+                // Without `--key` names cannot be checked; say so even when stdout is JSON (the
+                // text report carries the same notice, and the JSON has `names_checked: false`).
+                if !r.names_checked && args.json {
+                    let _ = writeln!(std::io::stderr(), "{}", fid_design::research::NO_KEY_NOTICE);
+                }
+                finish(r.to_json(), r.to_text(), args.json, r.exit_code())
+            }
+            Err(e) => fail(e),
+        };
+    }
+    if args.rules.is_some() || args.package.is_some() || args.allowlist.is_some() || args.key.is_some() {
         return usage();
     }
     if cmd == "screens-check" || cmd == "screens-gate" {

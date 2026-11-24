@@ -1,0 +1,208 @@
+# fid-spike-ui report canvas v1 (make_canvas.py, seed 13); lengths in 0.1 mm
+# page<TAB>number<TAB>paper
+# block<TAB>id<TAB>page<TAB>kind<TAB>x<TAB>y<TAB>w<TAB>h<TAB>name<TAB>content
+page	1	A4
+page	2	A4
+page	3	A4
+page	4	A4
+page	5	A4
+block	1	1	band	150	100	1800	150	Header 1	Inspection report, page 1
+block	2	1	frame3d	150	300	1175	320	Viewport 1	-
+block	3	1	table	1350	300	575	150	Table 1	3x2
+block	4	1	text	1350	470	575	150	Text 1	operator cylinder flatness notes cylinder fixture
+block	5	1	text	150	640	575	150	Text 2	fixture operator plane section plane
+block	6	1	text	750	640	575	150	Text 3	tolérance 部品 plane alignment cylinder probe alignment 部品
+block	7	1	text	1350	640	575	150	Text 4	section 測定 position probe そくてい notes cylinder fixture fixture
+block	8	1	text	150	810	575	150	Text 5	notes 部品 position Prüfung fixture datum 部品 alignment alignment program
+block	9	1	text	750	810	575	150	Text 6	position notes section program 部品 cylinder
+block	10	1	table	1350	810	575	150	Table 2	5x3
+block	11	1	text	150	980	575	150	Text 7	flatness Prüfung fixture 部品
+block	12	1	text	750	980	575	150	Text 8	報告 report flatness fixture
+block	13	1	text	1350	980	575	150	Text 9	cylinder そくてい 部品 datum
+block	14	1	table	150	1150	575	150	Table 3	6x3
+block	15	1	table	750	1150	575	150	Table 4	5x3
+block	16	1	text	1350	1150	575	150	Text 10	報告 datum alignment report summary flatness
+block	17	1	text	150	1320	575	150	Text 11	notes flatness datum
+block	18	1	text	750	1320	575	150	Text 12	plane plane probe flatness 測定 測定
+block	19	1	text	1350	1320	575	150	Text 13	部品 tolérance Prüfung fixture section
+block	20	1	text	150	1490	575	150	Text 14	cylinder 部品 plane そくてい operator probe program
+block	21	1	table	750	1490	575	150	Table 5	2x4
+block	22	1	text	1350	1490	575	150	Text 15	報告 summary operator report section
+block	23	1	text	150	1660	575	150	Text 16	program report notes notes そくてい position datum 部品 position alignment
+block	24	1	text	750	1660	575	150	Text 17	そくてい そくてい plane 測定 report program 報告
+block	25	1	table	1350	1660	575	150	Table 6	2x5
+block	26	1	text	150	1830	575	150	Text 18	報告 datum position operator notes operator plane alignment summary fixture
+block	27	1	table	750	1830	575	150	Table 7	6x4
+block	28	1	text	1350	1830	575	150	Text 19	報告 notes flatness cylinder flatness operator section
+block	29	1	text	150	2000	575	150	Text 20	部品 cylinder summary tolérance summary そくてい 報告 部品
+block	30	1	table	750	2000	575	150	Table 8	5x2
+block	31	1	table	1350	2000	575	150	Table 9	2x5
+block	32	1	table	150	2170	575	150	Table 10	6x4
+block	33	1	text	750	2170	575	150	Text 21	部品 fixture position tolérance fixture 報告 部品 flatness summary section
+block	34	1	text	1350	2170	575	150	Text 22	fixture report 報告
+block	35	1	text	150	2340	575	150	Text 23	部品 tolérance position summary program そくてい section section そくてい
+block	36	1	text	750	2340	575	150	Text 24	部品 datum probe 報告 notes
+block	37	1	text	1350	2340	575	150	Text 25	position position tolérance program position plane 測定 部品
+block	38	1	text	150	2510	575	150	Text 26	operator そくてい summary section
+block	39	1	text	750	2510	575	150	Text 27	position Prüfung alignment fixture section tolérance plane flatness Prüfung
+block	40	1	band	150	2720	1800	150	Footer 1	Page 1 of 5
+block	41	2	band	150	100	1800	150	Header 2	Inspection report, page 2
+block	42	2	table	150	300	575	150	Table 11	5x4
+block	43	2	table	750	300	575	150	Table 12	4x4
+block	44	2	text	1350	300	575	150	Text 28	Prüfung section operator datum 報告
+block	45	2	text	150	470	575	150	Text 29	tolérance section 部品 flatness probe position report section 部品
+block	46	2	table	750	470	575	150	Table 13	2x3
+block	47	2	table	1350	470	575	150	Table 14	4x5
+block	48	2	text	150	640	575	150	Text 30	summary fixture そくてい
+block	49	2	text	750	640	575	150	Text 31	flatness plane alignment report section notes 測定
+block	50	2	text	1350	640	575	150	Text 32	program flatness そくてい program position 報告 notes
+block	51	2	text	150	810	575	150	Text 33	datum cylinder tolérance 測定
+block	52	2	text	750	810	575	150	Text 34	flatness summary 部品 position 部品 operator report operator
+block	53	2	text	1350	810	575	150	Text 35	alignment report cylinder 報告 probe section probe program
+block	54	2	text	150	980	575	150	Text 36	alignment flatness plane 部品 tolérance
+block	55	2	text	750	980	575	150	Text 37	report tolérance plane alignment Prüfung Prüfung
+block	56	2	text	1350	980	575	150	Text 38	summary 測定 operator そくてい plane program summary flatness alignment
+block	57	2	text	150	1150	575	150	Text 39	tolérance fixture alignment 部品 flatness section flatness notes
+block	58	2	text	750	1150	575	150	Text 40	plane cylinder operator fixture 部品 測定 flatness 報告
+block	59	2	text	1350	1150	575	150	Text 41	program fixture summary flatness plane
+block	60	2	text	150	1320	575	150	Text 42	datum report datum 測定 section operator section 報告 alignment notes
+block	61	2	text	750	1320	575	150	Text 43	flatness 部品 そくてい
+block	62	2	text	1350	1320	575	150	Text 44	section report Prüfung cylinder datum position alignment 報告 position 報告
+block	63	2	text	150	1490	575	150	Text 45	operator Prüfung fixture Prüfung operator
+block	64	2	text	750	1490	575	150	Text 46	program alignment 報告 Prüfung tolérance 測定 notes report
+block	65	2	text	1350	1490	575	150	Text 47	Prüfung tolérance probe flatness summary report flatness tolérance section
+block	66	2	text	150	1660	575	150	Text 48	flatness program section operator operator fixture section report position
+block	67	2	text	750	1660	575	150	Text 49	fixture そくてい datum plane 報告 operator program notes
+block	68	2	text	1350	1660	575	150	Text 50	alignment fixture flatness
+block	69	2	text	150	1830	575	150	Text 51	fixture probe 報告 Prüfung
+block	70	2	text	750	1830	575	150	Text 52	report datum program 報告 報告
+block	71	2	text	1350	1830	575	150	Text 53	probe operator notes
+block	72	2	text	150	2000	575	150	Text 54	部品 operator 報告 section flatness datum section report
+block	73	2	text	750	2000	575	150	Text 55	測定 報告 report plane 報告 flatness
+block	74	2	text	1350	2000	575	150	Text 56	report そくてい Prüfung Prüfung
+block	75	2	text	150	2170	575	150	Text 57	Prüfung plane report
+block	76	2	table	750	2170	575	150	Table 15	5x3
+block	77	2	text	1350	2170	575	150	Text 58	Prüfung position report position 報告 position summary flatness program
+block	78	2	text	150	2340	575	150	Text 59	部品 alignment flatness
+block	79	2	text	750	2340	575	150	Text 60	summary fixture program program program
+block	80	2	band	150	2720	1800	150	Footer 2	Page 2 of 5
+block	81	3	band	150	100	1800	150	Header 3	Inspection report, page 3
+block	82	3	text	150	300	575	150	Text 61	tolérance flatness そくてい notes 報告 section tolérance position 測定
+block	83	3	table	750	300	575	150	Table 16	4x5
+block	84	3	text	1350	300	575	150	Text 62	そくてい そくてい 測定
+block	85	3	table	150	470	575	150	Table 17	6x4
+block	86	3	text	750	470	575	150	Text 63	Prüfung flatness section flatness summary Prüfung
+block	87	3	text	1350	470	575	150	Text 64	fixture summary report
+block	88	3	table	150	640	575	150	Table 18	2x5
+block	89	3	text	750	640	575	150	Text 65	測定 部品 報告 program Prüfung position
+block	90	3	text	1350	640	575	150	Text 66	Prüfung tolérance plane section summary position datum probe tolérance program
+block	91	3	text	150	810	575	150	Text 67	alignment plane alignment 測定
+block	92	3	text	750	810	575	150	Text 68	section tolérance program program plane
+block	93	3	text	1350	810	575	150	Text 69	fixture flatness probe
+block	94	3	text	150	980	575	150	Text 70	部品 そくてい probe report program 測定 notes 部品
+block	95	3	text	750	980	575	150	Text 71	probe datum plane program 報告 section operator
+block	96	3	text	1350	980	575	150	Text 72	cylinder alignment flatness notes alignment summary Prüfung summary
+block	97	3	table	150	1150	575	150	Table 19	3x5
+block	98	3	text	750	1150	575	150	Text 73	program section 部品 alignment 報告 operator notes report 測定
+block	99	3	text	1350	1150	575	150	Text 74	alignment program 報告
+block	100	3	text	150	1320	575	150	Text 75	position Prüfung Prüfung
+block	101	3	text	750	1320	575	150	Text 76	datum datum plane 部品
+block	102	3	text	1350	1320	575	150	Text 77	report 部品 部品
+block	103	3	table	150	1490	575	150	Table 20	4x2
+block	104	3	text	750	1490	575	150	Text 78	section summary program そくてい probe
+block	105	3	table	1350	1490	575	150	Table 21	2x3
+block	106	3	table	150	1660	575	150	Table 22	3x4
+block	107	3	text	750	1660	575	150	Text 79	tolérance fixture section Prüfung
+block	108	3	text	1350	1660	575	150	Text 80	operator Prüfung そくてい position operator alignment report そくてい Prüfung
+block	109	3	text	150	1830	575	150	Text 81	notes operator section 報告 plane operator report plane Prüfung
+block	110	3	table	750	1830	575	150	Table 23	6x2
+block	111	3	text	1350	1830	575	150	Text 82	section operator fixture section cylinder そくてい 測定 flatness program 測定
+block	112	3	text	150	2000	575	150	Text 83	probe tolérance 報告 alignment そくてい section alignment flatness summary fixture
+block	113	3	text	750	2000	575	150	Text 84	flatness flatness 測定 position 報告 notes 測定 summary 部品
+block	114	3	text	1350	2000	575	150	Text 85	report flatness 測定 報告 tolérance program notes 測定 operator 報告
+block	115	3	text	150	2170	575	150	Text 86	Prüfung cylinder probe flatness Prüfung flatness flatness plane
+block	116	3	text	750	2170	575	150	Text 87	報告 report datum report tolérance summary
+block	117	3	text	1350	2170	575	150	Text 88	報告 report alignment 測定 program
+block	118	3	text	150	2340	575	150	Text 89	report position そくてい plane probe
+block	119	3	text	750	2340	575	150	Text 90	fixture Prüfung fixture fixture plane
+block	120	3	band	150	2720	1800	150	Footer 3	Page 3 of 5
+block	121	4	band	150	100	1800	150	Header 4	Inspection report, page 4
+block	122	4	text	150	300	575	150	Text 91	そくてい position position
+block	123	4	text	750	300	575	150	Text 92	測定 notes 測定
+block	124	4	text	1350	300	575	150	Text 93	そくてい cylinder fixture Prüfung 部品 operator notes fixture 部品
+block	125	4	text	150	470	575	150	Text 94	position cylinder 部品 報告 section flatness operator
+block	126	4	text	750	470	575	150	Text 95	section program summary そくてい fixture section 測定 Prüfung operator position
+block	127	4	text	1350	470	575	150	Text 96	probe alignment Prüfung fixture fixture 報告 tolérance そくてい report Prüfung
+block	128	4	text	150	640	575	150	Text 97	cylinder alignment flatness 部品 program Prüfung そくてい summary tolérance
+block	129	4	text	750	640	575	150	Text 98	Prüfung summary alignment plane Prüfung notes summary
+block	130	4	text	1350	640	575	150	Text 99	flatness position 測定 program
+block	131	4	text	150	810	575	150	Text 100	report flatness section 測定 operator program plane fixture 報告 position
+block	132	4	text	750	810	575	150	Text 101	notes flatness cylinder flatness そくてい Prüfung
+block	133	4	text	1350	810	575	150	Text 102	tolérance datum report operator report fixture fixture summary program
+block	134	4	text	150	980	575	150	Text 103	Prüfung 測定 alignment fixture 測定
+block	135	4	text	750	980	575	150	Text 104	program 測定 flatness position Prüfung summary 報告 測定
+block	136	4	text	1350	980	575	150	Text 105	alignment fixture probe program alignment alignment Prüfung program
+block	137	4	text	150	1150	575	150	Text 106	測定 position cylinder plane flatness 部品 program flatness 部品
+block	138	4	text	750	1150	575	150	Text 107	Prüfung cylinder report program 報告 報告
+block	139	4	text	1350	1150	575	150	Text 108	operator probe alignment program
+block	140	4	text	150	1320	575	150	Text 109	部品 Prüfung tolérance
+block	141	4	text	750	1320	575	150	Text 110	測定 報告 fixture 部品 datum
+block	142	4	text	1350	1320	575	150	Text 111	cylinder probe tolérance summary flatness notes alignment report operator 報告
+block	143	4	text	150	1490	575	150	Text 112	報告 section fixture fixture probe 測定 datum flatness
+block	144	4	text	750	1490	575	150	Text 113	report datum section cylinder そくてい position
+block	145	4	text	1350	1490	575	150	Text 114	position 測定 position probe alignment
+block	146	4	text	150	1660	575	150	Text 115	alignment program 報告 fixture Prüfung operator Prüfung 測定 section alignment
+block	147	4	text	750	1660	575	150	Text 116	section tolérance fixture notes Prüfung cylinder notes datum 測定 probe
+block	148	4	text	1350	1660	575	150	Text 117	probe tolérance そくてい 部品 plane そくてい flatness probe flatness 報告
+block	149	4	text	150	1830	575	150	Text 118	section operator 測定 cylinder 報告 datum flatness summary notes
+block	150	4	text	750	1830	575	150	Text 119	position fixture summary section summary plane
+block	151	4	text	1350	1830	575	150	Text 120	position alignment notes alignment summary fixture Prüfung
+block	152	4	text	150	2000	575	150	Text 121	fixture program cylinder datum alignment notes
+block	153	4	table	750	2000	575	150	Table 24	2x4
+block	154	4	text	1350	2000	575	150	Text 122	tolérance summary fixture flatness plane position fixture report program
+block	155	4	text	150	2170	575	150	Text 123	fixture 報告 probe position そくてい plane datum 測定 probe
+block	156	4	text	750	2170	575	150	Text 124	position Prüfung notes 部品 flatness 報告 probe 報告
+block	157	4	table	1350	2170	575	150	Table 25	4x3
+block	158	4	text	150	2340	575	150	Text 125	probe summary cylinder cylinder report program
+block	159	4	text	750	2340	575	150	Text 126	report summary alignment Prüfung
+block	160	4	band	150	2720	1800	150	Footer 4	Page 4 of 5
+block	161	5	band	150	100	1800	150	Header 5	Inspection report, page 5
+block	162	5	text	150	300	575	150	Text 127	tolérance program そくてい 測定 position summary datum Prüfung fixture
+block	163	5	table	750	300	575	150	Table 26	5x4
+block	164	5	text	1350	300	575	150	Text 128	tolérance notes section tolérance Prüfung datum probe section
+block	165	5	text	150	470	575	150	Text 129	alignment cylinder alignment Prüfung program
+block	166	5	text	750	470	575	150	Text 130	fixture report plane section
+block	167	5	text	1350	470	575	150	Text 131	summary Prüfung flatness 報告
+block	168	5	text	150	640	575	150	Text 132	cylinder plane alignment 報告 summary 部品 そくてい
+block	169	5	table	750	640	575	150	Table 27	2x4
+block	170	5	table	1350	640	575	150	Table 28	5x5
+block	171	5	text	150	810	575	150	Text 133	Prüfung 部品 program 部品 probe position
+block	172	5	text	750	810	575	150	Text 134	alignment そくてい そくてい cylinder operator
+block	173	5	text	1350	810	575	150	Text 135	fixture 測定 program probe
+block	174	5	text	150	980	575	150	Text 136	cylinder datum plane notes section fixture そくてい position 部品 部品
+block	175	5	text	750	980	575	150	Text 137	そくてい datum flatness flatness notes Prüfung 測定 position
+block	176	5	text	1350	980	575	150	Text 138	tolérance fixture program 測定 section そくてい datum section 測定
+block	177	5	text	150	1150	575	150	Text 139	fixture 測定 position summary 部品
+block	178	5	table	750	1150	575	150	Table 29	5x3
+block	179	5	text	1350	1150	575	150	Text 140	operator 測定 tolérance 測定
+block	180	5	text	150	1320	575	150	Text 141	summary fixture tolérance
+block	181	5	text	750	1320	575	150	Text 142	report position flatness alignment fixture report cylinder
+block	182	5	text	1350	1320	575	150	Text 143	fixture tolérance program plane
+block	183	5	text	150	1490	575	150	Text 144	position notes operator datum
+block	184	5	text	750	1490	575	150	Text 145	flatness position 部品 flatness alignment flatness cylinder そくてい position
+block	185	5	text	1350	1490	575	150	Text 146	datum position tolérance そくてい 部品 tolérance
+block	186	5	text	150	1660	575	150	Text 147	notes notes program 部品 program plane 報告
+block	187	5	text	750	1660	575	150	Text 148	notes datum 部品 alignment section
+block	188	5	text	1350	1660	575	150	Text 149	datum datum summary
+block	189	5	text	150	1830	575	150	Text 150	tolérance datum report 報告 operator operator probe
+block	190	5	text	750	1830	575	150	Text 151	報告 report notes
+block	191	5	text	1350	1830	575	150	Text 152	datum operator Prüfung 部品 program position summary flatness summary
+block	192	5	text	150	2000	575	150	Text 153	probe 報告 報告 notes position position cylinder program
+block	193	5	text	750	2000	575	150	Text 154	alignment section program datum position position section
+block	194	5	text	1350	2000	575	150	Text 155	cylinder probe operator notes plane report operator
+block	195	5	table	150	2170	575	150	Table 30	3x5
+block	196	5	text	750	2170	575	150	Text 156	報告 operator summary program flatness fixture
+block	197	5	table	1350	2170	575	150	Table 31	4x2
+block	198	5	text	150	2340	575	150	Text 157	flatness cylinder そくてい fixture notes notes position
+block	199	5	table	750	2340	575	150	Table 32	3x3
+block	200	5	band	150	2720	1800	150	Footer 5	Page 5 of 5
