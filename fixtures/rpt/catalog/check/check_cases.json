@@ -1,0 +1,819 @@
+{
+  "projects": [
+    {
+      "project_id": "01936f3a-0000-7000-8000-000000000002",
+      "handle": "line-b"
+    },
+    {
+      "project_id": "01936f3a-0000-7000-8000-000000000001",
+      "handle": "line-a"
+    },
+    {
+      "project_id": "01936f3a-0000-7000-8000-000000000003",
+      "handle": "line-c"
+    }
+  ],
+  "entries": [
+    {
+      "project_id": "01936f3a-0000-7000-8000-000000000002",
+      "record_id": "r-020",
+      "part": "BRACKET-100",
+      "revision": "C",
+      "plan": "plan-main",
+      "run": "run-1",
+      "stage": "final",
+      "characteristic": "Flatness \u0001 top",
+      "timestamp": "2026-11-20T08:00:00Z",
+      "value": {
+        "literal": "12.004",
+        "unit": "mm",
+        "si": "0.012004"
+      },
+      "decision_outcome": "CONFORMS",
+      "rule_id": "simple-acceptance",
+      "evaluation_basis": "FEATURES",
+      "uec_class": "UEC-2",
+      "claimed": false,
+      "declared_input": false,
+      "uncharacterized_input": false,
+      "interpretation": "signed_off",
+      "record_status": "active",
+      "journal_seq": "4",
+      "journal_entry_hash": "sha256:02005b18b5941e9bb141a1f3c5a7bf1462f519fc8f101944c5e6162ace340315",
+      "entry_status": "unverified",
+      "tags": [
+        "lot-7",
+        "audit"
+      ]
+    },
+    {
+      "project_id": "01936f3a-0000-7000-8000-000000000001",
+      "record_id": "r-002",
+      "part": "BRACKET-100",
+      "revision": "C",
+      "plan": "plan-main",
+      "run": "run-1",
+      "stage": "final",
+      "characteristic": "D1 diameter",
+      "timestamp": "2026-11-20T08:00:00Z",
+      "value": {
+        "literal": "-0.0",
+        "unit": "mm",
+        "si": "-0.0"
+      },
+      "decision_outcome": "CONFORMS",
+      "rule_id": "simple-acceptance",
+      "evaluation_basis": "FEATURES",
+      "uec_class": "UEC-2",
+      "claimed": false,
+      "declared_input": false,
+      "uncharacterized_input": false,
+      "interpretation": "signed_off",
+      "record_status": "active",
+      "journal_seq": "2",
+      "journal_entry_hash": "sha256:d0b6d4ab4039d80ddd86923d5109d3c192a7cc35ad3795b93a3c2df703f7c334",
+      "entry_status": "ok",
+      "tags": []
+    },
+    {
+      "project_id": "01936f3a-0000-7000-8000-000000000001",
+      "record_id": "r-001",
+      "part": "Bracket \u00e9\u2028\"q\"\\",
+      "revision": null,
+      "plan": "plan-main",
+      "run": "run-1",
+      "stage": "final",
+      "characteristic": "D1 diameter",
+      "timestamp": "2026-11-20T08:00:00Z",
+      "value": {
+        "literal": "12.004",
+        "unit": "mm",
+        "si": "0.012004"
+      },
+      "decision_outcome": "CONFORMS",
+      "rule_id": "simple-acceptance",
+      "evaluation_basis": "FEATURES",
+      "uec_class": "UEC-2",
+      "claimed": false,
+      "declared_input": false,
+      "uncharacterized_input": false,
+      "interpretation": "signed_off",
+      "record_status": "active",
+      "journal_seq": "2",
+      "journal_entry_hash": "sha256:d0b6d4ab4039d80ddd86923d5109d3c192a7cc35ad3795b93a3c2df703f7c334",
+      "entry_status": "unverified",
+      "tags": [
+        "b",
+        "a",
+        "Z"
+      ]
+    },
+    {
+      "project_id": "01936f3a-0000-7000-8000-000000000003",
+      "record_id": "r-100",
+      "part": "BRACKET-100",
+      "revision": "C",
+      "plan": "plan-main",
+      "run": "run-1",
+      "stage": "final",
+      "characteristic": "D1 diameter",
+      "timestamp": "2026-11-20T08:00:00Z",
+      "value": {
+        "literal": "5e-5",
+        "unit": "m",
+        "si": "5e-5"
+      },
+      "decision_outcome": "CONFORMS",
+      "rule_id": "simple-acceptance",
+      "evaluation_basis": "FEATURES",
+      "uec_class": "UEC-2",
+      "claimed": false,
+      "declared_input": false,
+      "uncharacterized_input": false,
+      "interpretation": "signed_off",
+      "record_status": "active",
+      "journal_seq": "1",
+      "journal_entry_hash": "sha256:aff5471e3a28ee50d594391c8f35ced52a1633130204525f6a03eccbe8fd9a90",
+      "entry_status": "stale",
+      "tags": []
+    },
+    {
+      "project_id": "01936f3a-0000-7000-8000-000000000001",
+      "record_id": "r-010",
+      "part": "BRACKET-100",
+      "revision": "C",
+      "plan": "plan-main",
+      "run": "run-1",
+      "stage": "final",
+      "characteristic": "D1 diameter",
+      "timestamp": "2026-11-20T08:00:00Z",
+      "value": null,
+      "decision_outcome": "NOT_DECIDABLE",
+      "rule_id": null,
+      "evaluation_basis": "FEATURES",
+      "uec_class": "UEC-0",
+      "claimed": false,
+      "declared_input": false,
+      "uncharacterized_input": false,
+      "interpretation": "provisional",
+      "record_status": "active",
+      "journal_seq": "5",
+      "journal_entry_hash": "sha256:4b1afd7a7546519f6280e184697b1bb78f65715905255f991b1996e556cd7bc4",
+      "entry_status": "unverified",
+      "tags": []
+    },
+    {
+      "project_id": "01936f3a-0000-7000-8000-000000000002",
+      "record_id": "r-021",
+      "part": "BRACKET-100",
+      "revision": "C",
+      "plan": "plan-main",
+      "run": "run-1",
+      "stage": "final",
+      "characteristic": "D1 diameter",
+      "timestamp": "2026-11-20T08:00:00Z",
+      "value": {
+        "literal": "12.004",
+        "unit": "mm",
+        "si": "0.012004"
+      },
+      "decision_outcome": "INDETERMINATE",
+      "rule_id": "simple-acceptance",
+      "evaluation_basis": "DIRECT_READING",
+      "uec_class": "UEC-1",
+      "claimed": true,
+      "declared_input": false,
+      "uncharacterized_input": false,
+      "interpretation": "signed_off",
+      "record_status": "voided",
+      "journal_seq": "6",
+      "journal_entry_hash": "sha256:b21acab11e7b1e9e1edbb614abca55db77fb178e7641482774cae464519a2f54",
+      "entry_status": "unverified",
+      "tags": []
+    },
+    {
+      "project_id": "01936f3a-0000-7000-8000-000000000003",
+      "record_id": "r-101",
+      "part": "BRACKET-100",
+      "revision": "C",
+      "plan": "plan-main",
+      "run": "run-1",
+      "stage": "final",
+      "characteristic": "D1 diameter",
+      "timestamp": "2026-11-20T08:00:00Z",
+      "value": {
+        "literal": "1.5",
+        "unit": "deg",
+        "si": "0.02617993877991494"
+      },
+      "decision_outcome": "CONFORMS",
+      "rule_id": "simple-acceptance",
+      "evaluation_basis": "FEATURES",
+      "uec_class": "UEC-1",
+      "claimed": false,
+      "declared_input": true,
+      "uncharacterized_input": true,
+      "interpretation": "signed_off",
+      "record_status": "active",
+      "journal_seq": "3",
+      "journal_entry_hash": "sha256:28744b86de21fb688bff7f2633b1f485c4aa19cb7b2f5c67b87066d29a16bdc4",
+      "entry_status": "unverified",
+      "tags": []
+    },
+    {
+      "project_id": "01936f3a-0000-7000-8000-000000000002",
+      "record_id": "r-022",
+      "part": "BRACKET-100",
+      "revision": "C",
+      "plan": "plan-main",
+      "run": "run-1",
+      "stage": "final",
+      "characteristic": "D1 diameter",
+      "timestamp": "2026-11-21T09:30:15.250Z",
+      "value": {
+        "literal": "12.004",
+        "unit": "mm",
+        "si": "0.012004"
+      },
+      "decision_outcome": "CONFORMS",
+      "rule_id": "simple-acceptance",
+      "evaluation_basis": "FEATURES",
+      "uec_class": "UEC-2",
+      "claimed": false,
+      "declared_input": false,
+      "uncharacterized_input": false,
+      "interpretation": "signed_off",
+      "record_status": "superseded",
+      "journal_seq": "6",
+      "journal_entry_hash": "sha256:b21acab11e7b1e9e1edbb614abca55db77fb178e7641482774cae464519a2f54",
+      "entry_status": "unverified",
+      "tags": []
+    },
+    {
+      "project_id": "01936f3a-0000-7000-8000-000000000001",
+      "record_id": "r-003",
+      "part": "BRACKET-100",
+      "revision": "C",
+      "plan": "plan-main",
+      "run": "run-1",
+      "stage": "first-off",
+      "characteristic": "D1 diameter",
+      "timestamp": "2026-11-20T08:00:00Z",
+      "value": {
+        "literal": "12.004",
+        "unit": "mm",
+        "si": "0.012004"
+      },
+      "decision_outcome": "NONCONFORMS",
+      "rule_id": "simple-acceptance",
+      "evaluation_basis": "FEATURES",
+      "uec_class": "UEC-2",
+      "claimed": false,
+      "declared_input": false,
+      "uncharacterized_input": false,
+      "interpretation": "signed_off",
+      "record_status": "active",
+      "journal_seq": "9",
+      "journal_entry_hash": "sha256:8443a1be677bbd7404ab53fe6b466aebb1cb81539880e44674fe75a1b1e0a630",
+      "entry_status": "unavailable",
+      "tags": []
+    },
+    {
+      "project_id": "01936f3a-0000-7000-8000-000000000003",
+      "record_id": "r-102",
+      "part": "BRACKET-100",
+      "revision": "C",
+      "plan": "plan-main",
+      "run": "run-1",
+      "stage": "final",
+      "characteristic": "D1 diameter",
+      "timestamp": "2026-11-20T08:00:00Z",
+      "value": {
+        "literal": "12.004",
+        "unit": "mm",
+        "si": "0.012004"
+      },
+      "decision_outcome": "CONFORMS",
+      "rule_id": "simple-acceptance",
+      "evaluation_basis": "FEATURES",
+      "uec_class": "UEC-3",
+      "claimed": false,
+      "declared_input": false,
+      "uncharacterized_input": false,
+      "interpretation": "signed_off",
+      "record_status": "active",
+      "journal_seq": "3",
+      "journal_entry_hash": "sha256:28744b86de21fb688bff7f2633b1f485c4aa19cb7b2f5c67b87066d29a16bdc4",
+      "entry_status": "unverified",
+      "tags": []
+    }
+  ],
+  "sources": {
+    "01936f3a-0000-7000-8000-000000000001": [
+      {
+        "seq": "2",
+        "hash": "sha256:d0b6d4ab4039d80ddd86923d5109d3c192a7cc35ad3795b93a3c2df703f7c334",
+        "records": [
+          "r-001",
+          "r-002"
+        ],
+        "unreadable": false
+      },
+      {
+        "seq": "5",
+        "hash": "sha256:4b1afd7a7546519f6280e184697b1bb78f65715905255f991b1996e556cd7bc4",
+        "records": [
+          "r-010"
+        ],
+        "unreadable": false
+      },
+      {
+        "seq": "7",
+        "hash": "sha256:d202911c539df8820195a07d9c674205d107d7f967992b3e7a3469e227c25196",
+        "records": [
+          "r-999"
+        ],
+        "unreadable": false
+      },
+      {
+        "seq": "9",
+        "hash": "sha256:8443a1be677bbd7404ab53fe6b466aebb1cb81539880e44674fe75a1b1e0a630",
+        "records": [
+          "r-003"
+        ],
+        "unreadable": false
+      }
+    ],
+    "01936f3a-0000-7000-8000-000000000002": [
+      {
+        "seq": "4",
+        "hash": "sha256:02005b18b5941e9bb141a1f3c5a7bf1462f519fc8f101944c5e6162ace340315",
+        "records": [
+          "r-020"
+        ],
+        "unreadable": false
+      },
+      {
+        "seq": "6",
+        "hash": "sha256:b21acab11e7b1e9e1edbb614abca55db77fb178e7641482774cae464519a2f54",
+        "records": [
+          "r-021",
+          "r-022"
+        ],
+        "unreadable": false
+      }
+    ],
+    "01936f3a-0000-7000-8000-000000000003": [
+      {
+        "seq": "1",
+        "hash": "sha256:aff5471e3a28ee50d594391c8f35ced52a1633130204525f6a03eccbe8fd9a90",
+        "records": [
+          "r-100"
+        ],
+        "unreadable": false
+      },
+      {
+        "seq": "3",
+        "hash": "sha256:28744b86de21fb688bff7f2633b1f485c4aa19cb7b2f5c67b87066d29a16bdc4",
+        "records": [
+          "r-101",
+          "r-102"
+        ],
+        "unreadable": false
+      }
+    ]
+  },
+  "digest": "sha256:e5b639156d38d021a832b2ca7c70c9135d7768a9bf3b5835921cbdb4ffdef4d2",
+  "empty_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "scenarios": [
+    {
+      "name": "all_ok",
+      "ac": "AC-1",
+      "catalog_edits": [],
+      "remove_projects": [],
+      "drop_records": [],
+      "unreadable": [],
+      "rehash": [],
+      "filter": null,
+      "expect": {
+        "statuses": {
+          "01936f3a-0000-7000-8000-000000000001/r-001": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-002": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-003": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-010": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-020": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-021": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-022": "ok",
+          "01936f3a-0000-7000-8000-000000000003/r-100": "ok",
+          "01936f3a-0000-7000-8000-000000000003/r-101": "ok",
+          "01936f3a-0000-7000-8000-000000000003/r-102": "ok"
+        },
+        "per_project": [
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000001",
+            "ok": 4,
+            "stale": 0,
+            "unavailable": 0
+          },
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000002",
+            "ok": 3,
+            "stale": 0,
+            "unavailable": 0
+          },
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000003",
+            "ok": 3,
+            "stale": 0,
+            "unavailable": 0
+          }
+        ],
+        "stale": [],
+        "digest": "sha256:e5b639156d38d021a832b2ca7c70c9135d7768a9bf3b5835921cbdb4ffdef4d2"
+      }
+    },
+    {
+      "name": "altered_catalog_hash",
+      "ac": "AC-2",
+      "catalog_edits": [
+        {
+          "project_id": "01936f3a-0000-7000-8000-000000000002",
+          "record_id": "r-021",
+          "journal_entry_hash": "sha256:d121be3103007b41edf96f8262925f8c7d61894afe9a041843b631f69445bc57"
+        }
+      ],
+      "remove_projects": [],
+      "drop_records": [],
+      "unreadable": [],
+      "rehash": [],
+      "filter": null,
+      "expect": {
+        "statuses": {
+          "01936f3a-0000-7000-8000-000000000001/r-001": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-002": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-003": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-010": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-020": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-021": "stale",
+          "01936f3a-0000-7000-8000-000000000002/r-022": "ok",
+          "01936f3a-0000-7000-8000-000000000003/r-100": "ok",
+          "01936f3a-0000-7000-8000-000000000003/r-101": "ok",
+          "01936f3a-0000-7000-8000-000000000003/r-102": "ok"
+        },
+        "per_project": [
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000001",
+            "ok": 4,
+            "stale": 0,
+            "unavailable": 0
+          },
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000002",
+            "ok": 2,
+            "stale": 1,
+            "unavailable": 0
+          },
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000003",
+            "ok": 3,
+            "stale": 0,
+            "unavailable": 0
+          }
+        ],
+        "stale": [
+          [
+            "01936f3a-0000-7000-8000-000000000002",
+            "r-021"
+          ]
+        ],
+        "digest": "sha256:4644974c2caaaddf7e0e55c91cf182a1fa2d5f5a525b16c182ab209755e789d3"
+      }
+    },
+    {
+      "name": "project_removed",
+      "ac": "AC-3",
+      "catalog_edits": [],
+      "remove_projects": [
+        "01936f3a-0000-7000-8000-000000000003"
+      ],
+      "drop_records": [],
+      "unreadable": [],
+      "rehash": [],
+      "filter": null,
+      "expect": {
+        "statuses": {
+          "01936f3a-0000-7000-8000-000000000001/r-001": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-002": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-003": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-010": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-020": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-021": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-022": "ok",
+          "01936f3a-0000-7000-8000-000000000003/r-100": "unavailable",
+          "01936f3a-0000-7000-8000-000000000003/r-101": "unavailable",
+          "01936f3a-0000-7000-8000-000000000003/r-102": "unavailable"
+        },
+        "per_project": [
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000001",
+            "ok": 4,
+            "stale": 0,
+            "unavailable": 0
+          },
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000002",
+            "ok": 3,
+            "stale": 0,
+            "unavailable": 0
+          },
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000003",
+            "ok": 0,
+            "stale": 0,
+            "unavailable": 3
+          }
+        ],
+        "stale": [],
+        "digest": "sha256:e5b639156d38d021a832b2ca7c70c9135d7768a9bf3b5835921cbdb4ffdef4d2"
+      }
+    },
+    {
+      "name": "journal_rewritten",
+      "ac": "REQ-002",
+      "catalog_edits": [],
+      "remove_projects": [],
+      "drop_records": [],
+      "unreadable": [],
+      "rehash": [
+        {
+          "project_id": "01936f3a-0000-7000-8000-000000000001",
+          "seq": "2",
+          "hash": "sha256:04d96d8a91ea74aa0ec9adb2f390d4f025b3a4517bae57226f0903962de682b0"
+        }
+      ],
+      "filter": null,
+      "expect": {
+        "statuses": {
+          "01936f3a-0000-7000-8000-000000000001/r-001": "stale",
+          "01936f3a-0000-7000-8000-000000000001/r-002": "stale",
+          "01936f3a-0000-7000-8000-000000000001/r-003": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-010": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-020": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-021": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-022": "ok",
+          "01936f3a-0000-7000-8000-000000000003/r-100": "ok",
+          "01936f3a-0000-7000-8000-000000000003/r-101": "ok",
+          "01936f3a-0000-7000-8000-000000000003/r-102": "ok"
+        },
+        "per_project": [
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000001",
+            "ok": 2,
+            "stale": 2,
+            "unavailable": 0
+          },
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000002",
+            "ok": 3,
+            "stale": 0,
+            "unavailable": 0
+          },
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000003",
+            "ok": 3,
+            "stale": 0,
+            "unavailable": 0
+          }
+        ],
+        "stale": [
+          [
+            "01936f3a-0000-7000-8000-000000000001",
+            "r-001"
+          ],
+          [
+            "01936f3a-0000-7000-8000-000000000001",
+            "r-002"
+          ]
+        ],
+        "digest": "sha256:e5b639156d38d021a832b2ca7c70c9135d7768a9bf3b5835921cbdb4ffdef4d2"
+      }
+    },
+    {
+      "name": "record_not_at_position",
+      "ac": "REQ-002",
+      "catalog_edits": [],
+      "remove_projects": [],
+      "drop_records": [
+        {
+          "project_id": "01936f3a-0000-7000-8000-000000000002",
+          "seq": "6",
+          "record_id": "r-022"
+        }
+      ],
+      "unreadable": [],
+      "rehash": [],
+      "filter": null,
+      "expect": {
+        "statuses": {
+          "01936f3a-0000-7000-8000-000000000001/r-001": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-002": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-003": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-010": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-020": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-021": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-022": "stale",
+          "01936f3a-0000-7000-8000-000000000003/r-100": "ok",
+          "01936f3a-0000-7000-8000-000000000003/r-101": "ok",
+          "01936f3a-0000-7000-8000-000000000003/r-102": "ok"
+        },
+        "per_project": [
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000001",
+            "ok": 4,
+            "stale": 0,
+            "unavailable": 0
+          },
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000002",
+            "ok": 2,
+            "stale": 1,
+            "unavailable": 0
+          },
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000003",
+            "ok": 3,
+            "stale": 0,
+            "unavailable": 0
+          }
+        ],
+        "stale": [
+          [
+            "01936f3a-0000-7000-8000-000000000002",
+            "r-022"
+          ]
+        ],
+        "digest": "sha256:e5b639156d38d021a832b2ca7c70c9135d7768a9bf3b5835921cbdb4ffdef4d2"
+      }
+    },
+    {
+      "name": "entry_unreadable",
+      "ac": "UNAVAILABLE",
+      "catalog_edits": [],
+      "remove_projects": [],
+      "drop_records": [],
+      "unreadable": [
+        {
+          "project_id": "01936f3a-0000-7000-8000-000000000003",
+          "seq": "3"
+        }
+      ],
+      "rehash": [],
+      "filter": null,
+      "expect": {
+        "statuses": {
+          "01936f3a-0000-7000-8000-000000000001/r-001": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-002": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-003": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-010": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-020": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-021": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-022": "ok",
+          "01936f3a-0000-7000-8000-000000000003/r-100": "ok",
+          "01936f3a-0000-7000-8000-000000000003/r-101": "unavailable",
+          "01936f3a-0000-7000-8000-000000000003/r-102": "unavailable"
+        },
+        "per_project": [
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000001",
+            "ok": 4,
+            "stale": 0,
+            "unavailable": 0
+          },
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000002",
+            "ok": 3,
+            "stale": 0,
+            "unavailable": 0
+          },
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000003",
+            "ok": 1,
+            "stale": 0,
+            "unavailable": 2
+          }
+        ],
+        "stale": [],
+        "digest": "sha256:e5b639156d38d021a832b2ca7c70c9135d7768a9bf3b5835921cbdb4ffdef4d2"
+      }
+    },
+    {
+      "name": "filter_one_project",
+      "ac": "REQ-001",
+      "catalog_edits": [
+        {
+          "project_id": "01936f3a-0000-7000-8000-000000000001",
+          "record_id": "r-003",
+          "journal_entry_hash": "sha256:628b49d96dcde97a430dd4f597705899e09a968f793491e4b704cae33a40dc02"
+        },
+        {
+          "project_id": "01936f3a-0000-7000-8000-000000000002",
+          "record_id": "r-020",
+          "journal_entry_hash": "sha256:c44474038d459e40e4714afefa7bf8dae9f9834b22f5e8ec1dd434ecb62b512e"
+        }
+      ],
+      "remove_projects": [],
+      "drop_records": [],
+      "unreadable": [],
+      "rehash": [],
+      "filter": "01936f3a-0000-7000-8000-000000000002",
+      "expect": {
+        "statuses": {
+          "01936f3a-0000-7000-8000-000000000001/r-001": "unverified",
+          "01936f3a-0000-7000-8000-000000000001/r-002": "ok",
+          "01936f3a-0000-7000-8000-000000000001/r-003": "unavailable",
+          "01936f3a-0000-7000-8000-000000000001/r-010": "unverified",
+          "01936f3a-0000-7000-8000-000000000002/r-020": "stale",
+          "01936f3a-0000-7000-8000-000000000002/r-021": "ok",
+          "01936f3a-0000-7000-8000-000000000002/r-022": "ok",
+          "01936f3a-0000-7000-8000-000000000003/r-100": "stale",
+          "01936f3a-0000-7000-8000-000000000003/r-101": "unverified",
+          "01936f3a-0000-7000-8000-000000000003/r-102": "unverified"
+        },
+        "per_project": [
+          {
+            "project_id": "01936f3a-0000-7000-8000-000000000002",
+            "ok": 2,
+            "stale": 1,
+            "unavailable": 0
+          }
+        ],
+        "stale": [
+          [
+            "01936f3a-0000-7000-8000-000000000002",
+            "r-020"
+          ]
+        ],
+        "digest": "sha256:3a3fe1cfe42d9b30193ee394f19033fe3f2566713e3da53ddb6cae3cba2a1874"
+      }
+    }
+  ],
+  "bulk": {
+    "count": 10001,
+    "hash": "sha256:bf8348b4107daaacf154ae780e1d5a7ee7a98f912d22e70c1f808550aaf26ef9",
+    "template": {
+      "project_id": "01936f3a-0000-7000-8000-000000000001",
+      "record_id": "r-00000",
+      "part": "BRACKET-100",
+      "revision": null,
+      "plan": "plan-main",
+      "run": "run-1",
+      "stage": "final",
+      "characteristic": "D1 diameter",
+      "timestamp": "2026-11-20T08:00:00Z",
+      "value": null,
+      "decision_outcome": "NOT_DECIDABLE",
+      "rule_id": null,
+      "evaluation_basis": "FEATURES",
+      "uec_class": "UEC-0",
+      "claimed": false,
+      "declared_input": false,
+      "uncharacterized_input": false,
+      "interpretation": "signed_off",
+      "record_status": "active",
+      "journal_seq": "1",
+      "journal_entry_hash": "sha256:bf8348b4107daaacf154ae780e1d5a7ee7a98f912d22e70c1f808550aaf26ef9",
+      "entry_status": "unverified",
+      "tags": []
+    },
+    "other": {
+      "project_id": "01936f3a-0000-7000-8000-000000000002",
+      "record_id": "r-020",
+      "part": "BRACKET-100",
+      "revision": "C",
+      "plan": "plan-main",
+      "run": "run-1",
+      "stage": "final",
+      "characteristic": "D1 diameter",
+      "timestamp": "2026-11-20T08:00:00Z",
+      "value": {
+        "literal": "12.004",
+        "unit": "mm",
+        "si": "0.012004"
+      },
+      "decision_outcome": "CONFORMS",
+      "rule_id": "simple-acceptance",
+      "evaluation_basis": "FEATURES",
+      "uec_class": "UEC-2",
+      "claimed": false,
+      "declared_input": false,
+      "uncharacterized_input": false,
+      "interpretation": "signed_off",
+      "record_status": "active",
+      "journal_seq": "4",
+      "journal_entry_hash": "sha256:02005b18b5941e9bb141a1f3c5a7bf1462f519fc8f101944c5e6162ace340315",
+      "entry_status": "unverified",
+      "tags": []
+    },
+    "digest": "sha256:215d10e734a9da45806c0b5455325bb75e0582e1dcde1cf60b10ca68bc9054bf"
+  }
+}

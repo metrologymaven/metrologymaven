@@ -240,6 +240,7 @@ python fixtures/replay/select/make_cases.py --check
 python fixtures/repo/tpl/promote/make_fixtures.py --check
 python fixtures/repo/tpl/selftest/make_fixtures.py --check
 python fixtures/rpt/balloon/auto/make_fixtures.py --check
+python fixtures/rpt/catalog/check/make_cases.py --check
 python fixtures/rpt/catalog/make_schema_fixtures.py --check
 python fixtures/rpt/model/bind/expand/make_fixtures.py --check
 python fixtures/rpt/model/bracket_3stage/make_fixtures.py --check
