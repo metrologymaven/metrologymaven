@@ -703,7 +703,8 @@ impl CoverageTable {
         if h.private_run {
             let _ = writeln!(
                 p,
-                "- Private run: yes (self-declared in the corpus manifest, unverified; the corpus holds files the                  project may not redistribute)"
+                "- Private run: yes (self-declared in the corpus manifest, unverified; the corpus holds files \
+                 the project may not redistribute)"
             );
         } else {
             let _ = writeln!(p, "- Private run: no (self-declared in the corpus manifest, unverified)");
@@ -937,7 +938,8 @@ fn admission_prop() -> CValue {
         ("enum", strs(&[ADMISSION_NOT_CHECKED])),
         (
             "description",
-            s("Corpus and taxonomy admission is not checked by this command (cargo xtask mig corpus-check and                taxonomy-check do)."),
+            s("Corpus and taxonomy admission is not checked by this command (cargo xtask mig corpus-check and \
+               taxonomy-check do)."),
         ),
     ])
 }
