@@ -7,11 +7,16 @@
 //! - **`RESEARCH-PII email`**: any text file contains an e-mail address (the address is never
 //!   echoed).
 //! - **`RESEARCH-PII phone`**: any text file contains a phone number (the number is never
-//!   echoed).
-//! - **`RESEARCH-PII name`**: any file or path contains a name from `--key <csv>` (matched
-//!   case-insensitively after Unicode NFKC and hidden-character stripping, using
-//!   [`crate::review::names::scan_key`]). The key is read only from `--key`, never written, and
+//!   echoed): `+<cc>` international numbers, `(NNN) NNN-NNNN`, 3-3-4 groups with `-`, space or
+//!   `.` (`555.019.2834`), 3-4 local numbers with `-` or space (`555-0192`), and national numbers
+//!   with a trunk `0` prefix in other groupings (`07700 900123`, `030 12345678`).
+//! - **`RESEARCH-PII name`**: any file or path contains a name from `--key <csv>`, or any part
+//!   of one with at least [`MIN_NAME_PART_CHARS`] characters as a whole word (a surname alone),
+//!   matched case-insensitively after Unicode NFKC and hidden-character stripping, using
+//!   [`crate::review::names::scan_key`]. The key is read only from `--key`, never written, and
 //!   no finding or path ever prints a matched name (matching path segments become `<withheld>`).
+//!   Without `--key` names are not checked: the text report says so ([`NO_KEY_NOTICE`], also on
+//!   stderr with `--json`) and the JSON carries `names_checked: false`.
 //! - **`RESEARCH-IMAGE-PROVENANCE`**: every raster image (`.png`, `.jpg`, `.jpeg`, `.webp`,
 //!   `.gif`, `.bmp`, `.tif`, `.tiff`) must carry a `<image>.capture.json` sidecar
 //!   (`research-capture@1`: `format`, `image`, `command` naming `fid <app> capture`, `date`).
@@ -62,12 +67,36 @@ pub const MAX_KEY_ROWS: usize = 10_000;
 const RASTER_EXTS: [&str; 8] = ["bmp", "gif", "jpeg", "jpg", "png", "tif", "tiff", "webp"];
 const CAPTURE_KEYS: [&str; 4] = ["command", "date", "format", "image"];
 
+/// Shortest name part matched on its own (`Jordan Kestrel` also matches `Kestrel`, `Jordan`).
+pub const MIN_NAME_PART_CHARS: usize = 3;
+
 /// One private key entry (never logged or printed).
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct KeyEntry {
     row: usize,
     /// Normalised, whitespace-collapsed comparison key.
     norm: String,
+    /// Each word of `norm` with at least [`MIN_NAME_PART_CHARS`] characters, matched as a whole
+    /// word on its own (a first name or surname alone still identifies a participant).
+    parts: Vec<String>,
+}
+
+impl KeyEntry {
+    fn new(row: usize, norm: String) -> Self {
+        let mut parts: Vec<String> = norm
+            .split(' ')
+            .filter(|w| w.chars().count() >= MIN_NAME_PART_CHARS && *w != norm)
+            .map(str::to_string)
+            .collect();
+        parts.sort();
+        parts.dedup();
+        Self { row, norm, parts }
+    }
+
+    /// Whether normalised text `hay` holds the full name or one of its parts as whole words.
+    fn found_in(&self, hay: &str) -> bool {
+        contains_whole_phrase(hay, &self.norm) || self.parts.iter().any(|w| contains_whole_phrase(hay, w))
+    }
 }
 
 /// Result of `fid-design research-check`.
@@ -75,6 +104,8 @@ struct KeyEntry {
 pub struct Report {
     pub files_scanned: usize,
     pub images_checked: usize,
+    /// Whether a private `--key` was given, so participant names were checked.
+    pub names_checked: bool,
     pub findings: Vec<Finding>,
 }
 
@@ -146,7 +177,7 @@ fn redact_path(rel: &str, keys: &[KeyEntry]) -> String {
     rel.split('/')
         .map(|seg| {
             let norm = normalise_words(seg);
-            if keys.iter().any(|k| contains_whole_phrase(&norm, &k.norm) || norm.contains(&k.norm)) {
+            if keys.iter().any(|k| k.found_in(&norm) || norm.contains(&k.norm)) {
                 WITHHELD.to_string()
             } else {
                 seg.to_string()
@@ -279,8 +310,25 @@ fn is_phone_candidate(s: &str) -> bool {
     if s.starts_with('(') && s.contains(')') && groups.len() >= 2 && digits >= 7 {
         return true;
     }
-    // 3-group national format like `555-019-2834` or `555 019 2834` (3-3-4 or 3-4-4 or 1-3-3-4).
-    if matches!(groups.as_slice(), [3, 3, 4] | [3, 4, 4] | [1, 3, 3, 4]) && (s.contains('-') || s.contains(' ')) {
+    // 3-group national format like `555-019-2834`, `555 019 2834` or `555.019.2834` (3-3-4,
+    // 3-4-4 or 1-3-3-4).
+    if matches!(groups.as_slice(), [3, 3, 4] | [3, 4, 4] | [1, 3, 3, 4])
+        && (s.contains('-') || s.contains(' ') || s.contains('.'))
+    {
+        return true;
+    }
+    // Local number `555-0192` / `555 0192` (3-4). Not with `.`: `125.4500` is a measurement.
+    if groups == [3, 4] && !s.contains('.') {
+        return true;
+    }
+    // National numbers with a trunk prefix in other groupings: `07700 900123`, `030 12345678`,
+    // `0800 123 4567`, `0049 30 12345678`. The first group starts with `0` and has 2..=5 digits;
+    // space or `-` separators only (a `.` would make `012.345678` a decimal).
+    let first_trunk = s
+        .split(|c: char| !c.is_ascii_digit())
+        .find(|g| !g.is_empty())
+        .is_some_and(|g| g.starts_with('0') && (2..=5).contains(&g.len()));
+    if first_trunk && !s.contains('.') && (2..=4).contains(&groups.len()) && digits >= 9 && s.starts_with('0') {
         return true;
     }
     false
@@ -375,7 +423,7 @@ fn parse_key_csv(text: &str, f: &mut Vec<Finding>) -> Vec<KeyEntry> {
             }
             let norm = normalise_words(col);
             if norm.len() >= 2 {
-                entries.push(KeyEntry { row, norm });
+                entries.push(KeyEntry::new(row, norm));
                 added_for_row = true;
             }
         }
@@ -531,11 +579,14 @@ fn scan_text_file(shown_rel: &str, text: &str, keys: &[KeyEntry], f: &mut Vec<Fi
         if !keys.is_empty() {
             let norm_line = normalise_words(line);
             for k in keys {
-                if contains_whole_phrase(&norm_line, &k.norm) {
+                if k.found_in(&norm_line) {
                     f.push(Finding::new(
                         PII,
                         "name",
-                        format!("{shown_rel}:{line_no}: name from private key matched (key row {})", k.row),
+                        format!(
+                            "{shown_rel}:{line_no}: name or name part from private key matched (key row {})",
+                            k.row
+                        ),
                     ));
                 }
             }
@@ -634,8 +685,13 @@ pub fn check(root: &Path, key_path: Option<&Path>) -> Result<Report, String> {
 
     f.sort();
     f.dedup();
-    Ok(Report { files_scanned, images_checked: raster_files.len(), findings: f })
+    Ok(Report { files_scanned, images_checked: raster_files.len(), names_checked: key_path.is_some(), findings: f })
 }
+
+/// What `research-check` prints when it ran without `--key`: names cannot be checked without the
+/// private key, so a clean result says nothing about them.
+pub const NO_KEY_NOTICE: &str =
+    "notice: no --key given: participant names were NOT checked (only e-mail, phone, images, consent and incumbent flags)";
 
 impl Report {
     pub fn exit_code(&self) -> u8 {
@@ -647,6 +703,7 @@ impl Report {
         m.insert("format".to_string(), CValue::Str(REPORT_FORMAT.to_string()));
         m.insert("files_scanned".to_string(), CValue::Num(self.files_scanned as f64));
         m.insert("images_checked".to_string(), CValue::Num(self.images_checked as f64));
+        m.insert("names_checked".to_string(), CValue::Bool(self.names_checked));
         m.insert("findings".to_string(), findings_value(&self.findings));
         m.insert("ok".to_string(), CValue::Bool(self.findings.is_empty()));
         CValue::Obj(m)
@@ -662,6 +719,10 @@ impl Report {
             "fid-design research-check: {} file(s) scanned, {} image(s) checked\n",
             self.files_scanned, self.images_checked
         );
+        if !self.names_checked {
+            s.push_str(NO_KEY_NOTICE);
+            s.push('\n');
+        }
         findings_text(&mut s, &self.findings);
         s
     }
@@ -694,5 +755,21 @@ mod tests {
         assert!(line_has_phone("Direct 555-019-2834"));
         assert!(!line_has_phone("Date: 2026-11-22"));
         assert!(!line_has_phone("Participant P-inq01-01 measured 12.3456 mm"));
+
+        // `.` separators, 3-4 local numbers, and trunk-prefix national groupings.
+        assert!(line_has_phone("Call 555.019.2834 after six"));
+        assert!(line_has_phone("Extension line 555-0192."));
+        assert!(line_has_phone("Mobile 07700 900123"));
+        assert!(line_has_phone("Berlin office 030 12345678"));
+        assert!(line_has_phone("Freephone 0800 123 4567"));
+        assert!(line_has_phone("Dial 0049 30 12345678"));
+        assert!(line_has_phone("+44 7700 900123"));
+        // Not phones: decimals, versions, IP-like runs, dates, standards, short pairs.
+        assert!(!line_has_phone("Flatness 125.4500 mm, 0.0125 mm band"));
+        assert!(!line_has_phone("Version 1.2.3, build 2026.11.22"));
+        assert!(!line_has_phone("Host 192.168.100.200"));
+        assert!(!line_has_phone("ISO 2768-1 and ISO 1101"));
+        assert!(!line_has_phone("Took 120 s for 42 parts"));
+        assert!(!line_has_phone("Grid 0.5 1200"));
     }
 }
