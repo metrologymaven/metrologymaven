@@ -382,13 +382,13 @@ impl InstanceIndex {
                 backward.push((ix, ent, id));
             }
         }
-        forward.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+        forward.sort_unstable_by_key(|a| a.0);
         for w in forward.windows(2) {
             if w[0].0 == w[1].0 {
                 return Err(AssyModelError::DuplicateId { id: w[0].0 });
             }
         }
-        backward.sort_unstable_by(|a, b| (a.0, a.1).cmp(&(b.0, b.1)));
+        backward.sort_unstable_by_key(|a| (a.0, a.1));
         Ok(InstanceIndex { instances, forward, backward })
     }
 
