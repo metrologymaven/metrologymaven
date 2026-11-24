@@ -30,7 +30,7 @@ use std::fmt;
 
 use fid_canon::{digest_bytes, parse_with_limits, to_canonical_bytes, CValue, CanonError};
 use fid_geo_cmd::{derive_id, Derivation, FramePrincipal, GeoCmdError, SelectionRegistry};
-use fid_geo_types::Mesh;
+use fid_geo_types::{digest_mesh, Mesh};
 use fid_registry::{CommandDef, DefError};
 use fid_scan_mesh::cut::invert::{plan, INVERT_NORMALS as INVERT_NORMALS_OP};
 use fid_scan_mesh::{InvertParams, MeshOpError, MeshOpOutput, MeshView};
@@ -50,6 +50,7 @@ pub const MAX_PARAMS_DEPTH: usize = 1;
 const MAX_CLI_ARGS: usize = 8;
 const LIFECYCLE_SINCE: &str = "2026-11-24";
 const ID_PATTERN: &str = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
+const DIGEST_PATTERN: &str = "^sha256:[0-9a-f]{64}$";
 const MAX_KEPT_BYTES: usize = 64;
 
 /// Entity IDs (CONSTITUTION §5).
@@ -162,7 +163,8 @@ impl MeshVersion {
 }
 
 /// Deterministic store of mesh versions keyed by entity ID, each with the version digest
-/// recorded when it was stored.
+/// recorded when it was stored. An in-memory stand-in, not persisted: it holds versions only
+/// for the lifetime of the value, until the project document stores derived mesh versions.
 #[derive(Debug, Clone, Default)]
 pub struct MeshStore {
     versions: BTreeMap<EntityId, (MeshVersion, Digest)>,
@@ -176,6 +178,11 @@ impl MeshStore {
 
     /// Stores a raw mesh under `id` and returns its version digest (the GEO.TYPES element
     /// digest). An ID already in use is refused.
+    ///
+    /// The trusted import path for **measured** meshes only: a version stored here reads as
+    /// fully measured (no `synthesized` attribute). Never store an operation output's bare
+    /// mesh through it; outputs enter the store only as derived versions, through the
+    /// commands of this crate.
     pub fn insert_raw(&mut self, id: EntityId, mesh: Mesh) -> Result<Digest, MeshCmdError> {
         if self.versions.contains_key(&id) {
             return Err(MeshCmdError::IdCollision(id));
@@ -289,6 +296,9 @@ pub struct InvertNormalsResult {
     pub mesh: EntityId,
     /// Its version digest (the derived-mesh digest, flags included).
     pub digest: Digest,
+    /// The GEO.TYPES element digest of its mesh (geometry and channels, without flags):
+    /// inverting the same target twice gives back the input's element digest (REQ-003).
+    pub element_digest: Digest,
     /// The input mesh version and its digest.
     pub input: EntityId,
     pub input_digest: Digest,
@@ -305,6 +315,7 @@ impl InvertNormalsResult {
     pub fn to_value(&self) -> CValue {
         obj([
             ("digest", text(self.digest.as_str())),
+            ("element_digest", text(self.element_digest.as_str())),
             ("input", text(&self.input.to_string())),
             ("input_digest", text(self.input_digest.as_str())),
             ("inverted_triangles", CValue::Num(self.inverted_triangles as f64)),
@@ -371,6 +382,7 @@ pub fn invert_normals(
     let result = InvertNormalsResult {
         mesh: new_id,
         digest: out.output_digest(),
+        element_digest: digest_mesh(out.mesh()).to_digest(),
         input: params.mesh,
         input_digest,
         inverted_triangles: counts.triangle_count(),
@@ -401,7 +413,14 @@ pub fn invert_normals(
 
 // ================================================================== CLI and MCP
 
+/// Parses an entity ID in exactly the form of `ID_PATTERN`: 8-4-4-4-12 lowercase hex digits
+/// (no uppercase, braces or URN prefix), so the CLI and MCP accept what the schema accepts.
 fn parse_id(s: &str) -> Result<EntityId, MeshCmdError> {
+    let lower_hex = |p: &str| p.bytes().all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c));
+    let parts: Vec<&str> = s.split('-').collect();
+    if !(parts.iter().map(|p| p.len()).eq([8, 4, 4, 4, 12]) && parts.iter().all(|p| lower_hex(p))) {
+        return Err(MeshCmdError::BadParams("not a lowercase UUID"));
+    }
     Uuid::parse(s).map_err(|_| MeshCmdError::BadParams("not a UUID"))
 }
 
@@ -502,7 +521,7 @@ pub fn invoke_mcp(
 /// MCP exposed).
 pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
     let uuid = || obj([("type", text("string")), ("pattern", text(ID_PATTERN))]);
-    let digest = || obj([("type", text("string"))]);
+    let digest = || obj([("type", text("string")), ("pattern", text(DIGEST_PATTERN))]);
     let count = || obj([("type", text("integer")), ("minimum", CValue::Num(0.0))]);
     let params = obj([
         ("type", text("object")),
@@ -523,6 +542,7 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
             "required",
             strs(&[
                 "digest",
+                "element_digest",
                 "input",
                 "input_digest",
                 "inverted_triangles",
@@ -535,6 +555,7 @@ pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
             "properties",
             obj([
                 ("digest", digest()),
+                ("element_digest", digest()),
                 ("input", uuid()),
                 ("input_digest", digest()),
                 ("inverted_triangles", count()),

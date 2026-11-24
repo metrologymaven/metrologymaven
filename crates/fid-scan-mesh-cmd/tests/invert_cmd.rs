@@ -134,6 +134,7 @@ fn ac1_whole_mesh_through_cli_then_mcp_reproduces_the_geometry() {
     let r = obj(&out);
     assert_eq!(s(&r, "input_digest"), oracle("whole", "input_digest").as_str());
     assert_eq!(s(&r, "digest"), oracle("whole", "output_digest").as_str());
+    assert_eq!(s(&r, "element_digest"), oracle("whole", "element_digest").as_str());
     assert_eq!(n(&r, "inverted_triangles"), 12.0);
     assert_eq!(n(&r, "negated_normals"), 0.0, "the cube stores no normals");
     assert_eq!(journal.len(), 1);
@@ -147,6 +148,9 @@ fn ac1_whole_mesh_through_cli_then_mcp_reproduces_the_geometry() {
     let out2 = invoke_mcp(&mut store, &sels, &mut journal, &human(), ns, MCP_INVERT_NORMALS, raw.as_bytes()).unwrap();
     let r2 = obj(&out2);
     assert_eq!(s(&r2, "digest"), oracle("twice", "output_digest").as_str());
+    // AC-1 as decided: the second inversion reports the input's GEO.TYPES element digest.
+    assert_eq!(s(&r2, "element_digest"), oracle("input", "element_digest").as_str());
+    assert_eq!(s(&r2, "element_digest"), s(&r, "input_digest"));
     let second = id(s(&r2, "mesh"));
     assert_eq!(store.get(&second).unwrap().mesh(), store.get(&id(MESH_A)).unwrap().mesh());
     assert_eq!(journal.len(), 2);
@@ -162,6 +166,7 @@ fn ac2_face_selection_through_mcp() {
         .unwrap();
     let r = obj(&out);
     assert_eq!(s(&r, "digest"), oracle("face_z0", "output_digest").as_str());
+    assert_eq!(s(&r, "element_digest"), oracle("face_z0", "element_digest").as_str());
     assert_eq!(n(&r, "inverted_triangles"), 2.0);
     let new = id(s(&r, "mesh"));
     assert_eq!(store.get(&new).unwrap().mesh().facts().misoriented_pairs, 4);
@@ -250,4 +255,148 @@ fn the_registry_definition_validates_and_is_exposed() {
     let catalogue = Catalogue::geo_frame().unwrap();
     let errs = validate_with(&[CommandDecl(d.to_value())], &Limits::default(), &catalogue);
     assert!(errs.is_empty(), "{errs:?}");
+}
+
+// ---------------------------------------------------------------- schema conformance
+
+const ID_PATTERN: &str = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
+const DIGEST_PATTERN: &str = "^sha256:[0-9a-f]{64}$";
+
+fn matches_pattern(p: &str, x: &str) -> bool {
+    let hex = |s: &str| s.bytes().all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c));
+    match p {
+        ID_PATTERN => {
+            let parts: Vec<&str> = x.split('-').collect();
+            parts.iter().map(|s| s.len()).eq([8, 4, 4, 4, 12]) && parts.iter().all(|s| hex(s))
+        }
+        DIGEST_PATTERN => x.strip_prefix("sha256:").is_some_and(|h| h.len() == 64 && hex(h)),
+        other => panic!("pattern {other} not supported by the test checker"),
+    }
+}
+
+fn type_ok(t: &str, v: &CValue) -> bool {
+    match (t, v) {
+        ("object", CValue::Obj(_)) | ("array", CValue::Arr(_)) | ("string", CValue::Str(_)) => true,
+        ("boolean", CValue::Bool(_)) | ("null", CValue::Null) | ("number", CValue::Num(_)) => true,
+        ("integer", CValue::Num(n)) => n.fract() == 0.0,
+        _ => false,
+    }
+}
+
+/// A checker for the JSON Schema subset the definition uses (after fid-geo-cmd's describe
+/// tests). An unknown keyword fails the test, so a schema change must extend this checker.
+fn conforms(schema: &CValue, v: &CValue, at: &str) -> Result<(), String> {
+    let CValue::Obj(sc) = schema else { return Err(format!("{at}: schema is not an object")) };
+    for (k, kv) in sc {
+        let ok = match (k.as_str(), kv) {
+            ("description", _) | ("x-ref", _) => true,
+            ("type", CValue::Str(t)) => type_ok(t, v),
+            ("pattern", CValue::Str(p)) => match v {
+                CValue::Str(x) => matches_pattern(p, x),
+                _ => true,
+            },
+            ("minimum", CValue::Num(m)) => !matches!(v, CValue::Num(x) if x < m),
+            ("required", CValue::Arr(r)) => match v {
+                CValue::Obj(o) => r.iter().all(|k| matches!(k, CValue::Str(k) if o.contains_key(k))),
+                _ => true,
+            },
+            ("additionalProperties", CValue::Bool(false)) => match (v, sc.get("properties")) {
+                (CValue::Obj(o), Some(CValue::Obj(props))) => o.keys().all(|k| props.contains_key(k)),
+                (CValue::Obj(_), _) => return Err(format!("{at}: additionalProperties without properties")),
+                _ => true,
+            },
+            ("properties", CValue::Obj(props)) => {
+                if let CValue::Obj(o) = v {
+                    for (pk, ps) in props {
+                        if let Some(pv) = o.get(pk) {
+                            conforms(ps, pv, &format!("{at}/{pk}"))?;
+                        }
+                    }
+                }
+                true
+            }
+            (other, _) => return Err(format!("{at}: keyword {other} not supported by the test checker")),
+        };
+        if !ok {
+            return Err(format!("{at}: fails {k}"));
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn real_results_and_params_conform_to_the_published_schemas() {
+    let def = command_defs().unwrap().remove(0);
+    let geo = Catalogue::geo_frame().unwrap();
+    assert_eq!(fid_registry::check_schema(&def.params_schema, &geo), vec![]);
+    assert_eq!(fid_registry::check_schema(&def.result_schema, &geo), vec![]);
+
+    // The real AC-1 (whole mesh, CLI) and AC-2 (face selection, MCP) runs.
+    let (mut store, sels) = setup();
+    let mut journal = Vec::new();
+    let ns = id(NAMESPACE);
+    let whole_params = format!(r#"{{"mesh":"{MESH_A}"}}"#);
+    let face_params = format!(r#"{{"mesh":"{MESH_A}","selection":"{SEL_FACE}"}}"#);
+    let ac1 =
+        invoke_cli(&mut store, &sels, &mut journal, &human(), ns, &[CLI_INVERT_NORMALS, "--mesh", MESH_A]).unwrap();
+    let ac2 =
+        invoke_mcp(&mut store, &sels, &mut journal, &human(), ns, MCP_INVERT_NORMALS, face_params.as_bytes()).unwrap();
+    for (name, out) in [("ac1", &ac1), ("ac2", &ac2)] {
+        conforms(&def.result_schema, &parse(out).unwrap(), name).unwrap();
+    }
+    for (name, p) in [("whole", &whole_params), ("face", &face_params)] {
+        conforms(&def.params_schema, &parse(p.as_bytes()).unwrap(), name).unwrap();
+    }
+
+    // Results the schema must refuse.
+    let mut bad = obj(&ac1);
+    bad.remove("element_digest");
+    assert!(conforms(&def.result_schema, &CValue::Obj(bad), "no element_digest").is_err());
+    let mut bad = obj(&ac1);
+    bad.insert("digest".to_owned(), CValue::Str("sha256:ABC".to_owned()));
+    assert!(conforms(&def.result_schema, &CValue::Obj(bad), "bad digest").is_err());
+    let mut bad = obj(&ac2);
+    bad.insert("extra".to_owned(), CValue::Bool(true));
+    assert!(conforms(&def.result_schema, &CValue::Obj(bad), "extra key").is_err());
+
+    // Parameters the schema refuses are refused by both surfaces too.
+    let upper = MESH_A.to_uppercase();
+    for bad in [
+        "{}".to_owned(),
+        r#"{"mesh":1}"#.to_owned(),
+        format!(r#"{{"mesh":"{upper}"}}"#),
+        format!(r#"{{"mesh":"{MESH_A}","force":true}}"#),
+    ] {
+        assert!(conforms(&def.params_schema, &parse(bad.as_bytes()).unwrap(), &bad).is_err(), "{bad}");
+        let e =
+            invoke_mcp(&mut store, &sels, &mut journal, &human(), ns, MCP_INVERT_NORMALS, bad.as_bytes()).unwrap_err();
+        assert_eq!(e.code(), "scan.mesh.bad_params", "{bad}");
+    }
+    let e =
+        invoke_cli(&mut store, &sels, &mut journal, &human(), ns, &[CLI_INVERT_NORMALS, "--mesh", &upper]).unwrap_err();
+    assert_eq!(e.code(), "scan.mesh.bad_params");
+    assert_eq!(journal.len(), 2);
+}
+
+/// A selection made on one version and reused on the version an inversion created fails
+/// with `scan.mesh.selection_target` (it targets the old entity ID).
+#[test]
+fn a_selection_reused_on_the_new_version_is_refused() {
+    let (mut store, sels) = setup();
+    let mut journal = Vec::new();
+    let ns = id(NAMESPACE);
+    let out =
+        invoke_cli(&mut store, &sels, &mut journal, &human(), ns, &[CLI_INVERT_NORMALS, "--mesh", MESH_A]).unwrap();
+    let new = s(&obj(&out), "mesh").to_owned();
+    let e = invoke_cli(
+        &mut store,
+        &sels,
+        &mut journal,
+        &human(),
+        ns,
+        &[CLI_INVERT_NORMALS, "--mesh", &new, "--selection", SEL_FACE],
+    )
+    .unwrap_err();
+    assert_eq!(e.code(), "scan.mesh.selection_target");
+    assert_eq!(journal.len(), 1);
 }
