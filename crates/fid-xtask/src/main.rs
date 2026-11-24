@@ -71,6 +71,7 @@ fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("layers") => layers(&args[1..]),
+        Some("fmt") => fid_xtask::fmt::cli(&args[1..]),
         Some("licence-check") => fid_xtask::licence_check::cli(&args[1..]),
         Some("lint-crate-graph") => lint_crate_graph(&args[1..]),
         Some("kernel-allow") => kernel_allow(&args[1..]),
@@ -129,6 +130,7 @@ fn main() -> ExitCode {
             eprintln!("{}", fid_xtask::convergence::DOC_USAGE);
             eprintln!("{GEN_SURFACES_USAGE}");
             eprintln!("{}", fid_xtask::rel::notes::USAGE);
+            eprintln!("{}", fid_xtask::fmt::USAGE);
             ExitCode::from(2)
         }
     }
