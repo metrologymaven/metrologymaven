@@ -298,11 +298,54 @@ pub fn write_guide(inputs: &GuideInputs<'_>, out_dir: &Path) -> Result<GuideOutp
 // ------------------------------------------------------------------ parsers
 
 fn read_bounded(path: &Path) -> Result<Vec<u8>, String> {
-    let meta = std::fs::metadata(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let meta = std::fs::symlink_metadata(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    if !meta.file_type().is_file() {
+        return Err(format!("{}: expected a regular file (symlinks are refused)", path.display()));
+    }
     if meta.len() > MAX_FILE_BYTES as u64 {
         return Err(format!("{}: exceeds {MAX_FILE_BYTES} bytes", path.display()));
     }
     std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))
+}
+
+fn validate_model_id(id: &str) -> Result<(), String> {
+    if id.is_empty() || id.len() > 128 {
+        return Err(format!("invalid model id {id:?}: must be 1..=128 bytes"));
+    }
+    if id.contains('/') || id.contains('\\') || id.contains(':') || id.contains('\0') {
+        return Err(format!("invalid model id {id:?}: contains forbidden path character"));
+    }
+    let mut comps = Path::new(id).components();
+    match (comps.next(), comps.next()) {
+        (Some(std::path::Component::Normal(_)), None) => Ok(()),
+        _ => Err(format!("invalid model id {id:?}: must be a single path component")),
+    }
+}
+
+fn check_no_symlink_dir(dir: &Path) -> Result<bool, GuideError> {
+    match std::fs::symlink_metadata(dir) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(GuideError::Io { detail: format!("{}: {e}", dir.display()) }),
+        Ok(meta) if meta.file_type().is_symlink() || !meta.file_type().is_dir() => {
+            Err(GuideError::Io { detail: format!("{}: expected a directory (symlinks are refused)", dir.display()) })
+        }
+        Ok(_) => Ok(true),
+    }
+}
+
+fn read_optional_bounded(path: &Path) -> Result<Option<Vec<u8>>, GuideError> {
+    match std::fs::symlink_metadata(path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(GuideError::Io { detail: format!("{}: {e}", path.display()) }),
+        Ok(meta) => {
+            if !meta.file_type().is_file() {
+                return Err(GuideError::Io {
+                    detail: format!("{}: expected a regular file (symlinks are refused)", path.display()),
+                });
+            }
+        }
+    }
+    read_bounded(path).map(Some).map_err(|detail| GuideError::Io { detail })
 }
 
 fn parse_guide_board(bytes: &[u8], path: &Path) -> Result<GuideBoard, GuideError> {
@@ -354,6 +397,7 @@ fn parse_guide_board(bytes: &[u8], path: &Path) -> Result<GuideBoard, GuideError
             Some(CValue::Str(s)) if !s.is_empty() => s.clone(),
             _ => return Err(err(format!("models[{idx}].model must be a non-empty string"))),
         };
+        validate_model_id(&name).map_err(|msg| err(format!("models[{idx}].model: {msg}")))?;
         let is_open_weight = match mo.get("open_weight") {
             Some(CValue::Bool(b)) => *b,
             None => true,
@@ -436,11 +480,15 @@ fn parse_catalog_index(bytes: &[u8], path: &Path) -> Result<Vec<String>, GuideEr
 }
 
 fn load_host_info(hosts_dir: &Path, model_id: &str) -> Result<Option<HardwareInfo>, GuideError> {
-    let path = hosts_dir.join(model_id).join("host.json");
-    if !path.exists() {
+    validate_model_id(model_id).map_err(|detail| GuideError::Io { detail })?;
+    let model_dir = hosts_dir.join(model_id);
+    if !check_no_symlink_dir(&model_dir)? {
         return Ok(None);
     }
-    let bytes = read_bounded(&path).map_err(|detail| GuideError::Io { detail })?;
+    let path = model_dir.join("host.json");
+    let Some(bytes) = read_optional_bounded(&path)? else {
+        return Ok(None);
+    };
     let v = fid_canon::parse_with_limits(&bytes, MAX_FILE_BYTES, MAX_JSON_DEPTH)
         .map_err(|e| GuideError::Io { detail: format!("{}: invalid JSON: {e}", path.display()) })?;
     let CValue::Obj(o) = v else {
@@ -454,11 +502,15 @@ fn load_host_info(hosts_dir: &Path, model_id: &str) -> Result<Option<HardwareInf
 }
 
 fn load_model_licence(hosts_dir: &Path, model_id: &str) -> Result<Option<String>, GuideError> {
-    let path = hosts_dir.join(model_id).join("model.json");
-    if !path.exists() {
+    validate_model_id(model_id).map_err(|detail| GuideError::Io { detail })?;
+    let model_dir = hosts_dir.join(model_id);
+    if !check_no_symlink_dir(&model_dir)? {
         return Ok(None);
     }
-    let bytes = read_bounded(&path).map_err(|detail| GuideError::Io { detail })?;
+    let path = model_dir.join("model.json");
+    let Some(bytes) = read_optional_bounded(&path)? else {
+        return Ok(None);
+    };
     let v = fid_canon::parse_with_limits(&bytes, MAX_FILE_BYTES, MAX_JSON_DEPTH)
         .map_err(|e| GuideError::Io { detail: format!("{}: invalid JSON: {e}", path.display()) })?;
     let CValue::Obj(o) = v else {

@@ -166,3 +166,77 @@ fn error_paths_board_missing_and_catalog_mismatch() {
     assert_eq!(err.code(), "catalog_mismatch");
     let _ = std::fs::remove_dir_all(&tmp);
 }
+
+#[test]
+fn rejects_unsafe_model_ids_and_non_regular_files() {
+    let (_, catalog, hosts) = fixture_inputs();
+    let tmp = std::env::temp_dir().join(format!("fid-eval-local-guide-sec-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&tmp);
+    std::fs::create_dir_all(&tmp).expect("mkdir");
+
+    for bad_id in ["../escape", "/etc/passwd", "a/b", "a\\b", "C:evil", ".", ".."] {
+        let board_file = tmp.join("board.json");
+        let json = format!(
+            r#"{{"release":"r1","verdict":{{"outcome":"pass"}},"models":[{{"model":{bad_id:?},"open_weight":true,"by_task":{{}}}}]}}"#
+        );
+        std::fs::write(&board_file, json).expect("write bad board");
+        let err = build_guide(&GuideInputs { board: &board_file, catalog: &catalog, hosts: &hosts }).unwrap_err();
+        assert_eq!(err.code(), "board_missing", "expected board_missing for model id {bad_id:?}, got {err}");
+    }
+
+    // Non-regular file (directory named host.json) must be refused
+    let hosts_dir = tmp.join("hosts");
+    std::fs::create_dir_all(hosts_dir.join("safe-model").join("host.json")).expect("mkdir host.json dir");
+    let board_file = tmp.join("board-safe.json");
+    std::fs::write(
+        &board_file,
+        r#"{"release":"r1","verdict":{"outcome":"pass"},"models":[{"model":"safe-model","open_weight":true,"by_task":{}}]}"#,
+    )
+    .expect("write safe board");
+    let err = build_guide(&GuideInputs { board: &board_file, catalog: &catalog, hosts: &hosts_dir }).unwrap_err();
+    assert_eq!(err.code(), "io_error");
+
+    // Symlinked host.json and model.json must be refused when OS permits symlink creation
+    let real_host = tmp.join("real_host.json");
+    let real_model = tmp.join("real_model.json");
+    std::fs::write(&real_host, r#"{"cpu_model":"TestCPU"}"#).expect("write real_host");
+    std::fs::write(&real_model, r#"{"licence_declared":"Apache-2.0"}"#).expect("write real_model");
+
+    let sym_hosts = tmp.join("sym_hosts");
+    std::fs::create_dir_all(sym_hosts.join("safe-model")).expect("mkdir sym_hosts");
+    let sym_host_path = sym_hosts.join("safe-model").join("host.json");
+    let host_link_ok = {
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(&real_host, &sym_host_path).is_ok()
+        }
+        #[cfg(windows)]
+        {
+            std::os::windows::fs::symlink_file(&real_host, &sym_host_path).is_ok()
+        }
+    };
+    if host_link_ok {
+        let err = build_guide(&GuideInputs { board: &board_file, catalog: &catalog, hosts: &sym_hosts }).unwrap_err();
+        assert_eq!(err.code(), "io_error", "symlinked host.json must fail closed");
+    }
+
+    let sym_models = tmp.join("sym_models");
+    std::fs::create_dir_all(sym_models.join("safe-model")).expect("mkdir sym_models");
+    let sym_model_path = sym_models.join("safe-model").join("model.json");
+    let model_link_ok = {
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(&real_model, &sym_model_path).is_ok()
+        }
+        #[cfg(windows)]
+        {
+            std::os::windows::fs::symlink_file(&real_model, &sym_model_path).is_ok()
+        }
+    };
+    if model_link_ok {
+        let err = build_guide(&GuideInputs { board: &board_file, catalog: &catalog, hosts: &sym_models }).unwrap_err();
+        assert_eq!(err.code(), "io_error", "symlinked model.json must fail closed");
+    }
+
+    let _ = std::fs::remove_dir_all(&tmp);
+}
