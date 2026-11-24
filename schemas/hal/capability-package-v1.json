@@ -64,7 +64,7 @@
         "id": {
           "maxLength": 64,
           "minLength": 1,
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,63}$",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,63}(@(0|[1-9][0-9]*))?$",
           "type": "string"
         },
         "summary": {
@@ -322,7 +322,7 @@
         "id": {
           "maxLength": 64,
           "minLength": 1,
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,63}$",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,63}(@(0|[1-9][0-9]*))?$",
           "type": "string"
         },
         "items": {

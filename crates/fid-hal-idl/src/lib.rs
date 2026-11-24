@@ -7,8 +7,9 @@
 //! - [`stamp`]: the frozen v0 provenance stamp, acquisition-batch envelope and external
 //!   claim schemas, their validator and canonical digests (`HAL.IDL.STAMP`).
 //! - [`base`]: the `Device@1` base package; so far [`base::config`], typed configuration and
-//!   the configuration digest (`HAL.IDL.BASE.CFG`), and [`base::error`], the closed device
-//!   error model (`HAL.IDL.BASE.ERR`).
+//!   the configuration digest (`HAL.IDL.BASE.CFG`), [`base::error`], the closed device
+//!   error model (`HAL.IDL.BASE.ERR`), and [`base::device`], the package's operations,
+//!   `DeviceInstance`, calibration-state references and `Device-core@1` (`HAL.IDL.BASE.DESC`).
 //! - [`package`]: the `capability-package/v1` language-neutral capability-package description
 //!   format, [`CapabilityPackage`] trait, validator and RFC 8785 canonical digest
 //!   (`HAL.IDL.GEN.FMT`).
@@ -34,6 +35,11 @@ pub use stamp::{
 pub use base::config::{
     config_digest, ConfigDigest, ConfigError, ConfigErrorCode, ConfigReason, ConfigSchema, Configuration, SettingRange,
     SettingSchema, SettingType, SettingValue,
+};
+
+pub use base::device::{
+    CalDate, CalibrationState, DeviceInstance, DevicePackage, DeviceRecordError, DriverId,
+    Operation as DeviceOperation, DEVICE_CORE,
 };
 
 pub use base::error::{

@@ -998,12 +998,19 @@ fn is_dotted_id(s: &str) -> bool {
         && s.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || matches!(b, b'.' | b'_' | b'-'))
 }
 
+/// A profile or profile-item ID: `[A-Za-z0-9][A-Za-z0-9._/-]*`, at most 64 bytes, no `..`,
+/// optionally ending in one `@<major>` suffix (as in `Device-core@1`, HAL.IDL.BASE.DESC).
 fn is_profile_id(s: &str) -> bool {
-    !s.is_empty()
+    let base = match s.split_once('@') {
+        Some((base, major)) if is_semver_num(major) => base,
+        Some(_) => return false,
+        None => s,
+    };
+    !base.is_empty()
         && s.len() <= 64
-        && !s.contains("..")
-        && s.as_bytes().first().is_some_and(u8::is_ascii_alphanumeric)
-        && s.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-' | b'/'))
+        && !base.contains("..")
+        && base.as_bytes().first().is_some_and(u8::is_ascii_alphanumeric)
+        && base.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-' | b'/'))
 }
 
 // ------------------------------------------------------------------ JSON helpers
