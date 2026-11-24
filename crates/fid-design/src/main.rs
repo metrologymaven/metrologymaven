@@ -16,6 +16,7 @@
 //! `fid-design icons-lint --root <icons dir> [--json]`,
 //! `fid-design glyph-distinct --root <icons dir> [--threshold <0..1>] [--json]`,
 //! `fid-design fonts-check --root <design dir> --allowlist <file> [--json]`,
+//! `fid-design comp-check --root <components dir | spec file> --package <design dir> [--json]`,
 //! `fid-design page-check (--root <design dir> | --file <pages.json>) [--json]`,
 //! `fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]`,
 //! `fid-design research-check --root <dir> [--key <private csv>] [--json]` and
@@ -46,6 +47,7 @@ const USAGE: &str =
        fid-design icons-lint --root <icons dir> [--json]
        fid-design glyph-distinct --root <icons dir> [--threshold <0..1>] [--json]
        fid-design fonts-check --root <design dir> --allowlist <file> [--json]
+       fid-design comp-check --root <components dir | spec file> --package <design dir> [--json]
        fid-design page-check (--root <design dir> | --file <pages.json>) [--json]
        fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]
        fid-design research-check --root <dir> [--key <private csv>] [--json]
@@ -231,6 +233,34 @@ fn main() -> ExitCode {
             return usage();
         }
         return match fid_design::fonts::check(root, allowlist) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        };
+    }
+    if cmd == "comp-check" {
+        let others = princ_flags
+            || screen_flags
+            || args.from.is_some()
+            || args.to.is_some()
+            || args.baseline.is_some()
+            || args.out.is_some()
+            || args.changed.is_some()
+            || args.deny_names.is_some()
+            || args.base.is_some()
+            || args.pr.is_some()
+            || args.all
+            || args.attribution.is_some()
+            || args.manifest.is_some()
+            || args.rules.is_some()
+            || args.allowlist.is_some()
+            || args.key.is_some();
+        let (Some(root), Some(package)) = (&args.root, &args.package) else {
+            return usage();
+        };
+        if others {
+            return usage();
+        }
+        return match fid_design::comp::check(root, package) {
             Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
             Err(e) => fail(e),
         };

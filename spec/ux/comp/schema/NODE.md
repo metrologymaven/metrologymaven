@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-design]
 satisfies: [REQ-UX.COMP-001, REQ-UX.COMP-002, REQ-UX.COMP-003, REQ-UX.COMP-004, REQ-UX.COMP-008]
 covers: []
 depends_on: [UX.SYSTEM.PKG, UX.TOKENS.COLOR, UX.TOKENS.SPACE, UX.ICONS.PROV]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-24
 ---
 
 # UX.COMP.SCHEMA: Component-spec format and completeness check
@@ -69,6 +70,9 @@ The toolkit-neutral format every component spec is written in (Markdown with a s
 ## Open questions
 
 - The focus-indicator size rule cites WCAG 2.2 SC 2.4.13 (AAA) as guidance beyond the AA rule of REQ-UX.COMP-004 [unverified that 2 px matches the SC's area formula].
+- Build note (fid-design `comp`): the package fixture `fixtures/ux/system/pkg/v1.0.0/` named in AC-1 has no `tokens/pairs.json` and no surface token, so REQ-004 cannot pass against it. AC-1 runs, as written, in `fixtures/ux/comp/schema/` against `fixtures/ux/comp/schema/v1.0.0/`: that package copied byte for byte plus `tokens/pairs.json`, `sem.surface.base` and `space.1` (`make_fixtures.py`). The unmodified package is kept as a test case that fails with `COMP-FOCUS`.
+- Build note: `comp-check` treats every `*.md` directly under `--root` as a component spec (fail closed), so a non-spec document such as UX.COMP.CMD's `components/manifest-mapping.md` would fail `COMP-SCHEMA`. That leaf should place it outside `components/` or the format should gain a non-spec marker.
+- Build note: `--root` also accepts a single spec file; `component-spec@1` adds `format`, `parts[].actionable` and `focus.against` (the surfaces whose pairs REQ-004 looks up) to the fields REQ-001 lists.
 
 ## Children
 

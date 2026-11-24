@@ -1,0 +1,15 @@
+{
+  "format": "fid-design-pairs@1",
+  "pairs": [
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.focus.ring",
+      "tag": "non-text"
+    },
+    {
+      "bg": "sem.surface.base",
+      "fg": "sem.text.muted",
+      "tag": "text"
+    }
+  ]
+}

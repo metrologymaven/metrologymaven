@@ -1,0 +1,73 @@
+{
+  "format": "fid-design-names@1",
+  "names": [
+    {
+      "kind": "component",
+      "name": "comp.button"
+    },
+    {
+      "kind": "gdt",
+      "name": "gdt.flatness"
+    },
+    {
+      "kind": "icon",
+      "name": "icon.check"
+    },
+    {
+      "kind": "token",
+      "name": "motion.fast"
+    },
+    {
+      "kind": "palette",
+      "name": "pal.deviation.diverging"
+    },
+    {
+      "kind": "pattern",
+      "name": "pattern.confirm"
+    },
+    {
+      "kind": "token",
+      "name": "prim.color.blue.500"
+    },
+    {
+      "kind": "token",
+      "name": "prim.color.green.500"
+    },
+    {
+      "kind": "token",
+      "name": "prim.color.grey.50"
+    },
+    {
+      "kind": "token",
+      "name": "prim.color.grey.700"
+    },
+    {
+      "kind": "screen",
+      "name": "screen.home"
+    },
+    {
+      "kind": "token",
+      "name": "sem.focus.ring"
+    },
+    {
+      "kind": "token",
+      "name": "sem.status.ok"
+    },
+    {
+      "kind": "token",
+      "name": "sem.surface.base"
+    },
+    {
+      "kind": "token",
+      "name": "sem.text.muted"
+    },
+    {
+      "kind": "token",
+      "name": "space.1"
+    },
+    {
+      "kind": "token",
+      "name": "space.2"
+    }
+  ]
+}
