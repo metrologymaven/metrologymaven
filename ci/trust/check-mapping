@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+"""CI validator for TRUST.PROFILE.MAP (`docs/trust/regulated-mapping.csv` & `.md`).
+
+Checks:
+- CSV header matches `control_id,description,requirement_ids,designator,section,review_status`
+- Every row has unique non-empty `control_id`, non-empty `description`, `designator`, `section`
+- Every row has `review_status` in {`draft`, `reviewed`} (REQ-TRUST.PROFILE.MAP-004)
+- Every row lists at least one requirement ID and every ID exists in `spec/**/NODE.md` (REQ-003)
+- When `--doc` is checked, the Markdown document contains the compliance disclaimer (REQ-002)
+  and references every `control_id` from the CSV.
+- `--self-test` runs AC-1 (real CSV + doc), AC-2 (negative CSVs under `ci/trust/negative/`),
+  and AC-3 (disclaimer & doc coverage).
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import re
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+DEFAULT_CSV = REPO_ROOT / "docs" / "trust" / "regulated-mapping.csv"
+DEFAULT_DOC = REPO_ROOT / "docs" / "trust" / "regulated-mapping.md"
+NEGATIVE_DIR = Path(__file__).resolve().parent / "negative"
+
+EXPECTED_HEADER = [
+    "control_id",
+    "description",
+    "requirement_ids",
+    "designator",
+    "section",
+    "review_status",
+]
+VALID_STATUSES = {"draft", "reviewed"}
+REQ_RE = re.compile(r"\bREQ-[A-Z0-9]+(?:\.[A-Z0-9]+)*-\d{3}\b")
+CONTROL_ID_RE = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
+
+
+def collect_spec_requirements(spec_dir: Path) -> set[str]:
+    found: set[str] = set()
+    for node_file in sorted(spec_dir.rglob("NODE.md")):
+        text = node_file.read_text(encoding="utf-8")
+        for line in text.splitlines():
+            if line.startswith("- **REQ-"):
+                m = REQ_RE.search(line)
+                if m:
+                    found.add(m.group(0))
+    return found
+
+
+def validate_csv(csv_path: Path, valid_reqs: set[str]) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    control_ids: list[str] = []
+    seen_ids: set[str] = set()
+
+    if not csv_path.is_file():
+        return [f"missing mapping CSV: {csv_path}"], control_ids
+
+    with csv_path.open("r", encoding="utf-8", newline="") as f:
+        reader = csv.reader(f)
+        rows = list(reader)
+
+    if not rows:
+        return [f"{csv_path}: empty CSV"], control_ids
+
+    header = rows[0]
+    if header != EXPECTED_HEADER:
+        return [f"{csv_path}:1: expected header {EXPECTED_HEADER}, got {header}"], control_ids
+
+    if len(rows) == 1:
+        return [f"{csv_path}: CSV contains no mapping rows"], control_ids
+
+    for line_no, raw_row in enumerate(rows[1:], start=2):
+        if len(raw_row) != len(EXPECTED_HEADER):
+            errors.append(f"{csv_path}:{line_no}: expected {len(EXPECTED_HEADER)} columns, got {len(raw_row)}")
+            continue
+        control_id, desc, req_ids_raw, designator, section, review_status = [c.strip() for c in raw_row]
+
+        if not control_id or not CONTROL_ID_RE.match(control_id):
+            errors.append(f"{csv_path}:{line_no}: invalid control_id {control_id!r}")
+        elif control_id in seen_ids:
+            errors.append(f"{csv_path}:{line_no}: duplicate control_id {control_id!r}")
+        else:
+            seen_ids.add(control_id)
+            control_ids.append(control_id)
+
+        if not desc:
+            errors.append(f"{csv_path}:{line_no} ({control_id}): empty description")
+        if not designator:
+            errors.append(f"{csv_path}:{line_no} ({control_id}): empty designator")
+        if not section:
+            errors.append(f"{csv_path}:{line_no} ({control_id}): empty section")
+
+        if review_status not in VALID_STATUSES:
+            errors.append(
+                f"{csv_path}:{line_no} ({control_id}): invalid or missing review_status {review_status!r} "
+                f"(expected one of {sorted(VALID_STATUSES)})"
+            )
+
+        req_ids = [r.strip() for r in req_ids_raw.split(";") if r.strip()]
+        if not req_ids:
+            errors.append(f"{csv_path}:{line_no} ({control_id}): row must reference at least one requirement ID")
+        else:
+            for req_id in req_ids:
+                if req_id not in valid_reqs:
+                    errors.append(
+                        f"{csv_path}:{line_no} ({control_id}): unknown requirement ID {req_id}"
+                    )
+
+    return errors, control_ids
+
+
+def validate_doc(doc_path: Path, control_ids: list[str]) -> list[str]:
+    errors: list[str] = []
+    if not doc_path.is_file():
+        return [f"missing mapping document: {doc_path}"]
+
+    text = doc_path.read_text(encoding="utf-8")
+    lower = text.lower()
+
+    if "cc-by-4.0" not in lower:
+        errors.append(f"{doc_path}: missing CC-BY-4.0 licence notice")
+    if "not" not in lower or "compliance" not in lower or "validation" not in lower or "responsibility" not in lower:
+        errors.append(f"{doc_path}: missing required compliance and validation-responsibility disclaimer")
+
+    for cid in control_ids:
+        if f"`{cid}`" not in text:
+            errors.append(f"{doc_path}: control_id `{cid}` from CSV not listed in document")
+
+    return errors
+
+
+def run_self_test(valid_reqs: set[str]) -> int:
+    # AC-1 & AC-3: real CSV and Markdown doc pass.
+    errs, cids = validate_csv(DEFAULT_CSV, valid_reqs)
+    if errs:
+        for e in errs:
+            print(f"FAIL (AC-1): {e}", file=sys.stderr)
+        return 1
+    doc_errs = validate_doc(DEFAULT_DOC, cids)
+    if doc_errs:
+        for e in doc_errs:
+            print(f"FAIL (AC-3): {e}", file=sys.stderr)
+        return 1
+
+    # AC-2: negative CSV referencing REQ-TRUST.ESIG-099 must fail naming the row and ID.
+    bad_req = NEGATIVE_DIR / "bad-req.csv"
+    neg_errs, _ = validate_csv(bad_req, valid_reqs)
+    if not any("REQ-TRUST.ESIG-099" in e for e in neg_errs):
+        print(f"FAIL (AC-2): expected error naming REQ-TRUST.ESIG-099 for {bad_req}, got {neg_errs}", file=sys.stderr)
+        return 1
+
+    # REQ-004 negative check: missing review_status must fail naming the row.
+    bad_status = NEGATIVE_DIR / "missing-status.csv"
+    status_errs, _ = validate_csv(bad_status, valid_reqs)
+    if not any("review_status" in e for e in status_errs):
+        print(f"FAIL (REQ-004): expected review_status error for {bad_status}, got {status_errs}", file=sys.stderr)
+        return 1
+
+    print(f"ok ({len(cids)} controls verified against {len(valid_reqs)} spec requirements; 2 negative cases rejected)")
+    return 0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Validate TRUST.PROFILE.MAP regulated mapping CSV and document.")
+    ap.add_argument("csv", nargs="?", type=Path, default=DEFAULT_CSV, help="Path to mapping CSV.")
+    ap.add_argument("--doc", type=Path, default=DEFAULT_DOC, help="Path to mapping Markdown doc.")
+    ap.add_argument("--skip-doc", action="store_true", help="Validate CSV only.")
+    ap.add_argument("--spec-dir", type=Path, default=REPO_ROOT / "spec", help="Path to spec tree.")
+    ap.add_argument("--self-test", action="store_true", help="Run AC-1..AC-3 including negative test CSVs.")
+    args = ap.parse_args()
+
+    valid_reqs = collect_spec_requirements(args.spec_dir)
+    if not valid_reqs:
+        print(f"error: no requirements found under {args.spec_dir}", file=sys.stderr)
+        return 1
+
+    if args.self_test:
+        return run_self_test(valid_reqs)
+
+    errors, cids = validate_csv(args.csv, valid_reqs)
+    if not args.skip_doc and not errors:
+        errors.extend(validate_doc(args.doc, cids))
+
+    if errors:
+        for err in errors:
+            print(f"error: {err}", file=sys.stderr)
+        return 1
+
+    print(f"ok ({len(cids)} controls verified against {len(valid_reqs)} spec requirements)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

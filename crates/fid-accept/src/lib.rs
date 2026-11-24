@@ -10,9 +10,12 @@
 //!   history and `accept.show_report@1` (spec node FLOW.RUNNER.VERDICT).
 //! - [`study`]: the study task list `acceptance/study/tasks.json` (`study-tasks@1`) and its
 //!   check (spec node FLOW.STUDY.PROTO).
+//! - [`unassist`]: unassisted-run principal check over golden journals and Activity Logs
+//!   (spec node FLOW.RUNNER.UNASSIST).
 
 pub mod journey;
 pub mod package;
 pub mod persona;
 pub mod report;
 pub mod study;
+pub mod unassist;

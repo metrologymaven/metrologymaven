@@ -1,0 +1,3 @@
+{"branch":"main","kind":"session_header","principal":{"commit":"sha256:ee7dbdf0a1672893f50a40bb4057becfffde6fd3568866654c6c0ae7921de6e1","kind":"human"},"schema_version":1,"seq":"1","session":{"app_version":"0.1.0","channel":"cli","session_id":"sess-1"},"stream":"record"}
+{"branch":"main","command":{"id":"fit.ls_plane","major":1},"kind":"command","principal":{"commit":"sha256:0ed467464b2d356a6ae9c138b644623290e1fcc56aa4395f9fadb311afe339c4","kind":"human"},"schema_version":1,"seq":"2","stream":"record"}
+{"branch":"agent/claude/1","command":{"id":"fit.ls_circle","major":1},"kind":"command","principal":{"commit":"sha256:e3345befec46041273b013a27d087bd3f7bf9bc3c3719f96de577953aed74431","kind":"human"},"schema_version":1,"seq":"3","stream":"record"}
