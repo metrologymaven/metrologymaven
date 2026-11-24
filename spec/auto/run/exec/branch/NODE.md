@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-run]
 satisfies: [REQ-AUTO.RUN.EXEC-001]
 covers: []
 depends_on: [AUTO.RUN.BIND, CORE.JRN.BR, CORE.PRJ.CONT]
@@ -75,7 +76,10 @@ Gives each run its own place: before the first step, it creates a journal branch
 
 ## Open questions
 
-- None.
+- Build notes (fid-run, module `exec::branch`): the bus is reached through the port trait `RunBus` (working branch, branch head, Run entity read, `execute` of a `fid_bus::Invocation` on a named branch), which `AUTO.RUN.EXEC.CMD` wires to `fid_bus::Bus`. `journal.create_branch@1` and `project.create_run@1` carry `expected_head` = the fork point, so the branch starts at exactly the head read and the Run entity is its first entry or nothing. `finalise` reads the entity back and commits with `expected_head` = the head read, so a racing second finalisation is refused by the bus. AC-1..AC-5 are tested against a test bus with real plans (BIND harness); the fixture project `fixtures/projects/bracket-runs/` was not created.
+- Parameters (open, obligation on `CORE.PRJ.CONT.HIER`, not edited from here): this module sends `project.create_run@1` `{"record": <run record with branch>}`, but the built command takes `{id, label, plan, revision}` (a Run container under a Plan), which cannot hold the record's fields, and the `RunPlan` names no Plan container. No command sets a Run entity's outcome; this module names `project.finalise_run@1` `{"outcome", "run"}`. CORE must define both before the production wiring can succeed.
+- Agents (open, obligation on `CORE.JRN.BR.NAME` and `CORE.BUS.ROUTE`): `journal.create_branch@1` refuses agent callers and the bus refuses agent commits outside `agent/`, so against today's bus an agent's run setup fails closed with `run_setup_failed` (AC-2 is met on the test bus only). A rule for agent run branches is needed.
+- Run ledger (AUTO.RUN.BIND): the ledger admits a run only from a `program.run@1` entry carrying `RunStarted` on `run/<run_id>`. With this module the run branch's first entry is the Run entity and that entry comes later; `AUTO.RUN.EXEC.CMD` must commit it on the run branch through the `RunTarget`.
 
 ## Children
 

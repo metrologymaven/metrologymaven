@@ -1,22 +1,32 @@
 //! Runs of Command Programs (spec node `AUTO.RUN`). Modules land one spec leaf at a time; see
 //! `spec/auto/run/`.
 //!
-//! This crate holds `AUTO.RUN.BIND`: run binding validation and run records.
+//! This crate holds `AUTO.RUN.BIND` (run binding validation and run records) and
+//! `AUTO.RUN.EXEC.BRANCH` (the run's branch and Run entity).
 //!
 //! - [`prepare_run`] (module [`prepare`]): lifecycle and principal rules, the binding check,
 //!   input digests, and the [`RunPlan`] with its [`RunRecord`] (REQ-AUTO.RUN.BIND-001..005).
 //! - [`record`]: the run record, its canonical JSON, its strict reader and its JSON Schema.
 //! - [`ledger`]: the `RunStarted` event `AUTO.RUN.EXEC` commits and the origin-bound fold of
 //!   run records (REQ-CORE.RPL.RECON.FOLD-008).
+//! - [`exec::branch`]: [`open_run_target`] forks `run/<run_id>` from the principal's working
+//!   branch and writes the Run entity as its first entry; the [`RunTarget`] routes the run's
+//!   commits there only (`wrong_branch`); [`finalise`] writes the outcome once
+//!   (`already_final`).
 //!
 //! No command is declared here: `program.run@1` and `program.run_batch@1` (`AUTO.RUN.EXEC`,
 //! `AUTO.RUN.BATCH`) call this library. Nothing here panics, uses floating point in a
 //! decision, or converts a unit.
 
+pub mod exec;
 pub mod ledger;
 pub mod prepare;
 pub mod record;
 
+pub use exec::branch::{
+    finalise, open_run_target, ExecError, FinalOutcome, RunBus, RunTarget, SetupCause, SetupStage,
+    CREATE_BRANCH_COMMAND, CREATE_RUN_COMMAND, FINALISE_RUN_COMMAND,
+};
 pub use ledger::{run_started, Applied, RunEntry, RunLedger, RUN_COMMAND, RUN_STARTED};
 pub use prepare::{
     decided_lifecycle, prepare_run, BindCtx, BindingSource, InputSource, ProgramRef, RunError, RunFlags, RunIds,
