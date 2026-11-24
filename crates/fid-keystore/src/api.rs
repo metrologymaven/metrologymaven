@@ -290,8 +290,30 @@ pub fn delete_sidecar(config_dir: &Path, fingerprint: &Fingerprint) -> Result<()
 
 // ------------------------------------------------------------------ opaque handle & UV release
 
-/// Single-use authorization proving OS user verification succeeded for one signing operation
-/// on one key (`TRUST.SIGN.UV`). Intentionally neither `Clone` nor `Copy`.
+/// User-verification methods a production [`UvRelease`] may record (closed set; maintainer
+/// decision on PR #444, following REQ-TRUST.SIGN.UV-004 and D-011).
+pub const UV_METHODS: [&str; 5] = ["windows_hello", "macos_local_auth", "token_pin", "token_pin_touch", "passphrase"];
+
+/// UV method recorded by test releases; accepted only when feature `test-backend` is enabled.
+const TEST_UV_METHOD: &str = "test_uv";
+
+/// True when `uv_method` is in [`UV_METHODS`], or is `test_uv` and feature `test-backend` is on.
+pub fn is_valid_uv_method(uv_method: &str) -> bool {
+    UV_METHODS.contains(&uv_method) || (cfg!(feature = "test-backend") && uv_method == TEST_UV_METHOD)
+}
+
+/// Single-use authorization recording that OS user verification succeeded for one signing
+/// operation on one key (`TRUST.SIGN.UV`). Intentionally neither `Clone` nor `Copy`.
+///
+/// **This is a flow marker, not an in-process security boundary.** Any code linked into the
+/// process can call [`UvRelease::issue`], so holding a `UvRelease` proves nothing by itself.
+/// The guarantees are: (1) [`UvRelease::issue`] accepts only the closed [`UV_METHODS`] set
+/// (plus `test_uv` under feature `test-backend`), so a forged release still records a real
+/// method name; (2) the CI rule `python ci/keystore/key-bytes-scan --uv-release-issue` fails
+/// if `UvRelease::issue` is reached anywhere outside crate `fid-uv` and fid-keystore's own
+/// tests; (3) the OS keystore backends enforce user verification themselves where the
+/// platform supports it. A sealed capability owned by `TRUST.SIGN.UV` is an open question
+/// recorded in `spec/trust/sign/keystore/trait/NODE.md`.
 #[derive(Debug, PartialEq, Eq)]
 pub struct UvRelease {
     fingerprint: Fingerprint,
@@ -301,16 +323,21 @@ pub struct UvRelease {
 impl UvRelease {
     /// Issues a single-use release bound to `fingerprint` and `uv_method`.
     ///
-    /// Production callers obtain this only from `TRUST.SIGN.UV`'s gate after verifying principal,
-    /// channel and per-operation OS user verification.
-    pub fn issue(fingerprint: Fingerprint, uv_method: impl Into<String>) -> UvRelease {
-        UvRelease { fingerprint, uv_method: uv_method.into() }
+    /// Only `TRUST.SIGN.UV` (crate `fid-uv`) may call this, after verifying principal, channel
+    /// and per-operation OS user verification; CI enforces that with
+    /// `ci/keystore/key-bytes-scan --uv-release-issue`. Returns
+    /// [`KeyStoreError::Unsupported`] unless [`is_valid_uv_method`] accepts `uv_method`.
+    pub fn issue(fingerprint: Fingerprint, uv_method: &str) -> Result<UvRelease, KeyStoreError> {
+        if !is_valid_uv_method(uv_method) {
+            return Err(KeyStoreError::Unsupported);
+        }
+        Ok(UvRelease { fingerprint, uv_method: uv_method.to_string() })
     }
 
     /// Test-only UV release minted under feature `test-backend` for conformance and unit tests.
     #[cfg(feature = "test-backend")]
     pub fn test_release(fingerprint: Fingerprint) -> UvRelease {
-        UvRelease { fingerprint, uv_method: "test_uv".to_string() }
+        UvRelease { fingerprint, uv_method: TEST_UV_METHOD.to_string() }
     }
 
     /// Fingerprint of the key this release authorizes.
@@ -498,5 +525,20 @@ mod tests {
         // Extra field (e.g. smuggled private_key) must be rejected.
         let bad = br#"{"alg":"ecdsa-p256-sha256","created":"2027-01-15T12:00:00Z","fingerprint":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","hardware":false,"label":"qa","private_key":"00"}"#;
         assert!(decode_sidecar(bad).is_err());
+    }
+
+    #[test]
+    fn uv_release_issue_accepts_only_the_closed_method_set() {
+        let fp = Fingerprint::of_spki_der(b"uv-method-unit-test");
+        for method in UV_METHODS {
+            let release = UvRelease::issue(fp.clone(), method);
+            assert_eq!(release.as_ref().map(UvRelease::uv_method), Ok(method), "{method}");
+        }
+        for bad in ["", "none", "WINDOWS_HELLO", "windows_hello ", "touch_id", "pin", "test_uv\0"] {
+            assert_eq!(UvRelease::issue(fp.clone(), bad), Err(KeyStoreError::Unsupported), "{bad:?}");
+        }
+        // `test_uv` is accepted exactly when feature `test-backend` is compiled in.
+        assert_eq!(UvRelease::issue(fp, "test_uv").is_ok(), cfg!(feature = "test-backend"));
+        assert_eq!(is_valid_uv_method("test_uv"), cfg!(feature = "test-backend"));
     }
 }

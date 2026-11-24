@@ -6,8 +6,10 @@
 //! 2. Verify `list()` includes it and `public_key()` matches its fingerprint.
 //! 3. Open an opaque `KeyHandle`, sign a DSSE PAE via a single-use `UvRelease`, and verify the
 //!    envelope and raw signature with `fid-sign-core`.
-//! 4. Assert the single-use `ReleasedSigner` refuses a second sign call.
-//! 5. Delete the key and assert `list()`, `open()`, `public_key()` and `delete()` report it gone.
+//! 4. Assert the single-use `ReleasedSigner` refuses a second sign call, and that a UV release
+//!    bound to a second, real key (fingerprint mismatch) is refused by both signing paths.
+//! 5. Delete the key and assert `list()`, `open()`, `public_key()` and `delete()` report it gone,
+//!    and that the handle opened before the delete can no longer sign by either path.
 
 use crate::api::{KeyInfo, KeyStore, KeyStoreError, UvRelease};
 use fid_sign_core::{pae, sign_envelope, verify, Alg, Envelope, Fingerprint, Signer, IN_TOTO_PAYLOAD_TYPE};
@@ -17,6 +19,8 @@ use std::fmt;
 const CONFORMANCE_PAYLOAD: &[u8] = b"{\"suite\":\"TRUST.SIGN.KEYSTORE.TRAIT\",\"step\":\"conformance\"}";
 /// Label applied to the conformance P-256 key.
 pub const CONFORMANCE_LABEL: &str = "fid-keystore-conformance-p256";
+/// Label applied to the second P-256 key used for the mismatched-fingerprint refusal.
+pub const CONFORMANCE_OTHER_LABEL: &str = "fid-keystore-conformance-p256-other";
 
 /// Outcome of a passing conformance run.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -119,6 +123,22 @@ where
         .map_err(|e| fail("sign_with_release", e.to_string()))?;
     pubkey.verify_raw(&pae_bytes, &raw_sig).map_err(|e| fail("verify_raw", e.to_string()))?;
 
+    // A UV release bound to a different (real) key must be refused by both signing paths.
+    let other_key = store
+        .create(Alg::EcdsaP256Sha256, CONFORMANCE_OTHER_LABEL, true)
+        .map_err(|e| fail("create_other", e.to_string()))?;
+    if other_key.fingerprint == info.fingerprint {
+        return Err(fail("create_other", "second key has the same fingerprint as the first"));
+    }
+    if handle.sign_with_release(release_for(&other_key.fingerprint), &pae_bytes).is_ok() {
+        return Err(fail("mismatched_uv_release", "sign_with_release accepted a release bound to another key"));
+    }
+    let mismatched = handle.release_signer(release_for(&other_key.fingerprint));
+    if mismatched.sign_pae(&pae_bytes).is_ok() {
+        return Err(fail("mismatched_uv_release", "ReleasedSigner accepted a release bound to another key"));
+    }
+    store.delete(&other_key.fingerprint).map_err(|e| fail("delete_other", e.to_string()))?;
+
     // 4. Verify the DSSE envelope with fid-sign-core::verify.
     let verified_fp = verify(&envelope, &pubkey).map_err(|e| fail("verify", e.to_string()))?;
     if verified_fp != info.fingerprint {
@@ -133,7 +153,7 @@ where
     // 5. Delete the key and assert it is gone.
     store.delete(&info.fingerprint).map_err(|e| fail("delete", e.to_string()))?;
     let after = store.list().map_err(|e| fail("list_after_delete", e.to_string()))?;
-    if after.iter().any(|k| k.fingerprint == info.fingerprint) {
+    if after.iter().any(|k| k.fingerprint == info.fingerprint || k.fingerprint == other_key.fingerprint) {
         return Err(fail("list_after_delete", "deleted key still appears in list()"));
     }
     match store.open(&info.fingerprint) {
@@ -147,6 +167,15 @@ where
     match store.delete(&info.fingerprint) {
         Err(KeyStoreError::NotFound) => {}
         other => return Err(fail("delete_twice", format!("expected NotFound, got {other:?}"))),
+    }
+
+    // A handle opened before delete must not sign afterwards, by either signing path.
+    if handle.sign_with_release(release_for(&info.fingerprint), &pae_bytes).is_ok() {
+        return Err(fail("sign_after_delete", "handle opened before delete still signed via sign_with_release"));
+    }
+    let stale = handle.release_signer(release_for(&info.fingerprint));
+    if stale.sign_pae(&pae_bytes).is_ok() {
+        return Err(fail("sign_after_delete", "handle opened before delete still signed via ReleasedSigner"));
     }
 
     Ok(ConformanceReport { created: info, envelope })
