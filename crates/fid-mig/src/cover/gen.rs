@@ -253,7 +253,7 @@ impl GenError {
     pub fn code(&self) -> &'static str {
         match self {
             GenError::BadParams(_) => "bad_params",
-            GenError::File { code, .. } => *code,
+            GenError::File { code, .. } => code,
             GenError::Schema(_) => "coverage_schema",
             GenError::ForeignReport { .. } => "coverage_foreign_report",
             GenError::UnknownConstruct { .. } => "coverage_unknown_construct",
