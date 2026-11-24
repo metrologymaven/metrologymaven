@@ -11,12 +11,13 @@
 //! [--deny-names <file>] [--json]` or `review-check --all --root <design dir> [--base <repo>] ..`,
 //! `fid-design icons-prov --root <design dir> --attribution <file> [--json]`,
 //! `fid-design icons-registry --manifest <file> --root <design dir> [--json]`,
-//! `fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]` and
-//! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]`.
-//! `fid-design icons-registry --manifest <file> --root <design dir> [--json]` and
+//! `fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]`,
+//! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]`,
+//! `fid-design icons-lint --root <icons dir> [--json]`,
 //! `fid-design fonts-check --root <design dir> --allowlist <file> [--json]` and
 //! `fid-design page-check (--root <design dir> | --file <pages.json>) [--json]`.
-//! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage.
+//! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage (`icons-lint` also
+//! exits 2 for a root holding no SVG).
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -38,6 +39,7 @@ const USAGE: &str =
        fid-design icons-registry --manifest <file> --root <design dir> [--json]
        fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]
        fid-design screens-gate --spec <spec dir> --root <design dir> [--json]
+       fid-design icons-lint --root <icons dir> [--json]
        fid-design fonts-check --root <design dir> --allowlist <file> [--json]
        fid-design page-check (--root <design dir> | --file <pages.json>) [--json]";
 
@@ -352,6 +354,10 @@ fn main() -> ExitCode {
         },
         ("palettes-check", Some(root), None, None) => match fid_design::palettes::check(root, args.baseline.as_deref())
         {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        },
+        ("icons-lint", Some(root), None, None) => match fid_design::icons_lint::check(root) {
             Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
             Err(e) => fail(e),
         },
