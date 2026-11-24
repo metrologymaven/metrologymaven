@@ -1,7 +1,8 @@
 //! Acceptance criteria of spec node GDT.DRF.COMMON.COVER (datum target coverage): AC-1 to AC-4
 //! and REQ-001 to REQ-003. Expected distances and outcomes come from the independent Python
 //! reference `fixtures/gdt/drf/make_targets_plate.py` (`targets_plate.json`: exact rational
-//! nearest distances of the pinned samples, and the analytic largest gap); the input errors
+//! nearest distances of the pinned samples, the sampling bound `h` and the analytic largest
+//! gap); the conservative pass rule is `sampled + h <= threshold`; the input errors
 //! are hand-labelled from the leaf's rules. Synthetic data only.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -56,6 +57,7 @@ fn count(v: &CValue) -> u64 {
 struct Expect {
     sampled: f64,
     analytic: Option<f64>,
+    bound: f64,
     samples: u64,
 }
 
@@ -112,6 +114,7 @@ fn cases() -> Vec<Case> {
                         Expect {
                             sampled: num(&e["sampled"]),
                             analytic: e.get("analytic").map(num),
+                            bound: num(&e["bound"]),
                             samples: count(&e["samples"]),
                         }
                     })
@@ -150,8 +153,17 @@ fn every_reference_case() {
                 got.distance,
                 e.sampled
             );
+            assert!(
+                (got.bound - e.bound).abs() <= TOL,
+                "{}: {} bound {:e}, reference {:e}",
+                c.name,
+                t.label,
+                got.bound,
+                e.bound
+            );
             if let Some(a) = e.analytic {
                 assert!(got.distance <= a + TOL, "{}: {} sampled above the analytic supremum", c.name, t.label);
+                assert!(a <= got.distance + got.bound + TOL, "{}: {} analytic above sampled + h", c.name, t.label);
             }
         }
         match run(c) {
@@ -159,10 +171,12 @@ fn every_reference_case() {
                 assert!(c.expect.contains_key("ok"), "{}: passed, reference {:?}", c.name, c.expect);
                 assert_eq!(r, report, "{}", c.name);
             }
-            Err(CoverError::TargetNotCovered { target, distance }) => {
+            Err(CoverError::TargetNotCovered { target, distance, bound }) => {
                 assert_eq!(st(&c.expect["error"]), "target_not_covered", "{}", c.name);
                 assert_eq!(target, st(&c.expect["target"]), "{}", c.name);
                 assert!((distance - num(&c.expect["distance"])).abs() <= TOL, "{}", c.name);
+                assert!((bound - num(&c.expect["bound"])).abs() <= TOL, "{}", c.name);
+                assert!(distance + bound > c.threshold, "{}", c.name);
             }
             Err(e) => panic!("{}: {e}", c.name),
         }
@@ -189,9 +203,10 @@ fn ac1_point_targets_pass() {
 fn ac2_target_outside() {
     let e = run(&case("ac2_a2_outside")).unwrap_err();
     match &e {
-        CoverError::TargetNotCovered { target, distance } => {
+        CoverError::TargetNotCovered { target, distance, bound } => {
             assert_eq!(target, "A2");
             assert!((distance - 2e-3).abs() <= TOL);
+            assert_eq!(*bound, 0.0);
         }
         other => panic!("{other}"),
     }
@@ -204,18 +219,23 @@ fn ac2_target_outside() {
 fn first_failure_in_definition_order() {
     let c = case("first_in_definition_order");
     let worst = c.per_target.iter().map(|e| e.sampled).fold(0.0, |a: f64, b| if b > a { b } else { a });
+    // A2 (2 mm) comes before A3 (3.5 mm, the worst): A2 is named.
     match run(&c).unwrap_err() {
-        CoverError::TargetNotCovered { target, distance } => {
-            assert_eq!(target, "A3");
-            assert_eq!(distance, worst);
+        CoverError::TargetNotCovered { target, distance, .. } => {
+            assert_eq!(target, "A2");
+            assert!(distance < worst);
+            assert!((distance - 2e-3).abs() <= TOL);
         }
         other => panic!("{other}"),
     }
-    // Reversing the definition order names A2.
+    // Reversing the definition order names A3.
     let mut rev = c.targets.clone();
     rev.reverse();
     match check_coverage(&rev, &plate(), Some(c.threshold), c.spacing).unwrap_err() {
-        CoverError::TargetNotCovered { target, .. } => assert_eq!(target, "A2"),
+        CoverError::TargetNotCovered { target, distance, .. } => {
+            assert_eq!(target, "A3");
+            assert_eq!(distance, worst);
+        }
         other => panic!("{other}"),
     }
 }
@@ -242,11 +262,58 @@ fn ac3_line_half_outside() {
     assert!((a - 5e-3).abs() <= TOL);
     assert!((r.per_target[0].distance - a).abs() <= TOL);
     match run(&case("ac3_line_half_outside")).unwrap_err() {
-        CoverError::TargetNotCovered { target, distance } => {
+        CoverError::TargetNotCovered { target, distance, .. } => {
             assert_eq!(target, "C1");
             assert!((distance - a).abs() <= TOL);
         }
         other => panic!("{other}"),
+    }
+}
+
+/// Maintainer decision on #576: a target passes only if `sampled + h <= threshold`. The
+/// coarse-spacing line samples 0.66 mm, below a 0.7 mm threshold, but its true gap is 0.71 mm:
+/// it must fail. The same line at a spacing well below the threshold passes at 0.8 mm.
+#[test]
+fn coarse_spacing_is_not_covered() {
+    let c = case("line_coarse_spacing");
+    assert_eq!(c.threshold, 0.7e-3);
+    let analytic = c.per_target[0].analytic.unwrap();
+    assert!(analytic > c.threshold);
+    match run(&c).unwrap_err() {
+        CoverError::TargetNotCovered { target, distance, bound } => {
+            assert_eq!(target, "C3");
+            assert!(distance < c.threshold, "sampled {distance:e} alone would pass");
+            assert!(distance + bound >= analytic);
+            assert!((bound - (9.6e-3 / 14.0) / 2.0).abs() <= TOL, "h is half a step of 9.6 mm / 14");
+        }
+        other => panic!("{other}"),
+    }
+    let fine = case("line_fine_spacing");
+    let r = run(&fine).unwrap();
+    assert!(r.per_target[0].distance + r.per_target[0].bound <= fine.threshold);
+    assert!((r.per_target[0].bound - 0.025e-3).abs() <= TOL);
+}
+
+/// A disc normal is scaled by its largest component first: tiny and huge normals give the
+/// same samples as a unit normal.
+#[test]
+fn disc_normal_any_magnitude() {
+    let p = plate();
+    let disc = |normal: [f64; 3]| Target {
+        label: "E1".into(),
+        geometry: TargetGeometry::Disc { centre: [0.0055, 0.0055, 0.0], normal, radius: 0.002 },
+    };
+    let tiny = 2f64.powi(-560);
+    for (odd, unit) in [
+        ([1e-170, 0.0, 0.0], [1.0, 0.0, 0.0]),
+        ([0.0, -4e-320, 0.0], [0.0, -1.0, 0.0]),
+        ([1e300, 1e300, 0.0], [1.0, 1.0, 0.0]),
+        ([0.0, 0.75 * tiny, tiny], [0.0, 0.75, 1.0]),
+    ] {
+        let a = check_coverage(&[disc(odd)], &p, Some(1.0), 4e-4).unwrap();
+        let b = check_coverage(&[disc(unit)], &p, Some(1.0), 4e-4).unwrap();
+        assert_eq!(a.per_target[0].distance, b.per_target[0].distance, "{odd:?}");
+        assert_eq!(a.per_target[0].samples, b.per_target[0].samples, "{odd:?}");
     }
 }
 

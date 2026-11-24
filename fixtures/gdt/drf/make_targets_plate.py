@@ -5,7 +5,7 @@ Writes `targets_plate.json`: a measured plate (an 11 x 11 grid at 1 mm spacing i
 z = 0, x and y from 0 to 10 mm) and datum targets on and off it (point, line, parallelogram
 and disc targets), with the expected coverage distance of every target and the expected
 outcome of each case (a report, or `target_not_covered` naming the first target in
-definition order whose distance exceeds the threshold).
+definition order whose sampled distance plus sampling bound `h` exceeds the threshold).
 
 Two independent expectations per target:
 
@@ -24,6 +24,11 @@ Two independent expectations per target:
   exactly. For the parallelogram and disc cases it is hand-labelled below from the geometry
   (the farthest point of the target from the plate) and the script asserts that the sampled
   value does not exceed it.
+
+The sampling bound `h` (the leaf's conservative pass rule) is computed from its stated
+formula in binary64 (`bound` below). Wherever the analytic supremum is known the script
+asserts `sampled <= analytic <= sampled + h`, which checks the bound on these cases
+independently of the derivation.
 
 Inputs are decimal strings in metres; each value used is the binary64 nearest to it, which
 is what a correctly rounding parser (Rust's `str::parse::<f64>`) reads. With `--check` the
@@ -79,9 +84,48 @@ def steps(q):
     return max(1, c)
 
 
+def geom(t):
+    return {
+        k: ([float(x) for x in v] if isinstance(v, list) else float(v))
+        for k, v in t.items()
+        if k not in ("label", "kind", "expect")
+    }
+
+
+def unit_normal(nrm):
+    # Divided by the largest absolute component first, then normalised.
+    big = max(abs(x) for x in nrm)
+    sc = [x / big for x in nrm]
+    ln = fnorm(sc)
+    return [x / ln for x in sc]
+
+
+def bound(t, s):
+    """The sampling bound h of target t at spacing s (binary64, the leaf's formulas)."""
+    g = geom(t)
+    kind = t["kind"]
+    if kind == "point":
+        return 0.0
+    if kind == "line":
+        a, b = g["start"], g["end"]
+        ln = fnorm([b[0] - a[0], b[1] - a[1], b[2] - a[2]])
+        return (ln / steps(ln / s)) / 2.0
+    if kind == "rect":
+        eu, ev = g["edge_u"], g["edge_v"]
+        nu, nv = steps(fnorm(eu) / s), steps(fnorm(ev) / s)
+        a = [x / nu for x in eu]
+        b = [x / nv for x in ev]
+        return max(fnorm([a[k] + b[k] for k in range(3)]), fnorm([a[k] - b[k] for k in range(3)])) / 2.0
+    if kind == "disc":
+        r = g["radius"]
+        m = max(4, steps((math.tau * r) / s))
+        return s * math.sqrt(0.5) + (math.pi * r) / m
+    raise ValueError(kind)
+
+
 def samples(t, s):
     """The pinned sample set of target t at spacing s (binary64)."""
-    g = {k: ([float(x) for x in v] if isinstance(v, list) else float(v)) for k, v in t.items() if k not in ("label", "kind", "expect")}
+    g = geom(t)
     kind = t["kind"]
     if kind == "point":
         return [g["at"]]
@@ -102,8 +146,7 @@ def samples(t, s):
         ]
     if kind == "disc":
         c, nrm, r = g["centre"], g["normal"], g["radius"]
-        ln = fnorm(nrm)
-        n = [x / ln for x in nrm]
+        n = unit_normal(nrm)
         k = 0
         for a in (1, 2):
             if abs(n[a]) < abs(n[k]):
@@ -184,9 +227,10 @@ def build():
         # AC-2: A2 moved 2 mm outside the grid (nearest grid point (10, 5, 0) mm).
         {"name": "ac2_a2_outside", "threshold": mm(0.8), "spacing": mm(0.5),
          "targets": [plate_points[0], a2_out, plate_points[2]]},
-        # REQ-002: two targets fail; the first in definition order (A3 here) is named, not the worst.
+        # REQ-002: two targets fail; the first in definition order (A2, 2 mm) is named, not
+        # the worst (A3, 3.5 mm).
         {"name": "first_in_definition_order", "threshold": mm(0.8), "spacing": mm(0.5),
-         "targets": [plate_points[0], a3_out, a2_out]},
+         "targets": [plate_points[0], a2_out, a3_out]},
         # Equal to the threshold passes: 0.5 mm straight above grid point (5, 5, 0) mm.
         {"name": "equal_threshold_passes", "threshold": mm(0.5), "spacing": mm(0.5),
          "targets": [target("B1", "point", at=(5, 5, 0.5))]},
@@ -196,11 +240,17 @@ def build():
          "targets": [target("C1", "line", start=(5, 5, 0), end=(15, 5, 0))]},
         {"name": "ac3_line_half_outside_passes", "threshold": mm(6), "spacing": mm(0.5),
          "targets": [target("C1", "line", start=(5, 5, 0), end=(15, 5, 0))]},
-        # A line inside the plate whose largest gap is interior (between grid points) and a sample.
-        {"name": "line_interior_gap", "threshold": mm(0.8), "spacing": mm(0.5),
+        # A line inside the plate whose largest gap is interior (between grid points) and a
+        # sample; it passes at 1.1 mm (sampled 0.77 mm + h 0.25 mm).
+        {"name": "line_interior_gap", "threshold": mm(1.1), "spacing": mm(0.5),
          "targets": [target("C2", "line", start=(0.5, 0.5, 0.3), end=(9.5, 0.5, 0.3))]},
-        # A coarse spacing that misses the interior gaps: sampled < analytic.
-        {"name": "line_coarse_spacing", "threshold": mm(0.8), "spacing": mm(0.7),
+        # A coarse spacing that misses the interior gaps: sampled 0.66 mm < true 0.71 mm. At a
+        # 0.7 mm threshold the true gap is not covered, and the conservative rule (sampled + h)
+        # fails it although the sampled value alone is below 0.7 mm.
+        {"name": "line_coarse_spacing", "threshold": mm(0.7), "spacing": mm(0.7),
+         "targets": [target("C3", "line", start=(0.2, 2.5, 0), end=(9.8, 2.5, 0))]},
+        # The same line at a spacing well below the threshold passes at 0.8 mm.
+        {"name": "line_fine_spacing", "threshold": mm(0.8), "spacing": mm(0.05),
          "targets": [target("C3", "line", start=(0.2, 2.5, 0), end=(9.8, 2.5, 0))]},
         # An oblique line crossing the plate edge.
         {"name": "line_oblique", "threshold": mm(3), "spacing": mm(0.25),
@@ -210,8 +260,8 @@ def build():
         {"name": "rect_half_outside", "threshold": mm(0.8), "spacing": mm(0.5),
          "targets": [target("D1", "rect", corner=(8, 2, 0), edge_u=(4, 0, 0), edge_v=(0, 3, 0))]},
         # A rectangle inside the plate, lifted 0.1 mm: farthest point at a cell centre,
-        # sqrt(0.5^2 + 0.5^2 + 0.1^2) mm.
-        {"name": "rect_inside", "threshold": mm(0.8), "spacing": mm(0.5),
+        # sqrt(0.5^2 + 0.5^2 + 0.1^2) mm; passes at 1.1 mm (h = half the 0.5 mm cell diagonal).
+        {"name": "rect_inside", "threshold": mm(1.1), "spacing": mm(0.5),
          "targets": [target("D2", "rect", corner=(1, 1, 0.1), edge_u=(3, 0, 0), edge_v=(0, 2, 0))]},
         # A disc of radius 1.5 mm centred 1 mm outside the plate edge: its farthest point is
         # (12.5, 5, 0) mm, 2.5 mm from (10, 5, 0) mm.
@@ -220,6 +270,9 @@ def build():
         # A tilted disc on the plate (normal (0, 0.6, 0.8)), radius 2 mm, centre lifted 0.05 mm.
         {"name": "disc_tilted_inside", "threshold": mm(2), "spacing": mm(0.4),
          "targets": [target("E2", "disc", centre=(5.5, 5.5, 0.05), normal=(0, 0.6, 0.8), radius=2)]},
+        # The same disc with a tiny normal (scaled by its largest component first).
+        {"name": "disc_tiny_normal", "threshold": mm(2), "spacing": mm(0.4),
+         "targets": [{**target("E3", "disc", centre=(5.5, 5.5, 0.05), radius=2), "normal": ["0", "6e-171", "8e-171"]}]},
         # All kinds together; every one is checked, A1 first.
         {"name": "mixed_all_pass", "threshold": mm(6), "spacing": mm(0.5),
          "targets": [plate_points[0], target("C1", "line", start=(5, 5, 0), end=(15, 5, 0)),
@@ -244,7 +297,8 @@ def build():
         for t in c["targets"]:
             pts = samples(t, s)
             worst = max(d2_exact(q) for q in pts)
-            t_exp = {"sampled": sqrt_str(worst), "samples": len(pts)}
+            h = bound(t, s)
+            t_exp = {"sampled": sqrt_str(worst), "bound": repr(h), "samples": len(pts)}
             if t["kind"] == "point":
                 t_exp["analytic"] = t_exp["sampled"]
             elif t["kind"] == "line":
@@ -254,9 +308,13 @@ def build():
                     t_exp["analytic"] = sqrt_str(hand[t["label"]])
             if "analytic" in t_exp:
                 assert Decimal(t_exp["sampled"]) <= Decimal(t_exp["analytic"]) + Decimal("1e-18"), (c["name"], t_exp)
+                assert Decimal(t_exp["analytic"]) <= Decimal(t_exp["sampled"]) + Decimal(h), (c["name"], t_exp)
             t["expect"] = t_exp
-            if first_fail is None and Decimal(t_exp["sampled"]) > thr:
-                first_fail = {"target": t["label"], "distance": t_exp["sampled"]}
+            upper = Decimal(t_exp["sampled"]) + Decimal(h)
+            # No case sits within rounding of its threshold except a point at exactly it.
+            assert h == 0.0 or abs(upper - thr) > Decimal("1e-12"), (c["name"], t["label"])
+            if first_fail is None and upper > thr:
+                first_fail = {"target": t["label"], "distance": t_exp["sampled"], "bound": repr(h)}
         c["expect"] = {"error": "target_not_covered", **first_fail} if first_fail else {"ok": True}
     return {
         "about": "GDT.DRF.COMMON.COVER reference cases; generated by make_targets_plate.py; synthetic, CC0",

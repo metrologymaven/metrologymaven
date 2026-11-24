@@ -2,9 +2,10 @@
 //!
 //! Before a datum is simulated from its datum targets, every target must be touched by
 //! measured data. [`check_coverage`] reports, for each target in definition order, its
-//! coverage distance and refuses with `target_not_covered{target,distance}` when the first
-//! target's distance exceeds the threshold the resolved row supplies. There is no default
-//! threshold: none supplied is `threshold_missing`.
+//! sampled coverage distance and the sampling bound `h`, and refuses with
+//! `target_not_covered{target,distance,h}` for the first target that is not provably covered
+//! within the threshold the resolved row supplies. There is no default threshold: none
+//! supplied is `threshold_missing`.
 //!
 //! # Coverage distance (REQ-GDT.DRF.COMMON.COVER-001)
 //!
@@ -34,7 +35,29 @@
 //!   `x = radius * cos(theta_i)`, `y = radius * sin(theta_i)` (`fid_num::f`).
 //!
 //! A target needing more than [`MAX_SAMPLES`] samples is refused (`too_many_samples`); for a
-//! disc the bound is `(2k + 1)^2 + m`, the whole grid square plus the rim.
+//! disc the bound is `(2k + 1)^2 + m`, the whole grid square plus the rim. A disc normal is
+//! first divided by its largest absolute component, so tiny and huge normals are accepted.
+//!
+//! # Sampling bound `h` and the conservative pass rule (maintainer decision on #576)
+//!
+//! The sampled maximum can fall below the true largest gap of a line or area target. The
+//! distance to the nearest measured point is 1-Lipschitz, so the true largest gap is at most
+//! `sampled + h` when every point of the target lies within `h` of a sample:
+//!
+//! - point: `h = 0`;
+//! - line: `h = (|b - a| / n) / 2` (half a step);
+//! - parallelogram: with the cell edges `a = edge_u / nu` and `b = edge_v / nv`,
+//!   `h = max(|a + b|, |a - b|) / 2`, half the longer cell diagonal (rounding each cell
+//!   coordinate to 0 or 1 reaches a corner within it);
+//! - disc: `h = s * (1/sqrt 2) + (pi * radius) / m`. A point of the disc is within
+//!   `s/sqrt 2` of its nearest grid point; if that grid point lies outside the disc, the point
+//!   is within `s/sqrt 2` of the rim, and every rim point is within half a rim step
+//!   (`pi * radius / m`, an arc, never shorter than its chord) of a rim sample.
+//!
+//! A target passes only if `sampled + h <= threshold` (binary64, rounding of the sample
+//! coordinates, of order one ulp, not included). So a target can fail although its true gap
+//! is within the threshold; callers should choose a spacing well below the threshold (`h` is
+//! about `s/2` for a line, `s/sqrt 2` for an area at a spacing `s`).
 //!
 //! # Checks, in this order (first failure wins)
 //!
@@ -46,13 +69,12 @@
 //! 5. Per target in definition order: `degenerate_target` (a disc with a zero normal or a
 //!    negative radius) and `too_many_samples`.
 //! 6. The distances of every target, then `target_not_covered` for the first target in
-//!    definition order whose distance exceeds the threshold (a distance equal to the
-//!    threshold passes) (REQ-002).
+//!    definition order with `sampled + h > threshold` (equal passes) (REQ-002).
 //!
 //! Pure, no `HashMap`/`HashSet`, nothing panics.
 
 use core::fmt;
-use std::f64::consts::TAU;
+use std::f64::consts::{FRAC_1_SQRT_2, PI, TAU};
 
 use fid_geo_index::{PointIndex, PointIndexError};
 use fid_geo_types::PointBuffer;
@@ -111,8 +133,11 @@ pub struct Target {
 pub struct TargetCoverage {
     /// The target ID.
     pub label: String,
-    /// The coverage distance in metres.
+    /// The sampled coverage distance in metres: the largest nearest-point distance over the
+    /// samples.
     pub distance: f64,
+    /// The sampling bound `h` in metres: the true largest gap is at most `distance + h`.
+    pub bound: f64,
     /// How many samples it was taken over.
     pub samples: u64,
 }
@@ -149,12 +174,15 @@ pub enum CoverError {
         /// The target ID.
         target: String,
     },
-    /// The first target, in definition order, whose coverage distance exceeds the threshold.
+    /// The first target, in definition order, whose sampled distance plus sampling bound
+    /// exceeds the threshold.
     TargetNotCovered {
         /// The target ID.
         target: String,
-        /// Its coverage distance in metres.
+        /// Its sampled coverage distance in metres.
         distance: f64,
+        /// Its sampling bound `h` in metres.
+        bound: f64,
     },
     /// A refusal of the k-d tree (`GEO.INDEX.KDTREE`), passed through by code.
     Index {
@@ -187,7 +215,9 @@ impl fmt::Display for CoverError {
             CoverError::DegenerateTarget { target } | CoverError::TooManySamples { target } => {
                 write!(f, "{}{{{target}}}", self.code())
             }
-            CoverError::TargetNotCovered { target, distance } => write!(f, "target_not_covered{{{target},{distance}}}"),
+            CoverError::TargetNotCovered { target, distance, bound } => {
+                write!(f, "target_not_covered{{{target},{distance},h={bound}}}")
+            }
             CoverError::Index { code } => write!(f, "index{{{code}}}"),
             _ => f.write_str(self.code()),
         }
@@ -225,6 +255,10 @@ fn scale(a: V3, k: f64) -> V3 {
     [a[0] / k, a[1] / k, a[2] / k]
 }
 
+fn total_max(a: f64, b: f64) -> Result<f64, CoverError> {
+    fid_num::f::total_max(a, b).map_err(|_| CoverError::NanInput)
+}
+
 /// `max(1, ceil(q))` as a count, or `too_many_samples` above [`MAX_SAMPLES`].
 fn steps(q: f64, label: &str) -> Result<u64, CoverError> {
     let c = q.ceil();
@@ -239,11 +273,13 @@ fn steps(q: f64, label: &str) -> Result<u64, CoverError> {
 
 /// The disc's in-plane basis `(u, v)` (module documentation).
 fn disc_basis(normal: V3, label: &str) -> Result<(V3, V3), CoverError> {
-    let len = norm(normal)?;
-    if len == 0.0 {
+    let big = total_max(total_max(normal[0].abs(), normal[1].abs())?, normal[2].abs())?;
+    if big == 0.0 {
         return Err(CoverError::DegenerateTarget { target: label.to_owned() });
     }
-    let n = scale(normal, len);
+    // Scaled so the largest component is 1: the squared length is in [1, 3] for any normal.
+    let scaled = scale(normal, big);
+    let n = scale(scaled, norm(scaled)?);
     let k = if n[1].abs() < n[0].abs() { 1 } else { 0 };
     let k = if n[2].abs() < n[k].abs() { 2 } else { k };
     let mut e = [0.0; 3];
@@ -257,8 +293,8 @@ fn disc_basis(normal: V3, label: &str) -> Result<(V3, V3), CoverError> {
     Ok((u, cross(n, u)))
 }
 
-/// The sample plan of one target, with an upper bound of its sample count checked against
-/// [`MAX_SAMPLES`] before any sample is made (a disc's bound counts its whole grid square).
+/// The sample plan of one target. An upper bound of its sample count is checked against
+/// [`MAX_SAMPLES`] before any sample is made (a disc's count bound is its whole grid square).
 enum Plan {
     Point(V3),
     Line { a: V3, b: V3, n: u64 },
@@ -266,15 +302,17 @@ enum Plan {
     Disc { c: V3, u: V3, v: V3, r: f64, s: f64, k: i64, m: u64 },
 }
 
-fn plan(t: &Target, s: f64) -> Result<(Plan, u64), CoverError> {
+/// The plan of one target and its sampling bound `h` (module documentation).
+fn plan(t: &Target, s: f64) -> Result<(Plan, f64), CoverError> {
     let label = t.label.as_str();
     let too_many = || CoverError::TooManySamples { target: label.to_owned() };
     match t.geometry {
-        TargetGeometry::Point { at } => Ok((Plan::Point(at), 1)),
+        TargetGeometry::Point { at } => Ok((Plan::Point(at), 0.0)),
         TargetGeometry::Line { start, end } => {
             let d = [end[0] - start[0], end[1] - start[1], end[2] - start[2]];
-            let n = steps(norm(d)? / s, label)?;
-            Ok((Plan::Line { a: start, b: end, n }, n + 1))
+            let len = norm(d)?;
+            let n = steps(len / s, label)?;
+            Ok((Plan::Line { a: start, b: end, n }, (len / n as f64) / 2.0))
         }
         TargetGeometry::Rect { corner, edge_u, edge_v } => {
             let nu = steps(norm(edge_u)? / s, label)?;
@@ -283,7 +321,12 @@ fn plan(t: &Target, s: f64) -> Result<(Plan, u64), CoverError> {
             if total > MAX_SAMPLES {
                 return Err(too_many());
             }
-            Ok((Plan::Rect { c: corner, eu: edge_u, ev: edge_v, nu, nv }, total))
+            let a = scale(edge_u, nu as f64);
+            let b = scale(edge_v, nv as f64);
+            let sum = norm([a[0] + b[0], a[1] + b[1], a[2] + b[2]])?;
+            let diff = norm([a[0] - b[0], a[1] - b[1], a[2] - b[2]])?;
+            let h = total_max(sum, diff)? / 2.0;
+            Ok((Plan::Rect { c: corner, eu: edge_u, ev: edge_v, nu, nv }, h))
         }
         TargetGeometry::Disc { centre, normal, radius } => {
             if radius < 0.0 {
@@ -303,7 +346,8 @@ fn plan(t: &Target, s: f64) -> Result<(Plan, u64), CoverError> {
             if total > MAX_SAMPLES {
                 return Err(too_many());
             }
-            Ok((Plan::Disc { c: centre, u, v, r: radius, s, k, m }, total))
+            let h = s * FRAC_1_SQRT_2 + (PI * radius) / m as f64;
+            Ok((Plan::Disc { c: centre, u, v, r: radius, s, k, m }, h))
         }
     }
 }
@@ -402,21 +446,24 @@ pub fn check_coverage(
     }
     let index = PointIndex::build(points, 1).map_err(index_error)?;
     let mut per_target = Vec::with_capacity(targets.len());
-    for (t, (p, _bound)) in targets.iter().zip(&plans) {
+    for (t, (p, bound)) in targets.iter().zip(&plans) {
         let mut worst = 0.0_f64;
         let mut samples = 0_u64;
         for_each_sample(p, &mut |q| {
             samples += 1;
             let hit = index.knn(q, 1).map_err(index_error)?;
             let d2 = hit.first().ok_or(CoverError::Index { code: "inconsistent" })?.dist2;
-            worst = fid_num::f::total_max(worst, d2).map_err(|_| CoverError::NanInput)?;
+            worst = total_max(worst, d2)?;
             Ok(())
         })?;
         let distance = fid_num::f::sqrt(worst).map_err(|_| CoverError::NanInput)?;
-        per_target.push(TargetCoverage { label: t.label.clone(), distance, samples });
+        if !bound.is_finite() {
+            return Err(CoverError::NanInput);
+        }
+        per_target.push(TargetCoverage { label: t.label.clone(), distance, bound: *bound, samples });
     }
-    if let Some(c) = per_target.iter().find(|c| c.distance > threshold) {
-        return Err(CoverError::TargetNotCovered { target: c.label.clone(), distance: c.distance });
+    if let Some(c) = per_target.iter().find(|c| c.distance + c.bound > threshold) {
+        return Err(CoverError::TargetNotCovered { target: c.label.clone(), distance: c.distance, bound: c.bound });
     }
     Ok(CoverageReport { per_target })
 }
