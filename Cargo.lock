@@ -1098,8 +1098,10 @@ checksum = "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
 name = "fid-accept"
 version = "0.0.1"
 dependencies = [
+ "fid-bus",
  "fid-canon",
  "fid-registry",
+ "fid-registry-build",
  "fid-types",
  "sha2 0.10.9",
  "toml",

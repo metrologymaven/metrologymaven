@@ -53,6 +53,12 @@ pub const MAX_REASON_BYTES: usize = 1024;
 pub const REPORTS_DIR: &str = "reports";
 /// File name of the append-only trend history under the acceptance store.
 pub const TREND_FILE: &str = "trend.jsonl";
+/// The project's acceptance store, relative to the project root: `acceptance/store`.
+pub const STORE_DIR: [&str; 2] = ["acceptance", "store"];
+/// Marker of a project root: the registered suite `acceptance/suite.json` (FLOW.RUNNER.PKG).
+pub const PROJECT_MARKER: [&str; 2] = ["acceptance", "suite.json"];
+/// Most ancestor directories searched for the project root.
+pub const MAX_PROJECT_SEARCH_DEPTH: usize = 64;
 
 // ------------------------------------------------------------------ errors
 
@@ -260,14 +266,21 @@ pub struct AcceptanceReport {
 }
 
 /// One record in the append-only trend history (`trend.jsonl`, REQ-004).
+///
+/// `report` is the digest of the stored acceptance report the record was derived from, so a
+/// record edited after the fact no longer matches its report (see
+/// [`AcceptanceStore::verify_trend_record`]).
 #[derive(Debug, Clone, PartialEq)]
 pub struct TrendRecord {
-    /// ISO 8601 calendar date (`YYYY-MM-DD`).
+    /// ISO 8601 calendar date (`YYYY-MM-DD`): the UTC date of the report's `started_at`.
     pub night: String,
     pub job: String,
     pub variant: String,
     pub verdict: Verdict,
+    /// Largest machine time over the reference machines, in seconds (`0` when none).
     pub machine_s: f64,
+    /// Digest of the acceptance report holding this package's result.
+    pub report: Digest,
 }
 
 // ------------------------------------------------------------------ PII lint (REQ-003, AC-4)
@@ -502,28 +515,127 @@ pub fn is_iso_date(s: &str) -> bool {
     (1970..=9999).contains(&y) && (1..=12).contains(&m) && (1..=days_in_month(y, m)).contains(&d)
 }
 
+/// A parsed RFC 3339 UTC timestamp. Field order makes the derived ordering chronological:
+/// calendar fields first, then the fraction of a second scaled to nanoseconds, so
+/// `01:00:00Z` and `01:00:00.5Z` compare by time and not by their text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct UtcTimestamp {
+    year: u32,
+    month: u32,
+    day: u32,
+    hour: u32,
+    minute: u32,
+    second: u32,
+    nanos: u32,
+}
+
+impl UtcTimestamp {
+    /// Parses `YYYY-MM-DDTHH:MM:SSZ` with optional `.f` to `.fffffffff` fractional seconds.
+    pub fn parse(s: &str) -> Option<Self> {
+        let b = s.as_bytes();
+        if b.len() < 20 || b[10] != b'T' || b[13] != b':' || b[16] != b':' || *b.last()? != b'Z' {
+            return None;
+        }
+        let date = std::str::from_utf8(&b[0..10]).ok()?;
+        if !is_iso_date(date) {
+            return None;
+        }
+        let year = parse_u32_slice(&b[0..4])?;
+        let month = parse_u32_slice(&b[5..7])?;
+        let day = parse_u32_slice(&b[8..10])?;
+        let hour = parse_u32_slice(&b[11..13])?;
+        let minute = parse_u32_slice(&b[14..16])?;
+        let second = parse_u32_slice(&b[17..19])?;
+        if hour > 23 || minute > 59 || second > 59 {
+            return None;
+        }
+        let nanos = if b.len() == 20 {
+            0
+        } else {
+            // `.` then 1..=9 digits then `Z`.
+            if b[19] != b'.' || b.len() < 22 || b.len() > 30 {
+                return None;
+            }
+            let digits = &b[20..b.len() - 1];
+            let mut n = parse_u32_slice(digits)?;
+            for _ in digits.len()..9 {
+                n *= 10;
+            }
+            n
+        };
+        Some(Self { year, month, day, hour, minute, second, nanos })
+    }
+}
+
 /// Validates RFC 3339 UTC timestamp `YYYY-MM-DDTHH:MM:SSZ` (with optional `.fff..` fractional seconds).
 pub fn is_rfc3339_utc(s: &str) -> bool {
-    let b = s.as_bytes();
-    if b.len() < 20 || b[10] != b'T' || b[13] != b':' || b[16] != b':' || *b.last().unwrap_or(&0) != b'Z' {
-        return false;
+    UtcTimestamp::parse(s).is_some()
+}
+
+/// Refuses a verdict the package's own evidence does not support (REQ-001).
+///
+/// - `pass` needs a replay outcome of `identical` or `equivalent`, at least one check with every
+///   check `pass`, and a machine time for exactly the report's declared machines.
+/// - `not_replayable` needs a `not_replayable` replay outcome, and a `not_replayable` replay
+///   outcome needs the `not_replayable` verdict.
+/// - Anything else must be `fail` (with reasons, checked by the caller).
+fn check_verdict_evidence(
+    sub: &str,
+    verdict: Verdict,
+    replay_outcome: ReplayOutcome,
+    checks: &[CheckOutcome],
+    machine_times: &BTreeMap<String, f64>,
+    machine_ids: &BTreeSet<String>,
+) -> Result<(), VerdictError> {
+    match verdict {
+        Verdict::Pass => {
+            if !matches!(replay_outcome, ReplayOutcome::Identical | ReplayOutcome::Equivalent) {
+                return Err(VerdictError::schema(
+                    format!("{sub}.verdict"),
+                    format!("`pass` needs replay outcome identical or equivalent, got `{}`", replay_outcome.as_str()),
+                ));
+            }
+            if checks.is_empty() {
+                return Err(VerdictError::schema(format!("{sub}.verdict"), "`pass` needs at least one check"));
+            }
+            if let Some(c) = checks.iter().find(|c| c.outcome != CheckStatus::Pass) {
+                return Err(VerdictError::schema(
+                    format!("{sub}.verdict"),
+                    format!("`pass` needs every check to pass; check `{}` is `{}`", c.id, c.outcome.as_str()),
+                ));
+            }
+            if let Some(missing) = machine_ids.iter().find(|m| !machine_times.contains_key(*m)) {
+                return Err(VerdictError::schema(
+                    format!("{sub}.machine_times"),
+                    format!("`pass` needs a machine time for every declared machine; `{missing}` is missing"),
+                ));
+            }
+            // Keys outside the declared machines are refused while parsing, so the key sets are
+            // now equal.
+            Ok(())
+        }
+        Verdict::NotReplayable => {
+            if replay_outcome != ReplayOutcome::NotReplayable {
+                return Err(VerdictError::schema(
+                    format!("{sub}.verdict"),
+                    format!(
+                        "`not_replayable` needs replay outcome `not_replayable`, got `{}`",
+                        replay_outcome.as_str()
+                    ),
+                ));
+            }
+            Ok(())
+        }
+        Verdict::Fail => {
+            if replay_outcome == ReplayOutcome::NotReplayable {
+                return Err(VerdictError::schema(
+                    format!("{sub}.verdict"),
+                    "replay outcome `not_replayable` needs the verdict `not_replayable`",
+                ));
+            }
+            Ok(())
+        }
     }
-    let Ok(date) = std::str::from_utf8(&b[0..10]) else { return false };
-    if !is_iso_date(date) {
-        return false;
-    }
-    let (Some(h), Some(min), Some(sec)) =
-        (parse_u32_slice(&b[11..13]), parse_u32_slice(&b[14..16]), parse_u32_slice(&b[17..19]))
-    else {
-        return false;
-    };
-    if h > 23 || min > 59 || sec > 59 {
-        return false;
-    }
-    if b.len() == 20 {
-        return true;
-    }
-    b[19] == b'.' && b.len() > 21 && b.len() <= 30 && b[20..b.len() - 1].iter().all(u8::is_ascii_digit)
 }
 
 // ------------------------------------------------------------------ AcceptanceReport impl
@@ -575,14 +687,16 @@ impl AcceptanceReport {
             .map_err(|e| VerdictError::schema("$.suite_digest", format!("invalid digest: {e}")))?;
 
         let started_at = get_str(root, "started_at", "$")?.to_string();
-        if !is_rfc3339_utc(&started_at) {
+        let Some(started) = UtcTimestamp::parse(&started_at) else {
             return Err(VerdictError::schema("$.started_at", "expected RFC 3339 UTC timestamp"));
-        }
+        };
         let ended_at = get_str(root, "ended_at", "$")?.to_string();
-        if !is_rfc3339_utc(&ended_at) {
+        let Some(ended) = UtcTimestamp::parse(&ended_at) else {
             return Err(VerdictError::schema("$.ended_at", "expected RFC 3339 UTC timestamp"));
-        }
-        if ended_at < started_at {
+        };
+        // Compare parsed time values, never the strings: `01:00:00.5Z` sorts before `01:00:00Z`
+        // as text but is later in time.
+        if ended < started {
             return Err(VerdictError::schema("$.ended_at", "ended_at precedes started_at"));
         }
 
@@ -759,6 +873,7 @@ impl AcceptanceReport {
                     "non-pass verdict must provide at least one reason",
                 ));
             }
+            check_verdict_evidence(&sub, verdict, replay_outcome, &checks, &machine_times, &machine_ids)?;
 
             packages.push(PackageResult {
                 job,
@@ -939,11 +1054,28 @@ impl TrendRecord {
         Self::from_value(&val)
     }
 
+    /// Derives the trend records of one stored report: one per package, in report order.
+    pub fn from_report(report: &AcceptanceReport, digest: &Digest) -> Vec<TrendRecord> {
+        let night = report.started_at.get(0..10).unwrap_or_default().to_string();
+        report
+            .packages
+            .iter()
+            .map(|p| TrendRecord {
+                night: night.clone(),
+                job: p.job.clone(),
+                variant: p.variant.clone(),
+                verdict: p.verdict,
+                machine_s: largest_machine_time(p),
+                report: *digest,
+            })
+            .collect()
+    }
+
     /// Parses and validates a [`TrendRecord`] from [`CValue`].
     pub fn from_value(val: &CValue) -> Result<Self, VerdictError> {
         lint_pii(val)?;
         let m = require_obj(val, "trend")?;
-        check_closed_keys(m, &["night", "job", "variant", "verdict", "machine_s"], &[], "trend")?;
+        check_closed_keys(m, &["night", "job", "variant", "verdict", "machine_s", "report"], &[], "trend")?;
         let night = get_str(m, "night", "trend")?.to_string();
         if !is_iso_date(&night) {
             return Err(VerdictError::schema("trend.night", "expected YYYY-MM-DD date"));
@@ -962,7 +1094,9 @@ impl TrendRecord {
             Some(v) => get_nonneg_seconds(v, "trend.machine_s")?,
             None => return Err(VerdictError::schema("trend.machine_s", "missing machine_s")),
         };
-        Ok(TrendRecord { night, job, variant, verdict, machine_s })
+        let report = Digest::parse(get_str(m, "report", "trend")?)
+            .map_err(|e| VerdictError::schema("trend.report", format!("invalid digest: {e}")))?;
+        Ok(TrendRecord { night, job, variant, verdict, machine_s, report })
     }
 
     /// Converts the trend record to [`CValue`].
@@ -971,6 +1105,7 @@ impl TrendRecord {
             ("job", s(&self.job)),
             ("machine_s", CValue::Num(self.machine_s)),
             ("night", s(&self.night)),
+            ("report", s(self.report.as_str())),
             ("variant", s(&self.variant)),
             ("verdict", s(self.verdict.as_str())),
         ])
@@ -984,12 +1119,48 @@ impl TrendRecord {
     }
 }
 
+/// Largest machine time of a package over its reference machines (`0` when it has none).
+fn largest_machine_time(p: &PackageResult) -> f64 {
+    p.machine_times.values().fold(0.0, |acc, &t| if t > acc { t } else { acc })
+}
+
+/// Checks that `rec` may follow `history` in append order: its night is not earlier than the
+/// last record's night (so each (job, variant) series is strictly increasing) and no record
+/// for the same (night, job, variant) exists. `seen` holds the keys of `history`.
+fn check_trend_order(
+    last_night: Option<&str>,
+    seen: &BTreeSet<(String, String, String)>,
+    rec: &TrendRecord,
+    subject: &str,
+) -> Result<(), VerdictError> {
+    if let Some(last) = last_night {
+        // Both are validated `YYYY-MM-DD` dates, whose text order is their date order.
+        if rec.night.as_str() < last {
+            return Err(VerdictError::schema(
+                subject,
+                format!("night {} is earlier than the preceding night {last}; trend history is append-only", rec.night),
+            ));
+        }
+    }
+    if seen.contains(&(rec.night.clone(), rec.job.clone(), rec.variant.clone())) {
+        return Err(VerdictError::schema(
+            subject,
+            format!("duplicate trend record for ({}, {}, {})", rec.night, rec.job, rec.variant),
+        ));
+    }
+    Ok(())
+}
+
 /// Parses an entire `trend.jsonl` byte buffer (strict LF lines, no blank interior lines).
+///
+/// Refuses a record whose night is earlier than the record before it and a second record for
+/// the same (night, job, variant), so a rewritten history does not load.
 pub fn parse_trend_jsonl(bytes: &[u8]) -> Result<Vec<TrendRecord>, VerdictError> {
     if bytes.len() > MAX_TREND_BYTES {
         return Err(VerdictError::schema("trend", format!("trend file exceeds {MAX_TREND_BYTES} bytes")));
     }
-    let mut out = Vec::new();
+    let mut out: Vec<TrendRecord> = Vec::new();
+    let mut seen = BTreeSet::new();
     for (idx, raw_line) in bytes.split(|&b| b == b'\n').enumerate() {
         let line = raw_line.strip_suffix(b"\r").unwrap_or(raw_line);
         if line.is_empty() {
@@ -1000,8 +1171,10 @@ pub fn parse_trend_jsonl(bytes: &[u8]) -> Result<Vec<TrendRecord>, VerdictError>
             }
             return Err(VerdictError::schema(format!("trend:line {}", idx + 1), "blank line in trend history"));
         }
-        let rec = TrendRecord::parse_line(line)
-            .map_err(|e| VerdictError::new(e.code, format!("trend:line {}", idx + 1), e.detail))?;
+        let subject = format!("trend:line {}", idx + 1);
+        let rec = TrendRecord::parse_line(line).map_err(|e| VerdictError::new(e.code, &subject, e.detail))?;
+        check_trend_order(out.last().map(|r| r.night.as_str()), &seen, &rec, &subject)?;
+        seen.insert((rec.night.clone(), rec.job.clone(), rec.variant.clone()));
         out.push(rec);
     }
     Ok(out)
@@ -1020,6 +1193,31 @@ impl AcceptanceStore {
     /// Opens a handle to an acceptance store directory.
     pub fn new(root: impl Into<PathBuf>) -> Self {
         Self { root: root.into() }
+    }
+
+    /// Resolves the project's configured acceptance store: `<project>/acceptance/store`, where
+    /// `<project>` is `start` or its nearest ancestor holding `acceptance/suite.json`. The
+    /// store is never taken from a caller-supplied path (`accept.show_report@1` Design). The
+    /// store directory must exist and be a real directory, not a link.
+    pub fn discover(start: &Path) -> Result<Self, VerdictError> {
+        let mut dir = Some(start);
+        for _ in 0..MAX_PROJECT_SEARCH_DEPTH {
+            let Some(d) = dir else { break };
+            let marker = PROJECT_MARKER.iter().fold(d.to_path_buf(), |p, c| p.join(c));
+            if fs::symlink_metadata(&marker).map(|m| m.file_type().is_file()).unwrap_or(false) {
+                let root = STORE_DIR.iter().fold(d.to_path_buf(), |p, c| p.join(c));
+                return match fs::symlink_metadata(&root) {
+                    Ok(m) if m.file_type().is_dir() => Ok(Self::new(root)),
+                    Ok(_) => Err(VerdictError::schema("store", "acceptance/store is not a real directory")),
+                    Err(_) => Err(VerdictError::not_found("store", "the project has no acceptance/store directory")),
+                };
+            }
+            dir = d.parent();
+        }
+        Err(VerdictError::not_found(
+            "store",
+            "no project found: neither the current directory nor an ancestor holds acceptance/suite.json",
+        ))
     }
 
     /// Root directory of the store.
@@ -1100,10 +1298,19 @@ impl AcceptanceStore {
     }
 
     /// Appends one validated [`TrendRecord`] to `<root>/trend.jsonl` (append-only, LF-terminated).
+    ///
+    /// Refuses a record whose report is not in the store or does not hold it
+    /// ([`Self::verify_trend_record`]), a night earlier than the last stored night, and a
+    /// second record for the same (night, job, variant).
     pub fn append_trend(&self, record: &TrendRecord) -> Result<(), VerdictError> {
         let bytes = record.to_canonical_bytes()?;
         // Validate round-trip before appending.
         let _ = TrendRecord::parse_line(&bytes)?;
+        self.verify_trend_record(record)?;
+        let history = self.load_trends()?;
+        let seen: BTreeSet<(String, String, String)> =
+            history.iter().map(|r| (r.night.clone(), r.job.clone(), r.variant.clone())).collect();
+        check_trend_order(history.last().map(|r| r.night.as_str()), &seen, record, "trend")?;
         fs::create_dir_all(&self.root)
             .map_err(|_| VerdictError::schema("store", "failed to create acceptance store directory"))?;
         let path = self.trend_path();
@@ -1123,6 +1330,36 @@ impl AcceptanceStore {
         Ok(())
     }
 
+    /// Stores `report` and appends its trend records (one per package), returning its digest.
+    pub fn record_report(&self, report: &AcceptanceReport) -> Result<Digest, VerdictError> {
+        let digest = self.put_report(report)?;
+        for rec in TrendRecord::from_report(report, &digest) {
+            self.append_trend(&rec)?;
+        }
+        Ok(digest)
+    }
+
+    /// Checks a trend record against the stored report it names: the report must be in the
+    /// store, its `started_at` date must be the record's night, and it must hold the record's
+    /// (job, variant) with the same verdict and largest machine time. An edited record fails
+    /// with `VERDICT-SCHEMA`.
+    pub fn verify_trend_record(&self, rec: &TrendRecord) -> Result<(), VerdictError> {
+        check_record_matches(rec, &self.report_of_record(rec)?)
+    }
+
+    /// Reads the report a trend record names; a missing report is `VERDICT-SCHEMA` (the
+    /// history refers to evidence the store does not hold).
+    fn report_of_record(&self, rec: &TrendRecord) -> Result<AcceptanceReport, VerdictError> {
+        match self.get_report(&rec.report) {
+            Ok((report, _)) => Ok(report),
+            Err(e) if e.code == VerdictErrorCode::NotFound => Err(VerdictError::schema(
+                format!("trend({}, {}, {})", rec.night, rec.job, rec.variant),
+                format!("names report {} which is not in the store", rec.report),
+            )),
+            Err(e) => Err(e),
+        }
+    }
+
     /// Loads all trend records from `<root>/trend.jsonl` (returns empty vector if file does not
     /// exist yet).
     pub fn load_trends(&self) -> Result<Vec<TrendRecord>, VerdictError> {
@@ -1139,6 +1376,19 @@ impl AcceptanceStore {
         }
         let bytes = fs::read(&path).map_err(|_| VerdictError::schema("trend", "failed to read trend file"))?;
         parse_trend_jsonl(&bytes)
+    }
+}
+
+fn check_record_matches(rec: &TrendRecord, report: &AcceptanceReport) -> Result<(), VerdictError> {
+    let subject = format!("trend({}, {}, {})", rec.night, rec.job, rec.variant);
+    let expected = TrendRecord::from_report(report, &rec.report);
+    match expected.iter().find(|e| e.job == rec.job && e.variant == rec.variant) {
+        None => Err(VerdictError::schema(subject, format!("report {} holds no such package", rec.report))),
+        Some(e) if e != rec => Err(VerdictError::schema(
+            subject,
+            format!("record does not match report {}; trend history was edited", rec.report),
+        )),
+        Some(_) => Ok(()),
     }
 }
 
@@ -1202,6 +1452,17 @@ pub fn show_report(store: &AcceptanceStore, params: &ShowReportParams) -> Result
                 all.into_iter().enumerate().filter(|(_, r)| r.job == *job).collect();
             indexed.sort_by(|(i1, r1), (i2, r2)| r2.night.cmp(&r1.night).then_with(|| i2.cmp(i1)));
             let records: Vec<TrendRecord> = indexed.into_iter().take(usize::from(last)).map(|(_, r)| r).collect();
+            // Every returned record must match the stored report it names, so an edited record
+            // is refused rather than shown (each report is read once).
+            let mut reports: BTreeMap<Digest, AcceptanceReport> = BTreeMap::new();
+            for rec in &records {
+                if !reports.contains_key(&rec.report) {
+                    reports.insert(rec.report, store.report_of_record(rec)?);
+                }
+                if let Some(report) = reports.get(&rec.report) {
+                    check_record_matches(rec, report)?;
+                }
+            }
             Ok(ShowReportResult::Trend { job: job.clone(), records })
         }
         (Some(_), Some(_)) => Err(VerdictError::schema("params", "specify either `digest` or `trend`, not both")),
@@ -1216,7 +1477,7 @@ pub fn command_def() -> Result<CommandDef, DefError> {
         (
             "properties",
             obj([
-                ("digest", obj([("pattern", s("^sha256:[0-9a-f]{64}$")), ("type", s("string"))])),
+                ("digest", pattern_schema(DIGEST_PATTERN)),
                 (
                     "last",
                     obj([
@@ -1225,26 +1486,22 @@ pub fn command_def() -> Result<CommandDef, DefError> {
                         ("type", s("integer")),
                     ]),
                 ),
-                ("trend", obj([("pattern", s("^JOB\\.[A-Z]{1,8}\\.[0-9]{2}$")), ("type", s("string"))])),
+                ("trend", pattern_schema(JOB_PATTERN)),
             ]),
         ),
-        ("type", s("object")),
-    ]);
-    let result_schema = obj([
-        ("additionalProperties", CValue::Bool(false)),
+        // `last` only with `trend`; exactly one of `digest` and `trend`.
+        ("dependentRequired", obj([("last", CValue::Arr(vec![s("trend")]))])),
         (
-            "properties",
-            obj([
-                ("digest", obj([("pattern", s("^sha256:[0-9a-f]{64}$")), ("type", s("string"))])),
-                ("job", obj([("type", s("string"))])),
-                ("kind", obj([("enum", CValue::Arr(vec![s("report"), s("trend")])), ("type", s("string"))])),
-                ("records", obj([("type", s("array"))])),
-                ("report", obj([("type", s("object"))])),
+            "oneOf",
+            CValue::Arr(vec![
+                obj([("required", CValue::Arr(vec![s("digest")]))]),
+                obj([("required", CValue::Arr(vec![s("trend")]))]),
             ]),
         ),
-        ("required", CValue::Arr(vec![s("kind")])),
         ("type", s("object")),
     ]);
+    let result_schema =
+        obj([("oneOf", CValue::Arr(vec![report_result_schema(), trend_result_schema()])), ("type", s("object"))]);
 
     CommandDef::from_value(obj([
         ("algorithms", CValue::Arr(Vec::new())),
@@ -1274,25 +1531,183 @@ pub fn command_def() -> Result<CommandDef, DefError> {
     ]))
 }
 
+const DIGEST_PATTERN: &str = "^sha256:[0-9a-f]{64}$";
+const JOB_PATTERN: &str = "^JOB\\.[A-Z]{1,8}\\.[0-9]{2}$";
+
+fn str_enum(values: &[&str]) -> CValue {
+    obj([("enum", CValue::Arr(values.iter().map(|v| s(v)).collect())), ("type", s("string"))])
+}
+
+fn closed(required: &[&str], properties: Vec<(&str, CValue)>) -> CValue {
+    obj([
+        ("additionalProperties", CValue::Bool(false)),
+        ("properties", CValue::Obj(properties.into_iter().map(|(k, v)| (k.to_string(), v)).collect())),
+        ("required", CValue::Arr(required.iter().map(|k| s(k)).collect())),
+        ("type", s("object")),
+    ])
+}
+
+fn string_schema() -> CValue {
+    obj([("type", s("string"))])
+}
+
+fn pattern_schema(pattern: &str) -> CValue {
+    obj([("pattern", s(pattern)), ("type", s("string"))])
+}
+
+fn count_schema() -> CValue {
+    obj([("minimum", CValue::Num(0.0)), ("type", s("integer"))])
+}
+
+/// Seconds of machine time: quantity kind `time` in `s` (the kind `fid-jobs` publishes to the
+/// workspace catalogue).
+fn seconds_schema() -> CValue {
+    obj([
+        ("maximum", CValue::Num(MAX_SECONDS)),
+        ("minimum", CValue::Num(0.0)),
+        ("type", s("number")),
+        ("x-quantity", s("time")),
+        ("x-unit", s("s")),
+    ])
+}
+
+fn array_of(items: CValue) -> CValue {
+    obj([("items", items), ("type", s("array"))])
+}
+
+/// Result shape for `kind: report`: the digest and the full `acceptance-report@1` document.
+fn report_result_schema() -> CValue {
+    let check = closed(
+        &["id", "kind", "outcome"],
+        vec![
+            ("id", string_schema()),
+            ("kind", str_enum(&CHECK_KINDS)),
+            ("outcome", str_enum(&["pass", "fail", "skipped"])),
+            ("reason", string_schema()),
+        ],
+    );
+    let package = closed(
+        &[
+            "assistance",
+            "checks",
+            "gating",
+            "job",
+            "machine_times",
+            "non_gating",
+            "reasons",
+            "replay_outcome",
+            "variant",
+            "verdict",
+        ],
+        vec![
+            ("assistance", str_enum(&["unassisted", "assisted"])),
+            ("checks", array_of(check)),
+            ("gating", str_enum(&["gating", "tracked"])),
+            ("job", pattern_schema(JOB_PATTERN)),
+            ("machine_times", obj([("additionalProperties", seconds_schema()), ("type", s("object"))])),
+            ("non_gating", obj([("type", s("boolean"))])),
+            ("reasons", array_of(string_schema())),
+            ("replay_outcome", str_enum(&["identical", "equivalent", "diverged", "not_replayable"])),
+            ("variant", string_schema()),
+            ("verdict", str_enum(&["pass", "fail", "not_replayable"])),
+        ],
+    );
+    let machine = closed(&["host", "id"], vec![("host", string_schema()), ("id", string_schema())]);
+    let reliability = closed(
+        &["failed", "gating_failed", "gating_passed", "non_gating_count", "not_replayable", "passed", "total_packages"],
+        vec![
+            ("crash_recovery_passed", obj([("type", s("boolean"))])),
+            ("failed", count_schema()),
+            ("gating_failed", count_schema()),
+            ("gating_passed", count_schema()),
+            ("non_gating_count", count_schema()),
+            ("not_replayable", count_schema()),
+            ("passed", count_schema()),
+            ("total_packages", count_schema()),
+        ],
+    );
+    let report = closed(
+        &[
+            "build_id",
+            "ended_at",
+            "format",
+            "machines",
+            "manifest_digest",
+            "packages",
+            "reliability",
+            "started_at",
+            "suite_digest",
+        ],
+        vec![
+            ("build_id", string_schema()),
+            ("ended_at", string_schema()),
+            ("format", obj([("const", s(REPORT_FORMAT))])),
+            ("machines", array_of(machine)),
+            ("manifest_digest", pattern_schema(DIGEST_PATTERN)),
+            ("packages", array_of(package)),
+            ("reliability", reliability),
+            ("started_at", string_schema()),
+            ("suite_digest", pattern_schema(DIGEST_PATTERN)),
+        ],
+    );
+    closed(
+        &["digest", "kind", "report"],
+        vec![("digest", pattern_schema(DIGEST_PATTERN)), ("kind", obj([("const", s("report"))])), ("report", report)],
+    )
+}
+
+/// Result shape for `kind: trend`: the job and at most 365 trend records, newest first.
+fn trend_result_schema() -> CValue {
+    let record = closed(
+        &["job", "machine_s", "night", "report", "variant", "verdict"],
+        vec![
+            ("job", pattern_schema(JOB_PATTERN)),
+            ("machine_s", seconds_schema()),
+            ("night", pattern_schema("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")),
+            ("report", pattern_schema(DIGEST_PATTERN)),
+            ("variant", string_schema()),
+            ("verdict", str_enum(&["pass", "fail", "not_replayable"])),
+        ],
+    );
+    closed(
+        &["job", "kind", "records"],
+        vec![
+            ("job", pattern_schema(JOB_PATTERN)),
+            ("kind", obj([("const", s("trend"))])),
+            (
+                "records",
+                obj([("items", record), ("maxItems", CValue::Num(f64::from(MAX_TREND_LAST))), ("type", s("array"))]),
+            ),
+        ],
+    )
+}
+
 // ------------------------------------------------------------------ CLI runner
 
-/// Runs `fid-accept show-report --store <dir> [--digest <sha256:...>] [--trend <job> --last <N>] [--json]`.
-/// Returns `(exit_code, stdout, stderr)`.
+/// Runs `fid-accept show-report (--digest <sha256:...> | --trend <job> [--last <N>]) [--json]`
+/// against the project's acceptance store found from the current directory
+/// ([`AcceptanceStore::discover`]). Returns `(exit_code, stdout, stderr)`.
 pub fn run_cli(args: &[String]) -> (i32, String, String) {
+    match std::env::current_dir() {
+        Ok(cwd) => run_cli_in(&cwd, args),
+        Err(_) => (2, String::new(), "VERDICT-SCHEMA: cannot read the current directory\n".to_string()),
+    }
+}
+
+/// [`run_cli`] with the project search starting at `start`.
+fn run_cli_in(start: &Path, args: &[String]) -> (i32, String, String) {
     let mut iter = args.iter();
     let Some(sub) = iter.next() else {
         return (
             2,
             String::new(),
-            "usage: fid-accept show-report --store <dir> (--digest <sha256:...> | --trend <job> [--last N]) [--json]\n"
-                .to_string(),
+            "usage: fid-accept show-report (--digest <sha256:...> | --trend <job> [--last N]) [--json]\n".to_string(),
         );
     };
     if sub != "show-report" {
         return (2, String::new(), format!("unknown subcommand `{sub}`; expected `show-report`\n"));
     }
 
-    let mut store_dir: Option<PathBuf> = None;
     let mut digest_raw: Option<String> = None;
     let mut trend: Option<String> = None;
     let mut last: Option<u16> = None;
@@ -1301,10 +1716,12 @@ pub fn run_cli(args: &[String]) -> (i32, String, String) {
     while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--store" => {
-                let Some(v) = iter.next() else {
-                    return (2, String::new(), "VERDICT-SCHEMA: --store requires a directory\n".to_string());
-                };
-                store_dir = Some(PathBuf::from(v));
+                return (
+                    2,
+                    String::new(),
+                    "VERDICT-SCHEMA: --store is not accepted; reports are read from the project's acceptance/store\n"
+                        .to_string(),
+                );
             }
             "--digest" => {
                 let Some(v) = iter.next() else {
@@ -1336,9 +1753,6 @@ pub fn run_cli(args: &[String]) -> (i32, String, String) {
         }
     }
 
-    let Some(dir) = store_dir else {
-        return (2, String::new(), "VERDICT-SCHEMA: --store <dir> is required\n".to_string());
-    };
     let digest = match digest_raw {
         Some(raw) => match Digest::parse(&raw) {
             Ok(d) => Some(d),
@@ -1347,9 +1761,8 @@ pub fn run_cli(args: &[String]) -> (i32, String, String) {
         None => None,
     };
 
-    let store = AcceptanceStore::new(dir);
     let params = ShowReportParams { digest, trend, last };
-    match show_report(&store, &params) {
+    match AcceptanceStore::discover(start).and_then(|store| show_report(&store, &params)) {
         Ok(res) => {
             if as_json {
                 match to_canonical_bytes(&res.to_value()).ok().and_then(|b| String::from_utf8(b).ok()) {
