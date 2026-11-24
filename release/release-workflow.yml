@@ -66,14 +66,29 @@ jobs:
         id: resolve
         run: |
           set -euo pipefail
-          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          tag="${{ github.event.inputs.tag }}"
           channel="${{ github.event.inputs.channel || '' }}"
           dry_run="${{ github.event.inputs.dry_run || 'false' }}"
           if [ "${{ github.event_name }}" = "schedule" ]; then
             channel="nightly"
             dry_run="true"
-            tag="v$(awk -F'"' '/^version =/{print $2; exit}' Cargo.toml)-nightly.$(date -u +%Y%m%d)"
-          elif [ -z "$channel" ]; then
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -z "$channel" ]; then
+            channel="beta"
+          fi
+          if [ -z "$tag" ]; then
+            if [ "$dry_run" = "true" ]; then
+              base_ver="$(awk -F'"' '/^version =/{print $2; exit}' Cargo.toml)"
+              case "$channel" in
+                nightly) tag="v${base_ver}-nightly.$(date -u +%Y%m%d)" ;;
+                beta) tag="v${base_ver}-beta.1" ;;
+                stable|lts) tag="v${base_ver}" ;;
+                *) tag="v${base_ver}" ;;
+              esac
+            else
+              tag="${{ github.ref_name }}"
+            fi
+          fi
+          if [ -z "$channel" ]; then
             case "$tag" in
               *-nightly.*) channel="nightly" ;;
               *-beta.*) channel="beta" ;;
@@ -86,7 +101,17 @@ jobs:
       - name: Run tag version-check
         run: |
           set -euo pipefail
-          cargo xtask rel version-check --tag "${{ steps.resolve.outputs.tag }}" --channel "${{ steps.resolve.outputs.channel }}" --workspace .
+          tag="${{ steps.resolve.outputs.tag }}"
+          channel="${{ steps.resolve.outputs.channel }}"
+          if [ "${{ steps.resolve.outputs.dry_run }}" = "true" ]; then
+            tmp_ws="$(mktemp -d)"
+            trap 'rm -rf "$tmp_ws"' EXIT
+            ver="${tag#v}"
+            printf '[workspace.package]\nversion = "%s"\n' "$ver" > "$tmp_ws/Cargo.toml"
+            cargo xtask rel version-check --tag "$tag" --channel "$channel" --workspace "$tmp_ws"
+          else
+            cargo xtask rel version-check --tag "$tag" --channel "$channel" --workspace .
+          fi
       - name: Verify runbook consistency
         run: |
           set -euo pipefail
@@ -259,7 +284,7 @@ jobs:
       - i18n-gate
       - kernel-patch-gate
       - lts-gate
-    if: ${{ always() && needs.tag-validate.result == 'success' }}
+    if: ${{ !cancelled() && needs.tag-validate.result == 'success' && needs.vuln-gate.result == 'success' && needs.platform-gate.result == 'success' && (needs.evidence-complete.result == 'success' || needs.evidence-complete.result == 'skipped') && (needs.threat-review-minor.result == 'success' || needs.threat-review-minor.result == 'skipped') && (needs.eu-venue-gate.result == 'success' || needs.eu-venue-gate.result == 'skipped') && (needs.redteam-verdict.result == 'success' || needs.redteam-verdict.result == 'skipped') && (needs.ga-gate.result == 'success' || needs.ga-gate.result == 'skipped') && (needs.i18n-gate.result == 'success' || needs.i18n-gate.result == 'skipped') && (needs.kernel-patch-gate.result == 'success' || needs.kernel-patch-gate.result == 'skipped') && (needs.lts-gate.result == 'success' || needs.lts-gate.result == 'skipped') }}
     runs-on: ubuntu-latest
     outputs:
       verdict: ${{ steps.sim.outputs.verdict }}
@@ -293,7 +318,7 @@ jobs:
   notes:
     name: Generate release notes
     needs: [tag-validate, gates-summary]
-    if: ${{ always() && needs.tag-validate.result == 'success' && needs.gates-summary.outputs.verdict == 'pass' }}
+    if: ${{ !cancelled() && needs.tag-validate.result == 'success' && needs.gates-summary.result == 'success' && needs.gates-summary.outputs.verdict == 'pass' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -311,25 +336,43 @@ jobs:
   os-sign:
     name: OS code signing and notarisation
     needs: [tag-validate, gates-summary, notes]
-    if: ${{ needs.tag-validate.outputs.channel != 'nightly' && needs.tag-validate.outputs.dry_run != 'true' && needs.gates-summary.outputs.verdict == 'pass' }}
+    if: ${{ !cancelled() && needs.tag-validate.result == 'success' && needs.gates-summary.result == 'success' && needs.notes.result == 'success' && needs.tag-validate.outputs.channel != 'nightly' && needs.tag-validate.outputs.dry_run != 'true' && needs.gates-summary.outputs.verdict == 'pass' }}
     environment: release-signing
     runs-on: ubuntu-latest
     steps:
       - name: Verify approval digest matches presign_digest before OS signing
         env:
           SIGN_APPROVAL_JSON: ${{ secrets.RELEASE_APPROVAL_JSON }}
+          EXPECTED_PRESIGN: ${{ needs.gates-summary.outputs.presign_digest }}
         run: |
           set -euo pipefail
           if [ -z "${SIGN_APPROVAL_JSON:-}" ]; then
             echo "awaiting human sign-approval in release-signing environment for ${{ needs.gates-summary.outputs.presign_digest }}"
             exit 1
           fi
+          python3 -c '
+          import json, os, sys
+          raw = os.environ.get("SIGN_APPROVAL_JSON", "")
+          expected = os.environ.get("EXPECTED_PRESIGN", "")
+          try:
+              doc = json.loads(raw)
+          except Exception as exc:
+              print(f"invalid SIGN_APPROVAL_JSON: {exc}", file=sys.stderr)
+              sys.exit(1)
+          if not isinstance(doc, dict) or doc.get("approver_kind") not in (None, "human") or doc.get("role") not in (None, "release-approver"):
+              print("approval credential rejected: invalid approver metadata", file=sys.stderr)
+              sys.exit(1)
+          got = doc.get("presign_digest", "")
+          if not expected or got != expected:
+              print(f"approval_digest_mismatch: got {got!r}, expected {expected!r}", file=sys.stderr)
+              sys.exit(1)
+          '
           echo "approval verified for ${{ needs.gates-summary.outputs.presign_digest }}"
 
   sums:
     name: Compute SHA256SUMS and checksum statement
     needs: [tag-validate, gates-summary, notes, os-sign]
-    if: ${{ always() && needs.gates-summary.outputs.verdict == 'pass' && (needs.tag-validate.outputs.dry_run == 'true' || needs.tag-validate.outputs.channel == 'nightly' || needs.os-sign.result == 'success') }}
+    if: ${{ !cancelled() && needs.tag-validate.result == 'success' && needs.gates-summary.result == 'success' && needs.notes.result == 'success' && needs.gates-summary.outputs.verdict == 'pass' && (needs.os-sign.result == 'success' || ((needs.tag-validate.outputs.dry_run == 'true' || needs.tag-validate.outputs.channel == 'nightly') && needs.os-sign.result == 'skipped')) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -347,7 +390,7 @@ jobs:
   sign-statements:
     name: Sign SHA256SUMS and release statements
     needs: [tag-validate, gates-summary, sums]
-    if: ${{ needs.tag-validate.outputs.dry_run != 'true' && needs.gates-summary.outputs.verdict == 'pass' }}
+    if: ${{ !cancelled() && needs.tag-validate.result == 'success' && needs.gates-summary.result == 'success' && needs.sums.result == 'success' && needs.tag-validate.outputs.dry_run != 'true' && needs.gates-summary.outputs.verdict == 'pass' }}
     environment: release-signing
     runs-on: ubuntu-latest
     steps:
@@ -366,7 +409,7 @@ jobs:
   publish:
     name: Publish artefacts to enabled venues
     needs: [tag-validate, gates-summary, sums, sign-statements]
-    if: ${{ always() && needs.gates-summary.outputs.verdict == 'pass' && (needs.tag-validate.outputs.dry_run == 'true' || needs.sign-statements.result == 'success') }}
+    if: ${{ !cancelled() && needs.tag-validate.result == 'success' && needs.gates-summary.result == 'success' && needs.sums.result == 'success' && needs.gates-summary.outputs.verdict == 'pass' && (needs.sign-statements.result == 'success' || (needs.tag-validate.outputs.dry_run == 'true' && needs.sign-statements.result == 'skipped')) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -384,7 +427,7 @@ jobs:
   feeds:
     name: Update and sign channel feeds
     needs: [tag-validate, publish]
-    if: ${{ needs.publish.result == 'success' }}
+    if: ${{ !cancelled() && needs.publish.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Update channel feed state
@@ -395,7 +438,7 @@ jobs:
   rebuild-compare:
     name: Rebuild independently and compare artefacts
     needs: [tag-validate, feeds]
-    if: ${{ needs.feeds.result == 'success' }}
+    if: ${{ !cancelled() && needs.feeds.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

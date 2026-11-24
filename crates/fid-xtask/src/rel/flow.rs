@@ -280,17 +280,31 @@ fn strip_yaml_comment(line: &str) -> &str {
 fn extract_top_level_block<'a>(lines: &[&'a str], key: &str) -> Option<Vec<(usize, &'a str)>> {
     let target = format!("{key}:");
     let mut start = None;
+    let mut inline_rhs: Option<(usize, &'a str)> = None;
     for (i, line) in lines.iter().enumerate() {
         if !line.starts_with([' ', '\t', '#']) {
             let trimmed = strip_yaml_comment(line).trim_start_matches('\u{feff}');
-            if trimmed == target || trimmed.starts_with(&format!("{target} ")) {
+            if trimmed == target {
                 start = Some(i + 1);
                 break;
+            }
+            if let Some(rest) = trimmed.strip_prefix(&target) {
+                if rest.starts_with([' ', '\t']) {
+                    let rhs = rest.trim();
+                    if !rhs.is_empty() {
+                        inline_rhs = Some((i + 1, rhs));
+                    }
+                    start = Some(i + 1);
+                    break;
+                }
             }
         }
     }
     let start = start?;
     let mut out = Vec::new();
+    if let Some(rhs) = inline_rhs {
+        out.push(rhs);
+    }
     for (offset, line) in lines.get(start..)?.iter().enumerate() {
         let lineno = start + offset + 1;
         let trimmed = line.trim();
@@ -389,6 +403,29 @@ fn contains_token_ci(haystack: &str, needle: &str) -> bool {
     haystack.to_ascii_lowercase().contains(&needle.to_ascii_lowercase())
 }
 
+fn detect_secret_ref(line: &str) -> Option<&'static str> {
+    let code = strip_yaml_comment(line).trim();
+    if code.is_empty() {
+        return None;
+    }
+    if contains_token_ci(code, "secrets.") {
+        return Some("secrets.");
+    }
+    if contains_token_ci(code, "secrets[") {
+        return Some("secrets[");
+    }
+    let lower = code.to_ascii_lowercase();
+    if let Some(pos) = lower.find("secrets:") {
+        let prev_ok = pos == 0 || matches!(lower.as_bytes().get(pos - 1), Some(b' ' | b'\t' | b'{' | b','));
+        let next = lower.as_bytes().get(pos + "secrets:".len());
+        let next_ok = next.is_none() || matches!(next, Some(b' ' | b'\t'));
+        if prev_ok && next_ok {
+            return Some("secrets:");
+        }
+    }
+    None
+}
+
 /// Validates a GitHub Actions workflow against `release/runbook.toml` and `AC-7`
 /// security invariants (no fork-PR triggers, read-only permissions, zero secrets
 /// or `release-signing` environment in pre-approval jobs).
@@ -447,15 +484,12 @@ pub fn check_workflow(workflow_path: &Path, runbook_dir: &Path) -> Result<Workfl
         Some(on_lines) => {
             for (lineno, line) in on_lines {
                 let stripped = strip_yaml_comment(line).trim();
-                for bad in ["pull_request", "pull_request_target", "workflow_run"] {
-                    if stripped == format!("{bad}:")
-                        || stripped.starts_with(&format!("{bad}:"))
-                        || stripped == format!("- {bad}")
-                    {
+                for tok in stripped.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_')) {
+                    if matches!(tok, "pull_request" | "pull_request_target" | "workflow_run") {
                         findings.push(WorkflowFinding {
                             code: "FLOW-FORK-TRIGGER",
                             subject: format!("line {lineno}"),
-                            message: format!("forbidden trigger `{bad}` on release workflow"),
+                            message: format!("forbidden trigger `{tok}` on release workflow"),
                         });
                     }
                 }
@@ -474,10 +508,10 @@ pub fn check_workflow(workflow_path: &Path, runbook_dir: &Path) -> Result<Workfl
             let mut has_contents_read = false;
             for (lineno, line) in perm_lines {
                 let stripped = strip_yaml_comment(line).trim();
-                if stripped == "contents: read" {
+                if stripped == "contents: read" || stripped.contains("contents: read") {
                     has_contents_read = true;
                 }
-                if stripped.contains(": write") || stripped == "write-all" {
+                if stripped.contains(": write") || contains_token_ci(stripped, "write-all") {
                     findings.push(WorkflowFinding {
                         code: "FLOW-PERMISSIONS",
                         subject: format!("line {lineno}"),
@@ -495,6 +529,19 @@ pub fn check_workflow(workflow_path: &Path, runbook_dir: &Path) -> Result<Workfl
         }
     }
 
+    // Top-level `env:` check: secrets here are exposed to every pre-approval job.
+    if let Some(env_lines) = extract_top_level_block(&lines, "env") {
+        for (lineno, line) in env_lines {
+            if let Some(what) = detect_secret_ref(line) {
+                findings.push(WorkflowFinding {
+                    code: "FLOW-PREAPPROVAL-SECRET",
+                    subject: "env".to_string(),
+                    message: format!("line {lineno}: top-level `env` references `{what}`"),
+                });
+            }
+        }
+    }
+
     match extract_job_blocks(&lines) {
         Err(f) => findings.push(f),
         Ok(job_blocks) => {
@@ -503,25 +550,24 @@ pub fn check_workflow(workflow_path: &Path, runbook_dir: &Path) -> Result<Workfl
                 let Some(body) = job_blocks.get(job_id) else { continue };
                 if pre_set.contains(job_id.as_str()) {
                     for (lineno, line) in body {
-                        let trimmed = line.trim();
-                        if trimmed.starts_with('#') {
+                        let code_line = strip_yaml_comment(line).trim();
+                        if code_line.is_empty() {
                             continue;
                         }
-                        if contains_token_ci(trimmed, "secrets.") {
+                        if let Some(what) = detect_secret_ref(code_line) {
                             findings.push(WorkflowFinding {
                                 code: "FLOW-PREAPPROVAL-SECRET",
                                 subject: job_id.clone(),
-                                message: format!("line {lineno}: pre-approval job references `secrets.`"),
+                                message: format!("line {lineno}: pre-approval job references `{what}`"),
                             });
                         }
-                        if trimmed.starts_with("environment:") && contains_token_ci(trimmed, "release-signing") {
+                        if code_line.starts_with("environment:") && contains_token_ci(code_line, "release-signing") {
                             findings.push(WorkflowFinding {
                                 code: "FLOW-PREAPPROVAL-ENV",
                                 subject: job_id.clone(),
                                 message: format!("line {lineno}: pre-approval job uses `release-signing` environment"),
                             });
-                        }
-                        if contains_token_ci(trimmed, "release-signing") && !trimmed.starts_with('#') {
+                        } else if contains_token_ci(code_line, "release-signing") {
                             findings.push(WorkflowFinding {
                                 code: "FLOW-PREAPPROVAL-ENV",
                                 subject: job_id.clone(),
@@ -692,6 +738,8 @@ fn parse_approval(path: &Path) -> Result<ApprovalDoc, FlowError> {
 }
 
 struct PriorState {
+    tag: String,
+    channel: String,
     state: FlowState,
     completed_steps: BTreeMap<String, String>,
     presign_digest: Option<String>,
@@ -705,6 +753,14 @@ fn parse_prior_state(path: &Path) -> Result<PriorState, FlowError> {
         .map_err(|e| FlowError::parse(format!("{}: invalid JSON: {e}", path.display())))?;
     let CValue::Obj(o) = v else {
         return Err(FlowError::parse(format!("{}: must be a JSON object", path.display())));
+    };
+    let tag = match o.get("tag") {
+        Some(CValue::Str(s)) if !s.is_empty() => s.clone(),
+        _ => return Err(FlowError::parse("prior release-state.json: missing `tag`")),
+    };
+    let channel = match o.get("channel") {
+        Some(CValue::Str(s)) if !s.is_empty() => s.clone(),
+        _ => return Err(FlowError::parse("prior release-state.json: missing `channel`")),
     };
     let state_str = match o.get("state") {
         Some(CValue::Str(s)) => s.as_str(),
@@ -746,7 +802,7 @@ fn parse_prior_state(path: &Path) -> Result<PriorState, FlowError> {
             }
         }
     }
-    Ok(PriorState { state, completed_steps, presign_digest, approval_ref, published_venues })
+    Ok(PriorState { tag, channel, state, completed_steps, presign_digest, approval_ref, published_venues })
 }
 
 fn collect_dir_files(dir: &Path) -> Result<BTreeMap<String, (PathBuf, String)>, FlowError> {
@@ -837,6 +893,16 @@ pub fn simulate(opts: &SimOptions<'_>) -> Result<ReleaseState, FlowError> {
         Some(p) => Some(parse_prior_state(p)?),
         None => None,
     };
+    if let Some(pr) = &prior {
+        if pr.tag != tag || pr.channel != channel.name() {
+            return Err(FlowError::parse(format!(
+                "prior release-state.json mismatch: state has ({}, {}), expected ({tag}, {})",
+                pr.tag,
+                pr.channel,
+                channel.name()
+            )));
+        }
+    }
 
     let artefacts = collect_dir_files(&opts.fixtures.join("artefacts"))?;
     let sboms = collect_dir_files(&opts.fixtures.join("sboms"))?;
@@ -890,19 +956,60 @@ pub fn simulate(opts: &SimOptions<'_>) -> Result<ReleaseState, FlowError> {
     }
     let mut uploaded_count: BTreeMap<String, usize> = venues_state.keys().map(|k| (k.clone(), 0usize)).collect();
 
-    let applicable: Vec<&Step> = steps.iter().filter(|s| s.channels.iter().any(|c| c == channel.name())).collect();
-    let approval_idx = applicable.iter().position(|s| s.id == SIGN_APPROVAL).unwrap_or(applicable.len());
+    let approval_pos = steps
+        .iter()
+        .position(|s| s.id == SIGN_APPROVAL)
+        .ok_or_else(|| FlowError::parse("runbook.toml lacks `sign-approval` step"))?;
+    let pre_approval_steps: Vec<&Step> = steps
+        .get(..approval_pos)
+        .unwrap_or_default()
+        .iter()
+        .filter(|s| s.channels.iter().any(|c| c == channel.name()))
+        .collect();
+    let post_approval_steps: Vec<&Step> = steps
+        .get(approval_pos + 1..)
+        .unwrap_or_default()
+        .iter()
+        .filter(|s| s.channels.iter().any(|c| c == channel.name()))
+        .collect();
 
+    let presign_matches =
+        prior.as_ref().is_some_and(|p| p.presign_digest.as_deref() == Some(computed_presign.as_str()));
     let mut state = FlowState::Tagged;
     let mut step_records: Vec<StepRecord> = Vec::new();
     let mut reasons: Vec<String> = Vec::new();
-    let mut presign_digest: Option<String> = prior.as_ref().and_then(|p| p.presign_digest.clone());
-    let mut approval_ref: Option<String> = prior.as_ref().and_then(|p| p.approval_ref.clone());
+    let presign_digest = Some(computed_presign.clone());
+    let mut approval_ref: Option<String> =
+        if presign_matches { prior.as_ref().and_then(|p| p.approval_ref.clone()) } else { None };
 
     // Phase 1: pre-approval CI steps.
-    for step in applicable.iter().take(approval_idx) {
+    for step in &pre_approval_steps {
         if step.performer != Performer::Ci {
             continue;
+        }
+        if step.id == "gates-summary" && gates.verdict == "block" {
+            step_records.push(StepRecord { id: step.id.clone(), status: "blocked".to_string(), outputs_sha256: None });
+            let result = ReleaseState {
+                tag,
+                channel: channel.name().to_string(),
+                state: FlowState::Blocked,
+                steps: step_records,
+                presign_digest: None,
+                approval_ref: None,
+                reasons: gates.reasons,
+                published_venues: venues_state,
+                uploaded_count,
+            };
+            if let Some(out) = opts.out {
+                write_state_atomic(out, &result)?;
+            }
+            return Ok(result);
+        }
+        if step.id == "build-packages" || step.id == "build-web" || step.id == "sbom" {
+            state = FlowState::Built;
+        }
+        if step.id == "gates-summary" {
+            state = FlowState::Gated;
         }
         if let Some(prev_sha) = prior.as_ref().and_then(|p| p.completed_steps.get(&step.id)) {
             step_records.push(StepRecord {
@@ -913,46 +1020,20 @@ pub fn simulate(opts: &SimOptions<'_>) -> Result<ReleaseState, FlowError> {
             continue;
         }
 
-        if step.id == "build-packages" || step.id == "build-web" || step.id == "sbom" {
-            state = FlowState::Built;
-        }
-        if step.id == "gates-summary" {
-            if gates.verdict == "block" {
-                step_records.push(StepRecord {
-                    id: step.id.clone(),
-                    status: "blocked".to_string(),
-                    outputs_sha256: None,
-                });
-                let result = ReleaseState {
-                    tag,
-                    channel: channel.name().to_string(),
-                    state: FlowState::Blocked,
-                    steps: step_records,
-                    presign_digest: None,
-                    approval_ref: None,
-                    reasons: gates.reasons,
-                    published_venues: venues_state,
-                    uploaded_count,
-                };
-                if let Some(out) = opts.out {
-                    write_state_atomic(out, &result)?;
-                }
-                return Ok(result);
-            }
-            state = FlowState::Gated;
-        }
-
         let d = step_digest(&step.id, &tag, channel.name(), None);
         step_records.push(StepRecord { id: step.id.clone(), status: "completed".to_string(), outputs_sha256: Some(d) });
     }
 
-    presign_digest = Some(computed_presign.clone());
-
     // Phase 2: human approval gate (skipped on nightly).
     if channel != Channel::Nightly {
-        let already_approved = prior.as_ref().is_some_and(|p| {
-            matches!(p.state, FlowState::Approved | FlowState::Signed | FlowState::Published | FlowState::FeedsUpdated)
-        });
+        let already_approved = presign_matches
+            && prior.as_ref().is_some_and(|p| {
+                matches!(
+                    p.state,
+                    FlowState::Approved | FlowState::Signed | FlowState::Published | FlowState::FeedsUpdated
+                ) || (p.state == FlowState::Failed
+                    && (p.completed_steps.contains_key("os-sign") || p.completed_steps.contains_key("sign-statements")))
+            });
         if let Some(approval_path) = opts.approval {
             let approval = parse_approval(approval_path)?;
             if approval.presign_digest != computed_presign {
@@ -1006,17 +1087,26 @@ pub fn simulate(opts: &SimOptions<'_>) -> Result<ReleaseState, FlowError> {
     }
 
     // Phase 3: post-approval CI steps.
-    for step in applicable.iter().skip(approval_idx) {
+    for step in &post_approval_steps {
         if step.performer != Performer::Ci {
             continue;
         }
-        if let Some(prev_sha) = prior.as_ref().and_then(|p| p.completed_steps.get(&step.id)) {
-            step_records.push(StepRecord {
-                id: step.id.clone(),
-                status: "completed".to_string(),
-                outputs_sha256: Some(prev_sha.clone()),
-            });
-            continue;
+        if presign_matches {
+            if let Some(prev_sha) = prior.as_ref().and_then(|p| p.completed_steps.get(&step.id)) {
+                if step.id == "sign-statements" || step.id == "os-sign" {
+                    state = FlowState::Signed;
+                } else if step.id == "publish" {
+                    state = FlowState::Published;
+                } else if step.id == "feeds" {
+                    state = FlowState::FeedsUpdated;
+                }
+                step_records.push(StepRecord {
+                    id: step.id.clone(),
+                    status: "completed".to_string(),
+                    outputs_sha256: Some(prev_sha.clone()),
+                });
+                continue;
+            }
         }
 
         if step.id == "sign-statements" || step.id == "os-sign" {
@@ -1083,10 +1173,6 @@ pub fn simulate(opts: &SimOptions<'_>) -> Result<ReleaseState, FlowError> {
 
         let d = step_digest(&step.id, &tag, channel.name(), presign_digest.as_deref());
         step_records.push(StepRecord { id: step.id.clone(), status: "completed".to_string(), outputs_sha256: Some(d) });
-    }
-
-    if state != FlowState::FeedsUpdated {
-        state = FlowState::FeedsUpdated;
     }
 
     let result = ReleaseState {
@@ -1194,7 +1280,11 @@ pub fn cli(args: &[String]) -> ExitCode {
         }
     }
 
-    if check_wf && fixtures.is_none() {
+    if check_wf {
+        if fixtures.is_some() || approval.is_some() || prior_state.is_some() {
+            eprintln!("rel flow-sim: --check-workflow/--workflow cannot be combined with simulation flags\n{USAGE}");
+            return ExitCode::from(2);
+        }
         return match check_workflow(&workflow, &runbook) {
             Ok(report) => {
                 if json {

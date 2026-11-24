@@ -85,6 +85,9 @@ fn validate_against_schema(root_schema: &CValue, schema: &CValue, val: &CValue, 
                 if let Some(CValue::Num(min)) = s.get("minLength") {
                     assert!(st.len() >= *min as usize, "{path}: string too short");
                 }
+                if let Some(CValue::Str(pat)) = s.get("pattern") {
+                    assert!(matches_schema_pattern(pat, st), "{path}: {st:?} failed pattern {pat:?}");
+                }
             }
             "integer" => {
                 let CValue::Num(n) = val else { panic!("{path}: expected integer, got {val:?}") };
@@ -101,6 +104,25 @@ fn validate_against_schema(root_schema: &CValue, schema: &CValue, val: &CValue, 
             }
             other => panic!("unsupported schema type {other}"),
         }
+    }
+}
+
+fn is_canonical_uint(s: &str) -> bool {
+    !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()) && (s == "0" || !s.starts_with('0'))
+}
+
+fn matches_schema_pattern(pat: &str, val: &str) -> bool {
+    match pat {
+        "^[0-9a-f]{64}$" => val.len() == 64 && val.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')),
+        "^sha256:[0-9a-f]{64}$" => val
+            .strip_prefix("sha256:")
+            .is_some_and(|hex| hex.len() == 64 && hex.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))),
+        "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" => {
+            let mut parts = val.split('.');
+            matches!((parts.next(), parts.next(), parts.next(), parts.next()), (Some(a), Some(b), Some(c), None) if is_canonical_uint(a) && is_canonical_uint(b) && is_canonical_uint(c))
+        }
+        "^(0|[1-9][0-9]*)$" => is_canonical_uint(val),
+        other => panic!("unsupported schema pattern {other:?}"),
     }
 }
 
@@ -452,7 +474,160 @@ fn usage_errors_and_version_and_mcp_stub() {
     assert_eq!(code, 0);
     assert!(stdout.contains("usage: fid-verify"));
 
+    // `fid-verify mcp --json` honors `--json` and fails closed with exit 65.
+    let (code, stdout, stderr) = run_cli(&["mcp", "--json"]);
+    assert_eq!(code, 65, "stdout={stdout} stderr={stderr}");
+    assert!(stdout.is_empty(), "stdout={stdout}");
+    let err_obj = canon_parse(stderr.trim().as_bytes()).expect("mcp --json emits canonical JSON error");
+    assert_eq!(as_str(&as_obj(&as_obj(&err_obj)["error"])["code"]), "params.invalid");
+
     // Verify all 4 exit-code failure bits are reachable and distinct (1, 2, 8, etc.)
     let bits: BTreeSet<i32> = [1, 2, 8].into_iter().collect();
     assert_eq!(bits.len(), 3);
+}
+
+fn build_stored_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
+    let mut out = Vec::new();
+    let mut central = Vec::new();
+    for &(name, data) in entries {
+        let nb = name.as_bytes();
+        let crc = fid_pkg::crc32(data);
+        let len32 = u32::try_from(data.len()).unwrap();
+        let nlen = u16::try_from(nb.len()).unwrap();
+        let off = u32::try_from(out.len()).unwrap();
+        // Local file header
+        out.extend_from_slice(&0x0403_4b50u32.to_le_bytes());
+        out.extend_from_slice(&20u16.to_le_bytes()); // version needed
+        out.extend_from_slice(&0x0800u16.to_le_bytes()); // UTF-8 flag
+        out.extend_from_slice(&0u16.to_le_bytes()); // method 0 stored
+        out.extend_from_slice(&0u16.to_le_bytes()); // mod time
+        out.extend_from_slice(&0x0021u16.to_le_bytes()); // mod date
+        out.extend_from_slice(&crc.to_le_bytes());
+        out.extend_from_slice(&len32.to_le_bytes());
+        out.extend_from_slice(&len32.to_le_bytes());
+        out.extend_from_slice(&nlen.to_le_bytes());
+        out.extend_from_slice(&0u16.to_le_bytes()); // extra len
+        out.extend_from_slice(nb);
+        out.extend_from_slice(data);
+        // Central directory header
+        central.extend_from_slice(&0x0201_4b50u32.to_le_bytes());
+        central.extend_from_slice(&((3u16 << 8) | 45u16).to_le_bytes());
+        central.extend_from_slice(&20u16.to_le_bytes());
+        central.extend_from_slice(&0x0800u16.to_le_bytes());
+        central.extend_from_slice(&0u16.to_le_bytes());
+        central.extend_from_slice(&0u16.to_le_bytes());
+        central.extend_from_slice(&0x0021u16.to_le_bytes());
+        central.extend_from_slice(&crc.to_le_bytes());
+        central.extend_from_slice(&len32.to_le_bytes());
+        central.extend_from_slice(&len32.to_le_bytes());
+        central.extend_from_slice(&nlen.to_le_bytes());
+        central.extend_from_slice(&0u16.to_le_bytes()); // extra
+        central.extend_from_slice(&0u16.to_le_bytes()); // comment
+        central.extend_from_slice(&0u16.to_le_bytes()); // disk
+        central.extend_from_slice(&0u16.to_le_bytes()); // int attr
+        central.extend_from_slice(&(0o100_644u32 << 16).to_le_bytes());
+        central.extend_from_slice(&off.to_le_bytes());
+        central.extend_from_slice(nb);
+    }
+    let cd_off = u32::try_from(out.len()).unwrap();
+    let cd_size = u32::try_from(central.len()).unwrap();
+    let count = u16::try_from(entries.len()).unwrap();
+    out.extend_from_slice(&central);
+    out.extend_from_slice(&0x0605_4b50u32.to_le_bytes());
+    out.extend_from_slice(&0u16.to_le_bytes());
+    out.extend_from_slice(&0u16.to_le_bytes());
+    out.extend_from_slice(&count.to_le_bytes());
+    out.extend_from_slice(&count.to_le_bytes());
+    out.extend_from_slice(&cd_size.to_le_bytes());
+    out.extend_from_slice(&cd_off.to_le_bytes());
+    out.extend_from_slice(&0u16.to_le_bytes());
+    out
+}
+
+#[test]
+fn forged_manifest_with_untouched_statement_and_signatures_fails() {
+    let f = std::fs::File::open(root().join("fixtures/pkg/golden/two-signatures.zip")).unwrap();
+    let mut reader = fid_pkg::reader::PackageReader::open(f).unwrap();
+    let mut manifest = reader.manifest().clone();
+    let names: Vec<String> = reader.entry_names().into_iter().map(str::to_owned).collect();
+
+    let forged_qif = b"<QIFDocument>FORGED MEASUREMENTS ALL PASS</QIFDocument>".to_vec();
+    let forged_profile = br#"{"profile":"attacker_controlled"}"#.to_vec();
+    manifest.profile_digest = fid_pkg::hash_bytes(&forged_profile);
+    for m in &mut manifest.members {
+        if m.path.as_str() == "results/results.qif" {
+            m.length = u64::try_from(forged_qif.len()).unwrap();
+            m.sha256 = fid_pkg::hash_bytes(&forged_qif);
+        } else if m.path.as_str() == "profile/profile.json" {
+            m.length = u64::try_from(forged_profile.len()).unwrap();
+            m.sha256 = fid_pkg::hash_bytes(&forged_profile);
+        }
+    }
+    let new_manifest_bytes = manifest.to_canonical_bytes().unwrap();
+
+    // Keep statement.json and signatures/*.dsse.json completely untouched.
+    let mut stored_entries: Vec<(String, Vec<u8>)> = Vec::new();
+    for name in &names {
+        let data = match name.as_str() {
+            "manifest.json" => new_manifest_bytes.clone(),
+            "results/results.qif" => forged_qif.clone(),
+            "profile/profile.json" => forged_profile.clone(),
+            other => reader.read_member(other, 16 * 1024 * 1024).unwrap().unwrap(),
+        };
+        stored_entries.push((name.clone(), data));
+    }
+    let refs: Vec<(&str, &[u8])> = stored_entries.iter().map(|(k, v)| (k.as_str(), v.as_slice())).collect();
+    let zip_bytes = build_stored_zip(&refs);
+
+    let forged_zip = std::env::temp_dir().join("fid-verify-forged-manifest.zip");
+    std::fs::write(&forged_zip, &zip_bytes).unwrap();
+    let forged_s = forged_zip.to_string_lossy().into_owned();
+    let (code, stdout, stderr) = run_cli(&[&forged_s, "--trust-root", "fixtures/troot/roots/both.json", "--json"]);
+    let _ = std::fs::remove_file(&forged_zip);
+
+    assert_ne!(code, 0, "forged package must never pass! stdout={stdout} stderr={stderr}");
+    assert_eq!(code, 1, "expected bit 1 FAIL, got code={code} stdout={stdout} stderr={stderr}");
+    let obj = parse_and_validate(&stdout);
+    assert_eq!(as_str(&obj["verdict"]), "FAIL");
+    let sigs = match &as_obj(&obj["signatures"])["signatures"] {
+        CValue::Arr(a) => a,
+        _ => panic!("expected signatures array"),
+    };
+    assert_eq!(sigs.len(), 2);
+    for sig in sigs {
+        assert_eq!(as_str(&as_obj(sig)["status"]), "INVALID");
+    }
+
+    // Malformed statement.json -> exit 64 (sig.malformed).
+    let bad_entries: Vec<(String, Vec<u8>)> = stored_entries
+        .into_iter()
+        .map(|(k, v)| if k == "statement.json" { (k, b"{not valid json".to_vec()) } else { (k, v) })
+        .collect();
+    let bad_refs: Vec<(&str, &[u8])> = bad_entries.iter().map(|(k, v)| (k.as_str(), v.as_slice())).collect();
+    let bad_zip_bytes = build_stored_zip(&bad_refs);
+    let bad_stmt_zip = std::env::temp_dir().join("fid-verify-bad-statement.zip");
+    std::fs::write(&bad_stmt_zip, &bad_zip_bytes).unwrap();
+    let bad_s = bad_stmt_zip.to_string_lossy().into_owned();
+    let (code, stdout, stderr) = run_cli(&[&bad_s, "--trust-root", "fixtures/troot/roots/both.json", "--json"]);
+    let _ = std::fs::remove_file(&bad_stmt_zip);
+    assert_eq!(code, 64, "stdout={stdout} stderr={stderr}");
+    assert!(stderr.contains("sig.malformed"), "stderr={stderr}");
+}
+
+#[test]
+fn replay_after_broken_chain_records_not_replayable_journal_invalid() {
+    let (code, stdout, stderr) = run_cli(&[
+        "fixtures/chain/tamper/modified.zip",
+        "--trust-root",
+        "fixtures/troot/roots/both.json",
+        "--replay",
+        "--json",
+    ]);
+    assert_eq!(code, 11, "expected 1|2|8 = 11, got code={code} stderr={stderr}");
+    let obj = parse_and_validate(&stdout);
+    assert_eq!(as_str(&obj["verdict"]), "FAIL");
+    assert_eq!(as_str(&as_obj(&obj["chain"])["verdict"]), "BROKEN");
+    let replay = as_obj(&obj["replay"]);
+    assert_eq!(as_str(&replay["status"]), "NOT_REPLAYABLE");
+    assert_eq!(as_str(&replay["reason"]), "JOURNAL_INVALID");
 }

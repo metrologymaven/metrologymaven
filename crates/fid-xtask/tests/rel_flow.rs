@@ -202,19 +202,220 @@ fn deterministic_nightly_and_usage_errors() {
     .unwrap();
     assert_eq!(a.to_canonical_json(), b.to_canonical_json());
 
+    let nightly_out = tmp_dir("nightly-out");
     let nightly = simulate(&SimOptions {
         tag: Some("v1.4.0-nightly.20261124"),
         channel_override: Some(Channel::Nightly),
         fixtures: &fixture("pass"),
         approval: None,
         prior_state: None,
-        out: None,
+        out: Some(&nightly_out),
         runbook_dir: &root().join("release"),
     })
     .unwrap();
     assert_eq!(nightly.state, FlowState::FeedsUpdated);
+    assert_eq!(nightly.uploaded_count.get("github-releases").copied(), Some(3));
+    assert_eq!(nightly.uploaded_count.get("s3-cdn").copied(), Some(3));
+    assert_eq!(nightly.uploaded_count.get("eu-mirror").copied(), Some(0));
+    assert!(nightly_out.join("venues/github-releases/fid-1.4.0-beta.1-x86_64.msi").is_file());
+    assert!(nightly_out.join("venues/s3-cdn/fid-verify-1.4.0-beta.1-linux.tar.gz").is_file());
+    assert!(!nightly_out.join("venues/eu-mirror").exists());
+
+    // Nightly venue conflict also fails closed.
+    let nightly_conflict = simulate(&SimOptions {
+        tag: Some("v1.4.0-nightly.20261124"),
+        channel_override: Some(Channel::Nightly),
+        fixtures: &fixture("venue-conflict"),
+        approval: None,
+        prior_state: None,
+        out: None,
+        runbook_dir: &root().join("release"),
+    })
+    .unwrap();
+    assert_eq!(nightly_conflict.state, FlowState::Failed);
+    assert!(
+        nightly_conflict.reasons.iter().any(|r| r.contains("venue_conflict(fid-1.4.0-x86_64.msi, github-releases)")),
+        "{:?}",
+        nightly_conflict.reasons
+    );
 
     assert_eq!(cli(&[]).0, 2);
     assert_eq!(cli(&["--bogus"]).0, 2);
     assert_eq!(cli(&["--fixtures", "fixtures/rel/flow/no-such-dir"]).0, 2);
+    assert_eq!(cli(&["--check-workflow", "--fixtures", "fixtures/rel/flow/pass"]).0, 2);
+}
+
+fn copy_dir_all(src: &Path, dst: &Path) {
+    std::fs::create_dir_all(dst).unwrap();
+    for entry in std::fs::read_dir(src).unwrap() {
+        let entry = entry.unwrap();
+        let p = entry.path();
+        let target = dst.join(entry.file_name());
+        if p.is_dir() {
+            copy_dir_all(&p, &target);
+        } else {
+            std::fs::copy(&p, &target).unwrap();
+        }
+    }
+}
+
+#[test]
+fn resume_hardening_rejects_mismatch_digest_change_and_blocked_gates() {
+    let runbook = root().join("release");
+
+    // 1. Mismatched tag/channel in prior state -> Err (CLI exit 2).
+    let mismatch = simulate(&SimOptions {
+        tag: Some("v9.9.9-beta.1"),
+        channel_override: None,
+        fixtures: &fixture("resume-partial"),
+        approval: None,
+        prior_state: None,
+        out: None,
+        runbook_dir: &runbook,
+    });
+    assert!(mismatch.is_err(), "expected mismatched tag error");
+    assert_eq!(
+        cli(&[
+            "--tag",
+            "v9.9.9-beta.1",
+            "--fixtures",
+            "fixtures/rel/flow/pass",
+            "--state",
+            "fixtures/rel/flow/resume-partial/release-state.json",
+        ])
+        .0,
+        2
+    );
+
+    // 2. Changed artefact presign_digest invalidates prior approval and returns to AwaitingApproval.
+    let changed_dir = tmp_dir("resume-changed-digest");
+    copy_dir_all(&fixture("resume-partial"), &changed_dir);
+    std::fs::write(changed_dir.join("artefacts/fid-1.4.0-beta.1-x86_64.msi"), b"tampered-msi-bytes").unwrap();
+    let changed = simulate(&SimOptions {
+        tag: Some("v1.4.0-beta.1"),
+        channel_override: None,
+        fixtures: &changed_dir,
+        approval: None,
+        prior_state: None,
+        out: None,
+        runbook_dir: &runbook,
+    })
+    .unwrap();
+    assert_eq!(changed.state, FlowState::AwaitingApproval);
+    assert!(changed.approval_ref.is_none());
+
+    // 3. Blocked gate verdict always stops Blocked even if prior completed_steps has gates-summary.
+    let blocked_dir = tmp_dir("resume-blocked-gate");
+    copy_dir_all(&fixture("block"), &blocked_dir);
+    let prior_signed = std::fs::read_to_string(fixture("resume-partial/release-state.json")).unwrap();
+    let prior_path = blocked_dir.join("prior.json");
+    std::fs::write(&prior_path, prior_signed).unwrap();
+    let blocked = simulate(&SimOptions {
+        tag: Some("v1.4.0-beta.1"),
+        channel_override: None,
+        fixtures: &blocked_dir,
+        approval: None,
+        prior_state: Some(&prior_path),
+        out: None,
+        runbook_dir: &runbook,
+    })
+    .unwrap();
+    assert_eq!(blocked.state, FlowState::Blocked);
+    assert!(blocked.presign_digest.is_none());
+
+    // 4. Failed prior state preserves approval when presign_digest matches and signing step already completed.
+    let failed_dir = tmp_dir("resume-failed-ok");
+    copy_dir_all(&fixture("pass"), &failed_dir);
+    let awaiting = simulate(&SimOptions {
+        tag: Some("v1.4.0-beta.1"),
+        channel_override: None,
+        fixtures: &failed_dir,
+        approval: None,
+        prior_state: None,
+        out: None,
+        runbook_dir: &runbook,
+    })
+    .unwrap();
+    let matching_presign = awaiting.presign_digest.unwrap();
+    let failed_state = format!(
+        "{{\"approval_ref\":\"approval-prior-failed\",\"channel\":\"beta\",\"presign_digest\":\"{matching_presign}\",\"published_venues\":{{}},\"reasons\":[\"transient_error\"],\"state\":\"failed\",\"steps\":[{{\"id\":\"os-sign\",\"outputs_sha256\":\"sha256:0000000000000000000000000000000000000000000000000000000000000001\",\"status\":\"completed\"}},{{\"id\":\"sign-statements\",\"outputs_sha256\":\"sha256:0000000000000000000000000000000000000000000000000000000000000002\",\"status\":\"completed\"}}],\"tag\":\"v1.4.0-beta.1\"}}"
+    );
+    let failed_state_path = failed_dir.join("failed-state.json");
+    std::fs::write(&failed_state_path, failed_state).unwrap();
+    let resumed = simulate(&SimOptions {
+        tag: Some("v1.4.0-beta.1"),
+        channel_override: None,
+        fixtures: &failed_dir,
+        approval: None,
+        prior_state: Some(&failed_state_path),
+        out: None,
+        runbook_dir: &runbook,
+    })
+    .unwrap();
+    assert_eq!(resumed.state, FlowState::FeedsUpdated);
+    assert_eq!(resumed.approval_ref.as_deref(), Some("approval-prior-failed"));
+}
+
+#[test]
+fn check_workflow_catches_inline_triggers_bracket_secrets_top_env_and_inherit() {
+    let base_wf = std::fs::read_to_string(root().join("release/release-workflow.yml")).unwrap();
+    let runbook = root().join("release");
+    let dir = tmp_dir("wf-adv");
+    std::fs::create_dir_all(&dir).unwrap();
+
+    // 1. Single-line `on: pull_request`
+    let wf1 = base_wf.replacen("\non:\n", "\non: pull_request\n", 1);
+    let p1 = dir.join("wf1.yml");
+    std::fs::write(&p1, wf1).unwrap();
+    let r1 = check_workflow(&p1, &runbook).unwrap();
+    assert!(r1.findings.iter().any(|f| f.code == "FLOW-FORK-TRIGGER"), "{:?}", r1.findings);
+
+    // 2. Inline flow sequence `on: [push, pull_request_target]`
+    let wf2 = base_wf.replacen("\non:\n", "\non: [push, pull_request_target]\n", 1);
+    let p2 = dir.join("wf2.yml");
+    std::fs::write(&p2, wf2).unwrap();
+    let r2 = check_workflow(&p2, &runbook).unwrap();
+    assert!(r2.findings.iter().any(|f| f.code == "FLOW-FORK-TRIGGER"), "{:?}", r2.findings);
+
+    // 3. `secrets['KEY']` in pre-approval job
+    let wf3 = base_wf.replacen(
+        "echo \"gate=plat-matrix step=platform-gate\"",
+        "echo \"${{ secrets['RELEASE_SIGNING_KEY'] }}\"",
+        1,
+    );
+    let p3 = dir.join("wf3.yml");
+    std::fs::write(&p3, wf3).unwrap();
+    let r3 = check_workflow(&p3, &runbook).unwrap();
+    assert!(
+        r3.findings.iter().any(|f| f.code == "FLOW-PREAPPROVAL-SECRET" && f.subject == "platform-gate"),
+        "{:?}",
+        r3.findings
+    );
+
+    // 4. Top-level `env:` referencing `secrets.KEY`
+    let wf4 = base_wf.replacen(
+        "env:\n  CARGO_TERM_COLOR: never",
+        "env:\n  LEAK: ${{ secrets.RELEASE_SIGNING_KEY }}\n  CARGO_TERM_COLOR: never",
+        1,
+    );
+    let p4 = dir.join("wf4.yml");
+    std::fs::write(&p4, wf4).unwrap();
+    let r4 = check_workflow(&p4, &runbook).unwrap();
+    assert!(r4.findings.iter().any(|f| f.code == "FLOW-PREAPPROVAL-SECRET" && f.subject == "env"), "{:?}", r4.findings);
+
+    // 5. `secrets: inherit` in pre-approval job
+    let wf5 = base_wf.replacen("echo \"gate=plat-matrix step=platform-gate\"", "secrets: inherit", 1);
+    let p5 = dir.join("wf5.yml");
+    std::fs::write(&p5, wf5).unwrap();
+    let r5 = check_workflow(&p5, &runbook).unwrap();
+    assert!(
+        r5.findings.iter().any(|f| f.code == "FLOW-PREAPPROVAL-SECRET" && f.subject == "platform-gate"),
+        "{:?}",
+        r5.findings
+    );
+
+    // 6. Deduplicated FLOW-PREAPPROVAL-ENV for `environment: release-signing`
+    let r_env = check_workflow(&fixture("bad-workflows/pre-approval-env.yml"), &runbook).unwrap();
+    let env_count = r_env.findings.iter().filter(|f| f.code == "FLOW-PREAPPROVAL-ENV").count();
+    assert_eq!(env_count, 1, "{:?}", r_env.findings);
 }

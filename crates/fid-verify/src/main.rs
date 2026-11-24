@@ -59,11 +59,12 @@ fn parse_args(args: &[String]) -> Result<Action, (VerifyError, bool)> {
     }
 
     if raw[0] == "mcp" {
+        let want_json = raw.iter().any(|&a| a == "--json");
         return Err((
             VerifyError::usage(
                 "verify.mcp_unavailable: `fid-verify mcp` server is not yet implemented (TRUST.VERIFY.MCP)",
             ),
-            false,
+            want_json,
         ));
     }
 

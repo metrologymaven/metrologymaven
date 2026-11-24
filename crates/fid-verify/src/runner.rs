@@ -5,12 +5,14 @@ use crate::report::{
     ReplayKernelInfo, ReplayResultEntry, ReplaySection, ReplayStatus, SectionInputs, VerificationReport, EXIT_INTERNAL,
     EXIT_MALFORMED, EXIT_USAGE,
 };
+use fid_pkg::manifest::{hash_bytes, MANIFEST_PATH, PREDICATE_TYPE, STATEMENT_PATH, STATEMENT_TYPE};
 use fid_pkg::reader::{
     InventoryTier, MemberReport, MemberState, PackageInventory, PackageOpener, PackageReader, ReadError,
+    MAX_MANIFEST_BYTES, MAX_MANIFEST_VALUES,
 };
 use fid_sign_core::troot::{
-    check_envelope, Keyring, PackageStatus, Revocations, SignatureReport, TrootError, TrustInputs, TrustRoot, UtcTime,
-    MAX_FILE_BYTES, MAX_SIGNATURES_PER_PACKAGE, MAX_SIGNATURE_ENTRIES, MAX_VERIFIED_BYTES,
+    check_envelope, Keyring, PackageStatus, Revocations, SignatureReport, SignatureStatus, TrootError, TrustInputs,
+    TrustRoot, UtcTime, MAX_FILE_BYTES, MAX_SIGNATURES_PER_PACKAGE, MAX_SIGNATURE_ENTRIES, MAX_VERIFIED_BYTES,
 };
 use fid_sign_core::{Envelope, SigError, MAX_ENVELOPE_BYTES};
 use fid_types::Digest;
@@ -268,11 +270,114 @@ fn build_inventory<R: Read + Seek>(reader: &mut PackageReader<R>) -> PackageInve
     }
 }
 
+fn is_hex64(s: &str) -> bool {
+    s.len() == 64 && s.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+}
+
+fn stmt_malformed(detail: impl Into<String>) -> VerifyError {
+    VerifyError::malformed("sig.malformed", Some("statement_malformed"), detail)
+}
+
+/// Parses `statement.json` with bounded limits and verifies strict in-toto Statement v1 binding
+/// to `manifest.json` (`predicate.manifest_sha256` and every `subject` member digest).
+///
+/// Returns `Ok(None)` when `statement.json` is absent or binds cleanly, `Ok(Some(reason))` when
+/// `statement.json` is syntactically valid but mismatches `manifest.json` / members, and
+/// `Err(VerifyError::malformed)` (exit 64) when `statement.json` itself is malformed.
+fn check_statement_binding<R: Read + Seek>(reader: &mut PackageReader<R>) -> Result<Option<String>, VerifyError> {
+    let Some(stmt_bytes) = reader.read_member(STATEMENT_PATH, MAX_MANIFEST_BYTES).map_err(map_read_error)? else {
+        return Ok(None);
+    };
+    let max_bytes = usize::try_from(MAX_MANIFEST_BYTES).unwrap_or(usize::MAX);
+    let max_elements = usize::try_from(MAX_MANIFEST_VALUES).unwrap_or(usize::MAX);
+    let root = fid_canon::parse_with_budget(&stmt_bytes, max_bytes, 16, max_elements)
+        .map_err(|e| stmt_malformed(format!("statement.json: {e}")))?;
+    let fid_canon::CValue::Obj(obj) = root else {
+        return Err(stmt_malformed("statement.json: root must be a JSON object"));
+    };
+
+    match obj.get("_type") {
+        Some(fid_canon::CValue::Str(s)) if s == STATEMENT_TYPE => {}
+        Some(fid_canon::CValue::Str(s)) => {
+            return Err(stmt_malformed(format!("statement.json: unexpected _type {s:?}")));
+        }
+        _ => return Err(stmt_malformed("statement.json: missing or invalid _type")),
+    }
+    match obj.get("predicateType") {
+        Some(fid_canon::CValue::Str(s)) if s == PREDICATE_TYPE => {}
+        Some(fid_canon::CValue::Str(s)) => {
+            return Err(stmt_malformed(format!("statement.json: unexpected predicateType {s:?}")));
+        }
+        _ => return Err(stmt_malformed("statement.json: missing or invalid predicateType")),
+    }
+
+    let Some(fid_canon::CValue::Obj(pred)) = obj.get("predicate") else {
+        return Err(stmt_malformed("statement.json: missing or invalid predicate object"));
+    };
+    let pred_manifest_sha = match pred.get("manifest_sha256") {
+        Some(fid_canon::CValue::Str(s)) if is_hex64(s) => s.clone(),
+        _ => return Err(stmt_malformed("statement.json: predicate.manifest_sha256 must be 64 lowercase hex digits")),
+    };
+
+    let Some(fid_canon::CValue::Arr(subjects)) = obj.get("subject") else {
+        return Err(stmt_malformed("statement.json: missing or invalid subject array"));
+    };
+    let mut subject_digests = std::collections::BTreeMap::new();
+    for (idx, item) in subjects.iter().enumerate() {
+        let fid_canon::CValue::Obj(sub) = item else {
+            return Err(stmt_malformed(format!("statement.json: subject[{idx}] must be an object")));
+        };
+        let Some(fid_canon::CValue::Str(name)) = sub.get("name") else {
+            return Err(stmt_malformed(format!("statement.json: subject[{idx}].name must be a string")));
+        };
+        if name.is_empty() {
+            return Err(stmt_malformed(format!("statement.json: subject[{idx}].name cannot be empty")));
+        }
+        let Some(fid_canon::CValue::Obj(dig)) = sub.get("digest") else {
+            return Err(stmt_malformed(format!("statement.json: subject[{idx}].digest must be an object")));
+        };
+        let Some(fid_canon::CValue::Str(sha)) = dig.get("sha256") else {
+            return Err(stmt_malformed(format!("statement.json: subject[{idx}].digest.sha256 must be a string")));
+        };
+        if !is_hex64(sha) {
+            return Err(stmt_malformed(format!(
+                "statement.json: subject[{idx}].digest.sha256 must be 64 lowercase hex digits"
+            )));
+        }
+        if let Some(prev) = subject_digests.insert(name.clone(), sha.clone()) {
+            if prev != *sha {
+                return Err(stmt_malformed(format!("statement.json: conflicting subject digest for {name:?}")));
+            }
+            return Err(stmt_malformed(format!("statement.json: duplicate subject {name:?}")));
+        }
+    }
+
+    let manifest_hex = hash_bytes(reader.manifest_bytes()).hex().to_string();
+    if pred_manifest_sha != manifest_hex {
+        return Ok(Some("statement_manifest_mismatch".to_string()));
+    }
+    if subject_digests.get(MANIFEST_PATH).map(String::as_str) != Some(manifest_hex.as_str()) {
+        return Ok(Some("statement_subject_mismatch".to_string()));
+    }
+    let manifest_members = &reader.manifest().members;
+    if subject_digests.len() != manifest_members.len() + 1 {
+        return Ok(Some("statement_subject_mismatch".to_string()));
+    }
+    for m in manifest_members {
+        if subject_digests.get(m.path.as_str()).map(String::as_str) != Some(m.sha256.hex()) {
+            return Ok(Some("statement_subject_mismatch".to_string()));
+        }
+    }
+
+    Ok(None)
+}
+
 fn check_signatures_on_reader<R: Read + Seek>(
     reader: &mut PackageReader<R>,
     inputs: &TrustInputs<'_>,
 ) -> Result<SignatureReport, VerifyError> {
     let statement = reader.statement_sha256().map(|d| d.hex().to_owned());
+    let binding_mismatch = if reader.has_statement() { check_statement_binding(reader)? } else { None };
     let names: Vec<String> =
         reader.entry_names().into_iter().filter(|n| n.starts_with("signatures/")).map(str::to_owned).collect();
     if names.len() > MAX_SIGNATURE_ENTRIES {
@@ -294,7 +399,7 @@ fn check_signatures_on_reader<R: Read + Seek>(
             ));
         }
         let first = u32::try_from(signatures.len()).unwrap_or(u32::MAX);
-        let checked =
+        let mut checked =
             check_envelope(&envelope, &name, statement.as_deref(), inputs, first, &mut budget).map_err(|b| {
                 VerifyError::malformed(
                     "sig.malformed",
@@ -302,6 +407,12 @@ fn check_signatures_on_reader<R: Read + Seek>(
                     format!("{name}: needs up to {} PAE bytes hashed, {} left", b.needed, b.left),
                 )
             })?;
+        if let Some(reason) = &binding_mismatch {
+            for sig in &mut checked {
+                sig.status = SignatureStatus::Invalid;
+                sig.detail = Some(reason.clone());
+            }
+        }
         signatures.extend(checked);
     }
     Ok(SignatureReport { package_status, statement_sha256: statement, signatures })
@@ -341,6 +452,7 @@ fn run_replay_section<R: Read + Seek>(
     kernel_cache: Option<&str>,
     memory_limit_bytes: Option<u64>,
     time_budget_ms: Option<u64>,
+    chain_broken: bool,
 ) -> Result<ReplaySection, VerifyError> {
     let _ = memory_limit_bytes;
     if inventory.evidence_tier == InventoryTier::Results {
@@ -349,7 +461,13 @@ fn run_replay_section<R: Read + Seek>(
 
     let km_bytes =
         reader.read_member(select::KERNEL_MANIFEST_PATH, select::MAX_KERNEL_MANIFEST_BYTES).map_err(map_read_error)?;
-    let parsed_km = km_bytes.as_deref().and_then(|bytes| KernelManifest::parse(bytes).ok());
+    let (parsed_km, km_parse_err) = match km_bytes.as_deref() {
+        Some(bytes) => match KernelManifest::parse(bytes) {
+            Ok(km) => (Some(km), None),
+            Err(e) => (None, Some(e.to_string())),
+        },
+        None => (None, None),
+    };
 
     let cache_dir = kernel_cache.map(PathBuf::from).or_else(default_cache_dir);
     let offline = OfflineArtifactSource::new(LookupConfig {
@@ -383,20 +501,44 @@ fn run_replay_section<R: Read + Seek>(
             }
         }
         let source = BoolSource { digest: probe_km.map(|k| k.manifest_digest), ok: available_in_pkg_or_cache };
+        let kernel_manifest_digest = reader.manifest().kernel_manifest_digest;
         let mut view = ReaderPackageView(reader);
-        select::plan(&mut view, &source).map_err(|e| match e {
-            SelectError::Package(pe) => {
-                if pe.code == "pkg.io" {
-                    VerifyError::internal(pe.code, Some("io"), pe.detail)
-                } else {
-                    VerifyError::malformed(pe.code, None, pe.detail)
-                }
+        match select::plan(&mut view, &source) {
+            Ok(sel) => sel,
+            Err(SelectError::Malformed { member, reason, detail }) if chain_broken => {
+                return Ok(ReplaySection {
+                    status: ReplayStatus::NotReplayable,
+                    reason: Some("JOURNAL_INVALID".to_string()),
+                    detail: Some(format!("{member}: {reason}: {detail}")),
+                    kernel: Some(ReplayKernelInfo {
+                        manifest_digest: kernel_manifest_digest.as_str().to_string(),
+                        artifact_digest: parsed_km
+                            .as_ref()
+                            .and_then(|k| k.wasm32_wasip1_digest.map(|d| d.as_str().to_string())),
+                        origin: None,
+                    }),
+                    rep1_version: Some(rep1.version().to_string()),
+                    rep1_digest: Some(rep1.digest().as_str().to_string()),
+                    rep1_production: Some(rep1.is_production()),
+                    results: None,
+                });
             }
-            SelectError::Malformed { reason, .. } => {
-                VerifyError::malformed("pkg.malformed", Some(reason), e.to_string())
+            Err(e) => {
+                return Err(match e {
+                    SelectError::Package(pe) => {
+                        if pe.code == "pkg.io" {
+                            VerifyError::internal(pe.code, Some("io"), pe.detail)
+                        } else {
+                            VerifyError::malformed(pe.code, None, pe.detail)
+                        }
+                    }
+                    SelectError::Malformed { reason, .. } => {
+                        VerifyError::malformed("pkg.malformed", Some(reason), e.to_string())
+                    }
+                    SelectError::Limit { what, .. } => VerifyError::malformed("pkg.limit", Some(what), e.to_string()),
+                });
             }
-            SelectError::Limit { what, .. } => VerifyError::malformed("pkg.limit", Some(what), e.to_string()),
-        })?
+        }
     };
 
     let kernel_info_base = ReplayKernelInfo {
@@ -480,10 +622,14 @@ fn run_replay_section<R: Read + Seek>(
     let lookup_res = match &parsed_km {
         Some(km) => offline.get_with_notes(km, Some(&mut view)),
         None => {
+            let detail = match &km_parse_err {
+                Some(err) => format!("kernel/manifest.json unparseable or unsupported: {err}"),
+                None => "kernel/manifest.json missing".to_string(),
+            };
             return Ok(ReplaySection {
                 status: ReplayStatus::NotReplayable,
                 reason: Some("KERNEL_UNAVAILABLE".to_string()),
-                detail: Some("kernel/manifest.json missing".to_string()),
+                detail: Some(detail),
                 kernel: Some(kernel_info_base),
                 rep1_version: Some(rep1.version().to_string()),
                 rep1_digest: Some(rep1.digest().as_str().to_string()),
@@ -685,6 +831,7 @@ pub fn verify_package(opener: &dyn PackageOpener, opts: &VerifyOptions) -> Resul
     }
 
     // 3. Replay section (only when --replay requested).
+    let chain_broken = !chain_report.chain_and_links_ok();
     let replay = match (&opts.replay, &rep1) {
         (true, Some(table)) => run_replay_section(
             &mut reader,
@@ -693,6 +840,7 @@ pub fn verify_package(opener: &dyn PackageOpener, opts: &VerifyOptions) -> Resul
             opts.kernel_cache.as_deref(),
             memory_limit_bytes,
             time_budget_ms,
+            chain_broken,
         )?,
         _ => ReplaySection::not_requested(),
     };
