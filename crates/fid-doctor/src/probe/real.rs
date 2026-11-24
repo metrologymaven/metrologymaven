@@ -757,8 +757,8 @@ mod windows_tests {
 
     #[test]
     fn verbatim_prefix_is_stripped_for_disk_and_unc_paths() {
-        assert_eq!(strip_verbatim_prefix(Path::new(r"\?\C:\Users\x")), PathBuf::from(r"C:\Users\x"));
-        assert_eq!(strip_verbatim_prefix(Path::new(r"\?\UNC\srv\share\d")), PathBuf::from(r"\srv\share\d"));
+        assert_eq!(strip_verbatim_prefix(Path::new(r"\\?\C:\Users\x")), PathBuf::from(r"C:\Users\x"));
+        assert_eq!(strip_verbatim_prefix(Path::new(r"\\?\UNC\srv\share\d")), PathBuf::from(r"\\srv\share\d"));
         assert_eq!(strip_verbatim_prefix(Path::new(r"D:\data")), PathBuf::from(r"D:\data"));
     }
 
