@@ -53,7 +53,9 @@ pub fn check_version_bump(old: &str, new: &str, change: Change) -> Result<(), Ne
 }
 
 /// Checks the support table of the next release against the previous one: every capability
-/// stays, and its previous current (highest, not deprecated) major stays negotiable.
+/// stays, and its previous current (highest, not deprecated) major stays negotiable. Every
+/// major present in both tables keeps at least its highest minor and every feature it had,
+/// because removing either inside a major is a breaking change.
 /// [`RuntimeSupport::new`] already requires that a superseded major is marked deprecated.
 pub fn check_major_retention(previous: &RuntimeSupport, next: &RuntimeSupport) -> Result<(), NegError> {
     for (name, majors) in previous.capabilities() {
@@ -63,6 +65,17 @@ pub fn check_major_retention(previous: &RuntimeSupport, next: &RuntimeSupport) -
         if let Some(current) = majors.keys().next_back() {
             if !next_majors.contains_key(current) {
                 return Err(NegError::support(name.clone(), "previous_major_dropped"));
+            }
+        }
+        for (major, prev) in majors {
+            let Some(next_row) = next_majors.get(major) else {
+                continue;
+            };
+            if next_row.highest_minor < prev.highest_minor {
+                return Err(NegError::support(name.clone(), "minor_regressed"));
+            }
+            if !prev.features.is_subset(&next_row.features) {
+                return Err(NegError::support(name.clone(), "feature_dropped"));
             }
         }
     }

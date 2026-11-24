@@ -390,13 +390,51 @@ fn previous_major_stays_negotiable_for_a_release() {
     let v1 = support("support_v1.json");
     let v2 = support("support_v2_with_v1_deprecated.json");
     assert_eq!(check_major_retention(&v1, &v2), Ok(()));
-    // Next release after v2 may drop the deprecated LineScan 1, but not LineScan 2.
-    let v3 = table(&[("Device", 1, 1, false), ("HeightMap", 1, 0, false), ("LineScan", 2, 1, false)]).unwrap();
+    // Next release after v2 may drop the deprecated LineScan 1, but not LineScan 2. v3 keeps
+    // every feature of the majors it retains (see the minor and feature tests below).
+    let mut caps = v2.capabilities().clone();
+    let linescan = caps.get_mut("LineScan").unwrap();
+    linescan.remove(&1);
+    linescan.get_mut(&2).unwrap().highest_minor = 1;
+    let v3 = RuntimeSupport::new(caps).unwrap();
     assert_eq!(check_major_retention(&v2, &v3), Ok(()));
     // Jumping straight from v1 to a table without LineScan 1 drops the previous major.
     let e = check_major_retention(&v1, &v3).unwrap_err();
     assert_eq!((e.code(), e.entry.as_str(), e.reason), ("support_invalid", "LineScan", "previous_major_dropped"));
-    let v4 = table(&[("Device", 1, 1, false), ("LineScan", 2, 0, false), ("LineScan", 1, 3, true)]).unwrap();
+    let mut caps = v2.capabilities().clone();
+    caps.remove("HeightMap");
+    let v4 = RuntimeSupport::new(caps).unwrap();
     let e = check_major_retention(&v2, &v4).unwrap_err();
     assert_eq!((e.entry.as_str(), e.reason), ("HeightMap", "capability_dropped"));
+}
+
+#[test]
+fn retained_major_must_not_lower_its_minor() {
+    let prev = table(&[("Device", 1, 3, false)]).unwrap();
+    assert_eq!(check_major_retention(&prev, &table(&[("Device", 1, 3, false)]).unwrap()), Ok(()));
+    assert_eq!(check_major_retention(&prev, &table(&[("Device", 1, 4, false)]).unwrap()), Ok(()));
+    let e = check_major_retention(&prev, &table(&[("Device", 1, 2, false)]).unwrap()).unwrap_err();
+    assert_eq!((e.code(), e.entry.as_str(), e.reason), ("support_invalid", "Device", "minor_regressed"));
+    // Also for a deprecated major kept in both tables.
+    let prev = table(&[("Device", 1, 3, true), ("Device", 2, 0, false)]).unwrap();
+    let next = table(&[("Device", 1, 1, true), ("Device", 2, 0, false)]).unwrap();
+    assert_eq!(check_major_retention(&prev, &next).unwrap_err().reason, "minor_regressed");
+}
+
+#[test]
+fn retained_major_must_keep_its_features() {
+    let v1 = support("support_v1.json");
+    // LineScan 1 in v2 keeps every v1 feature, so the shipped fixtures pass.
+    assert_eq!(check_major_retention(&v1, &support("support_v2_with_v1_deprecated.json")), Ok(()));
+    let mut caps = v1.capabilities().clone();
+    let ls1 = caps.get_mut("LineScan").unwrap().get_mut(&1).unwrap();
+    assert!(ls1.features.remove("intensity"));
+    let next = RuntimeSupport::new(caps.clone()).unwrap();
+    let e = check_major_retention(&v1, &next).unwrap_err();
+    assert_eq!((e.code(), e.entry.as_str(), e.reason), ("support_invalid", "LineScan", "feature_dropped"));
+    // Adding a feature is fine.
+    let ls1 = caps.get_mut("LineScan").unwrap().get_mut(&1).unwrap();
+    ls1.features.insert("intensity".to_string());
+    ls1.features.insert("new_feature".to_string());
+    assert_eq!(check_major_retention(&v1, &RuntimeSupport::new(caps).unwrap()), Ok(()));
 }

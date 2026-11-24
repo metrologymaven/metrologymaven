@@ -27,8 +27,8 @@
 //! granted only if declared *and* known for the chosen major; limits are not echoed into the
 //! result. [`negotiate_with_profile`] additionally refuses every capability (other than the
 //! `Device` base) that an `instrument-profile/v1` descriptor does not list in its
-//! `device_class`. Every check that [`CapabilityDeclaration::from_json`] makes is repeated by
-//! [`negotiate`], so a declaration assembled in code cannot skip them.
+//! `device_class`. Every offer check that [`CapabilityDeclaration::from_json`] makes is
+//! repeated by [`negotiate`], so a declaration assembled in code cannot skip them.
 //!
 //! Device-supplied strings in a declaration (make, model, serial, firmware) are
 //! [`crate::DeviceText`] values inside [`crate::DeviceInstance`]: data, never instructions.
@@ -516,7 +516,9 @@ impl NegotiationResult {
 // ------------------------------------------------------------------ negotiation
 
 /// Negotiates `decl` against `support` (REQ-001..006). Fails `declaration_invalid` on a
-/// malformed or duplicated entry, and `UNSUPPORTED` if `Device` is not negotiated.
+/// malformed or duplicated entry, and `UNSUPPORTED` if `Device` is not negotiated. It applies
+/// no profile restriction (see [`negotiate_with_profile`]); whether a session must use the
+/// instrument profile is decided by `HAL.ACQ.SESS`.
 pub fn negotiate(support: &RuntimeSupport, decl: &CapabilityDeclaration) -> Result<NegotiationResult, NegError> {
     run(support, decl, None)
 }
