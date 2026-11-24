@@ -140,9 +140,28 @@
     }
   }
 
+  /**
+   * Resolves only when `bytes` hash to `expected` ("sha256:" + 64 lowercase hex), the digest
+   * build.py wrote into `data-wasm-sha256`. Rejects on a mismatch, a malformed or missing
+   * expected digest, or when Web Crypto is unavailable: the module is never run unchecked.
+   */
+  async function verifyWasmDigest(bytes, expected) {
+    if (typeof expected !== "string" || !/^sha256:[0-9a-f]{64}$/.test(expected)) {
+      throw new Error("no expected WASM digest on the page");
+    }
+    const subtle = typeof crypto !== "undefined" && crypto.subtle ? crypto.subtle : null;
+    if (!subtle) throw new Error("Web Crypto unavailable, cannot check the WASM digest");
+    const hash = new Uint8Array(await subtle.digest("SHA-256", bytes));
+    let hex = "";
+    for (const b of hash) hex += b.toString(16).padStart(2, "0");
+    const got = "sha256:" + hex;
+    if (got !== expected) throw new Error("WASM digest mismatch: got " + got + ", page expects " + expected);
+    return got;
+  }
+
   // Export for Node.js CI verification (OUTR.DOCS.GUIDE.SITE AC-4).
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { runKernelWasm };
+    module.exports = { runKernelWasm, verifyWasmDigest };
     return;
   }
 
@@ -285,6 +304,7 @@
     if (!kind || kind === "field-map-explorer") return;
 
     const wasmUrl = host.getAttribute("data-wasm-url");
+    const wasmSha256 = host.getAttribute("data-wasm-sha256");
     const statusEl = document.getElementById("guide-wasm-status");
     let wasmModule = null;
 
@@ -294,6 +314,8 @@
         const resp = await fetch(wasmUrl);
         if (!resp.ok) throw new Error("HTTP " + resp.status);
         const bytes = await resp.arrayBuffer();
+        // Check the bytes against the digest the page was built with before compiling them.
+        await verifyWasmDigest(bytes, wasmSha256);
         wasmModule = await WebAssembly.compile(bytes);
         if (statusEl) {
           statusEl.textContent = "Live WASM kernel active (fid-guide-wasm · wasm32-wasip1 · D0 bit-exact)";
@@ -845,8 +867,10 @@
           ["MCM Standard u", fmt(r.mcm_u_std * 1e6, 3) + " um"],
           ["LPU 95% Interval", "[" + fmt(r.lpu_low * 1e3, 5) + ", " + fmt(r.lpu_high * 1e3, 5) + "] mm"],
           ["MCM 95% Interval", "[" + fmt(r.mcm_sym_low * 1e3, 5) + ", " + fmt(r.mcm_sym_high * 1e3, 5) + "] mm"],
-          ["JCGM 101 LPU Check", r.lpu_check_passed ? "PASS (LPU adequate)" : "FAIL (use Monte Carlo)", r.lpu_check_passed ? "ok" : "bad"],
-          ["Evidence Class", r.evidence_class],
+          r.mc_validation === "not_run"
+            ? ["JCGM 101 LPU Check", "NOT RUN (LPU gives zero uncertainty)", "warn"]
+            : ["JCGM 101 LPU Check", r.lpu_check_passed ? "PASS (LPU adequate)" : "FAIL (use Monte Carlo)", r.lpu_check_passed ? "ok" : "bad"],
+          ["Evidence Class", r.evidence_class + (r.statement_method ? " · " + r.statement_method + " statement" : "")],
         ],
         out.digest,
         out.live ? "WASM fid-kunc" : "Verified preset"
@@ -1014,7 +1038,14 @@
         ["Outcome", r.outcome, cls],
         ["Rule", r.rule_ref],
         ["Evidence Class", r.evidence_class],
-        ["Conformance Prob. p", r.p_conformance != null ? fmt(r.p_conformance * 100, 2) + "%" : "—"],
+        [
+          "Conformance Prob. p",
+          r.p_conformance != null
+            ? fmt(r.p_conformance * 100, 2) + "%"
+            : r.mc_validation === "not_run"
+              ? "not computed (no Monte Carlo check backs this LPU statement)"
+              : "—",
+        ],
         ["Specific Consumer Risk", r.specific_consumer_risk != null ? fmt(r.specific_consumer_risk * 100, 2) + "%" : "—"],
         ["Specific Producer Risk", r.specific_producer_risk != null ? fmt(r.specific_producer_risk * 100, 2) + "%" : "—"],
         ["Global Consumer Risk", r.global_consumer_risk != null ? fmt(r.global_consumer_risk * 100, 3) + "%" : "—"],

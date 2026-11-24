@@ -34,7 +34,7 @@
       "standards": ["ISO 23952 (QIF 3.0)", "ISO 22093 (DMIS 5.3)", "I++ DME", "ISO 10303-242 (STEP AP242)"],
       "spec_domains": ["KRN", "ALN", "SCAN", "CMM", "HAL", "IO"],
       "guide_slug": "fits",
-      "why": "Forms the shared geometric fitting, alignment, scan comparison and CMM execution backbone of Inspect and Probe."
+      "why": "Its fitting kernels (fid-fit) run live in the Fits lab today; the planned Inspect and Probe apps (roadmap, not yet built) are to share them as their fitting, alignment, scan comparison and CMM execution backbone."
     },
     {
       "id": "gdt-uncertainty-decisions",
@@ -64,7 +64,7 @@
       "standards": ["ISO 10360-10:2021", "ASME B89.4.19", "JCGM 100:2008"],
       "spec_domains": ["LVM"],
       "guide_slug": null,
-      "why": "Powers Metrology Maven Network for aerospace, energy and heavy-tooling bundle adjustment and live fixture guidance."
+      "why": "Planned (roadmap, not yet built): would power the Metrology Maven Network app for aerospace, energy and heavy-tooling bundle adjustment and live fixture guidance."
     },
     {
       "id": "msa-quality-stats",
@@ -94,7 +94,7 @@
       "standards": ["ISO 16610 series", "ISO 21920-2/3:2021", "ISO 25178-2/3/72", "ISO 12181:2011", "ASME B46.1-2019"],
       "spec_domains": ["SURF"],
       "guide_slug": null,
-      "why": "Completes CONSTITUTION §7 P3 'Form and texture' and plugs directly into existing HAL.IDL.SENS.SURF (HeightMap@1, Profile@1) and UNC.ORS.FLT hooks."
+      "why": "Planned (roadmap, not yet built): would complete CONSTITUTION §7 P3 'Form and texture' and plug into the specified HAL.IDL.SENS.SURF (HeightMap@1, Profile@1) and UNC.ORS.FLT hooks."
     },
     {
       "id": "calibration-lab-verification",
@@ -109,7 +109,7 @@
       "standards": ["ISO 10360 series", "ISO 230 series", "ISO/IEC 17025:2017", "ISO 3650", "ISO 8512", "ASME B1.2", "PTB DCC XML"],
       "spec_domains": ["CAL"],
       "guide_slug": "decisions",
-      "why": "Unifies accredited physical verification, CMC/TUR guardbanding, Digital Calibration Certificates and out-of-tolerance impact tracking on top of UNC and TRUST."
+      "why": "Planned (roadmap, not yet built): would bring physical instrument verification, CMC/TUR guardbanding, Digital Calibration Certificates and out-of-tolerance impact tracking together on top of UNC and TRUST."
     },
     {
       "id": "vision-2d-optical",
