@@ -68,6 +68,7 @@ Screenshots as commands: render a viewport (or a NamedView) at a requested resol
 ## Open questions
 
 - This leaf defines the org-policy key `capture.screenshots` (`allowed` or `forbidden`, read from CORE settings) because screenshots ship in P1a; VIZ.CAPTURE.REC (P1b) adds the recording keys to the same policy record.
+- `capture.screenshots` is already declared in `fid_capture::rec::policy::capture_settings` (admin, machine scope only, default `allowed`; VIZ.CAPTURE.REC.POLICY, PR #589). This leaf must not declare it again; it checks the policy with `RecordingPolicy::check(MediaKind::Screenshot)`, which fails closed (`Forbid { cause: Unknown }`) on an unreadable or invalid machine value.
 
 ## Children
 
