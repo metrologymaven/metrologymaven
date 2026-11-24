@@ -20,7 +20,7 @@
 //!    end of an open edge is left to the vertex candidate; a closed edge (start vertex = end
 //!    vertex) has no corner, and its feet are always the edge's.
 //! 2. **Boundary vertices**: the ends of open boundary edges, in ascending vertex ID.
-//! 2a. **NURBS seams and poles** (points of the face, reported as Interior): on a NURBS
+//! 3. **NURBS seams and poles** (points of the face, reported as Interior): on a NURBS
 //!    face, where the surface may be only C0 across a seam or singular at a pole (so the
 //!    closest point need not be a stationary point of any patch), every seam edge is a curve
 //!    candidate over its whole range (ascending edge ID), and every pole is a point
@@ -28,7 +28,7 @@
 //!    the parameter domain (all its control points equal within `2^-40` of the largest
 //!    coordinate) that a trimming segment ends on. On analytic faces the closed forms below
 //!    already cover seams and poles.
-//! 3. **Interior stationary points** that could still win (lower distance, or a tie the
+//! 4. **Interior stationary points** that could still win (lower distance, or a tie the
 //!    interior wins), kept when the face contains them (REQ-002, see *Trim test*). Analytic
 //!    surfaces in closed form, in the surface's placement with `rho = hypot(x, y)`,
 //!    `phi = atan2(y, x)`: plane 1 (`(x, y)`); cylinder 2 (`phi`, `phi + pi` at `v = z`);
@@ -344,7 +344,7 @@ pub struct FaceProjector<'a> {
     /// NURBS face: seam edges (points of the face, not boundary), ascending edge ID.
     seams: Vec<BEdge<'a>>,
     /// NURBS face: pole points of the face with their parameters.
-    poles: Vec<([f64; 3], [f64; 2])>,
+    poles: Vec<Pole>,
 }
 
 impl fmt::Debug for FaceProjector<'_> {
@@ -487,6 +487,9 @@ fn on_surface_lip(s: SurfRef<'_>, c: &Curve2, t0: f64, t1: f64) -> Result<f64, F
     }
 }
 
+/// A pole point of a NURBS face and its surface parameters.
+type Pole = ([f64; 3], [f64; 2]);
+
 /// A boundary line of a NURBS domain: direction of the fixed parameter, its value, the range
 /// of the other parameter and the control points on the line.
 type DomainLine = (usize, f64, [f64; 2], Vec<Option<[f64; 3]>>);
@@ -495,7 +498,7 @@ type DomainLine = (usize, f64, [f64; 2], Vec<Option<[f64; 3]>>);
 /// points all coincide (within `2^-40` of the largest coordinate) is a single point of the
 /// surface; it belongs to the face when a trimming segment ends on that line (within
 /// `2^-40` of the domain width). Returned with its parameters (the line's midpoint).
-fn pole_lines(n: &NurbsSurface, trim: &TrimIndex) -> Result<Vec<([f64; 3], [f64; 2])>, FaceError> {
+fn pole_lines(n: &NurbsSurface, trim: &TrimIndex) -> Result<Vec<Pole>, FaceError> {
     const REL: f64 = 1.0 / 1_099_511_627_776.0;
     let (n_u, n_v) = n.shape();
     let ((u0, u1), (v0, v1)) = n.domain();
@@ -575,7 +578,7 @@ impl<'a> FaceProjector<'a> {
         let mut corner_ix: Vec<VertexIx> = Vec::new();
         let nurbs = matches!(surf, SurfRef::Nurbs(_));
         let mut seams: Vec<BEdge<'a>> = Vec::new();
-        let mut poles: Vec<([f64; 3], [f64; 2])> = Vec::new();
+        let mut poles: Vec<Pole> = Vec::new();
         for &(ex, count, pc) in &uses {
             let e = body.edge(ex).ok_or(FaceError::UnknownFace)?;
             let range = e.param_range();
