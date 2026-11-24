@@ -55,7 +55,7 @@ impl fmt::Debug for MemKeySlot {
         f.debug_struct("MemKeySlot")
             .field("alg", &self.public.algorithm().name())
             .field("fingerprint", &self.public.fingerprint().as_str())
-            .field("material", &self.material)
+            .field("material", &"<redacted>")
             .finish()
     }
 }
@@ -96,6 +96,7 @@ impl fmt::Debug for MemKeyStore {
         f.debug_struct("MemKeyStore")
             .field("config_dir", &self.config_dir)
             .field("created_utc", &self.created_utc)
+            .field("keys", &"<redacted>")
             .finish()
     }
 }

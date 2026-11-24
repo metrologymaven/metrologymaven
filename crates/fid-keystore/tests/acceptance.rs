@@ -4,7 +4,7 @@
 use fid_keystore::conformance::{run_conformance, run_conformance_with_hook, CONFORMANCE_LABEL};
 use fid_keystore::mem::MemKeyStore;
 use fid_keystore::{
-    decode_sidecar, encode_sidecar, sidecar_path, Alg, KeyStore, KeyStoreError, UvRelease, MAX_LABEL_BYTES,
+    decode_sidecar, encode_sidecar, sidecar_path, Alg, KeyStore, KeyStoreError, UvRelease, MAX_LABEL_BYTES, UV_METHODS,
 };
 use fid_sign_core::{sign_envelope, verify, IN_TOTO_PAYLOAD_TYPE};
 use std::fs;
@@ -34,15 +34,21 @@ fn python_bin() -> &'static str {
     panic!("neither python3 nor python found on PATH");
 }
 
-fn run_key_bytes_scan(root: Option<&Path>) -> (i32, String, String) {
+fn run_scan(args: &[String]) -> (i32, String, String) {
     let script = repo_root().join("ci/keystore/key-bytes-scan");
-    let mut cmd = Command::new(python_bin());
-    cmd.arg(&script);
-    if let Some(r) = root {
-        cmd.arg("--root").arg(r);
-    }
-    let out = cmd.output().unwrap();
+    let out = Command::new(python_bin()).arg(&script).args(args).output().unwrap();
     (out.status.code().unwrap(), String::from_utf8(out.stdout).unwrap(), String::from_utf8(out.stderr).unwrap())
+}
+
+fn path_arg(p: &Path) -> String {
+    p.to_str().expect("scratch paths are UTF-8").to_string()
+}
+
+fn run_key_bytes_scan(root: Option<&Path>) -> (i32, String, String) {
+    match root {
+        Some(r) => run_scan(&["--root".to_string(), path_arg(r)]),
+        None => run_scan(&[]),
+    }
 }
 
 #[test]
@@ -76,6 +82,22 @@ fn ac2_key_bytes_scan_passes_crate_and_fails_on_derive_debug_and_sinks() {
     assert!(stderr.contains("PrivateKeyMaterial"), "must name the type: {stderr}");
     assert!(stderr.contains("derive(Debug)"), "must report derive(Debug): {stderr}");
     let _ = fs::remove_dir_all(&tmp);
+
+    // 2b. Regression probes for the #444 review: every real leak path in a mutated copy of
+    //     mem.rs must make the scan fail. Each anchor must occur exactly once in mem.rs.
+    for (name, anchor, replacement, needles) in mem_rs_leak_mutations() {
+        assert_eq!(mem_src.matches(anchor.as_str()).count(), 1, "probe {name}: anchor {anchor:?} not unique in mem.rs");
+        let mutated = mem_src.replace(anchor.as_str(), &replacement);
+        assert_ne!(mem_src, mutated, "probe {name} did not change mem.rs");
+        let dir = scratch(&format!("ac2-mut-{name}"));
+        fs::write(dir.join("mem.rs"), mutated).unwrap();
+        let (code, _, stderr) = run_key_bytes_scan(Some(&dir));
+        assert_eq!(code, 1, "probe {name}: mutated mem.rs must fail the scan, stderr={stderr}");
+        for needle in needles {
+            assert!(stderr.contains(needle), "probe {name}: expected {needle:?} in {stderr}");
+        }
+        let _ = fs::remove_dir_all(&dir);
+    }
 
     // 3. Additional REQ-004 violation cases: Serialize, Display, content-bearing Debug,
     //    file/log/journal/package writers, export APIs, pub fn returning private key type.
@@ -133,6 +155,199 @@ fn ac2_key_bytes_scan_passes_crate_and_fails_on_derive_debug_and_sinks() {
         assert_eq!(code, 1, "case {name} must fail scan");
         assert!(stderr.contains(needle), "case {name}: expected {needle:?} in {stderr}");
         let _ = fs::remove_dir_all(&dir);
+    }
+}
+
+type Mutation = (String, String, String, Vec<&'static str>);
+
+/// `(name, anchor in mem.rs, replacement, substrings the scan's stderr must contain)`.
+fn mem_rs_leak_mutations() -> Vec<Mutation> {
+    const PKM: &str = "struct PrivateKeyMaterial {";
+    const SLOT: &str = "struct MemKeySlot {";
+    const STORE: &str = "pub struct MemKeyStore {";
+    const SLOT_DEBUG: &str = ".field(\"material\", &\"<redacted>\")";
+    const STORE_DEBUG: &str = ".field(\"keys\", &\"<redacted>\")";
+    const ED_LET: &str = "let material = PrivateKeyMaterial { alg, bytes: seed };";
+    const P256_LET: &str = "let material = PrivateKeyMaterial { alg, bytes: scalar };";
+    const DELETE: &str = "slot.deleted.store(true, Ordering::Release);";
+    const PKM_FIELD: &str = "    bytes: [u8; 32],\n}";
+    const SLOT_FIELD: &str = "    material: PrivateKeyMaterial,";
+    const STORE_FN: &str = "    pub fn config_dir(&self) -> &Path {";
+    const ED_RNG: &str =
+        "getrandom::getrandom(&mut seed).map_err(|e| KeyStoreError::Backend(format!(\"getrandom:{e}\")))?;";
+
+    let m = |name: &str, anchor: &str, replacement: String, needles: Vec<&'static str>| {
+        (name.to_string(), anchor.to_string(), replacement, needles)
+    };
+    let mut cases = vec![
+        // cfg_attr(..., derive(Debug|Serialize)) on the private key type.
+        m("cfg_attr_debug", PKM, format!("#[cfg_attr(test, derive(Debug))]\n{PKM}"), vec!["derive(Debug)", "PrivateKeyMaterial"]),
+        m(
+            "cfg_attr_serialize",
+            PKM,
+            format!("#[cfg_attr(any(test, feature = \"serde\"), derive(Clone, serde::Serialize))]\n{PKM}"),
+            vec!["derive(Serialize)", "PrivateKeyMaterial"],
+        ),
+        // derive(Serialize) / derive(Debug) on structs holding key bytes (directly or transitively).
+        m("slot_derive_serialize", SLOT, format!("#[derive(serde::Serialize)]\n{SLOT}"), vec!["derive(Serialize)", "MemKeySlot"]),
+        m("store_derive_serialize", STORE, format!("#[derive(Serialize)]\n{STORE}"), vec!["derive(Serialize)", "MemKeyStore"]),
+        m(
+            "slot_cfg_attr_debug",
+            SLOT,
+            format!("#[cfg_attr(debug_assertions, derive(Debug))]\n{SLOT}"),
+            vec!["derive(Debug)", "MemKeySlot"],
+        ),
+        // Content-Debug check on every type with a private-key-typed field.
+        m("slot_debug_material", SLOT_DEBUG, ".field(\"material\", &self.material)".to_string(), vec!["Debug", "MemKeySlot"]),
+        m("slot_debug_bytes", SLOT_DEBUG, ".field(\"material\", &self.material.bytes)".to_string(), vec!["Debug", "MemKeySlot"]),
+        m("store_debug_keys", STORE_DEBUG, ".field(\"keys\", &self.keys)".to_string(), vec!["Debug", "MemKeyStore"]),
+        // `seed` / `scalar` reaching format! into errors (inline format args included).
+        m("seed_inline_format_error", ED_RNG, ED_RNG.replace("{e}", "{e}:{seed:?}"), vec!["`seed`", "error or format string"]),
+        m(
+            "scalar_format_error",
+            P256_LET,
+            format!("{P256_LET}\n                    return Err(KeyStoreError::Backend(format!(\"{{:?}}\", scalar)));"),
+            vec!["`scalar`", "error or format string"],
+        ),
+        // write( / write_all( / write! / fs::write sinks, including `.material`.
+        m("fs_write_seed", ED_LET, format!("{ED_LET}\n            let _ = std::fs::write(\"leak.bin\", seed);"), vec!["`seed`", "file writer"]),
+        m("write_material", DELETE, format!("{DELETE}\n        let _ = out.write(&slot.material.bytes);"), vec![".material", "file writer"]),
+        m(
+            "write_all_material",
+            DELETE,
+            format!("{DELETE}\n        let _ = out.write_all(&slot.material.bytes);"),
+            vec![".material", "file writer"],
+        ),
+        m(
+            "write_macro_material",
+            DELETE,
+            format!("{DELETE}\n        let _ = write!(out, \"{{:?}}\", slot.material);"),
+            vec![".material", "file writer"],
+        ),
+        // One-level copy of key bytes into a local before the sink.
+        m(
+            "indirect_copy",
+            ED_LET,
+            format!("{ED_LET}\n            let copy = material.bytes;\n            let _ = std::fs::write(\"leak.bin\", copy);"),
+            vec!["`copy`", "file writer"],
+        ),
+        // pub fn returning raw key arrays / key types / key bytes, and pub byte fields.
+        m(
+            "pub_fn_raw_array",
+            STORE_FN,
+            format!("    pub fn leak_seed(&self) -> [u8; 32] {{\n        [0u8; 32]\n    }}\n\n{STORE_FN}"),
+            vec!["leak_seed", "raw key array"],
+        ),
+        m(
+            "pub_fn_private_type",
+            STORE_FN,
+            format!("    pub fn material(&self) -> Option<&PrivateKeyMaterial> {{\n        None\n    }}\n\n{STORE_FN}"),
+            vec!["`material`", "returns private-key type PrivateKeyMaterial"],
+        ),
+        m(
+            "pub_fn_key_bytes",
+            STORE_FN,
+            format!("    pub fn export(&self) -> Vec<u8> {{\n        Vec::new()\n    }}\n\n{STORE_FN}"),
+            vec!["`export`", "returns key bytes"],
+        ),
+        m("pub_byte_field", PKM_FIELD, "    pub bytes: [u8; 32],\n}".to_string(), vec!["pub byte field `bytes`", "PrivateKeyMaterial"]),
+        m("pub_private_field", SLOT_FIELD, "    pub material: PrivateKeyMaterial,".to_string(), vec!["pub field `material`", "MemKeySlot"]),
+    ];
+    // Bare (unqualified) log and panic macros.
+    for (mac, kind) in [
+        ("error", "log writer"),
+        ("warn", "log writer"),
+        ("info", "log writer"),
+        ("debug", "log writer"),
+        ("trace", "log writer"),
+        ("panic", "panic message"),
+    ] {
+        cases.push(m(
+            &format!("bare_{mac}"),
+            ED_LET,
+            format!("{ED_LET}\n            {mac}!(\"{{:?}}\", seed);"),
+            vec!["`seed`", kind],
+        ));
+    }
+    cases
+}
+
+#[test]
+fn uv_release_issue_scan_allows_only_fid_uv_and_keystore_tests() {
+    // 1. The real workspace passes.
+    let (code, stdout, stderr) = run_scan(&["--uv-release-issue".to_string()]);
+    assert_eq!(code, 0, "stdout={stdout}\nstderr={stderr}");
+
+    // 2. Allowed locations: crate fid-uv, fid-keystore's tests/, #[cfg(test)] items in its src/.
+    let call = "fn mint(fp: Fingerprint) { let _ = UvRelease::issue(fp, \"windows_hello\"); }\n";
+    let allowed = [
+        ("crates/fid-uv/src/lib.rs", call.to_string()),
+        ("crates/fid-uv/src/gate/os.rs", call.to_string()),
+        ("crates/fid-keystore/tests/extra.rs", call.to_string()),
+        ("crates/fid-keystore/src/probe.rs", format!("#[cfg(test)]\nmod tests {{\n    {call}}}\n")),
+        ("crates/fid-other/src/lib.rs", "// UvRelease::issue is mentioned only in a comment.\nfn f() {}\n".to_string()),
+        ("crates/fid-other/src/doc.rs", "const S: &str = \"UvRelease::issue\";\n".to_string()),
+    ];
+    let ws = scratch("uv-allowed");
+    for (rel, body) in &allowed {
+        let p = ws.join(rel);
+        fs::create_dir_all(p.parent().unwrap()).unwrap();
+        fs::write(&p, body).unwrap();
+    }
+    let (code, _, stderr) = run_scan(&["--uv-release-issue".to_string(), "--workspace".to_string(), path_arg(&ws)]);
+    assert_eq!(code, 0, "allowed locations must pass: {stderr}");
+
+    // 3. Each forbidden use, added to the allowed workspace, must fail and name the file.
+    let forbidden = [
+        ("crates/fid-other/src/lib.rs", call.to_string()),
+        (
+            "crates/fid-other/src/q.rs",
+            "fn m(fp: Fingerprint) { fid_keystore::UvRelease::issue(fp, \"passphrase\").ok(); }\n".to_string(),
+        ),
+        (
+            "crates/fid-other/src/angle.rs",
+            "fn m(fp: Fingerprint) { <UvRelease>::issue(fp, \"token_pin\").ok(); }\n".to_string(),
+        ),
+        ("crates/fid-other/src/alias.rs", "use fid_keystore::UvRelease as Release;\n".to_string()),
+        ("crates/fid-other/src/ty.rs", "type Release = fid_keystore::UvRelease;\n".to_string()),
+        ("crates/fid-other/src/t.rs", format!("#[cfg(test)]\nmod tests {{\n    {call}}}\n")),
+        ("crates/fid-keystore/src/leak.rs", call.to_string()),
+        ("crates/fid-uv-shim/src/lib.rs", call.to_string()),
+        ("crates/fid-other/tests/it.rs", call.to_string()),
+        ("xtask/src/main.rs", call.to_string()),
+    ];
+    for (rel, body) in &forbidden {
+        let dir = scratch("uv-forbidden");
+        for (arel, abody) in &allowed {
+            let p = dir.join(arel);
+            fs::create_dir_all(p.parent().unwrap()).unwrap();
+            fs::write(&p, abody).unwrap();
+        }
+        let p = dir.join(rel);
+        fs::create_dir_all(p.parent().unwrap()).unwrap();
+        fs::write(&p, body).unwrap();
+        let (code, _, stderr) =
+            run_scan(&["--uv-release-issue".to_string(), "--workspace".to_string(), path_arg(&dir)]);
+        assert_eq!(code, 1, "{rel} must fail the UvRelease::issue rule: {stderr}");
+        assert!(stderr.contains(rel), "{rel}: expected the path in {stderr}");
+        let _ = fs::remove_dir_all(&dir);
+    }
+    let _ = fs::remove_dir_all(&ws);
+}
+
+#[test]
+fn uv_release_issue_validates_the_closed_uv_method_set() {
+    let fp = fid_keystore::Fingerprint::of_spki_der(b"acceptance-uv-method");
+    for method in UV_METHODS {
+        let release = UvRelease::issue(fp.clone(), method).unwrap();
+        assert_eq!(release.uv_method(), method);
+        assert_eq!(release.fingerprint(), &fp);
+    }
+    assert_eq!(UV_METHODS, ["windows_hello", "macos_local_auth", "token_pin", "token_pin_touch", "passphrase"]);
+    // Integration tests always build with `test-backend` (self dev-dependency), so `test_uv` is accepted here.
+    assert_eq!(UvRelease::issue(fp.clone(), "test_uv").unwrap().uv_method(), "test_uv");
+    for bad in ["", "none", "Windows_Hello", "token-pin", "biometric", " passphrase"] {
+        assert_eq!(UvRelease::issue(fp.clone(), bad), Err(KeyStoreError::Unsupported), "{bad:?}");
     }
 }
 

@@ -25,8 +25,8 @@ pub mod conformance;
 pub mod mem;
 
 pub use api::{
-    decode_sidecar, delete_sidecar, encode_sidecar, list_sidecars, read_sidecar, sidecar_dir, sidecar_path,
-    validate_label, validate_rfc3339_utc, write_sidecar, KeyHandle, KeyHandleOps, KeyInfo, KeyStore, KeyStoreError,
-    ReleasedSigner, UvRelease, MAX_LABEL_BYTES, MAX_SIDECAR_BYTES,
+    decode_sidecar, delete_sidecar, encode_sidecar, is_valid_uv_method, list_sidecars, read_sidecar, sidecar_dir,
+    sidecar_path, validate_label, validate_rfc3339_utc, write_sidecar, KeyHandle, KeyHandleOps, KeyInfo, KeyStore,
+    KeyStoreError, ReleasedSigner, UvRelease, MAX_LABEL_BYTES, MAX_SIDECAR_BYTES, UV_METHODS,
 };
 pub use fid_sign_core::{Alg, Fingerprint, PublicKey, SignError, Signer};
