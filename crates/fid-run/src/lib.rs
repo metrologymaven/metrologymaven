@@ -1,8 +1,9 @@
 //! Runs of Command Programs (spec node `AUTO.RUN`). Modules land one spec leaf at a time; see
 //! `spec/auto/run/`.
 //!
-//! This crate holds `AUTO.RUN.BIND` (run binding validation and run records) and
-//! `AUTO.RUN.EXEC.BRANCH` (the run's branch and Run entity).
+//! This crate holds `AUTO.RUN.BIND` (run binding validation and run records),
+//! `AUTO.RUN.EXEC.BRANCH` (the run's branch and Run entity) and `AUTO.RUN.EXEC.RETGT` (the
+//! step-gate hook and the not-re-targetable step guard).
 //!
 //! - [`prepare_run`] (module [`prepare`]): lifecycle and principal rules, the binding check,
 //!   input digests, and the [`RunPlan`] with its [`RunRecord`] (REQ-AUTO.RUN.BIND-001..005).
@@ -13,6 +14,9 @@
 //!   branch and writes the Run entity as its first entry; the [`RunTarget`] routes the run's
 //!   commits there only (`wrong_branch`); [`finalise`] writes the outcome once
 //!   (`already_final`).
+//! - [`exec::retarget`]: the [`StepGate`] pre-step hook and the [`RetargetGuard`], which
+//!   returns `Stop(not_retargetable)` before a step marked `retargetable: false` when any
+//!   bound input differs from its recorded default.
 //!
 //! No command is declared here: `program.run@1` and `program.run_batch@1` (`AUTO.RUN.EXEC`,
 //! `AUTO.RUN.BATCH`) call this library. Nothing here panics, uses floating point in a
@@ -26,6 +30,9 @@ pub mod record;
 pub use exec::branch::{
     finalise, open_run_target, step_allowed, ExecError, FinalOutcome, RunBus, RunTarget, SetupCause, SetupStage,
     CREATE_BRANCH_COMMAND, CREATE_RUN_COMMAND, FINALISE_RUN_COMMAND,
+};
+pub use exec::retarget::{
+    GateDecision, NotRetargetable, RetargetGuard, StepGate, StepInfo, StepKey, StepResult, NOT_RETARGETABLE,
 };
 pub use ledger::{run_started, Applied, RunEntry, RunLedger, RUN_COMMAND, RUN_STARTED};
 pub use prepare::{

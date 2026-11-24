@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-run]
 satisfies: [REQ-AUTO.RUN.EXEC-002]
 covers: []
 depends_on: [AUTO.RUN.BIND]
@@ -73,7 +74,10 @@ New `fixtures/program/retarget/manual-pick.json` (four steps, `s4` not re-target
 
 ## Open questions
 
-- `RunPlan` must carry the recorded default digest of each input parameter; `AUTO.RUN.BIND` hashes bound inputs already, and the defaults come from the program's parameter declarations (`AUTO.PROG.FAMILY`). If the program stores only handles, BIND hashes the default handles too.
+- Recorded default digests (settled in the build, `fid-run`): `RunPlan.default_digests` holds the SHA-256 of the default dataset of every `data_handle` parameter that declares a default. `prepare_run` (`AUTO.RUN.BIND`) hashes it through the same `InputSource` as the bound inputs; a default that cannot be read is left out, not an error, so binding that parameter re-targets the run (fail closed). A program stores only the default's handle, so the "recorded" default is the dataset that handle names when the run is prepared. If that dataset is overwritten with new data, the guard cannot see it. Obligation on `AUTO.PROG.FMT` / `AUTO.REC.LIFT` (not edited from here): store the recorded input's digest with the default, and `prepare_run` should then compare against it.
+- Marking (open, owned by `AUTO.REC.LIFT`, needs an additive `AUTO.PROG.FMT` field): no stored program can mark a step `retargetable: false` yet, so `prepare_run` lists every step re-targetable and the guard allows every step of a real plan. The fixture `fixtures/program/retarget/manual-pick.json` is a valid FMT program; its marking of `s4` lives in `fixtures/program/retarget/expected.json` (`not_retargetable`), and the tests apply it to the plan in LIFT's place. AC-1..AC-4 are met for the guard; the end-to-end path from a stored mark to the plan waits on LIFT.
+- Step types (provisional until `AUTO.PROG.INTERP.ENGINE` is built): `exec::retarget` defines `StepKey { step_id, iteration_path }`, `StepInfo { command, class }` and `StepResult { command, output }`; ENGINE's `StepKey` should be this type or convert to it one-to-one. `GateDecision` is `Allow | Stop(code, detail) | Hold(reason)`; the `not_retargetable` detail is `{"iteration_path", "params", "step_id"}` (`NotRetargetable`).
+- Authority: the guard emits no journal event and decides nothing that a fold replays, so REQ-CORE.RPL.RECON.FOLD-008 has nothing to bind here. `AUTO.RUN.EXEC.CMD` journals the stop and finalises the run `failed`; that entry is under `AUTO.RUN.EXEC.BRANCH`'s Run entity fold obligation.
 
 ## Children
 

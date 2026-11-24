@@ -25,7 +25,11 @@
 //!    list.
 //! 4. **Inputs**: every `data_handle` parameter, bound or by default, is opened through the
 //!    host's [`InputSource`] (the bus file policy and root handles) and streamed through
-//!    SHA-256 (`input_unreadable` on failure).
+//!    SHA-256 (`input_unreadable` on failure). The default of every `data_handle` parameter
+//!    that declares one (the recorded input) is hashed the same way into
+//!    [`RunPlan::default_digests`] for the re-target guard (`AUTO.RUN.EXEC.RETGT`); a default
+//!    that cannot be read is left out, never an error, so binding that parameter re-targets
+//!    the run (fail closed).
 //! 5. **Record**: a new run ID from [`RunIds`], outcome `pending`, branch `null`.
 //!
 //! D0 apart from the run ID: the same inputs give the same record but for `run_id`.
@@ -110,6 +114,10 @@ pub struct RunPlan {
     pub record: RunRecord,
     /// Every step ID in document order with whether it may run on re-targeted inputs.
     pub steps_retargetable: Vec<(Uuid7, bool)>,
+    /// SHA-256 of the recorded default dataset of every `data_handle` parameter whose default
+    /// could be read, by parameter name (`AUTO.RUN.EXEC.RETGT`). A program stores a default's
+    /// handle only, so this is the dataset that handle names when the run is prepared.
+    pub default_digests: BTreeMap<String, Digest>,
 }
 
 /// Errors of `prepare_run`. [`RunError::code`] is the stable code.
@@ -287,19 +295,38 @@ pub fn prepare_run(
 
     // 4. Inputs: every data handle, bound or by default.
     let mut inputs = BTreeMap::new();
+    let mut default_digests = BTreeMap::new();
     for d in family.params().iter().filter(|d| d.ty == ParamType::DataHandle) {
-        let handle = match bound.get(&d.name).or(d.default.as_ref()) {
-            Some(BoundValue::Text(h)) => h.clone(),
-            Some(_) => return Err(internal("data handle is not text after the binding check")),
-            None => continue,
+        let default = match d.default.as_ref() {
+            Some(BoundValue::Text(h)) => Some(h.as_str()),
+            Some(_) => return Err(internal("data handle default is not text after the binding check")),
+            None => None,
         };
-        let reader = ctx
-            .inputs
-            .open(principal, &d.name, &handle)
-            .map_err(|reason| RunError::InputUnreadable { param: d.name.clone(), reason })?;
-        let sha256 =
-            sha256_stream(reader).map_err(|reason| RunError::InputUnreadable { param: d.name.clone(), reason })?;
-        inputs.insert(d.name.clone(), InputDigest { handle, sha256 });
+        let handle = match bound.get(&d.name) {
+            Some(BoundValue::Text(h)) => Some(h.clone()),
+            Some(_) => return Err(internal("data handle is not text after the binding check")),
+            None => default.map(str::to_owned),
+        };
+        if let Some(handle) = handle {
+            let reader = ctx
+                .inputs
+                .open(principal, &d.name, &handle)
+                .map_err(|reason| RunError::InputUnreadable { param: d.name.clone(), reason })?;
+            let sha256 =
+                sha256_stream(reader).map_err(|reason| RunError::InputUnreadable { param: d.name.clone(), reason })?;
+            if default == Some(handle.as_str()) {
+                default_digests.insert(d.name.clone(), sha256);
+            }
+            inputs.insert(d.name.clone(), InputDigest { handle, sha256 });
+        }
+        // The recorded default, when the run binds another dataset to the parameter.
+        if let Some(def) = default {
+            if !default_digests.contains_key(&d.name) {
+                if let Ok(sha256) = ctx.inputs.open(principal, &d.name, def).and_then(sha256_stream) {
+                    default_digests.insert(d.name.clone(), sha256);
+                }
+            }
+        }
     }
 
     // 5. Record.
@@ -322,5 +349,5 @@ pub fn prepare_run(
     // AUTO.PROG.FMT has no per-step `retargetable` field yet (AUTO.REC.LIFT open question),
     // so no stored program can mark a step `false`: every step is re-targetable.
     let steps_retargetable = program.step_ids().into_iter().map(|id| (id, true)).collect();
-    Ok(RunPlan { record, steps_retargetable })
+    Ok(RunPlan { record, steps_retargetable, default_digests })
 }
