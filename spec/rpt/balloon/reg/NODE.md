@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-report]
 satisfies: [REQ-RPT.BALLOON-001, REQ-RPT.BALLOON-002, REQ-RPT.BALLOON-003, REQ-RPT.BALLOON-009]
 covers: []
 depends_on: [RPT.BALLOON.SHEET, CORE.JRN, GDT.CHAR]
