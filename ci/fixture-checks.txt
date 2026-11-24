@@ -314,6 +314,7 @@ python fixtures/ux/tokens/datapal/make_palettes.py --check
 python fixtures/ux/tokens/space/make_fixtures.py --check
 python fixtures/ux/tokens/status/make_fixtures.py --check
 python fixtures/ux/tokens/type/make_fixtures.py --check
+python fixtures/viz/capture/make_policy_matrix.py --check
 python fixtures/viz/golden-cube/make_fixtures.py --check
 python fixtures/viz/labels/make_part20.py --check
 python fixtures/viz/make_adapters.py --check
