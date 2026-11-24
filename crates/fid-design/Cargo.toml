@@ -1,6 +1,6 @@
 [package]
 name = "fid-design"
-description = "Design-system tooling commands: pkg-check and pkg-diff (UX.SYSTEM.PKG), princ-check and words-check (UX.SYSTEM.PRINC), review-check (UX.SYSTEM.REVIEW), screens-check and screens-gate (UX.SCREENS.INV), tokens-check (UX.TOKENS.COLOR), status-check (UX.TOKENS.STATUS), palettes-check (UX.TOKENS.DATAPAL), color-check (UX.TOKENS.CHECK), icons-prov and icons-registry (UX.ICONS.PROV), icons-lint (UX.ICONS.GRID), space-check (UX.TOKENS.SPACE)"
+description = "Design-system tooling commands: pkg-check and pkg-diff (UX.SYSTEM.PKG), princ-check and words-check (UX.SYSTEM.PRINC), review-check (UX.SYSTEM.REVIEW), screens-check and screens-gate (UX.SCREENS.INV), tokens-check (UX.TOKENS.COLOR), status-check (UX.TOKENS.STATUS), palettes-check (UX.TOKENS.DATAPAL), color-check (UX.TOKENS.CHECK), icons-prov and icons-registry (UX.ICONS.PROV), icons-lint (UX.ICONS.GRID), space-check (UX.TOKENS.SPACE), fonts-check (UX.TOKENS.TYPE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

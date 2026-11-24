@@ -18,7 +18,9 @@ determinism: D0
 cli: [fid accept show-report]
 mcp: [accept_show_report]
 journal: [accept.show_report@1]
-updated: 2026-11-17
+built_in: [fid-accept]
+built_pr: 440
+updated: 2026-11-22
 ---
 
 # FLOW.RUNNER.VERDICT: Nightly acceptance report, show command and trend history
@@ -70,6 +72,17 @@ Synthetic reports and trend files under `fixtures/flow/verdict/`.
 ## Build prompt
 
 > In crate `fid-accept`, add module `report` with `acceptance-report@1` (build ID, manifest digest, suite digest, times, reference machines with host, per-package job, variant, gating, assistance, non_gating flag, replay outcome, check outcomes, machine time per machine, verdict pass|fail|not_replayable, reasons, reliability section) and an append-only trend file. Digest = SHA-256 of RFC 8785 form; reject reports with path-like or address-like strings (`VERDICT-PII`). Command `accept.show_report@1` (R0; CLI `fid accept show-report [--digest] [--trend <job> --last N]`; MCP `accept_show_report`). Tests AC-1..AC-4 of spec node FLOW.RUNNER.VERDICT. No panic, no `unwrap`.
+
+## Build notes (2026-11-23)
+
+Built in `fid-accept` module `report` (PR #440). Decisions and deviations from the Design above:
+
+- **Store location.** The store is never a caller path. `fid-accept show-report` refuses `--store` and resolves the project's acceptance store itself: `<project>/acceptance/store`, where `<project>` is the current directory or its nearest ancestor holding `acceptance/suite.json` (the registered suite of FLOW.RUNNER.PKG). The store directory must be a real directory, not a link; with no project or no store the command fails `not_found`. The MCP params (`digest`, `trend`, `last`) carry no path. The library type `AcceptanceStore::new(root)` stays for the producer (`FLOW.RUNNER.NIGHTLY`) and tests.
+- **TrendRecord carries the report digest (deviation).** `TrendRecord { night, job, variant, verdict, machine_s, report }`: `report` is the digest of the stored report the record was derived from. `night` is the UTC date of the report's `started_at`; `machine_s` is the package's largest machine time over the reference machines. Appending refuses a record whose report is not stored or does not hold the same (job, variant, verdict, machine_s, night), and `show-report --trend` checks every returned record the same way, so an edited record fails `VERDICT-SCHEMA`.
+- **Append-only, checked on append and on load.** A record whose night is earlier than the record before it, or a second record for the same (night, job, variant), fails `VERDICT-SCHEMA`.
+- **Verdict evidence (REQ-001).** `pass` requires a replay outcome of `identical` or `equivalent`, at least one check with every check `pass`, and machine times for exactly the declared machines. `not_replayable` requires the replay outcome `not_replayable`, and that replay outcome requires the `not_replayable` verdict. Anything else fails `VERDICT-SCHEMA`.
+- **Timestamps** are compared as parsed time values (fractional seconds included), not as strings.
+- **Schemas.** Machine times in the result schema are quantity kind `time` in `s`. Tests validate real `show_report` output (report and trend) against `result_schema` and inputs against `params_schema` with the bus validator.
 
 ## Open questions
 
