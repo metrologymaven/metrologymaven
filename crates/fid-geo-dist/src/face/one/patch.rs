@@ -465,13 +465,13 @@ impl Patches {
         };
         let w = comp(3);
         let mut total: Option<Poly> = None;
-        for c in 0..3 {
+        for (c, &qc) in q.iter().enumerate() {
             let x = comp(c);
             // E = X - q W.
             let mut e = x.clone();
             for k in 0..e.c.len() {
-                e.c[k] = x.c[k] - q[c] * w.c[k];
-                e.mag[k] = x.mag[k] + q[c].abs() * w.mag[k];
+                e.c[k] = x.c[k] - qc * w.c[k];
+                e.mag[k] = x.mag[k] + qc.abs() * w.mag[k];
             }
             let d = if self.rational {
                 let a = prod(&deriv(c), &w, &self.bin);
