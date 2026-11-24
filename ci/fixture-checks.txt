@@ -96,6 +96,7 @@ python fixtures/flow/journey/make_fixtures.py --check
 python fixtures/flow/pkg/make_fixtures.py --check
 python fixtures/flow/study/tasks/make_fixtures.py --check
 python fixtures/flow/unassist/make_fixtures.py --check
+python fixtures/flow/verdict/make_fixtures.py --check
 python fixtures/gdt/dim/make_radial.py --check
 python fixtures/gdt/dmt/check_schema.py
 python fixtures/gdt/dmt/make_fixtures.py --check
