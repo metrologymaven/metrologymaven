@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-mig]
+built_pr: 578
 satisfies: [REQ-MIG.COVER-005]
 covers: []
 depends_on: [IO.REG.DETECT, MIG.SRC.REG]
