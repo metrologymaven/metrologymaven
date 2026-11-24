@@ -123,8 +123,8 @@ fn report_defs() -> Result<Vec<CommandDef>, DefError> {
 /// `fid-journal` declares the four branch commands of CORE.JRN.BR.NAME and the branch diff of
 /// CORE.JRN.BR.DIFF (handlers in `fid-journal-cmd`). `fid-profile-cmd` declares
 /// `sign.set_profile@1` and `sign.show_profile@1` of TRUST.PROFILE.SELECT. `fid-mig` declares
-/// `migrate.list_sources@1` of MIG.SRC.REG. `fid-scan-mesh-cmd` declares `mesh.invert_normals@1`
-/// of SCAN.MESHOP.CUT.INVERT.
+/// `migrate.list_sources@1` of MIG.SRC.REG and `migrate.generate_coverage@1` of MIG.COVER.GEN.
+/// `fid-scan-mesh-cmd` declares `mesh.invert_normals@1` of SCAN.MESHOP.CUT.INVERT.
 pub const SOURCES: [Source; 18] = [
     Source { krate: "fid-align", defs: fid_align::command_defs },
     Source { krate: "fid-bus", defs: fid_bus::policy::projection::command_defs },
@@ -133,7 +133,7 @@ pub const SOURCES: [Source; 18] = [
     Source { krate: "fid-geo-cmd", defs: fid_geo_cmd::command_defs },
     Source { krate: "fid-jobs", defs: fid_jobs::command_defs },
     Source { krate: "fid-journal", defs: journal_defs },
-    Source { krate: "fid-mig", defs: fid_mig::src::reg::command_defs },
+    Source { krate: "fid-mig", defs: fid_mig::command_defs },
     Source { krate: "fid-ors", defs: fid_ors::command_defs },
     Source { krate: "fid-profile-cmd", defs: fid_profile_cmd::command_defs },
     Source { krate: "fid-program-rec", defs: program_rec_defs },

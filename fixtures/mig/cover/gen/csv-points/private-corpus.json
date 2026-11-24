@@ -1,0 +1,31 @@
+{
+  "schema": "mig-corpus@1",
+  "format_id": "csv-points",
+  "name": "CSV points demo corpus",
+  "entries": [
+    {
+      "catalogue_id": "mig-csv-demo-1",
+      "sha256": "sha256:3d3ec586d188079ed8add0f275f955c9ca7e3a39e90384d61d4308f8ddc031ad",
+      "format_id": "csv-points",
+      "visibility": "public"
+    },
+    {
+      "catalogue_id": "mig-csv-demo-2",
+      "sha256": "sha256:91964cb8f50da2d225791892cb9f624abde6d981c85935cf6122ce09e1f35ae4",
+      "format_id": "csv-points",
+      "visibility": "public"
+    },
+    {
+      "catalogue_id": "mig-csv-demo-3",
+      "sha256": "sha256:6a733c0505497d3e69c771b6cc469a82821bcd3ae2f2cb2395adb1bc6f597801",
+      "format_id": "csv-points",
+      "visibility": "private"
+    },
+    {
+      "catalogue_id": "mig-csv-demo-4",
+      "sha256": "sha256:39fdf77c704d363e80433d99d3d3face866f04fb19f171f7c7f826683536c9af",
+      "format_id": "csv-points",
+      "visibility": "public"
+    }
+  ]
+}
