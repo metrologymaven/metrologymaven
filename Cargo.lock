@@ -1478,8 +1478,10 @@ dependencies = [
 name = "fid-geo-dist"
 version = "0.0.1"
 dependencies = [
+ "fid-geo-cad",
  "fid-geo-frame",
  "fid-geo-index",
+ "fid-geo-nurbs",
  "fid-geo-types",
  "fid-kci",
  "fid-num",
