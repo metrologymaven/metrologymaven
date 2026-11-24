@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use fid_canon::{to_canonical_bytes, CValue};
+use fid_report::balloon::auto_propose::Diagnostic;
 use fid_report::balloon::char::{AuthoredUnit, Dialect};
 use fid_slice::balloon::{run_balloon_demo, run_balloon_file, BalloonSliceOutput};
 use fid_slice::{demo_job, outcome_str, run_slice, verify_package_bytes, JobSpec, SliceOutput};
@@ -137,7 +138,11 @@ fn main() -> ExitCode {
                 }
                 ExitCode::SUCCESS
             }
-            Err(e) => fail(want_json, CMD_BALLOON, ErrorCode::ValidationError, &e.to_string()),
+            Err(e) => {
+                let code =
+                    if e.code == "io.root_violation" { ErrorCode::RootEscape } else { ErrorCode::ValidationError };
+                fail(want_json, CMD_BALLOON, code, &e.to_string())
+            }
         };
     }
 
@@ -301,7 +306,7 @@ fn fail(want_json: bool, cmd: &str, code: ErrorCode, msg: &str) -> ExitCode {
 }
 
 fn balloon_summary_cvalue(o: &BalloonSliceOutput) -> CValue {
-    let rows = o
+    let rows: Vec<CValue> = o
         .rows
         .iter()
         .map(|r| {
@@ -314,13 +319,19 @@ fn balloon_summary_cvalue(o: &BalloonSliceOutput) -> CValue {
             CValue::Obj(m)
         })
         .collect();
+    let diagnostics: Vec<CValue> = o.diagnostics.iter().map(Diagnostic::to_value).collect();
+    let balloon_count = o.pack.as_ref().map_or(0, |p| p.balloon_count);
     let mut obj = BTreeMap::new();
-    obj.insert("balloon_count".into(), CValue::Num(f64::from(o.pack.balloon_count)));
+    obj.insert("balloon_count".into(), CValue::Num(f64::from(balloon_count)));
     obj.insert("branch".into(), CValue::Str(o.proposal_branch.clone()));
     obj.insert("branch_digest".into(), CValue::Str(o.branch_digest.to_string()));
-    obj.insert("csv_digest".into(), CValue::Str(o.pack.csv_digest.to_string()));
+    if let Some(pack) = &o.pack {
+        obj.insert("csv_digest".into(), CValue::Str(pack.csv_digest.to_string()));
+        obj.insert("pdf_digest".into(), CValue::Str(pack.pdf_digest.to_string()));
+    }
+    obj.insert("diagnostics".into(), CValue::Arr(diagnostics));
     obj.insert("drawing_number".into(), CValue::Str(o.drawing_number.clone()));
-    obj.insert("pdf_digest".into(), CValue::Str(o.pack.pdf_digest.to_string()));
+    obj.insert("proposals".into(), CValue::Arr(rows.clone()));
     obj.insert("rows".into(), CValue::Arr(rows));
     obj.insert("sheet_count".into(), CValue::Num(o.sheet_count as f64));
     obj.insert("source_digest".into(), CValue::Str(o.source_digest.to_string()));
@@ -340,8 +351,22 @@ fn print_balloon_human(o: &BalloonSliceOutput, out_dir: &std::path::Path) {
     for r in &o.rows {
         println!("{:<4} {:<6} {:<18} {:<30} {}", r.number, r.zone, r.kind, r.raw_text, r.confidence);
     }
+    if !o.diagnostics.is_empty() {
+        println!();
+        println!("Diagnostics:");
+        for d in &o.diagnostics {
+            println!("  [{}] {}", d.code, d.detail);
+        }
+    }
     println!();
-    println!("Exported {} balloons to {}:", o.pack.balloon_count, out_dir.display());
-    println!("  ballooned.pdf     {}", o.pack.pdf_digest);
-    println!("  form3-starter.csv {}", o.pack.csv_digest);
+    match &o.pack {
+        Some(pack) => {
+            println!("Exported {} balloons to {}:", pack.balloon_count, out_dir.display());
+            println!("  ballooned.pdf     {}", pack.pdf_digest);
+            println!("  form3-starter.csv {}", pack.csv_digest);
+        }
+        None => {
+            println!("No balloons exported (0 callouts; see diagnostics above).");
+        }
+    }
 }

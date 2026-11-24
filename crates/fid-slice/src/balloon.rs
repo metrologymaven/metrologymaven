@@ -8,7 +8,7 @@
 //! 5. `RPT.BALLOON.AUTO.EXPORT` (deterministic vector-overlaid `ballooned.pdf` + AS9102 `form3-starter.csv`)
 
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Component, Path};
 
 use fid_gdt::chars::dprof::DprofState;
 use fid_gdt::chars::spec::{PlanId, SpecState};
@@ -18,7 +18,8 @@ use fid_report::balloon::auto_export::{
     export_balloon_pack, BalloonPackResult, EvaluatedRowValue, ExportBalloonPackParams,
 };
 use fid_report::balloon::auto_propose::{
-    AdoptDecision, BalloonProposal, ProposalBranchStore, ProposeBalloonsParams, ZoneGridSpec,
+    AdoptDecision, BalloonProposal, Diagnostic, ProposalBranchStore, ProposeBalloonsParams, ZoneGridSpec,
+    DIAG_RASTER_NEEDS_OCR,
 };
 use fid_report::balloon::char::{AuthoredUnit, CharBalloonStore, Dialect};
 use fid_report::balloon::register::BalloonRegister;
@@ -55,7 +56,73 @@ pub struct BalloonSliceOutput {
     pub proposal_branch: String,
     pub branch_digest: Digest,
     pub rows: Vec<BalloonSummaryRow>,
-    pub pack: BalloonPackResult,
+    pub diagnostics: Vec<Diagnostic>,
+    pub pack: Option<BalloonPackResult>,
+}
+
+/// Validates `--out` before any directory or file is created (`REQ-RPT.BALLOON.AUTO.EXPORT-004`).
+fn validate_export_out_dir(out_dir: &Path) -> Result<(), SliceError> {
+    if out_dir.as_os_str().is_empty() {
+        return Err(SliceError::new("io.root_violation", "export directory must not be empty"));
+    }
+    if out_dir.components().any(|c| matches!(c, Component::ParentDir)) {
+        return Err(SliceError::new(
+            "io.root_violation",
+            format!("export directory '{}' escapes export root via '..'", out_dir.display()),
+        ));
+    }
+    if !out_dir.is_absolute() {
+        if out_dir.components().any(|c| matches!(c, Component::Prefix(_) | Component::RootDir)) {
+            return Err(SliceError::new(
+                "io.root_violation",
+                format!("export directory '{}' must not escape export root", out_dir.display()),
+            ));
+        }
+        let cwd = std::env::current_dir()
+            .map_err(|e| SliceError::new("io.root_violation", format!("resolving current directory: {e}")))?;
+        let canon_root = std::fs::canonicalize(&cwd)
+            .map_err(|e| SliceError::new("io.root_violation", format!("canonicalizing export root: {e}")))?;
+        let mut cur = cwd;
+        for comp in out_dir.components() {
+            let Component::Normal(seg) = comp else {
+                continue;
+            };
+            cur.push(seg);
+            match std::fs::symlink_metadata(&cur) {
+                Ok(meta) => {
+                    let canon_cur = std::fs::canonicalize(&cur).map_err(|e| {
+                        SliceError::new(
+                            "io.root_violation",
+                            format!(
+                                "export directory '{}' cannot be resolved inside export root: {e}",
+                                out_dir.display()
+                            ),
+                        )
+                    })?;
+                    if !canon_cur.starts_with(&canon_root) {
+                        return Err(SliceError::new(
+                            "io.root_violation",
+                            format!("export directory '{}' escapes export root", out_dir.display()),
+                        ));
+                    }
+                    if meta.file_type().is_symlink() && !canon_cur.is_dir() {
+                        return Err(SliceError::new(
+                            "io.root_violation",
+                            format!("export directory '{}' traverses non-directory symlink", out_dir.display()),
+                        ));
+                    }
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => break,
+                Err(e) => {
+                    return Err(SliceError::new(
+                        "io.root_violation",
+                        format!("inspecting export directory '{}': {e}", out_dir.display()),
+                    ));
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Runs the full Day-1 2D PDF Auto-Ballooning pipeline on `pdf_path` and writes deterministic
@@ -66,6 +133,8 @@ pub fn run_balloon_file(
     dialect: Dialect,
     unit: AuthoredUnit,
 ) -> Result<BalloonSliceOutput, SliceError> {
+    validate_export_out_dir(out_dir)?;
+
     let parent = pdf_path.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or_else(|| Path::new("."));
     let file_name = pdf_path
         .file_name()
@@ -160,26 +229,31 @@ pub fn run_balloon_file(
         )
         .map_err(|e| SliceError::new(e.code(), e.to_string()))?;
 
-    let evaluated: BTreeMap<_, EvaluatedRowValue> = BTreeMap::new();
-    let mut export_journal = Vec::new();
-    let pack = export_balloon_pack(
-        &drawing_store,
-        &blobs,
-        &register,
-        &char_store,
-        &evaluated,
-        &roots,
-        Principal::Agent,
-        &mut export_journal,
-        &ExportBalloonPackParams {
-            drawing_rev,
-            out_dir: "root://exports".into(),
-            outcome_marking: false,
-            include_unmeasured: true,
-            dry_run: false,
-        },
-    )
-    .map_err(|e| SliceError::new(e.code(), e.to_string()))?;
+    let pack = if batch.proposals.is_empty() && batch.diagnostics.iter().any(|d| d.code == DIAG_RASTER_NEEDS_OCR) {
+        None
+    } else {
+        let evaluated: BTreeMap<_, EvaluatedRowValue> = BTreeMap::new();
+        let mut export_journal = Vec::new();
+        let exported = export_balloon_pack(
+            &drawing_store,
+            &blobs,
+            &register,
+            &char_store,
+            &evaluated,
+            &roots,
+            Principal::Agent,
+            &mut export_journal,
+            &ExportBalloonPackParams {
+                drawing_rev,
+                out_dir: "root://exports".into(),
+                outcome_marking: false,
+                include_unmeasured: true,
+                dry_run: false,
+            },
+        )
+        .map_err(|e| SliceError::new(e.code(), e.to_string()))?;
+        Some(exported)
+    };
 
     let rows = batch.proposals.iter().map(proposal_to_row).collect();
 
@@ -191,6 +265,7 @@ pub fn run_balloon_file(
         proposal_branch: batch.branch,
         branch_digest: batch.branch_digest,
         rows,
+        diagnostics: batch.diagnostics,
         pack,
     })
 }
@@ -198,6 +273,7 @@ pub fn run_balloon_file(
 /// Runs the Day-1 2D PDF Auto-Ballooning demo on the bundled `vector_bracket.pdf` drawing
 /// (`12 dimensions + 3 GD&T frames`), writing `ballooned.pdf` and `form3-starter.csv` into `out_dir`.
 pub fn run_balloon_demo(out_dir: &Path) -> Result<BalloonSliceOutput, SliceError> {
+    validate_export_out_dir(out_dir)?;
     std::fs::create_dir_all(out_dir)
         .map_err(|e| SliceError::new("io_error", format!("creating {}: {e}", out_dir.display())))?;
     let demo_pdf = out_dir.join("vector_bracket.pdf");

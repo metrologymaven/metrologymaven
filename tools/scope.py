@@ -159,6 +159,43 @@ def matches(patterns: list[str], sid: str) -> bool:
     return any(fnmatch.fnmatchcase(sid, p) for p in patterns)
 
 
+def _build_cover_eval(seed_ids: list[str]):
+    seed_set = set(seed_ids)
+    pat_cache: dict[str, frozenset[str]] = {}
+    list_cache: dict[tuple[str, ...], frozenset[str]] = {}
+
+    def match_pattern(pat: str) -> frozenset[str]:
+        res = pat_cache.get(pat)
+        if res is not None:
+            return res
+        if "*" not in pat and "?" not in pat and "[" not in pat:
+            res = frozenset((pat,)) if pat in seed_set else frozenset()
+        else:
+            rx = re.compile(fnmatch.translate(pat))
+            res = frozenset(s for s in seed_ids if rx.match(s))
+        pat_cache[pat] = res
+        return res
+
+    def eval_list(patterns: list[str]) -> frozenset[str]:
+        if not patterns:
+            return frozenset()
+        key = tuple(patterns)
+        res = list_cache.get(key)
+        if res is not None:
+            return res
+        if len(key) == 1:
+            res = match_pattern(key[0])
+        else:
+            acc: set[str] = set()
+            for p in key:
+                acc.update(match_pattern(p))
+            res = frozenset(acc)
+        list_cache[key] = res
+        return res
+
+    return match_pattern, eval_list
+
+
 def load_nodes(rep: Report) -> list[Node]:
     nodes = []
     for p in sorted(SPEC.rglob("NODE.md"), key=lambda p: p.relative_to(SPEC).as_posix()):
@@ -193,6 +230,9 @@ def validate(nodes: list[Node], seeds, oos, rep: Report) -> dict[str, Node]:
     by_folder = {n.path.parent: n for n in nodes}
     all_reqs: dict[str, str] = {}
     seed_ids = list(seeds)
+    match_pattern, eval_covers = _build_cover_eval(seed_ids)
+    node_covers: dict[int, frozenset[str]] = {}
+    covered_any: set[str] = set()
 
     for n in nodes:
         w, m = n.where, n.meta
@@ -293,9 +333,14 @@ def validate(nodes: list[Node], seeds, oos, rep: Report) -> dict[str, Node]:
             if d not in by_id:
                 rep.warn(w, f"uses_artifacts '{d}' does not exist yet")
 
-        for p in n.lst("covers"):
-            if seed_ids and not any(fnmatch.fnmatchcase(s, p) for s in seed_ids):
+        covers_pats = n.lst("covers")
+        for p in covers_pats:
+            if seed_ids and not match_pattern(p):
                 rep.warn(w, f"covers pattern '{p}' matches no seed row")
+        ncov = eval_covers(covers_pats)
+        node_covers[id(n)] = ncov
+        if n.level >= 1 and ncov:
+            covered_any.update(ncov)
 
         st = n.status
         if st == "leaf":
@@ -338,10 +383,14 @@ def validate(nodes: list[Node], seeds, oos, rep: Report) -> dict[str, Node]:
             for r in n.reqs:
                 if r not in satisfied:
                     rep.err(w, f"requirement {r} is not satisfied by any child")
-            parent_seeds = [s for s in seed_ids if matches(n.lst("covers"), s)]
-            for s in parent_seeds:
-                if not any(matches(c.lst("covers"), s) for c in n.children):
-                    rep.err(w, f"covered seed {s} dropped by all children")
+            parent_cov = node_covers[id(n)]
+            if parent_cov:
+                children_cov: set[str] = set()
+                for c in n.children:
+                    children_cov.update(node_covers[id(c)])
+                for s in seed_ids:
+                    if s in parent_cov and s not in children_cov:
+                        rep.err(w, f"covered seed {s} dropped by all children")
         if n.level >= 1:
             pnode = by_id.get(n.parent)
             if pnode is not None:
@@ -351,9 +400,14 @@ def validate(nodes: list[Node], seeds, oos, rep: Report) -> dict[str, Node]:
                 if not n.lst("satisfies"):
                     rep.err(w, "satisfies no parent requirement")
                 if n.level >= 2:
-                    for s in seed_ids:
-                        if matches(n.lst("covers"), s) and not matches(pnode.lst("covers"), s):
-                            rep.warn(w, f"covers {s}, which parent {pnode.id} does not cover")
+                    ncov = node_covers[id(n)]
+                    if ncov:
+                        pcov = node_covers[id(pnode)]
+                        extra = ncov - pcov
+                        if extra:
+                            for s in seed_ids:
+                                if s in extra:
+                                    rep.warn(w, f"covers {s}, which parent {pnode.id} does not cover")
 
     # Phase order: a node's phase is when work on it starts, so no child may start before its parent.
     order = {p: i for i, p in enumerate(["P0", "P1a", "P1b", "P2", "P3", "P4", "later"])}
@@ -377,10 +431,11 @@ def validate(nodes: list[Node], seeds, oos, rep: Report) -> dict[str, Node]:
 
     # Global coverage.
     oos_patterns = [p for p, _ in oos]
+    oos_cov = eval_covers(oos_patterns)
     for s in seed_ids:
-        if matches(oos_patterns, s):
+        if s in oos_cov:
             continue
-        if not any(n.level >= 1 and matches(n.lst("covers"), s) for n in nodes):
+        if s not in covered_any:
             rep.err("coverage", f"seed {s} ({seeds[s][0]}) is not covered by any node or out-of-scope row")
     return by_id
 
@@ -479,7 +534,15 @@ def write_reports(nodes: list[Node], by_id, seeds, oos, rep: Report) -> None:
     # COVERAGE.md
     out = ["# Competitor feature coverage", "", "_Generated by `tools/scope.py check`. Do not edit._", "",
            "Each competitor feature (seed row) is shown with the deepest spec nodes that cover it.", ""]
+    seed_ids = list(seeds)
+    _, eval_covers = _build_cover_eval(seed_ids)
     oos_patterns = [p for p, _ in oos]
+    oos_cov = eval_covers(oos_patterns)
+    seed_hits: dict[str, list[Node]] = defaultdict(list)
+    for n in nodes:
+        if n.level >= 1:
+            for sid in eval_covers(n.lst("covers")):
+                seed_hits[sid].append(n)
     by_file = defaultdict(list)
     for sid, (feat, fname) in seeds.items():
         by_file[fname].append((sid, feat))
@@ -489,12 +552,14 @@ def write_reports(nodes: list[Node], by_id, seeds, oos, rep: Report) -> None:
         rows = ["", f"## {fname}", "", "| Seed | Feature | Covered by | Status |", "|---|---|---|---|"]
         for sid, feat in by_file[fname]:
             total += 1
-            if matches(oos_patterns, sid):
+            if sid in oos_cov:
                 oos_n += 1
                 rows.append(f"| {sid} | {feat} | out of scope | - |")
                 continue
-            hits = deepest_cover(nodes, sid)
-            if hits:
+            node_hits = seed_hits.get(sid)
+            if node_hits:
+                top = max(h.level for h in node_hits)
+                hits = sorted((h for h in node_hits if h.level == top), key=lambda h: h.id)
                 covered += 1
                 rows.append(f"| {sid} | {feat} | " + ", ".join(link(h, GEN) for h in hits) + " | "
                             + ", ".join(sorted({h.status for h in hits})) + " |")
