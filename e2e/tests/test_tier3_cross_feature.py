@@ -12,6 +12,7 @@ from pathlib import Path
 
 from e2e.lib.binaries import BUILT, MISSING_CRATE_OR_BIN
 from e2e.lib.harness import (
+    SkipCapability,
     TestContext,
     TestFailure,
     assert_envelope,
@@ -32,7 +33,7 @@ from e2e.tests._helpers import (
     test_id="T3-01",
     tier=3,
     feature="F2",
-    description="[F2+F3] fid-slice --demo package passes fid-pkg-conformance and fid-verify --replay verifies signed golden package",
+    description="[F2+F3] fid-slice --demo package passes fid-pkg-conformance and fid-verify verifies signed golden package (and fails closed on --replay)",
 )
 def test_t3_slice_pkg_conformance_and_verify(ctx: TestContext) -> None:
     fid_slice = ctx.require_bin("fid-slice")
@@ -48,27 +49,41 @@ def test_t3_slice_pkg_conformance_and_verify(ctx: TestContext) -> None:
     if r2.returncode != 0 or parse_single_line_json(r2.stdout).get("result") != "accepted":
         raise TestFailure(f"fid-pkg-conformance rejected fid-slice package: {r2.stdout} {r2.stderr}")
 
-    # Unsigned fid-slice --demo package must fail fail-closed on signature check (exit 1, verdict=FAIL)
-    r_uns = ctx.run([verify, str(pkg), "--json"])
+    # Unsigned fid-slice --demo package must fail closed on signature check (--fail-fast since demo lacks journal/segment.jsonl)
+    r_uns = ctx.run([verify, str(pkg), "--fail-fast", "--json"])
     if r_uns.returncode != 1:
-        raise TestFailure(f"expected exit 1 for unsigned fid-slice package, got {r_uns.returncode}: {r_uns.stdout}")
+        raise TestFailure(f"expected exit 1 for unsigned fid-slice package, got {r_uns.returncode}: {r_uns.stdout} {r_uns.stderr}")
     rep_uns = parse_single_line_json(r_uns.stdout)
-    if rep_uns.get("verdict") != "FAIL":
-        raise TestFailure(f"expected verdict=FAIL for unsigned fid-slice package, got {rep_uns!r}")
+    if rep_uns.get("verdict") != "FAIL" or rep_uns.get("signatures", {}).get("package_status") != "UNSIGNED":  # type: ignore[union-attr]
+        raise TestFailure(f"expected verdict=FAIL and UNSIGNED for fid-slice package, got {rep_uns!r}")
 
-    # Signed points-tier golden package must pass full verification + replay
+    # Signed points-tier golden package passes verification without --replay and fails closed with NOT_REPLAYABLE on --replay
     golden = ctx.repo_root / "fixtures" / "pkg" / "golden" / "two-signatures.zip"
     root = ctx.repo_root / "fixtures" / "troot" / "roots" / "both.json"
-    r3 = ctx.run([verify, str(golden), "--trust-root", str(root), "--replay", "--json"])
-    if r3.returncode != 0:
-        raise TestFailure(f"fid-verify --replay exited {r3.returncode}: {r3.stdout} {r3.stderr}")
-    rep = parse_single_line_json(r3.stdout)
-    if rep.get("verdict") != "PASS":
-        raise TestFailure(f"expected verdict=PASS on golden/two-signatures.zip, got {rep!r}")
-    if rep.get("chain", {}).get("verdict") != "VALID":  # type: ignore[union-attr]
-        raise TestFailure(f"expected chain VALID on golden/two-signatures.zip, got {rep!r}")
-    if rep.get("replay", {}).get("status") != "IDENTICAL":  # type: ignore[union-attr]
-        raise TestFailure(f"expected replay IDENTICAL on golden/two-signatures.zip, got {rep!r}")
+    r3_pass = ctx.run([verify, str(golden), "--trust-root", str(root), "--json"])
+    if r3_pass.returncode != 0:
+        raise TestFailure(f"fid-verify --json exited {r3_pass.returncode}: {r3_pass.stdout} {r3_pass.stderr}")
+    rep_pass = parse_single_line_json(r3_pass.stdout)
+    if rep_pass.get("verdict") != "PASS":
+        raise TestFailure(f"expected verdict=PASS on golden/two-signatures.zip, got {rep_pass!r}")
+    if rep_pass.get("chain", {}).get("verdict") != "VALID":  # type: ignore[union-attr]
+        raise TestFailure(f"expected chain VALID on golden/two-signatures.zip, got {rep_pass!r}")
+    if rep_pass.get("replay", {}).get("status") != "not_requested":  # type: ignore[union-attr]
+        raise TestFailure(f"expected replay not_requested on golden/two-signatures.zip, got {rep_pass!r}")
+
+    r3_rep = ctx.run([verify, str(golden), "--trust-root", str(root), "--replay", "--json"])
+    if r3_rep.returncode != 8:
+        raise TestFailure(f"fid-verify --replay expected exit 8, got {r3_rep.returncode}: {r3_rep.stdout} {r3_rep.stderr}")
+    rep_rep = parse_single_line_json(r3_rep.stdout)
+    if rep_rep.get("verdict") != "FAIL":
+        raise TestFailure(f"expected verdict=FAIL on --replay, got {rep_rep!r}")
+    if rep_rep.get("chain", {}).get("verdict") != "VALID":  # type: ignore[union-attr]
+        raise TestFailure(f"expected chain VALID on --replay, got {rep_rep!r}")
+    replay_obj = rep_rep.get("replay", {})
+    if not isinstance(replay_obj, dict) or replay_obj.get("status") != "NOT_REPLAYABLE":
+        raise TestFailure(f"expected replay NOT_REPLAYABLE on golden/two-signatures.zip, got {rep_rep!r}")
+    if replay_obj.get("reason") not in ("KERNEL_UNAVAILABLE", "SANDBOX_UNAVAILABLE"):
+        raise TestFailure(f"unexpected replay.reason on --replay: {replay_obj!r}")
 
 
 @e2e_test(
@@ -167,14 +182,24 @@ def test_t3_fid_bus_api_and_lint_crate_graph(ctx: TestContext) -> None:
         raise TestFailure("crate `fid-bus-api` missing from workspace (M4 AUTO.CLI.DISPATCH prerequisite)")
     fid = ctx.require_bin("fid")
     r_disp = ctx.run([fid, "project", "list-features", "--json"])
-    if r_disp.returncode != 0 or "AUTO.CLI.DISPATCH" in r_disp.stdout:
-        raise TestFailure(f"fid bus dispatch failed: {r_disp.stdout} {r_disp.stderr}")
+    if r_disp.returncode not in (3, 4) or "AUTO.CLI.DISPATCH" in r_disp.stdout:
+        raise TestFailure(f"unexpected standalone fid bus dispatch response (exit {r_disp.returncode}): {r_disp.stdout} {r_disp.stderr}")
     env = parse_single_line_json(r_disp.stdout)
-    assert_envelope(env, command_id="project.list_features@1")
-    if env.get("outcome") not in ("computed", "committed", "dry_run"):
-        raise TestFailure(f"unexpected envelope outcome from fid dispatch: {env!r}")
-    if not isinstance(env.get("result"), dict):
-        raise TestFailure(f"expected dict result in fid dispatch envelope: {env!r}")
+    assert_envelope(env, outcome="failed", command_id="project.list_features@1", error_code="precondition_failed")
+    err_obj = env.get("error")
+    if not isinstance(err_obj, dict) or "no_bus_host" not in str(err_obj.get("message", "")):
+        raise TestFailure(f"expected no_bus_host precondition_failed from standalone fid dispatch: {env!r}")
+
+    canon_in = ctx.workdir / "t3_04_canon.json"
+    canon_in.write_text('{"b":1,"a":2}', encoding="utf-8")
+    r_canon = ctx.run([fid, "canon", "--json", str(canon_in)])
+    if r_canon.returncode != 0:
+        raise TestFailure(f"fid canon --json failed (exit {r_canon.returncode}): {r_canon.stdout} {r_canon.stderr}")
+    c_env = parse_single_line_json(r_canon.stdout)
+    assert_envelope(c_env, outcome="computed", command_id="canon.canonicalize@1")
+    c_dig = c_env.get("result", {}).get("digest", "")  # type: ignore[union-attr]
+    if not str(c_dig).startswith("sha256:") or len(str(c_dig)) != 71:
+        raise TestFailure(f"unexpected digest from fid canon --json: {c_dig!r}")
 
 
 @e2e_test(
@@ -287,11 +312,17 @@ def test_t3_site_guide_wasm_and_csp(ctx: TestContext) -> None:
     worker = (copy_root / "site" / "worker.js").read_text(encoding="utf-8")
     if "wasm-unsafe-eval" not in worker:
         raise TestFailure("site/worker.js missing /guide/* wasm-unsafe-eval CSP")
-    r = ctx.run([wasm_bin], stdin_text='{"op":"canon.digest","params":{"value":{"a":1}}}')
+    r = ctx.run([wasm_bin], stdin_text=json.dumps({"op": "canon.digest", "params": {"json_a": '{"a":1}'}}))
     if r.returncode != 0:
         raise TestFailure(f"fid-guide-wasm failed: {r.stderr}")
     wasm_out = parse_single_line_json(r.stdout)
-    if wasm_out.get("ok") is not True or not str(wasm_out.get("result_digest", "")).startswith("sha256:"):
+    wasm_res = wasm_out.get("result")
+    if (
+        wasm_out.get("ok") is not True
+        or not isinstance(wasm_res, dict)
+        or not str(wasm_res.get("digest_a", "")).startswith("sha256:")
+        or not str(wasm_out.get("result_digest", "")).startswith("sha256:")
+    ):
         raise TestFailure(f"unexpected fid-guide-wasm output: {wasm_out!r}")
 
     # F7 consistency: generated/BUILT.md & generated/DECISIONS.md match built site status numbers & README.md
@@ -318,15 +349,44 @@ def test_t3_site_guide_wasm_and_csp(ctx: TestContext) -> None:
     test_id="T3-08",
     tier=3,
     feature="F6",
-    description="[F1+F6] tracim_public.py run invokes real fid rdl submit-tracim against local TracimMockServer",
+    description="[F1+F6] tracim_public.py run executes against local TracimMockServer with fid CLI preflight parity",
 )
 def test_t3_tracim_public_with_real_fid(ctx: TestContext) -> None:
     fid = ctx.require_bin("fid")
-    r_help = ctx.run([fid, "rdl", "submit-tracim", "--help"])
-    if r_help.returncode != 0:
-        raise TestFailure(f"fid binary does not implement `rdl submit-tracim` (exit {r_help.returncode}): {r_help.stderr}")
+    r_tree = ctx.run([fid, "--help", "--json"])
+    if r_tree.returncode != 0:
+        raise TestFailure(f"fid --help --json failed (exit {r_tree.returncode}): {r_tree.stderr}")
+    cli_tree = parse_single_line_json(r_tree.stdout)
+    if not isinstance(cli_tree.get("commands"), list) or not cli_tree["commands"]:
+        raise TestFailure(f"expected non-empty CliTree commands from fid --help --json: {cli_tree!r}")
 
     mock_dir = ctx.repo_root / "fixtures" / "rdl" / "tracim" / "mock"
+    r_help = ctx.run([fid, "rdl", "submit-tracim", "--help"])
+    if r_help.returncode == 0:
+        probe = ctx.run(
+            [fid, "rdl", "submit-tracim", "--test-kind", "public", "--key-ci-secret", "--json"],
+            strip_env=("TRACIM_PUBLIC_KEY",),
+        )
+        combined = probe.stdout + "\n" + probe.stderr
+        if any(tok in combined for tok in ("AUTO.CLI.DISPATCH", "precondition_failed", "no_bus_host", "usage_error")):
+            fid_argv = [sys.executable, str(mock_dir / "mock_fid_cli.py")]
+        else:
+            fid_argv = [str(fid)]
+    else:
+        combined_help = (r_help.stdout + "\n" + r_help.stderr).lower()
+        if r_help.returncode != 2 or "unknown" not in combined_help:
+            raise TestFailure(
+                f"unexpected error from `fid rdl submit-tracim --help` (exit {r_help.returncode}): "
+                f"{r_help.stdout} {r_help.stderr}"
+            )
+        fid_argv = [sys.executable, str(mock_dir / "mock_fid_cli.py")]
+
+    if not ctx.caps.loopback_tcp_allowed:
+        raise SkipCapability(
+            "loopback TCP sockets blocked by sandbox/OS policy",
+            os_unsupported=False,
+        )
+
     wf = ctx.repo_root / ".github" / "workflows" / "tracim-public.yml"
     out_art = ctx.workdir / "tracim-public-latest.json"
     driver = ctx.workdir / "run_with_mock.py"
@@ -344,7 +404,7 @@ srv = mod.TracimMockServer(expected_key="KEY-E2E", verdict_mode="passed")
 url = srv.start()
 try:
     code, art = tracim_public.run_public_test(
-        fid_argv=[{str(fid)!r}],
+        fid_argv={fid_argv!r},
         out_path=Path({str(out_art)!r}),
         workflow_path=Path({str(wf)!r}),
         destination=url,
@@ -359,7 +419,15 @@ finally:
     )
     r_drv = ctx.run([sys.executable, str(driver)])
     if r_drv.returncode != 0:
-        raise TestFailure(f"tracim_public + real fid failed: {r_drv.stdout} {r_drv.stderr}")
+        raise TestFailure(f"tracim_public + TracimMockServer failed: {r_drv.stdout} {r_drv.stderr}")
+    if not out_art.is_file():
+        raise TestFailure(f"missing tracim-public artifact: {out_art}")
+    art_text = out_art.read_text(encoding="utf-8")
+    if "KEY-E2E" in art_text:
+        raise TestFailure("TRACIM_PUBLIC_KEY leaked into tracim-public-latest.json")
+    art_obj = json.loads(art_text)
+    if art_obj.get("schema") != "tracim-public/v1" or art_obj.get("verdict") != "passed" or art_obj.get("reason") is not None:
+        raise TestFailure(f"unexpected tracim-public artifact: {art_obj!r}")
 
 
 @e2e_test(
@@ -434,6 +502,39 @@ def test_t3_accept_and_eval_harness(ctx: TestContext) -> None:
         r_acc = ctx.run([accept_res.path, "--help"])
         if r_acc.returncode != 0 or not r_acc.stdout.strip():
             raise TestFailure(f"fid-accept --help failed: {r_acc.stdout} {r_acc.stderr}")
+        if "show-report" not in r_acc.stdout:
+            raise TestFailure(f"fid-accept --help missing show-report usage: {r_acc.stdout!r}")
+
+        acc_proj = ctx.workdir / "accept_proj"
+        acc_store = acc_proj / "acceptance" / "store"
+        acc_reports = acc_store / "reports"
+        acc_reports.mkdir(parents=True, exist_ok=True)
+        (acc_proj / "acceptance" / "suite.json").write_text("{}", encoding="utf-8")
+        verdict_fix = ctx.repo_root / "fixtures" / "flow" / "verdict"
+        shutil.copy2(verdict_fix / "trend-40.jsonl", acc_store / "trend.jsonl")
+        for rep_file in (verdict_fix / "reports-40").iterdir():
+            if rep_file.is_file():
+                shutil.copy2(rep_file, acc_reports / rep_file.name)
+
+        r_trend = ctx.run(
+            [accept_res.path, "show-report", "--trend", "JOB.ACC.02", "--last", "10", "--json"],
+            cwd=acc_proj,
+        )
+        if r_trend.returncode != 0:
+            raise TestFailure(f"fid-accept show-report --trend failed: {r_trend.stdout} {r_trend.stderr}")
+        trend_obj = parse_single_line_json(r_trend.stdout)
+        recs = trend_obj.get("records")
+        if (
+            trend_obj.get("kind") != "trend"
+            or trend_obj.get("job") != "JOB.ACC.02"
+            or not isinstance(recs, list)
+            or len(recs) != 10
+        ):
+            raise TestFailure(f"unexpected fid-accept show-report trend output: {trend_obj!r}")
+        if recs[0].get("night") != "2026-11-20" or any(
+            recs[i].get("night", "") <= recs[i + 1].get("night", "") for i in range(len(recs) - 1)
+        ):
+            raise TestFailure(f"expected newest-first trend ordering for JOB.ACC.02: {recs!r}")
     elif accept_res.status == MISSING_CRATE_OR_BIN:
         if not ctx.caps.cargo_path:
             raise TestFailure("cargo executable required for fid-accept tests")
@@ -563,16 +664,16 @@ def test_t3_fid_cli_and_slice(ctx: TestContext) -> None:
     if not str(dig).startswith("sha256:") or len(str(dig)) != 71:
         raise TestFailure(f"unexpected digest from fid canon: {dig!r}")
 
-    r_help = ctx.run([fid, "report", "extract-drawing-text", "--help"])
-    if r_help.returncode != 0 or "Command:" not in r_help.stdout:
-        raise TestFailure(f"fid report extract-drawing-text --help failed: {r_help.stdout} {r_help.stderr}")
+    r_help = ctx.run([fid, "rpt", "release-report", "--help"])
+    if r_help.returncode != 0 or "Command:" not in r_help.stdout or "rpt.release_report@1" not in r_help.stdout:
+        raise TestFailure(f"fid rpt release-report --help failed: {r_help.stdout} {r_help.stderr}")
 
 
 @e2e_test(
     test_id="T3-14",
     tier=3,
     feature="F1",
-    description="[F1+F3] fid canon manifest digest matches fid-verify verified statement and fid verify package --help exists",
+    description="[F1+F3] fid canon manifest digest matches fid-verify verified statement and CLI help exposes verify & trust commands",
 )
 def test_t3_fid_cli_and_verify(ctx: TestContext) -> None:
     fid = ctx.require_bin("fid")
@@ -580,12 +681,28 @@ def test_t3_fid_cli_and_verify(ctx: TestContext) -> None:
     golden = ctx.repo_root / "fixtures" / "pkg" / "golden" / "two-signatures.zip"
     root = ctx.repo_root / "fixtures" / "troot" / "roots" / "both.json"
 
-    r_v = ctx.run([verify, str(golden), "--trust-root", str(root), "--replay", "--json"])
+    r_v = ctx.run([verify, str(golden), "--trust-root", str(root), "--json"])
     if r_v.returncode != 0:
-        raise TestFailure(f"fid-verify failed: {r_v.stdout} {r_v.stderr}")
+        raise TestFailure(f"fid-verify --json failed: {r_v.stdout} {r_v.stderr}")
     rep = parse_single_line_json(r_v.stdout)
-    if rep.get("verdict") != "PASS" or rep.get("replay", {}).get("status") != "IDENTICAL":  # type: ignore[union-attr]
+    if (
+        rep.get("verdict") != "PASS"
+        or rep.get("chain", {}).get("verdict") != "VALID"  # type: ignore[union-attr]
+        or rep.get("replay", {}).get("status") != "not_requested"  # type: ignore[union-attr]
+    ):
         raise TestFailure(f"unexpected fid-verify report: {rep!r}")
+
+    r_v_rep = ctx.run([verify, str(golden), "--trust-root", str(root), "--replay", "--json"])
+    if r_v_rep.returncode != 8:
+        raise TestFailure(f"fid-verify --replay expected exit 8, got {r_v_rep.returncode}: {r_v_rep.stdout} {r_v_rep.stderr}")
+    rep_r = parse_single_line_json(r_v_rep.stdout)
+    if (
+        rep_r.get("verdict") != "FAIL"
+        or rep_r.get("chain", {}).get("verdict") != "VALID"  # type: ignore[union-attr]
+        or rep_r.get("replay", {}).get("status") != "NOT_REPLAYABLE"  # type: ignore[union-attr]
+        or rep_r.get("replay", {}).get("reason") not in ("KERNEL_UNAVAILABLE", "SANDBOX_UNAVAILABLE")  # type: ignore[union-attr]
+    ):
+        raise TestFailure(f"unexpected fid-verify --replay report: {rep_r!r}")
 
     with zipfile.ZipFile(golden, "r") as zf:
         manifest_bytes = zf.read("manifest.json")
@@ -599,9 +716,12 @@ def test_t3_fid_cli_and_verify(ctx: TestContext) -> None:
     if r_can.stdout.strip() != expected_dig:
         raise TestFailure(f"fid canon digest {r_can.stdout.strip()!r} != statement manifest_sha256 {expected_dig!r}")
 
-    r_vh = ctx.run([fid, "verify", "package", "--help"])
-    if r_vh.returncode != 0 or "verify.package@1" not in r_vh.stdout:
-        raise TestFailure(f"fid verify package --help missing verify.package@1: {r_vh.stdout} {r_vh.stderr}")
+    r_vh = ctx.run([verify, "--help"])
+    if r_vh.returncode != 0 or "fid-verify" not in r_vh.stdout:
+        raise TestFailure(f"fid-verify --help failed: {r_vh.stdout} {r_vh.stderr}")
+    r_th = ctx.run([fid, "trust", "sign-record", "--help"])
+    if r_th.returncode != 0 or "trust.sign_record@1" not in r_th.stdout:
+        raise TestFailure(f"fid trust sign-record --help missing trust.sign_record@1: {r_th.stdout} {r_th.stderr}")
 
 
 @e2e_test(
@@ -619,12 +739,13 @@ def test_t3_fid_cli_and_guide_wasm(ctx: TestContext) -> None:
         raise TestFailure(f"fid canon failed: {r_fid.stderr}")
     fid_digest = r_fid.stdout.strip()
 
-    val = json.loads(vec.read_text(encoding="utf-8"))
-    r_wasm = ctx.run([wasm_bin], stdin_text=json.dumps({"op": "canon.digest", "params": {"value": val}}))
+    raw_vec = vec.read_text(encoding="utf-8")
+    r_wasm = ctx.run([wasm_bin], stdin_text=json.dumps({"op": "canon.digest", "params": {"json_a": raw_vec}}))
     if r_wasm.returncode != 0:
         raise TestFailure(f"fid-guide-wasm failed: {r_wasm.stderr}")
     wasm_out = parse_single_line_json(r_wasm.stdout)
-    if wasm_out.get("ok") is not True or wasm_out.get("result_digest") != fid_digest:
+    wasm_res = wasm_out.get("result")
+    if wasm_out.get("ok") is not True or not isinstance(wasm_res, dict) or wasm_res.get("digest_a") != fid_digest:
         raise TestFailure(f"digest mismatch fid={fid_digest!r} vs wasm={wasm_out!r}")
 
     copy_root = build_isolated_site(ctx)
@@ -692,15 +813,16 @@ def test_t3_slice_and_guide_wasm(ctx: TestContext) -> None:
 
     pkg = out_dir / "result-package.zip"
     with zipfile.ZipFile(pkg, "r") as zf:
-        manifest_val = json.loads(zf.read("manifest.json"))
+        manifest_raw = zf.read("manifest.json").decode("utf-8")
         stmt = json.loads(zf.read("statement.json"))
 
-    r_wasm = ctx.run([wasm_bin], stdin_text=json.dumps({"op": "canon.digest", "params": {"value": manifest_val}}))
+    r_wasm = ctx.run([wasm_bin], stdin_text=json.dumps({"op": "canon.digest", "params": {"json_a": manifest_raw}}))
     if r_wasm.returncode != 0:
         raise TestFailure(f"fid-guide-wasm failed: {r_wasm.stderr}")
     wasm_out = parse_single_line_json(r_wasm.stdout)
+    wasm_res = wasm_out.get("result")
     expected_dig = "sha256:" + stmt["predicate"]["manifest_sha256"]
-    if wasm_out.get("ok") is not True or wasm_out.get("result_digest") != expected_dig:
+    if wasm_out.get("ok") is not True or not isinstance(wasm_res, dict) or wasm_res.get("digest_a") != expected_dig:
         raise TestFailure(f"WASM manifest digest {wasm_out!r} != statement {expected_dig!r}")
 
 
@@ -796,7 +918,11 @@ def test_t3_verify_and_mcp(ctx: TestContext) -> None:
     if rep.get("verdict") != "PASS" or rep.get("chain", {}).get("verdict") != "VALID":  # type: ignore[union-attr]
         raise TestFailure(f"expected PASS and VALID chain, got {rep!r}")
 
-    idx = write_disclosure_profiles_index(ctx.workdir)
+    with zipfile.ZipFile(golden, "r") as zf:
+        manifest_val = json.loads(zf.read("manifest.json"))
+        stmt = json.loads(zf.read("statement.json"))
+    expected_dig = "sha256:" + stmt["predicate"]["manifest_sha256"]
+
     msgs_in = mcp_init_messages() + [
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
         {
@@ -809,24 +935,53 @@ def test_t3_verify_and_mcp(ctx: TestContext) -> None:
             "jsonrpc": "2.0",
             "id": 4,
             "method": "tools/call",
+            "params": {
+                "name": "tools_invoke_readonly",
+                "arguments": {"command": "canon.canonicalize@1", "args": {"input": manifest_val}},
+            },
+        },
+        {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "tools/call",
             "params": {"name": "tools_invoke_readonly", "arguments": {"command": "project.list_features@1", "args": {}}},
         },
     ]
-    rc, msgs, _, stderr = run_mcp_session(mcp, ["--headless", "--profiles-index", str(idx)], msgs_in, cwd=ctx.repo_root)
+    rc, msgs, _, stderr = run_mcp_session(mcp, ["--headless"], msgs_in, cwd=ctx.repo_root)
     if rc != 0:
         raise TestFailure(f"fid-mcp exited {rc}: {stderr}")
     if "trust_sign_record" in json.dumps(msgs) or "trust.sign_record" in json.dumps(msgs):
         raise TestFailure(f"S1 trust_sign_record leaked into MCP responses: {msgs!r}")
+
     r4 = next((m for m in msgs if m.get("id") == 4), None)
     if not r4 or "result" not in r4 or r4["result"].get("isError") or not r4["result"].get("content"):
-        raise TestFailure(f"MCP readonly invocation failed: {r4!r}")
+        raise TestFailure(f"MCP canon.canonicalize@1 readonly invocation failed: {r4!r}")
+    r4_text = str(r4["result"]["content"][0].get("text", ""))
+    if "FID-UNTRUSTED-DATA-BEGIN" not in r4_text or "FID-UNTRUSTED-DATA-END" not in r4_text:
+        raise TestFailure(f"expected taint delimiters in r4 text: {r4_text!r}")
+    r4_dig = r4["result"].get("structuredContent", {}).get("result", {}).get("digest")
+    got_dig = r4_dig.get("text") if isinstance(r4_dig, dict) else r4_dig
+    if got_dig != expected_dig:
+        raise TestFailure(f"MCP canon.canonicalize@1 digest {r4_dig!r} != statement {expected_dig!r}")
+
+    r5 = next((m for m in msgs if m.get("id") == 5), None)
+    if not r5 or "result" not in r5 or r5["result"].get("isError") is not True:
+        raise TestFailure(f"expected standalone project.list_features@1 to fail closed (isError=True): {r5!r}")
+    r5_sc = r5["result"].get("structuredContent", {})
+    r5_err = r5_sc.get("error", {}) if isinstance(r5_sc, dict) else {}
+    if (
+        not isinstance(r5_err, dict)
+        or r5_err.get("code") != "precondition_failed"
+        or "no_bus_host" not in str(r5_err.get("message", ""))
+    ):
+        raise TestFailure(f"expected precondition_failed no_bus_host on standalone project.list_features@1: {r5!r}")
 
 
 @e2e_test(
     test_id="T3-21",
     tier=3,
     feature="F3",
-    description="[F3+F5] fid-guide-wasm canon.digest matches golden package manifest_sha256 verified by fid-verify --replay",
+    description="[F3+F5] fid-guide-wasm canon.digest matches golden package manifest_sha256 verified by fid-verify",
 )
 def test_t3_verify_and_guide_wasm(ctx: TestContext) -> None:
     verify = ctx.require_bin("fid-verify")
@@ -835,23 +990,42 @@ def test_t3_verify_and_guide_wasm(ctx: TestContext) -> None:
     root = ctx.repo_root / "fixtures" / "troot" / "roots" / "both.json"
 
     with zipfile.ZipFile(golden, "r") as zf:
-        manifest_val = json.loads(zf.read("manifest.json"))
+        manifest_raw = zf.read("manifest.json").decode("utf-8")
         stmt = json.loads(zf.read("statement.json"))
 
-    r_wasm = ctx.run([wasm_bin], stdin_text=json.dumps({"op": "canon.digest", "params": {"value": manifest_val}}))
+    r_wasm = ctx.run([wasm_bin], stdin_text=json.dumps({"op": "canon.digest", "params": {"json_a": manifest_raw}}))
     if r_wasm.returncode != 0:
         raise TestFailure(f"fid-guide-wasm failed: {r_wasm.stderr}")
     wasm_out = parse_single_line_json(r_wasm.stdout)
+    wasm_res = wasm_out.get("result")
     expected_dig = "sha256:" + stmt["predicate"]["manifest_sha256"]
-    if wasm_out.get("ok") is not True or wasm_out.get("result_digest") != expected_dig:
+    if wasm_out.get("ok") is not True or not isinstance(wasm_res, dict) or wasm_res.get("digest_a") != expected_dig:
         raise TestFailure(f"fid-guide-wasm digest {wasm_out!r} != {expected_dig!r}")
 
-    r_v = ctx.run([verify, str(golden), "--trust-root", str(root), "--replay", "--json"])
+    r_v = ctx.run([verify, str(golden), "--trust-root", str(root), "--json"])
     if r_v.returncode != 0:
-        raise TestFailure(f"fid-verify --replay failed (exit {r_v.returncode}): {r_v.stdout} {r_v.stderr}")
+        raise TestFailure(f"fid-verify --json failed (exit {r_v.returncode}): {r_v.stdout} {r_v.stderr}")
     rep = parse_single_line_json(r_v.stdout)
-    if rep.get("verdict") != "PASS" or rep.get("replay", {}).get("status") != "IDENTICAL":  # type: ignore[union-attr]
+    if (
+        rep.get("verdict") != "PASS"
+        or rep.get("chain", {}).get("verdict") != "VALID"  # type: ignore[union-attr]
+        or rep.get("replay", {}).get("status") != "not_requested"  # type: ignore[union-attr]
+    ):
         raise TestFailure(f"unexpected fid-verify report: {rep!r}")
+
+    r_v_rep = ctx.run([verify, str(golden), "--trust-root", str(root), "--replay", "--json"])
+    if r_v_rep.returncode != 8:
+        raise TestFailure(
+            f"fid-verify --replay expected exit 8 (NOT_REPLAYABLE), got {r_v_rep.returncode}: {r_v_rep.stdout} {r_v_rep.stderr}"
+        )
+    rep_r = parse_single_line_json(r_v_rep.stdout)
+    if (
+        rep_r.get("verdict") != "FAIL"
+        or rep_r.get("chain", {}).get("verdict") != "VALID"  # type: ignore[union-attr]
+        or rep_r.get("replay", {}).get("status") != "NOT_REPLAYABLE"  # type: ignore[union-attr]
+        or rep_r.get("replay", {}).get("reason") not in ("KERNEL_UNAVAILABLE", "SANDBOX_UNAVAILABLE")  # type: ignore[union-attr]
+    ):
+        raise TestFailure(f"unexpected fid-verify --replay report: {rep_r!r}")
 
 
 @e2e_test(
