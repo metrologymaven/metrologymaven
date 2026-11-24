@@ -329,7 +329,8 @@ impl UtcInstant {
         };
         let (y, mo, d) = (num(0, 4)?, num(5, 7)?, num(8, 10)?);
         let (h, mi, sec) = (num(11, 13)?, num(14, 16)?, num(17, 19)?);
-        if y < 1 || !(1..=12).contains(&mo) || d < 1 || d > days_in_month(y, mo) || h > 23 || mi > 59 || sec > 59 {
+        if y < 1 || !(1..=12).contains(&mo) || !(1..=days_in_month(y, mo)).contains(&d) || h > 23 || mi > 59 || sec > 59
+        {
             return None;
         }
         UtcInstant::from_unix_seconds(days_from_civil(y, mo, d) * SECONDS_PER_DAY + h * 3600 + mi * 60 + sec)
