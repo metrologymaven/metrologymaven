@@ -24,7 +24,7 @@ fn expected_digest(name: &str) -> String {
 }
 
 fn code_of(input: &[u8]) -> (&'static str, String) {
-    let e = validate(input).err().expect("must be rejected");
+    let e = validate(input).expect_err("must be rejected");
     (e.code(), e.pointer)
 }
 
