@@ -17,7 +17,7 @@ determinism: D0
 cli: [fid fit ls-point, fid fit ls-line2, fid fit ls-line3, fid fit ls-plane]
 mcp: [fit_ls_point, fit_ls_line2, fit_ls_line3, fit_ls_plane]
 journal: [fit.ls_point@1, fit.ls_line2@1, fit.ls_line3@1, fit.ls_plane@1]
-updated: 2026-11-16
+updated: 2026-11-24
 ---
 
 # KRN.LSQ.LIN: Least-squares point, line and plane fits
@@ -73,7 +73,7 @@ TraCIM Gaussian line and plane sets and NIST ATS datasets, frozen in the RDL by 
 ## Open questions
 
 - None beyond the parent's R1/W2 convention.
-- **Partial build (`fid-fit` module `ls_lin`, not yet marked built).** Done: the four algorithms with fixed-direction and projection-plane variants, residuals, statistics and diagnostics, spec cards (`crates/fid-fit/cards/`), command data rows, and AC-3, AC-4 and AC-6 in `crates/fid-fit/tests/ls_lin.rs` against `fixtures/fit/lin-synth-v1`. Remaining: (1) the registry, CLI and MCP layer of `fit.ls_*@1` (W2 commit with R1 dry run, one journaled event per commit, REQ-008, AC-5), which needs `CORE.REG` to read the kernel's fit data rows (see `KRN.LSQ.TRAIT` open questions); (2) AC-1 and AC-2, which need the TraCIM and NIST ATS sets in the RDL (`UNC.RDL`, terms open in D-038); (3) switching from the interim in-crate cyclic Jacobi to `fid_num::la::sym_eig` once `KRN.NUM.LA.EIG` is built.
+- **Partial build (`fid-fit` module `ls_lin`, not yet marked built).** Done: the four algorithms with fixed-direction and projection-plane variants, residuals, statistics and diagnostics, spec cards (`crates/fid-fit/cards/`), command data rows, and AC-3, AC-4 and AC-6 in `crates/fid-fit/tests/ls_lin.rs` against `fixtures/fit/lin-synth-v1`. The eigen step now uses `fid_num::la::sym_eig` (`KRN.NUM.LA.EIG`, built) as the Design says; the interim in-crate cyclic Jacobi is gone, and the bit-exact model in `fixtures/fit/make_lin_fixtures.py` imports the reviewed `KRN.NUM.LA.EIG` model. Open ACs: AC-1 and AC-2 (they need the TraCIM and NIST ATS sets in the RDL; `UNC.RDL` is unbuilt and their terms are open under D-038), and AC-5 with REQ-008 (the registry, CLI and MCP layer of `fit.ls_*@1`: W2 commit with R1 dry run, one journaled event per commit). AC-5 needs a `CORE.REG` leaf that turns the kernel's fit data rows into registry declarations; `CORE.REG.MAN` records that no leaf does yet (see also `KRN.LSQ.TRAIT` open questions).
 - **Choices made at build time (confirm in review).** Algorithm IDs, commands, CLI and MCP names use the contract's primitive slugs (`fit.line2.ls@1.0.0`, `fit.ls_line2@1`, `fid fit ls-line2`, `fit_ls_line2`, and `line3` likewise; this leaf said `line2d` / `line3d` before it was built) because `FitResult::assemble` requires the slug. REQ-004's tolerance is the ratio rule under Design (`thresholds.eig_ratio_max`, added to the contract's `Thresholds` and to every fit command row). Per-point weights are refused (`InvalidParams`), not implemented.
 - **Note for `CORE.REG` (wire form of results).** Rows declare value types, but the canonical result bytes carry every value as a JSON string: `number` as 16 lowercase hex digits of the IEEE-754 bits, `integer` as decimal digits, arrays of those, `points` as arrays of 3-number arrays; nested objects follow the dotted field names; `feature.kind` and a `null` certificate are extra. Documented in `fid-fit` `contract::rows` and checked against real results in `crates/fid-fit/tests/ls_lin.rs`.
 

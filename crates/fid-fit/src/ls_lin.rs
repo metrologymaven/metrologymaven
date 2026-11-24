@@ -22,7 +22,12 @@
 //!    only the count `n >= 1` is checked (`TooFewPoints { need: 1 }`): the fit is then
 //!    defined for any non-empty point set.
 //! 3. **Scatter.** `S[j][k] = red::dot(col_j, col_k)` for `j <= k` over the coordinate columns
-//!    of `q` in point order (`3 x 3`; `2 x 2` for line2). Eigenpairs by [`sym_eig`].
+//!    of `q` in point order (`3 x 3`; `2 x 2` for line2), mirrored to the lower triangle.
+//!    Eigenpairs by `fid_num::la::sym_eig` (spec node `KRN.NUM.LA.EIG`: cyclic Jacobi with
+//!    its pinned power-of-two scaling, thresholds, sort and sign) with `rel_tol = 0` (its
+//!    rank is not used): eigenvalues ascending in total order, eigenvector `k` the matching
+//!    column. Its `NoConvergence` is [`FitError::NotConverged`] (reason `JacobiSweeps`,
+//!    iterations the sweep limit); any other error of it is [`FitError::Num`].
 //! 4. **Direction and conditioning.** line3: `d` = eigenvector of the largest eigenvalue,
 //!    relevant pair `(la, lb) = (l_2, l_1)`; plane: `n` = eigenvector of the smallest,
 //!    `(la, lb) = (l_1, l_0)`; line2: `d` = eigenvector of the larger, `(la, lb) = (l_1, l_0)`.
@@ -80,17 +85,14 @@
 // `fixtures/fit/make_lin_fixtures.py`) term by term.
 #![allow(clippy::needless_range_loop)]
 
-mod eig;
-
-pub use eig::{sym_eig, SymEig, EIG_MAX_SWEEPS};
-
+use fid_num::la::{sym_eig, Mat};
 use fid_num::{f, red, NumError};
 use fid_types::Determinism;
 
 use crate::contract::{
     algorithm_id, check_points, command_row, normalize_direction, normalize_direction2, unit_direction, AlgorithmId,
     Centred, CommandRow, Constraint, Fit, FitDiagnostics, FitError, FitParams, FitResult, FittedFeature, Method,
-    PointsView, Primitive, StopReason, Weights, V2, V3,
+    NotConvergedReason, PointsView, Primitive, StopReason, Weights, V2, V3,
 };
 
 /// Version of all four algorithms.
@@ -206,6 +208,39 @@ fn scatter<const K: usize>(cols: &[Vec<f64>; K]) -> Result<[[f64; K]; K], FitErr
     Ok(s)
 }
 
+/// Eigenpairs of a `K x K` scatter matrix (rule 3): `(values, vectors)` with `values`
+/// ascending and `vectors[k]` the eigenvector of `values[k]`.
+fn eig<const K: usize>(s: &[[f64; K]; K]) -> Result<([f64; K], [[f64; K]; K]), FitError> {
+    let mut data = alloc(K * K)?;
+    for row in s {
+        data.extend_from_slice(row);
+    }
+    let e = match sym_eig(&Mat::new(K, K, data)?, 0.0) {
+        Ok(e) => e,
+        Err(NumError::NoConvergence { sweeps, .. }) => {
+            return Err(FitError::NotConverged {
+                iterations: sweeps,
+                reason: NotConvergedReason::JacobiSweeps,
+                last: None,
+            })
+        }
+        Err(e) => return Err(FitError::Num(e)),
+    };
+    let (vals, vecs) = (e.values(), e.vectors().data());
+    if vals.len() != K || vecs.len() != K * K {
+        return Err(FitError::Num(NumError::Domain { op: OP, detail: "eig_shape" }));
+    }
+    let mut values = [0.0; K];
+    let mut vectors = [[0.0; K]; K];
+    for k in 0..K {
+        values[k] = vals[k];
+        for r in 0..K {
+            vectors[k][r] = vecs[r * K + k];
+        }
+    }
+    Ok((values, vectors))
+}
+
 /// Rule 4: the eigenvalue ratio `total_max(0, lb) / la` of the pair `(la, lb)`, `la >= lb`,
 /// accepted when at most `max`.
 fn eig_ratio(la: f64, lb: f64, max: f64) -> Result<f64, FitError> {
@@ -300,9 +335,9 @@ impl Fit for Line3Ls {
         let (d, cond) = match fixed {
             Some(f) => (normalize_direction(f)?, 0.0),
             None => {
-                let e = sym_eig(&scatter(&columns::<3>(&c)?)?)?;
-                let cond = eig_ratio(e.values[2], e.values[1], params.thresholds.eig_ratio_max)?;
-                (normalize_direction(e.vectors[2])?, cond)
+                let (vals, vecs) = eig(&scatter(&columns::<3>(&c)?)?)?;
+                let cond = eig_ratio(vals[2], vals[1], params.thresholds.eig_ratio_max)?;
+                (normalize_direction(vecs[2])?, cond)
             }
         };
         let map = *c.map();
@@ -328,9 +363,9 @@ impl Fit for PlaneLs {
         let (n, cond) = match fixed {
             Some(f) => (normalize_direction(f)?, 0.0),
             None => {
-                let e = sym_eig(&scatter(&columns::<3>(&c)?)?)?;
-                let cond = eig_ratio(e.values[1], e.values[0], params.thresholds.eig_ratio_max)?;
-                (normalize_direction(e.vectors[0])?, cond)
+                let (vals, vecs) = eig(&scatter(&columns::<3>(&c)?)?)?;
+                let cond = eig_ratio(vals[1], vals[0], params.thresholds.eig_ratio_max)?;
+                (normalize_direction(vecs[0])?, cond)
             }
         };
         let map = *c.map();
@@ -419,9 +454,9 @@ impl Fit for Line2Ls {
         let (d, cond): (V2, f64) = match fixed2 {
             Some(d) => (d, 0.0),
             None => {
-                let e = sym_eig(&scatter(&columns::<2>(&c)?)?)?;
-                let cond = eig_ratio(e.values[1], e.values[0], params.thresholds.eig_ratio_max)?;
-                (normalize_direction2(e.vectors[1])?, cond)
+                let (vals, vecs) = eig(&scatter(&columns::<2>(&c)?)?)?;
+                let cond = eig_ratio(vals[1], vals[0], params.thresholds.eig_ratio_max)?;
+                (normalize_direction2(vecs[1])?, cond)
             }
         };
         let map = *c.map();
