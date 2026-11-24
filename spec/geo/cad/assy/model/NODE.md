@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-geo-cad]
+built_pr: 581
 satisfies: [REQ-GEO.CAD.ASSY-002, REQ-GEO.CAD.ASSY-005]
 covers: []
 depends_on: [GEO.CAD.TOPO.MODEL, GEO.FRAME.TREE]
