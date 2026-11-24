@@ -295,6 +295,7 @@ python fixtures/unc/model/subst/make_fixtures.py --check
 python fixtures/unc/qif/make_fixtures.py --check
 python fixtures/unc/stmt/make_fixtures.py --check
 python fixtures/unc/valid/make_fixtures.py --check
+python fixtures/ux/icons/class/glyph_oracle.py --check
 python fixtures/ux/icons/grid/make_fixtures.py --check
 python fixtures/ux/report/page/make_fixtures.py --check
 python fixtures/ux/research/plan/make_fixtures.py --check

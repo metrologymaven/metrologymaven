@@ -412,6 +412,18 @@ fn parse_svg_xml(src: &str) -> Result<Vec<XmlElem>, XmlFailure> {
     Ok(elems)
 }
 
+/// One parsed element of an SVG document: name, attributes in document order and parent index.
+pub(crate) type SvgElement = (String, Vec<(String, String)>, Option<usize>);
+
+/// The elements of an SVG document in document order (parents before children), for the glyph
+/// rasteriser; `Err` names the XML defect. Call [`lint_svg_str`] first for the profile rules.
+pub(crate) fn svg_elements(src: &str) -> Result<Vec<SvgElement>, String> {
+    match parse_svg_xml(src) {
+        Ok(elems) => Ok(elems.into_iter().map(|e| (e.name, e.attrs, e.parent)).collect()),
+        Err(XmlFailure::ExternalRef(m) | XmlFailure::Element(_, m) | XmlFailure::Attr(m)) => Err(m),
+    }
+}
+
 fn contains_external_scheme(val: &str) -> bool {
     let low = val.to_ascii_lowercase();
     low.contains("url(")
@@ -488,7 +500,7 @@ fn parse_viewbox(s: &str) -> Option<u32> {
     }
 }
 
-fn parse_points(s: &str) -> Result<Vec<(f64, f64)>, String> {
+pub(crate) fn parse_points(s: &str) -> Result<Vec<(f64, f64)>, String> {
     let mut nums = Vec::new();
     let mut cur = PathCursor::new(s);
     cur.skip_ws();
@@ -514,25 +526,26 @@ fn parse_points(s: &str) -> Result<Vec<(f64, f64)>, String> {
     Ok(out)
 }
 
-struct PathCursor<'a> {
+/// A cursor over SVG number lists (`d`, `points`), shared with the glyph rasteriser.
+pub(crate) struct PathCursor<'a> {
     bytes: &'a [u8],
-    pos: usize,
+    pub(crate) pos: usize,
 }
 
 impl<'a> PathCursor<'a> {
-    fn new(s: &'a str) -> Self {
+    pub(crate) fn new(s: &'a str) -> Self {
         Self { bytes: s.as_bytes(), pos: 0 }
     }
 
-    fn is_eof(&self) -> bool {
+    pub(crate) fn is_eof(&self) -> bool {
         self.pos >= self.bytes.len()
     }
 
-    fn peek(&self) -> Option<u8> {
+    pub(crate) fn peek(&self) -> Option<u8> {
         self.bytes.get(self.pos).copied()
     }
 
-    fn skip_ws(&mut self) {
+    pub(crate) fn skip_ws(&mut self) {
         while let Some(b) = self.peek() {
             if matches!(b, b' ' | b'\t' | b'\n' | b'\r') {
                 self.pos += 1;
@@ -542,7 +555,7 @@ impl<'a> PathCursor<'a> {
         }
     }
 
-    fn skip_comma_ws(&mut self) {
+    pub(crate) fn skip_comma_ws(&mut self) {
         self.skip_ws();
         if self.peek() == Some(b',') {
             self.pos += 1;
@@ -550,11 +563,11 @@ impl<'a> PathCursor<'a> {
         }
     }
 
-    fn starts_number(&self) -> bool {
+    pub(crate) fn starts_number(&self) -> bool {
         matches!(self.peek(), Some(b'+' | b'-' | b'.' | b'0'..=b'9'))
     }
 
-    fn read_flag(&mut self) -> Option<u8> {
+    pub(crate) fn read_flag(&mut self) -> Option<u8> {
         self.skip_comma_ws();
         match self.peek() {
             Some(b'0') => {
@@ -569,7 +582,7 @@ impl<'a> PathCursor<'a> {
         }
     }
 
-    fn read_number(&mut self) -> Option<f64> {
+    pub(crate) fn read_number(&mut self) -> Option<f64> {
         self.skip_comma_ws();
         let start = self.pos;
         if matches!(self.peek(), Some(b'+' | b'-')) {

@@ -1,0 +1,212 @@
+{
+  "format": "icon-index@1",
+  "icons": [
+    {
+      "a11y_en": "Side-effect class R0: read",
+      "a11y_id": "icon.class.r0",
+      "group": "class",
+      "labelless": true,
+      "name": "class.r0",
+      "provenance": "icons/svg/class.r0.16.svg.prov.json",
+      "role": "Read only; exposed on MCP."
+    },
+    {
+      "a11y_en": "Side-effect class R1: compute",
+      "a11y_id": "icon.class.r1",
+      "group": "class",
+      "labelless": true,
+      "name": "class.r1",
+      "provenance": "icons/svg/class.r1.16.svg.prov.json",
+      "role": "Pure computation with a scratch result."
+    },
+    {
+      "a11y_en": "Side-effect class W1: draft edit",
+      "a11y_id": "icon.class.w1",
+      "group": "class",
+      "labelless": true,
+      "name": "class.w1",
+      "provenance": "icons/svg/class.w1.16.svg.prov.json",
+      "role": "Mutates a draft or an agent branch."
+    },
+    {
+      "a11y_en": "Side-effect class W2: document edit",
+      "a11y_id": "icon.class.w2",
+      "group": "class",
+      "labelless": true,
+      "name": "class.w2",
+      "provenance": "icons/svg/class.w2.16.svg.prov.json",
+      "role": "Mutates the working document (journaled)."
+    },
+    {
+      "a11y_en": "Side-effect class W3: record release",
+      "a11y_id": "icon.class.w3",
+      "group": "class",
+      "labelless": true,
+      "name": "class.w3",
+      "provenance": "icons/svg/class.w3.16.svg.prov.json",
+      "role": "Mutates a controlled record; human only."
+    },
+    {
+      "a11y_en": "Side-effect class X1: egress",
+      "a11y_id": "icon.class.x1",
+      "group": "class",
+      "labelless": true,
+      "name": "class.x1",
+      "provenance": "icons/svg/class.x1.16.svg.prov.json",
+      "role": "Data leaves the machine; request only."
+    },
+    {
+      "a11y_en": "Side-effect class I1: simulator I/O",
+      "a11y_id": "icon.class.i1",
+      "group": "class",
+      "labelless": true,
+      "name": "class.i1",
+      "provenance": "icons/svg/class.i1.16.svg.prov.json",
+      "role": "Simulator input and output."
+    },
+    {
+      "a11y_en": "Side-effect class D1: device I/O",
+      "a11y_id": "icon.class.d1",
+      "group": "class",
+      "labelless": true,
+      "name": "class.d1",
+      "provenance": "icons/svg/class.d1.16.svg.prov.json",
+      "role": "Device energized, no motion; request only."
+    },
+    {
+      "a11y_en": "Side-effect class M1: motion",
+      "a11y_id": "icon.class.m1",
+      "group": "class",
+      "labelless": true,
+      "name": "class.m1",
+      "provenance": "icons/svg/class.m1.16.svg.prov.json",
+      "role": "Physical motion; never on MCP."
+    },
+    {
+      "a11y_en": "Side-effect class S1: signing",
+      "a11y_id": "icon.class.s1",
+      "group": "class",
+      "labelless": true,
+      "name": "class.s1",
+      "provenance": "icons/svg/class.s1.16.svg.prov.json",
+      "role": "Signing; human only, out of band."
+    },
+    {
+      "a11y_en": "Side-effect class A0: admin",
+      "a11y_id": "icon.class.a0",
+      "group": "class",
+      "labelless": true,
+      "name": "class.a0",
+      "provenance": "icons/svg/class.a0.16.svg.prov.json",
+      "role": "Admin and safety configuration; never on MCP."
+    },
+    {
+      "a11y_en": "Conforms",
+      "a11y_id": "icon.state.conforms",
+      "group": "state",
+      "labelless": true,
+      "name": "state.conforms",
+      "provenance": "icons/svg/state.conforms.16.svg.prov.json",
+      "role": "Display state: the result conforms."
+    },
+    {
+      "a11y_en": "Does not conform",
+      "a11y_id": "icon.state.nonconforms",
+      "group": "state",
+      "labelless": true,
+      "name": "state.nonconforms",
+      "provenance": "icons/svg/state.nonconforms.16.svg.prov.json",
+      "role": "Display state: the result does not conform."
+    },
+    {
+      "a11y_en": "Indeterminate",
+      "a11y_id": "icon.state.indeterminate",
+      "group": "state",
+      "labelless": true,
+      "name": "state.indeterminate",
+      "provenance": "icons/svg/state.indeterminate.16.svg.prov.json",
+      "role": "Display state: uncertainty straddles a limit."
+    },
+    {
+      "a11y_en": "Not decidable",
+      "a11y_id": "icon.state.not-decidable",
+      "group": "state",
+      "labelless": true,
+      "name": "state.not-decidable",
+      "provenance": "icons/svg/state.not-decidable.16.svg.prov.json",
+      "role": "Display state: the rule cannot decide."
+    },
+    {
+      "a11y_en": "Not evaluated",
+      "a11y_id": "icon.state.not-evaluated",
+      "group": "state",
+      "labelless": true,
+      "name": "state.not-evaluated",
+      "provenance": "icons/svg/state.not-evaluated.16.svg.prov.json",
+      "role": "Display state: not evaluated yet."
+    },
+    {
+      "a11y_en": "Stale",
+      "a11y_id": "icon.state.stale",
+      "group": "state",
+      "labelless": true,
+      "name": "state.stale",
+      "provenance": "icons/svg/state.stale.16.svg.prov.json",
+      "role": "Display state: inputs changed since evaluation."
+    },
+    {
+      "a11y_en": "Computed value",
+      "a11y_id": "icon.prov.computed",
+      "group": "prov",
+      "labelless": true,
+      "name": "prov.computed",
+      "provenance": "icons/svg/prov.computed.16.svg.prov.json",
+      "role": "Provenance badge: computed by the software."
+    },
+    {
+      "a11y_en": "Measured value",
+      "a11y_id": "icon.prov.measured",
+      "group": "prov",
+      "labelless": true,
+      "name": "prov.measured",
+      "provenance": "icons/svg/prov.measured.16.svg.prov.json",
+      "role": "Provenance badge: measured on a device."
+    },
+    {
+      "a11y_en": "Entered value",
+      "a11y_id": "icon.prov.entered",
+      "group": "prov",
+      "labelless": true,
+      "name": "prov.entered",
+      "provenance": "icons/svg/prov.entered.16.svg.prov.json",
+      "role": "Provenance badge: typed in by a person."
+    },
+    {
+      "a11y_en": "Reported value",
+      "a11y_id": "icon.prov.reported",
+      "group": "prov",
+      "labelless": true,
+      "name": "prov.reported",
+      "provenance": "icons/svg/prov.reported.16.svg.prov.json",
+      "role": "Provenance badge: taken from a report."
+    },
+    {
+      "a11y_en": "Suggested value",
+      "a11y_id": "icon.prov.suggested",
+      "group": "prov",
+      "labelless": true,
+      "name": "prov.suggested",
+      "provenance": "icons/svg/prov.suggested.16.svg.prov.json",
+      "role": "Provenance badge: suggested, not adopted."
+    },
+    {
+      "a11y_en": "Out of tolerance",
+      "a11y_id": "icon.pattern.oot-stripe",
+      "group": "pattern",
+      "labelless": true,
+      "name": "pattern.oot-stripe",
+      "provenance": "icons/svg/pattern.oot-stripe.16.svg.prov.json",
+      "role": "Stripe tile for out-of-tolerance regions; repeats every 16 or 24 px."
+    }
+  ]
+}

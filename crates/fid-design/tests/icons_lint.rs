@@ -215,13 +215,14 @@ fn shipped_style_guide_and_examples() {
         }
     }
 
-    // Shipped design/icons/ holds no SVG yet (STYLE.md is not an icon): an empty root is not a
-    // pass but an `ICON-NO-SVG` finding with exit 2, since nothing was checked.
+    // Shipped design/icons/ holds the UX.ICONS.CLASS glyphs (16 and 24 px masters): all pass.
     let o = run(&["icons-lint", "--root", "design/icons", "--json"]);
-    assert_eq!(o.status.code(), Some(2), "{}", stdout(&o));
+    assert_eq!(o.status.code(), Some(0), "{}", stdout(&o));
     let report = json_out(&o);
-    assert_eq!(finding_keys(&report), ["ICON-NO-SVG ."]);
-    assert_eq!(get(&report, "ok"), &CValue::Bool(false));
+    assert_eq!(finding_keys(&report), Vec::<String>::new());
+    assert_eq!(get(&report, "ok"), &CValue::Bool(true));
+    let files = strs(get(&report, "files"));
+    assert!(files.contains(&"svg/class.r0.16.svg".to_string()) && files.contains(&"svg/class.r0.24.svg".to_string()));
 }
 
 /// A root with no SVG at all is a finding with exit 2, in JSON and text output alike; one SVG
