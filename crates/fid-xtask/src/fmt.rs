@@ -24,16 +24,17 @@ pub const USAGE: &str = "usage: cargo xtask fmt [--check] [--workspace <dir>] [-
 pub struct PackageFmtInfo {
     pub name: String,
     pub edition: String,
+    pub pkg_dir: PathBuf,
     pub files: Vec<PathBuf>,
     pub estimated_bytes: usize,
 }
 
 /// One planned formatting invocation guaranteed to stay within the batch byte budget
-/// (unless a single file path itself exceeds `max_batch_bytes`).
+/// (unless a single file path or `-p <pkg>` flag itself exceeds `max_batch_bytes`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FmtBatch {
     CargoFmt { packages: Vec<String>, estimated_bytes: usize },
-    DirectRustfmt { package: String, edition: String, files: Vec<PathBuf>, estimated_bytes: usize },
+    DirectRustfmt { package: String, edition: String, pkg_dir: PathBuf, files: Vec<PathBuf>, estimated_bytes: usize },
 }
 
 /// Runtime options for [`run`].
@@ -61,6 +62,12 @@ pub struct Summary {
 /// Estimates the command-line byte footprint of passing `path` (plus quoting/spacing) to `rustfmt`.
 pub fn estimate_file_arg_bytes(path: &Path) -> usize {
     path.to_string_lossy().len().saturating_add(3)
+}
+
+/// Estimates the command-line byte footprint of selecting `pkg` (`-p <pkg>`) plus its `.rs`
+/// file paths in a batched `cargo fmt` invocation.
+pub fn estimate_cargo_pkg_bytes(pkg: &PackageFmtInfo) -> usize {
+    pkg.estimated_bytes.saturating_add(pkg.name.len()).saturating_add(4)
 }
 
 /// Recursively collects `.rs` files under `dir`, skipping `target/`, hidden directories (`.git/`,
@@ -167,7 +174,13 @@ pub fn parse_workspace_metadata(json: &[u8]) -> Result<Vec<PackageFmtInfo>, Stri
             .ok_or_else(|| format!("manifest path has no parent directory: {}", pkg.manifest_path.display()))?;
         let files = collect_rs_files(pkg_dir)?;
         let estimated_bytes = files.iter().map(|p| estimate_file_arg_bytes(p)).fold(0usize, usize::saturating_add);
-        infos.push(PackageFmtInfo { name: pkg.name.clone(), edition: pkg.edition.clone(), files, estimated_bytes });
+        infos.push(PackageFmtInfo {
+            name: pkg.name.clone(),
+            edition: pkg.edition.clone(),
+            pkg_dir: pkg_dir.to_path_buf(),
+            files,
+            estimated_bytes,
+        });
     }
 
     infos.sort_by(|a, b| a.name.cmp(&b.name));
@@ -176,10 +189,11 @@ pub fn parse_workspace_metadata(json: &[u8]) -> Result<Vec<PackageFmtInfo>, Stri
 
 /// Packs workspace packages into bounded formatting batches.
 ///
-/// Packages whose estimated path footprint fits within `max_batch_bytes` are greedily packed into
-/// [`FmtBatch::CargoFmt`] batches. Any single package exceeding `max_batch_bytes` is split into
-/// [`FmtBatch::DirectRustfmt`] file chunks, each bounded by `max_batch_bytes` (with at least one
-/// file per chunk to guarantee forward progress if a single path exceeds the limit).
+/// Packages whose estimated `cargo fmt` footprint (including `-p <pkg>` and file paths) fits
+/// within `max_batch_bytes` are greedily packed into [`FmtBatch::CargoFmt`] batches. Any single
+/// package exceeding `max_batch_bytes` is split into [`FmtBatch::DirectRustfmt`] file chunks, each
+/// bounded by `max_batch_bytes` (with at least one file per chunk to guarantee forward progress if
+/// a single path exceeds the limit).
 pub fn plan_batches(packages: &[PackageFmtInfo], max_batch_bytes: usize) -> Vec<FmtBatch> {
     let limit = max_batch_bytes.max(1);
     let mut batches = Vec::new();
@@ -187,7 +201,8 @@ pub fn plan_batches(packages: &[PackageFmtInfo], max_batch_bytes: usize) -> Vec<
     let mut current_bytes: usize = 0;
 
     for pkg in packages {
-        if pkg.estimated_bytes > limit {
+        let cargo_bytes = estimate_cargo_pkg_bytes(pkg);
+        if cargo_bytes > limit {
             if !current_pkgs.is_empty() {
                 batches.push(FmtBatch::CargoFmt {
                     packages: std::mem::take(&mut current_pkgs),
@@ -196,10 +211,7 @@ pub fn plan_batches(packages: &[PackageFmtInfo], max_batch_bytes: usize) -> Vec<
                 current_bytes = 0;
             }
             if pkg.files.is_empty() {
-                batches.push(FmtBatch::CargoFmt {
-                    packages: vec![pkg.name.clone()],
-                    estimated_bytes: pkg.estimated_bytes,
-                });
+                batches.push(FmtBatch::CargoFmt { packages: vec![pkg.name.clone()], estimated_bytes: cargo_bytes });
                 continue;
             }
             let mut chunk_files: Vec<PathBuf> = Vec::new();
@@ -210,6 +222,7 @@ pub fn plan_batches(packages: &[PackageFmtInfo], max_batch_bytes: usize) -> Vec<
                     batches.push(FmtBatch::DirectRustfmt {
                         package: pkg.name.clone(),
                         edition: pkg.edition.clone(),
+                        pkg_dir: pkg.pkg_dir.clone(),
                         files: std::mem::take(&mut chunk_files),
                         estimated_bytes: chunk_bytes,
                     });
@@ -222,6 +235,7 @@ pub fn plan_batches(packages: &[PackageFmtInfo], max_batch_bytes: usize) -> Vec<
                 batches.push(FmtBatch::DirectRustfmt {
                     package: pkg.name.clone(),
                     edition: pkg.edition.clone(),
+                    pkg_dir: pkg.pkg_dir.clone(),
                     files: chunk_files,
                     estimated_bytes: chunk_bytes,
                 });
@@ -229,7 +243,7 @@ pub fn plan_batches(packages: &[PackageFmtInfo], max_batch_bytes: usize) -> Vec<
             continue;
         }
 
-        if !current_pkgs.is_empty() && current_bytes.saturating_add(pkg.estimated_bytes) > limit {
+        if !current_pkgs.is_empty() && current_bytes.saturating_add(cargo_bytes) > limit {
             batches.push(FmtBatch::CargoFmt {
                 packages: std::mem::take(&mut current_pkgs),
                 estimated_bytes: current_bytes,
@@ -237,7 +251,7 @@ pub fn plan_batches(packages: &[PackageFmtInfo], max_batch_bytes: usize) -> Vec<
             current_bytes = 0;
         }
         current_pkgs.push(pkg.name.clone());
-        current_bytes = current_bytes.saturating_add(pkg.estimated_bytes);
+        current_bytes = current_bytes.saturating_add(cargo_bytes);
     }
 
     if !current_pkgs.is_empty() {
@@ -247,14 +261,32 @@ pub fn plan_batches(packages: &[PackageFmtInfo], max_batch_bytes: usize) -> Vec<
     batches
 }
 
-fn find_rustfmt_config(workspace: &Path) -> Option<PathBuf> {
-    let primary = workspace.join("rustfmt.toml");
-    if primary.is_file() {
-        return Some(primary);
-    }
-    let hidden = workspace.join(".rustfmt.toml");
-    if hidden.is_file() {
-        return Some(hidden);
+/// Resolves the nearest `rustfmt.toml` or `.rustfmt.toml` walking upward from `start_dir` up to
+/// and including `workspace_root`, matching `rustfmt` / `cargo fmt` precedence.
+pub fn find_rustfmt_config_for_dir(start_dir: &Path, workspace_root: &Path) -> Option<PathBuf> {
+    let canon_root = fs::canonicalize(workspace_root).ok();
+    let mut cur = start_dir;
+    loop {
+        let primary = cur.join("rustfmt.toml");
+        if primary.is_file() {
+            return Some(primary);
+        }
+        let hidden = cur.join(".rustfmt.toml");
+        if hidden.is_file() {
+            return Some(hidden);
+        }
+        if cur == workspace_root {
+            break;
+        }
+        if let Some(root) = &canon_root {
+            if fs::canonicalize(cur).ok().as_ref() == Some(root) {
+                break;
+            }
+        }
+        let Some(parent) = cur.parent() else {
+            break;
+        };
+        cur = parent;
     }
     None
 }
@@ -269,7 +301,6 @@ pub fn run(opts: &Options) -> Result<Summary, String> {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
     let rustfmt = std::env::var("RUSTFMT").unwrap_or_else(|_| "rustfmt".into());
     let manifest_path = opts.workspace.join("Cargo.toml");
-    let config_path = find_rustfmt_config(&opts.workspace);
 
     let mut all_passed = true;
     for batch in &batches {
@@ -285,10 +316,10 @@ pub fn run(opts: &Options) -> Result<Summary, String> {
                 }
                 cmd.status().map_err(|e| format!("cannot run cargo fmt: {e}"))?
             }
-            FmtBatch::DirectRustfmt { edition, files, .. } => {
+            FmtBatch::DirectRustfmt { edition, pkg_dir, files, .. } => {
                 let mut cmd = Command::new(&rustfmt);
                 cmd.arg("--edition").arg(edition);
-                if let Some(cfg) = &config_path {
+                if let Some(cfg) = find_rustfmt_config_for_dir(pkg_dir, &opts.workspace) {
                     cmd.arg("--config-path").arg(cfg);
                 }
                 if opts.check {
