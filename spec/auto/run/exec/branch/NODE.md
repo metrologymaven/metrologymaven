@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-run]
+built_pr: 573
 satisfies: [REQ-AUTO.RUN.EXEC-001]
 covers: []
 depends_on: [AUTO.RUN.BIND, CORE.JRN.BR, CORE.PRJ.CONT]
