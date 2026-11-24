@@ -9,13 +9,13 @@ phase: P0
 size: XL
 owners: []
 claimed_by:
-satisfies: [REQ-FID-022]
+satisfies: [REQ-FID-022, REQ-FID-034]
 covers: []
 depends_on: [ECO]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-19
+updated: 2026-11-22
 ---
 
 # OUTR: Outreach
@@ -38,7 +38,7 @@ These are open-source deliverables that contributors can own. The **commercial**
 
 **In:**
 - Website: home, per-app pages, download, status and parity, roadmap, blog
-- Docs portal: user guide, CLI/MCP/Python references generated from the registry, contributor guide
+- Docs portal: user guide, CLI/MCP/Python references generated from the registry, contributor guide, executable WASM-interactive Metrology Field Guide (D-054)
 - Brand usage guidelines (after D-002)
 - Community channels and moderation rules
 - Launch plan: alpha → beta → 1.0 milestones and announcement channels
@@ -65,6 +65,7 @@ These are open-source deliverables that contributors can own. The **commercial**
 - **REQ-OUTR-007** Marketing material shall follow the vocabulary rules in CONSTITUTION C9 and the vocabulary lint: no incumbent trade dress or copied text, no unqualified "certified" or "compliant" claims.
 - **REQ-OUTR-008** The project shall run outreach programs for instrument vendors (driver SDK and conformance) and universities (teaching kits, datasets).
 - **REQ-OUTR-009** The project shall run a public GD&T interpretation community (rule pages, interpretation profiles, a case pipeline, a public reviewer role and public reference suites) that never publishes standards text, gives every interpretation rule a decision owner and a deadline, and routes questions about specific customer parts to paid support (D-045).
+- **REQ-OUTR-010** The project shall publish an executable, WASM-interactive Metrology Field Guide backed by implemented kernel crates and a transparent dimensional metrology field map (D-054).
 
 ## Interfaces
 
@@ -89,6 +90,7 @@ Alternatives considered:
 ## Open questions
 
 - **D-045 (accepted 2026-11-19):** added REQ-OUTR-009 and child `OUTR.GDTC`. It is a separate child, not part of `OUTR.COMM` or `OUTR.BENCH`, because its pages publish the review state of interpretation rules and its suites are run by third parties against any software, which are rules neither sibling has.
+- **D-054 (accepted 2026-11-22):** added REQ-OUTR-010 allocated to `OUTR.DOCS` (`OUTR.DOCS.GUIDE`) so the executable Metrology Field Guide shares the docs portal's offline bundle, runnable-example verification, and zero-third-party-origin gates.
 - An existing site project may already exist in `../../metrology maven/site` [unverified relationship]. Decide whether OUTR.SITE reuses it (carried into OUTR.SITE).
 - ECO's scope also lists "Docs site and book" and "Example corpora and benchmark datasets". This split assumes ECO owns the docs build, generators and datasets, and OUTR owns the portal, content and published results. Confirm when ECO is split.
 - REQ-OUTR-007 refers to "the vocabulary lint"; OUTR.BRAND owns the outreach claim lint. No node yet owns a product UI-string lint.
@@ -99,7 +101,7 @@ Alternatives considered:
 | ID | Title | Satisfies | Covers |
 |---|---|---|---|
 | [OUTR.SITE](site/NODE.md) | Project website | 001 003 | none |
-| [OUTR.DOCS](docs/NODE.md) | Docs portal and book | 002 003 | none |
+| [OUTR.DOCS](docs/NODE.md) | Docs portal and book | 002 003 010 | none |
 | [OUTR.BRAND](brand/NODE.md) | Brand, vocabulary and claim rules | 007 | none |
 | [OUTR.COMM](comm/NODE.md) | Community channels and adoption metrics | 006 | none |
 | [OUTR.LAUNCH](launch/NODE.md) | Launch plan, milestones and event kits | 004 | none |

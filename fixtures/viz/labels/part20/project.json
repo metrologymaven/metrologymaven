@@ -1,0 +1,238 @@
+{
+  "elements": [
+    {
+      "id": "9dc8068f-d40d-5f7b-b0a2-939807822dc1",
+      "name": "cp-01",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "63e2865e-a1b7-5c0d-a1fe-31c3be62ffaa",
+      "name": "dl-01",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "81d6f156-239b-534a-b7cd-5d0e255129a1",
+      "name": "cp-02",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "87882d39-ffed-5f61-a337-a0d01d854000",
+      "name": "dl-02",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "65291af2-1392-5c91-8269-a57c1aa56dbf",
+      "name": "cp-03",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "9c5d0a47-72d7-5f11-a9f4-9571273a8551",
+      "name": "dl-03",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "7fa15d33-8fe4-51f9-8e22-e08a4e394517",
+      "name": "cp-04",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "3ab40d26-b0de-5af8-9d0d-db903eab33ef",
+      "name": "dl-04",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "ed829b19-be84-5246-b96e-90646b268893",
+      "name": "cp-05",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "fb4f6954-6aab-5590-b78a-7358d4efa8e4",
+      "name": "dl-05",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "2c0674d7-d0ff-5ad8-b9ae-6b95d096b7b1",
+      "name": "cp-06",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "e9f6d630-9ddc-510b-bd2e-6717b1af2feb",
+      "name": "dl-06",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "9daf6302-6c7b-5ca5-a75f-b69315b95d8f",
+      "name": "cp-07",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "cd9090cc-045a-561a-a93a-6f749ba032a0",
+      "name": "dl-07",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "1f6672c3-d988-5106-bca0-b4b741fd6042",
+      "name": "cp-08",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "dbfb9e4a-631d-5285-9ab3-7fa0c0571d0e",
+      "name": "dl-08",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "8f7aed11-c714-586a-80fd-090f9254fc33",
+      "name": "cp-09",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "bcf78e93-3fb1-5e1d-8fed-aef6606a76f7",
+      "name": "dl-09",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "8b067977-f5b5-5726-bd80-3c3508a7a195",
+      "name": "cp-10",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "aa6a8a47-b4c4-564b-b1f2-e7c380404370",
+      "name": "dl-10",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "c9cb11bd-1f62-5ec5-9541-ade59f62a699",
+      "name": "cp-11",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "0bf8ba45-f8cb-5221-a77a-77f93e7aeea9",
+      "name": "dl-11",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "c1db2a54-d27e-5f0a-a071-39fc1a524271",
+      "name": "cp-12",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "24e6f77c-60b8-53b5-9a22-f0703241cfca",
+      "name": "dl-12",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "b468e125-5fcb-5b32-8137-768904c7a00d",
+      "name": "cp-13",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "093eb811-c417-565e-94f4-bdcb96a9f158",
+      "name": "dl-13",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "74d70db4-fe26-5d08-9bd3-06e3bc83ff73",
+      "name": "cp-14",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "bea66a20-3fbf-504b-accb-67b74e51efb0",
+      "name": "dl-14",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "581e8824-4cc9-54c9-a529-95f6cec03e17",
+      "name": "cp-15",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "d85c14af-09bd-5205-87cc-6f2a9f3292b3",
+      "name": "dl-15",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "fe87671e-e243-5cf3-a86c-5178f0633cdd",
+      "name": "cp-16",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "0c67ad79-0769-5490-996f-0e310371fe73",
+      "name": "dl-16",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "4d266687-d36e-5812-a419-21d395ad18f3",
+      "name": "cp-17",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "35925c07-49a6-5550-a9f3-a59223723d2e",
+      "name": "dl-17",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "4042d937-07ac-569e-bbf4-7595306d1349",
+      "name": "cp-18",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "c61b2900-19b1-5e03-a368-b480f564e346",
+      "name": "dl-18",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "75258be9-c017-5ff0-96ab-bd9bece6dbe7",
+      "name": "cp-19",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "73446bbd-db4b-5297-b1b4-afedc33f9b9d",
+      "name": "dl-19",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "ff045b90-3c29-5a05-8eb4-a2ddcdd7ac3c",
+      "name": "cp-20",
+      "type": "scan.comparison_point"
+    },
+    {
+      "id": "395c2729-a42b-59d9-9d67-436bd64a359b",
+      "name": "dl-20",
+      "type": "scan.deviation_label"
+    },
+    {
+      "id": "1dce9a61-b76e-5369-92ca-dc87e5380640",
+      "name": "char-01",
+      "type": "gdt.characteristic"
+    },
+    {
+      "id": "4d234113-b418-550c-837f-42bc8d75cd63",
+      "name": "dim-01",
+      "type": "gdt.dimension"
+    },
+    {
+      "id": "264df28f-9974-5a77-934e-f6e99198da2d",
+      "name": "char-02",
+      "type": "gdt.characteristic"
+    },
+    {
+      "id": "95caff76-2f4b-57a0-87a2-ec13083e2fe9",
+      "name": "dim-02",
+      "type": "gdt.dimension"
+    },
+    {
+      "id": "bd00327b-dea5-59af-ba9d-b1fc23c46ece",
+      "name": "mesh-part",
+      "type": "scan.mesh"
+    },
+    {
+      "id": "840c15b7-a6eb-556b-82d0-a48f10d0901d",
+      "name": "cad-body",
+      "type": "geo.brep"
+    }
+  ],
+  "format": "viz-label-fixture-project@1",
+  "label_set_id": "46a0b7c7-7e91-52c8-beb1-2a482b445fec",
+  "license": "CC-BY-4.0",
+  "namespace": "7f5b4a2c-9d61-5c0e-8b3a-4102c9e7a101"
+}

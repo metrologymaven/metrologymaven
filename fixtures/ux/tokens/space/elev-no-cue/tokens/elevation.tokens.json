@@ -1,0 +1,42 @@
+{
+  "elev": {
+    "$type": "shadow",
+    "0": {
+      "$extensions": {
+        "org.metrologymaven.elevation": {
+          "surface": "sem.surface.base"
+        }
+      },
+      "$value": {
+        "blur": "0px",
+        "color": "#00000029",
+        "offsetX": "0px",
+        "offsetY": "1px",
+        "spread": "0px"
+      }
+    },
+    "1": {
+      "$extensions": {
+        "org.metrologymaven.elevation": {
+          "surface": "sem.surface.raised"
+        }
+      },
+      "$value": {
+        "blur": "2px",
+        "color": "#00000029",
+        "offsetX": "0px",
+        "offsetY": "1px",
+        "spread": "0px"
+      }
+    },
+    "2": {
+      "$value": {
+        "blur": "8px",
+        "color": "#00000029",
+        "offsetX": "0px",
+        "offsetY": "1px",
+        "spread": "0px"
+      }
+    }
+  }
+}

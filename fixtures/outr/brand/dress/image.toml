@@ -1,0 +1,28 @@
+# Field containing an image link (AC-3, CC-BY-4.0).
+
+[[product]]
+name = "Acorn Metro"
+colours = "High-saturation amber header bars on charcoal panels."
+icon_style = "Filled duotone icons combining grey and bright amber."
+layout = "Left feature tree, top ribbon strip and right property dock."
+instead = "Use neutral surface.base and surface.panel tokens with muted accent.primary."
+reviewed_by = "maintainer-a"
+reviewed_on = "2026-11-20"
+
+[[product]]
+name = "Beryl Scan"
+colours = "Vivid emerald palette shown in ![example](beryl-header.png)."
+icon_style = "Thin outlined icons with emerald accent dots."
+layout = "Top workflow tabs with a split viewport and bottom stage bar."
+instead = "Use locked status.* tokens and monochrome 16/24 px icons."
+reviewed_by = ""
+reviewed_on = ""
+
+[[product]]
+name = "Cinder Probe"
+colours = "Classic light-grey desktop chrome with crimson status bars."
+icon_style = "Shaded bitmap-style toolbar glyphs with primary-colour cues."
+layout = "Multi-document workspace with floating toolbars and code pane."
+instead = "Use {{FAMILY_NAME}} tokenised surfaces and greyscale-safe status.* chips."
+reviewed_by = ""
+reviewed_on = ""

@@ -78,6 +78,9 @@ See `seeds/out-of-scope.md`.
 - **REQ-FID-029** The product, reports and docs shall be localisable, and shall ship in the major metrology markets' languages with reviewed terminology.
 - **REQ-FID-030** Agent assistance shall be backed by curated skills and a published, reproducible evaluation of agents on metrology tasks, including adversarial safety tasks.
 - **REQ-FID-031** All apps, reports, docs and the website shall share one design system, and every primary screen shall be designed and usability-tested with practising metrologists.
+- **REQ-FID-032** The system shall support surface texture, filtration (ISO 16610, ISO 21920, ISO 25178) and precision form/contour evaluation (ISO 12181) in post-1.0 core releases (D-054).
+- **REQ-FID-033** The system shall support calibration-lab instrument verification (ISO 10360, ISO 230), master/gauge calibration, and ISO/IEC 17025 / PTB DCC certificate workflows in post-1.0 core releases (D-054).
+- **REQ-FID-034** The project shall publish an executable, WASM-interactive Metrology Field Guide bound to implemented kernel capabilities and a transparent dimensional metrology field map (D-054).
 
 ## Interfaces
 
@@ -85,7 +88,7 @@ Users reach the product through the desktop apps, the `fid` CLI, MCP servers (`f
 
 ## Split rationale
 
-The split is by **capability domain**, not by app or phase. Shared foundations (CORE, GEO, KRN, IO, VIZ, AUTO, HAL) are separate from the evaluation domains (ALN, GDT, UNC, SCAN), the workflow domains (CMM, LVM, RPT, IND) and the trust and community domains (TRUST, ECO).
+The split is by **capability domain**, not by app or phase. Shared foundations (CORE, GEO, KRN, IO, VIZ, AUTO, HAL) are separate from the evaluation domains (ALN, GDT, UNC, SCAN, SURF), the workflow domains (CMM, LVM, RPT, IND, CAL) and the trust and community domains (TRUST, ECO).
 
 This lets one capability serve every focused app. For example, alignment is written once and used by the scan-inspection, CMM and large-volume apps. The apps themselves are thin compositions, defined in ECO (decision D-004).
 
@@ -95,7 +98,7 @@ Alternatives considered:
 
 ## Open questions
 
-- None (`D-001` through `D-052` are accepted; architectural and specification decisions proceed autonomously under `D-052`).
+- None (`D-001` through `D-054` are accepted; architectural and specification decisions proceed autonomously under `D-052`).
 
 ## Children
 
@@ -111,6 +114,8 @@ Alternatives considered:
 | SCAN | Scan processing and surface inspection | 001 | GOM.MSH/SRF, PW.PCL/CMP, PCD.LAS.02, SA.SCN/CAD.02 |
 | CMM | CMM programming and execution | 002 011 021 | PCD.PRB/FEA/SCN/PTH/CAD.03, PW.CMM |
 | LVM | Large-volume and multi-instrument networks | 003 | SA.NET, SA.BLD |
+| SURF | Surface texture, filtration and precision form metrology | 032 | none |
+| CAL | Calibration-lab verification and instrument calibration | 033 | none |
 | HAL | Instrument integration (hardware abstraction) | 002 003 011 014 024 | SA.INS, PW.PRB/SCN, PCD.MCH/LAS.01/LAS.03, DEV |
 | VIZ | GPU viewer and UX | 005 006 016 | GOM.VIZ, PW.VIZ, SA.VIZ |
 | AUTO | Automation surfaces: CLI, MCP, Python, control channel | 004 005 014 021 | GOM.AUT, PW.AUT, PCD.PRG, SA.MP |
@@ -118,7 +123,7 @@ Alternatives considered:
 | IND | Industry analysis packs | 013 | GOM.SPE, PW.IND, PCD.IND |
 | TRUST | Signing and independent verification | 018 | none |
 | ECO | Ecosystem, apps, SDK and community | 013 014 015 017 | none |
-| OUTR | Outreach: website, docs portal, launch and adoption | 022 | none |
+| OUTR | Outreach: website, docs portal, launch and adoption | 022 034 | none |
 | PLAT | Platform support: OS, hardware, GPU, deployment | 017 023 | none |
 | FLOW | End-to-end workflows, personas, acceptance suite | 025 | JOB |
 | MIG | Migration from incumbents and result correlation | 026 | none |
