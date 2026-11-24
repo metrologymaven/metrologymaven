@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-report]
+built_pr: 587
 satisfies: [REQ-RPT.BALLOON-001, REQ-RPT.BALLOON-002, REQ-RPT.BALLOON-003, REQ-RPT.BALLOON-009]
 covers: []
 depends_on: [RPT.BALLOON.SHEET, CORE.JRN, GDT.CHAR]
