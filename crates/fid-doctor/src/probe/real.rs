@@ -96,6 +96,7 @@ fn round_2dp(v: f64) -> f64 {
     }
 }
 
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn kib_to_gib(kib: u64) -> f64 {
     round_2dp((kib as f64) / (1024.0 * 1024.0))
 }
@@ -484,18 +485,17 @@ fn probe_cpu_impl() -> Probed<CpuInfo> {
 
 #[cfg(target_os = "windows")]
 fn probe_ram_impl() -> Probed<RamInfo> {
-    let script = "$o=Get-CimInstance Win32_OperatingSystem; \"$($o.TotalVisibleMemorySize) $($o.FreePhysicalMemory)\"";
-    let text = match run_powershell(script) {
-        Ok(t) => t,
-        Err(e) => return Probed::unknown(UnknownReason::Error, e),
-    };
-    let mut parts = text.split_whitespace();
-    let total = parts.next().and_then(|s| s.parse::<u64>().ok());
-    let free = parts.next().and_then(|s| s.parse::<u64>().ok());
-    match (total, free) {
-        (Some(t), Some(f)) => Probed::Known(RamInfo { total_gib: kib_to_gib(t), available_gib: kib_to_gib(f) }),
-        _ => Probed::unknown(UnknownReason::Error, "unexpected RAM probe output"),
+    // Read memory through the OS API (via `sysinfo`, the "system-information crate" of the
+    // leaf design) instead of a PowerShell/CIM process: starting PowerShell and WMI alone can
+    // exceed the 2 s per-probe deadline on a loaded runner, while this call takes microseconds.
+    let mut sys = sysinfo::System::new();
+    sys.refresh_memory();
+    let total = sys.total_memory();
+    if total == 0 {
+        return Probed::unknown(UnknownReason::Error, "OS reported zero total RAM");
     }
+    let available = sys.available_memory().min(total);
+    Probed::Known(RamInfo { total_gib: bytes_to_gib(total), available_gib: bytes_to_gib(available) })
 }
 
 #[cfg(target_os = "windows")]

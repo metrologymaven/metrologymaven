@@ -19,5 +19,10 @@ fid-canon = { path = "../fid-canon" }
 fid-gpu-policy = { path = "../fid-gpu-policy", optional = true }
 fid-gpu-select = { path = "../fid-gpu-select", optional = true }
 
+# Windows RAM probe (leaf design: "RAM and storage via a system-information crate").
+# Only the `system` feature; MIT; rust-version 1.75.
+[target.'cfg(windows)'.dependencies]
+sysinfo = { version = "0.36.1", default-features = false, features = ["system"] }
+
 [lints]
 workspace = true
