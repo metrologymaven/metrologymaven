@@ -17,7 +17,8 @@ pinned in the module documentation of `fid_filter::policy` (crates/fid-filter/sr
    its bit pattern, integers as decimal strings) and a strict decoder with its own error
    order (malformed, missing, wrong_type, bad_float, bad_integer, unknown_value,
    unexpected_key, duplicate_key, not_canonical).
-3. Exclusion masks: range check in input order, sort, dedup, and the digest
+3. Exclusion masks: range check in input order, then a repeated index is refused
+   (duplicate_index, the smallest repeated one), and the digest
    SHA-256(u32le(point_count) || u32le(index)...) from hashlib.
 4. Guards: remaining < minimum points first, then excluded / count (one IEEE-754 division,
    which CPython performs in binary64 round-to-nearest-even) > max_excluded_fraction.
@@ -303,13 +304,22 @@ def make_mask(count, indices):
     for i in indices:
         if i >= count:
             return ("index_out_of_range", i)
-    s = sorted(set(indices))
+    seen, repeated = {}, []
+    for i in indices:
+        if i in seen:
+            repeated.append(i)
+        seen[i] = True
+    if repeated:
+        return ("duplicate_index", min(repeated))
+    s = sorted(indices)
     pre = struct.pack("<I", count) + b"".join(struct.pack("<I", i) for i in s)
     return ("ok", s, "sha256:" + hashlib.sha256(pre).hexdigest())
 
 
 def guard(target, fraction, count, indices):
-    excluded = len(set(indices))
+    if len(set(indices)) != len(indices):
+        fail("guard case with a repeated index (the mask would be refused)")
+    excluded = len(indices)
     remaining = count - excluded
     if remaining < MIN_POINTS[target]:
         return f"too_few_remaining {remaining} {MIN_POINTS[target]}"
@@ -357,7 +367,8 @@ def build():
         "# f64 values are binary64 bit patterns in hex. spec: typed parameters, expected",
         "# validation outcome and (if ok) the canonical encoding. decode: input bytes on the",
         "# 'input' line (everything after 'input '; a bare 'input' is empty), expected outcome. mask: point count and raw",
-        "# indices, expected sorted unique indices and digest. guard: policy nsigma k=3 side=both.",
+        "# indices, expected outcome and (if ok) sorted indices and digest. guard: policy nsigma k=3",
+        "# side=both.",
     ]
     i = 0
     seen = set()
@@ -409,7 +420,7 @@ def build():
             args = kv(tok[2:])
             count, idx = int(args["count"]), parse_indices(args["indices"])
             res = make_mask(count, idx)
-            got = "ok" if res[0] == "ok" else f"index_out_of_range {res[1]}"
+            got = "ok" if res[0] == "ok" else f"{res[0]} {res[1]}"
             if got != label:
                 fail(f"{name}: label {label!r}, model {got!r}")
             out.append(f"mask {name}")

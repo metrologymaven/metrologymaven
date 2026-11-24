@@ -13,7 +13,7 @@
 //!   [`PolicySpec::decode`] (module `canon`).
 //! - [`PolicyMethod`]: the trait each method implements (REQ-KRN.OUT.POL-002).
 //! - [`ExclusionMask`]: sorted, unique, range-checked indices with their digest
-//!   (REQ-KRN.OUT.POL-005, REQ-KRN.OUT-002).
+//!   (REQ-KRN.OUT.POL-005, REQ-KRN.OUT-002); a repeated index is refused, not merged.
 //! - [`check_guards`]: the minimum-points and maximum-fraction guards
 //!   (REQ-KRN.OUT.POL-003, -004).
 //! - [`apply`]: the only public function in the kernel that takes a [`PointsView`] and returns
@@ -484,12 +484,16 @@ impl ReducedPoints {
 /// 2. `method.policy()` must encode to the same bytes as `spec.policy` (field `policy`,
 ///    reason `method_mismatch`), and `method.algorithm_id()` must be
 ///    `filter.outlier.<spec's method>@..` (field `algorithm`, reason `method_mismatch`);
-/// 3. one residual per point ([`PolicyError::LengthMismatch`] `residuals`), every residual
+/// 3. `nominal_dist` is given exactly when the spec's method needs it
+///    ([`PolicyKind::needs_nominal`]), else [`PolicyError::NominalDistances`] `{ required }`:
+///    a gate method never runs without its evidence, and other methods are never handed
+///    evidence they would silently ignore;
+/// 4. one residual per point ([`PolicyError::LengthMismatch`] `residuals`), every residual
 ///    finite ([`PolicyError::Num`]); the same for `nominal_dist` when given
 ///    (`nominal_distances`);
-/// 4. `method.exclude(..)`, whose mask must cover `pts.len()` points (`LengthMismatch` `mask`);
-/// 5. [`check_guards`];
-/// 6. the kept points are copied in input order and returned with their [`Exclusion`].
+/// 5. `method.exclude(..)`, whose mask must cover `pts.len()` points (`LengthMismatch` `mask`);
+/// 6. [`check_guards`];
+/// 7. the kept points are copied in input order and returned with their [`Exclusion`].
 pub fn apply(
     spec: &PolicySpec,
     method: &dyn PolicyMethod,
@@ -506,6 +510,10 @@ pub fn apply(
     let algorithm = method.algorithm_id();
     if algorithm.module != MODULE || algorithm.feature != OUTLIER || algorithm.method != spec.policy.kind().slug() {
         return Err(invalid("algorithm", "method_mismatch"));
+    }
+    let required = spec.policy.kind().needs_nominal();
+    if nominal_dist.is_some() != required {
+        return Err(PolicyError::NominalDistances { required });
     }
     let n = pts.len();
     if residuals.len() != n {

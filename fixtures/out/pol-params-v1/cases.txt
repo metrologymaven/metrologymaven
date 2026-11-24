@@ -3,7 +3,8 @@
 # f64 values are binary64 bit patterns in hex. spec: typed parameters, expected
 # validation outcome and (if ok) the canonical encoding. decode: input bytes on the
 # 'input' line (everything after 'input '; a bare 'input' is empty), expected outcome. mask: point count and raw
-# indices, expected sorted unique indices and digest. guard: policy nsigma k=3 side=both.
+# indices, expected outcome and (if ok) sorted indices and digest. guard: policy nsigma k=3
+# side=both.
 spec nsigma-ok
 kind nsigma
 k 4008000000000000
@@ -504,12 +505,32 @@ decode below-min-points
 input {"policy":{"kind":"ransac","threshold_m":"3ee4f8b588e368f1","iterations":"500","min_inliers":"4","seed":"7"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
 expect invalid_parameter min_inliers below_min_points
 end
-mask sorted-dedup
+mask sorted
 count 100
-indices 5 3 3 99 0
+indices 5 3 99 0
 expect ok
 sorted 0 3 5 99
 digest sha256:16649381c4c8eb0cd2b03988c6831d5cd0cda1d5de6553439734bc343a2ac307
+end
+mask sorted-duplicate
+count 100
+indices 5 3 3 99 0
+expect duplicate_index 3
+end
+mask smallest-duplicate
+count 10
+indices 9 9 4 7 4
+expect duplicate_index 4
+end
+mask all-same
+count 10
+indices 6 6 6
+expect duplicate_index 6
+end
+mask range-before-duplicate
+count 100
+indices 3 3 100
+expect index_out_of_range 100
 end
 mask empty-mask
 count 100

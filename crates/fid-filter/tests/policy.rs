@@ -158,7 +158,8 @@ fn decode_refuses_oversized_input() {
     );
 }
 
-/// REQ-005 and AC-3 (fixture): range check, order, dedup and the excluded-set digest.
+/// REQ-002, REQ-005 and AC-3 (fixture): range check, order, refused repeats and the
+/// excluded-set digest.
 #[test]
 fn ac3_masks() {
     let all = cases();
@@ -168,6 +169,10 @@ fn ac3_masks() {
         let e = c.get("expect");
         if let Some(index) = e.strip_prefix("index_out_of_range ") {
             assert_eq!(got, Err(PolicyError::IndexOutOfRange { index: index.parse().unwrap() }), "{}", c.name);
+            continue;
+        }
+        if let Some(index) = e.strip_prefix("duplicate_index ") {
+            assert_eq!(got, Err(PolicyError::DuplicateIndex { index: index.parse().unwrap() }), "{}", c.name);
             continue;
         }
         assert_eq!(e, "ok", "{}", c.name);
@@ -394,13 +399,16 @@ fn apply_refuses_bad_inputs() {
     let mut nan = zeros;
     nan[4] = f64::NAN;
     assert!(matches!(apply(&spec, &ok, &pts, &PLANE, &nan, None), Err(PolicyError::Num(_))));
+    // Nominal distances: length and finiteness, for a gate method that needs them.
+    let gate = PolicySpec { policy: OutlierPolicy::NominalGate { max_distance_m: 1e-3 }, ..spec };
+    let gate_m = Threshold { policy: gate.policy, k: 0.1, point_count_override: None };
     assert_eq!(
-        apply(&spec, &ok, &pts, &PLANE, &zeros, Some(&zeros[..3])).unwrap_err(),
+        apply(&gate, &gate_m, &pts, &PLANE, &zeros, Some(&zeros[..3])).unwrap_err(),
         PolicyError::LengthMismatch { what: "nominal_distances", expected: 10, got: 3 }
     );
     let mut inf = zeros;
     inf[0] = f64::INFINITY;
-    assert!(matches!(apply(&spec, &ok, &pts, &PLANE, &zeros, Some(&inf)), Err(PolicyError::Num(_))));
+    assert!(matches!(apply(&gate, &gate_m, &pts, &PLANE, &zeros, Some(&inf)), Err(PolicyError::Num(_))));
     // A mask over another input set.
     let wrong = Threshold { policy: spec.policy, k: 0.1, point_count_override: Some(11) };
     assert_eq!(
@@ -418,10 +426,58 @@ fn apply_refuses_bad_inputs() {
     );
 }
 
+/// Nominal distances are given exactly when the spec's method needs them
+/// (`PolicyKind::needs_nominal`), checked before any evidence is read.
+#[test]
+fn apply_refuses_nominal_distances_mismatch() {
+    let (xyz, _) = plane_points(10);
+    let pts = PointsView::new(&xyz, None).unwrap();
+    let zeros = [0.0; 10];
+    let policies = [
+        OutlierPolicy::NSigma { k: 3.0, side: Side::Both },
+        OutlierPolicy::RobustScale { k: 3.0, scale: ScaleEstimator::Mad, side: Side::Both },
+        OutlierPolicy::Ransac { threshold_m: 1e-5, iterations: 100, min_inliers: 3, seed: 7 },
+        OutlierPolicy::NominalGate { max_distance_m: 1e-3 },
+        OutlierPolicy::ToleranceBand { lower_m: -1e-3, upper_m: 1e-3 },
+    ];
+    for policy in policies {
+        let spec =
+            PolicySpec { policy, max_excluded_fraction: DEFAULT_MAX_EXCLUDED_FRACTION, target: Primitive::Plane };
+        let m = Threshold { policy, k: 0.1, point_count_override: None };
+        let needs = policy.kind().needs_nominal();
+        assert_eq!(needs, matches!(policy, OutlierPolicy::NominalGate { .. } | OutlierPolicy::ToleranceBand { .. }));
+        let (right, wrong) = if needs { (Some(&zeros[..]), None) } else { (None, Some(&zeros[..])) };
+        assert_eq!(
+            apply(&spec, &m, &pts, &PLANE, &zeros, wrong).unwrap_err(),
+            PolicyError::NominalDistances { required: needs },
+            "{policy:?}"
+        );
+        // Refused before the evidence is read: a wrong-length residual slice does not matter.
+        assert_eq!(
+            apply(&spec, &m, &pts, &PLANE, &zeros[..2], wrong).unwrap_err(),
+            PolicyError::NominalDistances { required: needs },
+            "{policy:?}"
+        );
+        let r = apply(&spec, &m, &pts, &PLANE, &zeros, right).unwrap();
+        assert!(!r.is_reduced(), "{policy:?}");
+    }
+}
+
+/// A repeated index is refused with the smallest repeated one, after the range check.
+#[test]
+fn masks_refuse_repeated_indices() {
+    assert_eq!(ExclusionMask::new(10, vec![8, 2, 8, 2]), Err(PolicyError::DuplicateIndex { index: 2 }));
+    assert_eq!(ExclusionMask::new(10, vec![3, 3, 10]), Err(PolicyError::IndexOutOfRange { index: 10 }));
+    assert_eq!(ExclusionMask::new(10, vec![1, 0]).unwrap().indices(), &[0, 1]);
+}
+
 /// The error codes are stable.
 #[test]
 fn error_codes() {
     assert_eq!(PolicyError::IndexOutOfRange { index: 1 }.code(), "index_out_of_range");
+    assert_eq!(PolicyError::DuplicateIndex { index: 1 }.code(), "duplicate_index");
+    assert_eq!(PolicyError::DuplicateIndex { index: 7 }.to_string(), "duplicate_index: 7");
+    assert_eq!(PolicyError::NominalDistances { required: true }.code(), "nominal_distances");
     assert_eq!(PolicyError::TooFewRemaining { remaining: 1, required: 2 }.code(), "too_few_remaining");
     assert_eq!(PolicyError::ExcessiveExclusion { fraction: 0.5, limit: 0.25 }.code(), "excessive_exclusion");
     assert_eq!(PolicyError::InvalidParameter { field: "k", reason: "out_of_range" }.code(), "invalid_parameter");

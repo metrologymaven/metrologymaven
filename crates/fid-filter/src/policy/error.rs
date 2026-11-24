@@ -1,4 +1,4 @@
-//! The typed policy error (REQ-KRN.OUT.POL-001, -003, -004, -005).
+//! The typed policy error (REQ-KRN.OUT.POL-001, -002, -003, -004, -005).
 
 use core::fmt;
 
@@ -20,6 +20,12 @@ pub enum PolicyError {
     ExcessiveExclusion { fraction: f64, limit: f64 },
     /// A mask index is not below the input point count (REQ-KRN.OUT.POL-005).
     IndexOutOfRange { index: u32 },
+    /// A mask names `index` more than once; `index` is the smallest repeated one. A method
+    /// that names a point twice has miscounted, so the mask is refused rather than merged.
+    DuplicateIndex { index: u32 },
+    /// Nominal distances were given to a method that does not use them (`required: false`),
+    /// or not given to a gate method that needs them (`required: true`).
+    NominalDistances { required: bool },
     /// An input that must have one value per point does not: `what` is `residuals`,
     /// `nominal_distances` or `mask`.
     LengthMismatch { what: &'static str, expected: usize, got: usize },
@@ -37,6 +43,8 @@ impl PolicyError {
             PolicyError::TooFewRemaining { .. } => "too_few_remaining",
             PolicyError::ExcessiveExclusion { .. } => "excessive_exclusion",
             PolicyError::IndexOutOfRange { .. } => "index_out_of_range",
+            PolicyError::DuplicateIndex { .. } => "duplicate_index",
+            PolicyError::NominalDistances { .. } => "nominal_distances",
             PolicyError::LengthMismatch { .. } => "length_mismatch",
             PolicyError::Num(_) => "num",
             PolicyError::Alloc { .. } => "alloc_failed",
@@ -55,6 +63,13 @@ impl fmt::Display for PolicyError {
                 write!(f, "excessive_exclusion: {fraction} of the input excluded, limit {limit}")
             }
             PolicyError::IndexOutOfRange { index } => write!(f, "index_out_of_range: {index}"),
+            PolicyError::DuplicateIndex { index } => write!(f, "duplicate_index: {index}"),
+            PolicyError::NominalDistances { required: true } => {
+                write!(f, "nominal_distances: the method needs them and none were given")
+            }
+            PolicyError::NominalDistances { required: false } => {
+                write!(f, "nominal_distances: given to a method that does not use them")
+            }
             PolicyError::LengthMismatch { what, expected, got } => {
                 write!(f, "length_mismatch: {what} has {got} values, expected {expected}")
             }

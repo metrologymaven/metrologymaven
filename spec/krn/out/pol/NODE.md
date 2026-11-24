@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-24
 ---
 
 # KRN.OUT.POL: Outlier policy types, validation and guards
@@ -52,9 +52,9 @@ The common model for every way the kernel removes points from a fit. A policy is
 ## Design
 
 - **Registry command(s):** none (commands in `KRN.OUT.RUN` and `KRN.OUT.SEL`).
-- **Data structures:** `enum OutlierPolicy { NSigma{k}, RobustScale{k, scale: Mad|Qn}, Ransac{threshold_m, iterations, min_inliers, seed}, NominalGate{max_distance_m}, ToleranceBand{lower_m, upper_m} }` with `max_excluded_fraction` and target primitive alongside; `struct ExclusionMask(Vec<u32>)`.
+- **Data structures:** `enum OutlierPolicy { NSigma{k}, RobustScale{k, scale: Mad|Qn}, Ransac{threshold_m, iterations, min_inliers, seed}, NominalGate{max_distance_m}, ToleranceBand{lower_m, upper_m} }` with `max_excluded_fraction` and target primitive alongside; `struct ExclusionMask(Vec<u32>)`. Construction checks the range first, then sorts and refuses a repeated index with `DuplicateIndex{index}` (the smallest repeated one); repeats are never merged (maintainer decision, PR #571 review).
 - **Algorithm:** validation and guards only.
-- **Errors:** `PolicyError::{InvalidParameter, TooFewRemaining, ExcessiveExclusion, IndexOutOfRange}`.
+- **Errors:** `PolicyError::{InvalidParameter, TooFewRemaining, ExcessiveExclusion, IndexOutOfRange, DuplicateIndex}`; the entry point also refuses nominal distances given to a method that does not use them, or missing for a gate method (`NominalDistances{required}`).
 - **Determinism:** D0.
 - **Performance budget:** guards on 1 M points < 5 ms [unverified until measured].
 - **Crate:** `fid-filter` (module `policy`).
@@ -70,6 +70,7 @@ The common model for every way the kernel removes points from a fit. A policy is
 ## Open questions
 
 - The 0.25 default may move into a defaults profile.
+- Follow-up for `KRN.LSQ.TRAIT`: `fid-fit`'s `FitParams.weights` (`Weights::PerPoint`) lets a caller reweight a fit's input per point without a recorded policy. REQ-KRN.OUT.POL-006 says the policy types are the only API that may reweight an input set. AC-4 pins every public item that takes a point set, and `Fit::fit` is listed there, but the weights travel in `FitParams`. The fit contract is outside this leaf (lane rule), so `fid-fit` is unchanged here. `KRN.LSQ.TRAIT` should decide whether per-point weights must come from a recorded policy.
 
 ## Children
 

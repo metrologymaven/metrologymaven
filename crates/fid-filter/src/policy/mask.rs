@@ -25,8 +25,10 @@ impl ExclusionMask {
     ///    `InvalidParameter { field: "point_count", reason: "out_of_range" }`;
     /// 2. the first index, in the given order, that is not below `point_count`:
     ///    [`PolicyError::IndexOutOfRange`] (REQ-KRN.OUT.POL-005);
-    /// 3. otherwise the indices are sorted ascending and repeated indices are merged (a set
-    ///    is the same set however often a member is named).
+    /// 3. the indices are sorted ascending; if one is named more than once,
+    ///    [`PolicyError::DuplicateIndex`] with the smallest repeated index
+    ///    (REQ-KRN.OUT.POL-002: a mask holds unique indices; a repeat means the method
+    ///    miscounted, so it is refused, not merged).
     pub fn new(point_count: usize, mut indices: Vec<u32>) -> Result<ExclusionMask, PolicyError> {
         if point_count > MAX_POINTS {
             return Err(invalid("point_count", "out_of_range"));
@@ -36,7 +38,9 @@ impl ExclusionMask {
             return Err(PolicyError::IndexOutOfRange { index });
         }
         indices.sort_unstable();
-        indices.dedup();
+        if let Some(w) = indices.windows(2).find(|w| w[0] == w[1]) {
+            return Err(PolicyError::DuplicateIndex { index: w[0] });
+        }
         Ok(ExclusionMask { point_count: n, indices })
     }
 

@@ -125,7 +125,11 @@ decode below-min-points => invalid_parameter min_inliers below_min_points
 {"policy":{"kind":"ransac","threshold_m":"3ee4f8b588e368f1","iterations":"500","min_inliers":"4","seed":"7"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
 
 # --- exclusion masks (REQ-005, AC-3)
-mask sorted-dedup count=100 indices=5,3,3,99,0 => ok
+mask sorted count=100 indices=5,3,99,0 => ok
+mask sorted-duplicate count=100 indices=5,3,3,99,0 => duplicate_index 3
+mask smallest-duplicate count=10 indices=9,9,4,7,4 => duplicate_index 4
+mask all-same count=10 indices=6,6,6 => duplicate_index 6
+mask range-before-duplicate count=100 indices=3,3,100 => index_out_of_range 100
 mask empty-mask count=100 indices= => ok
 mask empty-of-empty count=0 indices= => ok
 mask all count=4 indices=3,2,1,0 => ok
