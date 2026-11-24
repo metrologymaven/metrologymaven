@@ -20,5 +20,13 @@ sha2 = "0.10"
 # Reads the ECO.APPS.LIST app list (`apps.toml`) as an untyped table, like fid-vocab and fid-xtask.
 toml = { version = "0.8", default-features = false, features = ["parse"] }
 
+[dev-dependencies]
+# FLOW.RUNNER.VERDICT: `tests/report_schema.rs` validates real `accept.show_report@1` output and
+# inputs against the published schemas with the bus validator (`fid_bus::validate::Compiled`).
+fid-bus = { path = "../fid-bus" }
+# FLOW.RUNNER.VERDICT: the command definition is checked against the workspace quantity
+# catalogue (machine times are quantity kind `time`, which `fid-jobs` publishes there).
+fid-registry-build = { path = "../fid-registry-build" }
+
 [lints]
 workspace = true
