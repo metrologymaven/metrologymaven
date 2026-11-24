@@ -1,0 +1,28 @@
+[package]
+name = "fid-capture"
+description = "Metrology Maven capture: the org recording policy keys and the fail-closed policy evaluation every capture medium asks first (VIZ.CAPTURE.REC.POLICY)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# Viewer layer, as the rest of VIZ.CAPTURE will be (screenshots and video need fid-render). The
+# policy module itself is pure and needs no GPU, windowing or UI-toolkit crate.
+[dependencies]
+# The settings declaration macro, the resolver and its types (CORE.STO.SET, model layer). Brings
+# fid-store's bundled SQLite into this crate's build; no new crate in the lock.
+fid-store = { path = "../fid-store" }
+# Stored values are canonical JSON values (CORE.JRN.CANON, model layer).
+fid-canon = { path = "../fid-canon" }
+
+[dev-dependencies]
+# `Surface` for the settings-command callers in the AC-2 and AC-3 tests. Test-only.
+fid-registry = { path = "../fid-registry" }
+# AC-2: the capture keys checked together with every workspace setting against the merged
+# quantity catalogue (`fid_registry_build::settings`). Test-only; services layer, below viewer.
+fid-registry-build = { path = "../fid-registry-build" }
+
+[lints]
+workspace = true

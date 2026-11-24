@@ -1193,6 +1193,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-capture"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-registry",
+ "fid-registry-build",
+ "fid-store",
+]
+
+[[package]]
 name = "fid-catalog"
 version = "0.0.1"
 dependencies = [
