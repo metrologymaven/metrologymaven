@@ -43,6 +43,9 @@ pub struct Results {
     pub content: Option<Content>,
     /// Frame times in milliseconds per recorded phase.
     pub series: BTreeMap<Phase, Vec<f64>>,
+    /// How long the drag phase really lasted, in seconds, by the harness's monotonic clock.
+    /// AC-1 asks for at least [`DRAG_SECONDS`]; a shorter (or unknown) drag is "not run".
+    pub drag_seconds: Option<f64>,
     /// Keyboard sequence: (steps that matched, total steps); `None` if not run.
     pub keyboard: Option<(usize, usize)>,
     /// Manual IME check (AC-4), as recorded by the person.
@@ -52,6 +55,9 @@ pub struct Results {
     /// Observed limitations, one per bullet.
     pub limitations: Vec<String>,
 }
+
+/// Drag length AC-1 asks for, in seconds.
+pub const DRAG_SECONDS: f64 = 10.0;
 
 fn word(o: Outcome) -> &'static str {
     match o {
@@ -67,6 +73,8 @@ struct Row {
     measured: String,
     threshold: String,
     outcome: Outcome,
+    /// Appended to the result word (for "not run (needs 10 s)").
+    note: &'static str,
 }
 
 const TIMED: [(Phase, &str, &str); 3] = [
@@ -90,22 +98,37 @@ fn rows(r: &Results) -> (Vec<Row>, Vec<(Phase, Summary)>) {
         None => ("-".to_string(), Outcome::NotRun),
     };
     out.push(Row {
-        label: "REQ-001 content rendered",
+        label: "REQ-001 content loaded",
         short: "REQ-001 content",
         measured,
         threshold: "5 pages, 200 blocks, tables, 1 3D frame".to_string(),
         outcome,
+        note: "",
     });
     for (phase, label, short) in TIMED {
         let s = r.series.get(&phase).and_then(|v| summarise(v).ok());
-        let (measured, outcome) = match s {
+        let (mut measured, mut outcome) = match s {
             Some(s) => {
                 sums.push((phase, s));
                 (format!("{} (n = {})", ms(s.p95), s.n), if s.passes() { Outcome::Pass } else { Outcome::Fail })
             }
             None => ("-".to_string(), Outcome::NotRun),
         };
-        out.push(Row { label, short, measured, threshold: format!("< {THRESHOLD_MS:.0} ms"), outcome });
+        let mut note = "";
+        if phase == Phase::Drag && s.is_some() {
+            let d = r.drag_seconds.filter(|d| d.is_finite());
+            match d {
+                Some(d) => {
+                    let _ = write!(measured, " over {d:.3} s");
+                }
+                None => measured.push_str(" over an unknown time"),
+            }
+            if !d.is_some_and(|d| d >= DRAG_SECONDS) {
+                outcome = Outcome::NotRun;
+                note = " (needs 10 s)";
+            }
+        }
+        out.push(Row { label, short, measured, threshold: format!("< {THRESHOLD_MS:.0} ms"), outcome, note });
     }
     let (measured, outcome) = match r.keyboard {
         Some((ok, total)) => {
@@ -119,6 +142,7 @@ fn rows(r: &Results) -> (Vec<Row>, Vec<(Phase, Summary)>) {
         measured,
         threshold: "all steps".to_string(),
         outcome,
+        note: "",
     });
     out.push(Row {
         label: "AC-4 Japanese IME commit (manual)",
@@ -126,6 +150,7 @@ fn rows(r: &Results) -> (Vec<Row>, Vec<(Phase, Summary)>) {
         measured: "see log".to_string(),
         threshold: "committed text in the block".to_string(),
         outcome: r.ime,
+        note: "",
     });
     out.push(Row {
         label: "REQ-005 screen-reader announcements (manual)",
@@ -133,6 +158,7 @@ fn rows(r: &Results) -> (Vec<Row>, Vec<(Phase, Summary)>) {
         measured: "see log".to_string(),
         threshold: "type, name and position for 5 blocks".to_string(),
         outcome: r.screen_reader,
+        note: "",
     });
     (out, sums)
 }
@@ -167,7 +193,7 @@ pub fn render(r: &Results) -> String {
     }
     s.push_str("## Criteria\n\n| Criterion | Measured | Threshold | Result |\n|---|---|---|---|\n");
     for x in &rows {
-        let _ = writeln!(s, "| {} | {} | {} | {} |", x.label, x.measured, x.threshold, word(x.outcome));
+        let _ = writeln!(s, "| {} | {} | {} | {}{} |", x.label, x.measured, x.threshold, word(x.outcome), x.note);
     }
     s.push_str("\n## Recommendation\n\n");
     let failing: Vec<&Row> = rows.iter().filter(|x| x.outcome == Outcome::Fail).collect();
@@ -211,8 +237,9 @@ pub fn render(r: &Results) -> String {
     }
     s.push_str(
         "\n## Manual IME check (AC-4)\n\nOn Windows with a Japanese IME, select a text block, press \
-         Enter, compose そくてい and commit it.\n\n- Input method and version:\n- Committed text \
-         shown in the block:\n",
+         Enter, compose そくてい and commit it. Then compose again and press Escape before \
+         committing.\n\n- Input method and version:\n- Committed text shown in the block:\n- Escape \
+         during composition cancels the composition without ending the edit (yes or no):\n",
     );
     s.push_str(
         "\n## Manual screen-reader check (REQ-005)\n\nScreen reader and version:\n\n\

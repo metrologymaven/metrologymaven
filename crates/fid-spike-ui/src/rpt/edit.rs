@@ -21,6 +21,9 @@
 //! - Undo pops the newest entry, restores the block, pushes the entry on the redo stack and
 //!   focuses the block. Redo is the reverse.
 //! - Zoom in / out: the next of [`ZOOM_STEPS`] above / below the current zoom, clamped.
+//!   Zoom needs no focused block, so it also works on an empty canvas.
+//! - While a pointer drag or resize is in progress every keyboard action is ignored.
+//! - Changing the paper clears undo and redo: their rectangles belong to the old page size.
 //! - Drag ([`Designer::drag_to`]) with snapping: the raw position snaps to a guide when the
 //!   block's left edge, centre (`x + w / 2`) or right edge lies within [`GUIDE_TOL`] of one.
 //!   Guides, ascending: 0, the margins, the page centre and the left edge, centre and right
@@ -221,12 +224,14 @@ impl Designer {
         }
     }
 
-    /// Sets the paper of every page (see [`Canvas::set_paper`]). Clears undo and redo,
-    /// whose positions may no longer fit.
+    /// Sets the paper of every page (see [`Canvas::set_paper`]). Whenever the paper of any
+    /// page actually changes, undo and redo are cleared: their rectangles were valid for the
+    /// old page size and could put a block off the new page.
     pub fn set_paper(&mut self, paper: Paper) {
         self.finish_edit();
         self.end_drag();
-        if self.canvas.set_paper(paper) > 0 {
+        if self.canvas.pages().iter().any(|p| *p != paper) {
+            self.canvas.set_paper(paper);
             self.undo.clear();
             self.redo.clear();
         }
@@ -268,8 +273,11 @@ impl Designer {
         }
     }
 
-    /// Applies one keyboard action.
+    /// Applies one keyboard action. Ignored while a pointer drag or resize is in progress.
     pub fn apply(&mut self, a: &Action) {
+        if self.drag.is_some() {
+            return;
+        }
         if let Some((_, buf)) = self.editing.as_mut() {
             match a {
                 Action::Insert(s) => {
@@ -281,6 +289,17 @@ impl Designer {
                 _ => {}
             }
             return;
+        }
+        match a {
+            Action::ZoomIn => {
+                self.zoom = ZOOM_STEPS.iter().copied().find(|z| *z > self.zoom).unwrap_or(ZOOM_MAX);
+                return;
+            }
+            Action::ZoomOut => {
+                self.zoom = ZOOM_STEPS.iter().rev().copied().find(|z| *z < self.zoom).unwrap_or(ZOOM_MIN);
+                return;
+            }
+            _ => {}
         }
         let Some(id) = self.focus else { return };
         let Some(b) = self.canvas.get(id) else { return };
@@ -322,11 +341,7 @@ impl Designer {
                     self.undo.push_back(e);
                 }
             }
-            Action::ZoomIn => self.zoom = ZOOM_STEPS.iter().copied().find(|z| *z > self.zoom).unwrap_or(ZOOM_MAX),
-            Action::ZoomOut => {
-                self.zoom = ZOOM_STEPS.iter().rev().copied().find(|z| *z < self.zoom).unwrap_or(ZOOM_MIN)
-            }
-            Action::Escape | Action::Insert(_) | Action::SetText(_) => {}
+            Action::Escape | Action::Insert(_) | Action::SetText(_) | Action::ZoomIn | Action::ZoomOut => {}
         }
         if (dx, dy, dw, dh) == (0, 0, 0, 0) {
             return;
@@ -595,6 +610,79 @@ mod tests {
         assert!(!d.begin_drag(1));
         assert!(!d.begin_drag(9));
         assert_eq!(d.drag_to(0, 0, true), Guides::default());
+    }
+
+    /// Review of #577: A4, Letter, A4, move, Letter, then undo must not put a block off the
+    /// page (Letter to A4 moves no block, so a clear tied to moved blocks kept stale entries).
+    #[test]
+    fn paper_change_clears_history_so_undo_stays_on_the_page() {
+        // A footer near the bottom of A4: it must move up to fit Letter (2794 high).
+        let text = "page	1	A4
+block	1	1	band	150	2720	1800	150	Footer 1	Page 1
+";
+        let mut d = Designer::new(Canvas::parse(text).unwrap());
+        d.apply(&Action::Up);
+        assert_eq!(d.undo_depth(), 1);
+        d.set_paper(Paper::Letter);
+        assert_eq!((d.undo_depth(), d.redo_depth()), (0, 0));
+        d.apply(&Action::Undo);
+        d.set_paper(Paper::A4);
+        // No block moved, but the paper changed: still cleared.
+        assert_eq!((d.undo_depth(), d.redo_depth()), (0, 0));
+        for _ in 0..10 {
+            d.apply(&Action::Down);
+        }
+        assert_eq!(rect(&d, 1).y, 2970 - 150);
+        // Back up to where the block also fits Letter, so the switch below moves nothing;
+        // the undo entries still hold y 2820, below the Letter page.
+        for _ in 0..5 {
+            d.apply(&Action::Up);
+        }
+        assert_eq!(rect(&d, 1).y, 2570);
+        d.set_paper(Paper::Letter);
+        assert_eq!(rect(&d, 1).y, 2570);
+        assert_eq!((d.undo_depth(), d.redo_depth()), (0, 0));
+        for _ in 0..20 {
+            d.apply(&Action::Undo);
+        }
+        let size = d.canvas().page_size(1).unwrap();
+        assert!(d.canvas().blocks().iter().all(|b| fits(b.rect, size)), "{:?}", rect(&d, 1));
+        // Setting the same paper again keeps the history.
+        d.apply(&Action::Up);
+        d.set_paper(Paper::Letter);
+        assert_eq!(d.undo_depth(), 1);
+    }
+
+    #[test]
+    fn keys_are_ignored_while_dragging_and_zoom_needs_no_focus() {
+        let mut d = designer();
+        assert!(d.begin_drag(1));
+        d.drag_to(700, 300, false);
+        for a in [Action::Right, Action::Tab, Action::Undo, Action::ZoomIn, Action::Enter] {
+            d.apply(&a);
+        }
+        assert_eq!((rect(&d, 1).x, d.focus(), d.zoom(), d.editing()), (700, Some(1), 100.0, None));
+        d.end_drag();
+        assert_eq!(d.undo_depth(), 1);
+        d.apply(&Action::Undo);
+        assert_eq!(rect(&d, 1).x, 200);
+        // An empty canvas: no focus, zoom still works.
+        let mut e = Designer::new(
+            Canvas::parse(
+                "page	1	A4
+",
+            )
+            .unwrap(),
+        );
+        assert_eq!(e.focus(), None);
+        e.apply(&Action::ZoomIn);
+        e.apply(&Action::ZoomIn);
+        assert_eq!(e.zoom(), 150.0);
+        e.apply(&Action::ZoomOut);
+        assert_eq!(e.zoom(), 125.0);
+        e.apply(&Action::Right);
+        e.set_paper(Paper::Letter);
+        assert_eq!(e.canvas().pages(), [Paper::Letter]);
     }
 
     #[test]

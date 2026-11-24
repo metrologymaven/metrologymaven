@@ -14,8 +14,8 @@ Overall: **fail**
 
 | Criterion | Measured | Threshold | Result |
 |---|---|---|---|
-| REQ-001 content rendered | 5 pages, 200 blocks, 32 tables, 3D frames: 1 | 5 pages, 200 blocks, tables, 1 3D frame | pass |
-| AC-1 drag a block for 10 s, p95 frame time | 40.000 ms (n = 3) | < 33 ms | fail |
+| REQ-001 content loaded | 5 pages, 200 blocks, 32 tables, 3D frames: 1 | 5 pages, 200 blocks, tables, 1 3D frame | pass |
+| AC-1 drag a block for 10 s, p95 frame time | 40.000 ms (n = 3) over 10.250 s | < 33 ms | fail |
 | AC-2 zoom 25 % to 400 %, p95 frame time | 6.000 ms (n = 2) | < 33 ms | pass |
 | AC-2 type 200 characters, p95 frame time | 33.000 ms (n = 1) | < 33 ms | fail |
 | AC-3 keyboard move and resize | 108 of 109 steps | all steps | fail |
@@ -24,7 +24,7 @@ Overall: **fail**
 
 ## Recommendation
 
-- AC-1 drag: fail, measured 40.000 ms (n = 3).
+- AC-1 drag: fail, measured 40.000 ms (n = 3) over 10.250 s.
 - AC-2 typing: fail, measured 33.000 ms (n = 1).
 - AC-3 keyboard: fail, measured 108 of 109 steps.
 
@@ -42,10 +42,11 @@ Raw per-frame timings: `timings.csv` (series, index, ms).
 
 ## Manual IME check (AC-4)
 
-On Windows with a Japanese IME, select a text block, press Enter, compose そくてい and commit it.
+On Windows with a Japanese IME, select a text block, press Enter, compose そくてい and commit it. Then compose again and press Escape before committing.
 
 - Input method and version:
 - Committed text shown in the block:
+- Escape during composition cancels the composition without ending the edit (yes or no):
 
 ## Manual screen-reader check (REQ-005)
 

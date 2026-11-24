@@ -623,6 +623,10 @@ fn canvas_ui(ui: &mut egui::Ui, m: &mut Model) {
                 let Some(r) = layout.to_px(page, b.rect) else { continue };
                 let rect = screen(content.min, r);
                 let id = block_id(b.id);
+                // Pointer picking uses egui's own widget hit testing: one interact rect per
+                // block in id order, where the widget added last wins. That is the same
+                // topmost-block rule as `Canvas::hit` / `Layout::hit`, which CI tests; the
+                // prototype does not call them, so egui's picking is what the timings measure.
                 let resp = ui.interact(rect, id, egui::Sense::click_and_drag());
                 let handle_rect = egui::Rect::from_center_size(rect.max, egui::vec2(10.0, 10.0));
                 let handle = ui.interact(handle_rect, handle_id(b.id), egui::Sense::drag());
@@ -806,6 +810,8 @@ struct Bench {
     cursor: Cursor,
     series: BTreeMap<Phase, Vec<f64>>,
     drag_started: Option<Instant>,
+    /// How long the drag phase really lasted (AC-1 needs 10 s).
+    drag_seconds: Option<f64>,
 }
 
 struct App {
@@ -901,6 +907,7 @@ impl App {
             fonts: self.fonts.clone(),
             content: Some(content),
             series: b.series,
+            drag_seconds: b.drag_seconds,
             keyboard,
             ime: self.args.ime,
             screen_reader: self.args.screen_reader,
@@ -941,6 +948,7 @@ impl App {
                     record = Some(Phase::Drag);
                 }
                 Command::DragEnd => {
+                    b.drag_seconds = b.drag_started.map(|t| t.elapsed().as_secs_f64());
                     m.designer.end_drag();
                     m.guides = Guides::default();
                 }
@@ -1064,9 +1072,14 @@ fn main() -> ExitCode {
     };
     let bench = match args.bench.clone() {
         Some(out) => match Schedule::for_canvas(&canvas, args.drag_seconds) {
-            Some(schedule) => {
-                Some(Bench { out, schedule, cursor: Cursor::default(), series: BTreeMap::new(), drag_started: None })
-            }
+            Some(schedule) => Some(Bench {
+                out,
+                schedule,
+                cursor: Cursor::default(),
+                series: BTreeMap::new(),
+                drag_started: None,
+                drag_seconds: None,
+            }),
             None => {
                 eprintln!("fixture: page 1 needs two text blocks for the benchmark");
                 return ExitCode::from(1);

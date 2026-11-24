@@ -14,7 +14,7 @@ Overall: **incomplete**
 
 | Criterion | Measured | Threshold | Result |
 |---|---|---|---|
-| REQ-001 content rendered | - | 5 pages, 200 blocks, tables, 1 3D frame | not run |
+| REQ-001 content loaded | - | 5 pages, 200 blocks, tables, 1 3D frame | not run |
 | AC-1 drag a block for 10 s, p95 frame time | - | < 33 ms | not run |
 | AC-2 zoom 25 % to 400 %, p95 frame time | - | < 33 ms | not run |
 | AC-2 type 200 characters, p95 frame time | - | < 33 ms | not run |
@@ -32,10 +32,11 @@ No frame times recorded.
 
 ## Manual IME check (AC-4)
 
-On Windows with a Japanese IME, select a text block, press Enter, compose そくてい and commit it.
+On Windows with a Japanese IME, select a text block, press Enter, compose そくてい and commit it. Then compose again and press Escape before committing.
 
 - Input method and version:
 - Committed text shown in the block:
+- Escape during composition cancels the composition without ending the edit (yes or no):
 
 ## Manual screen-reader check (REQ-005)
 

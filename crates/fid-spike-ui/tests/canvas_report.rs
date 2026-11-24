@@ -40,6 +40,7 @@ fn ac5_failing_report_snapshot() {
         fonts: vec!["C:\\Windows\\Fonts\\segoeui.ttf".into(), "C:\\Windows\\Fonts\\YuGothM.ttc".into()],
         content: Some(FULL),
         series,
+        drag_seconds: Some(10.25),
         keyboard: Some((108, 109)),
         ime: Outcome::NotRun,
         screen_reader: Outcome::Pass,
@@ -56,6 +57,7 @@ fn pending_report_snapshot() {
         fonts: vec![],
         content: None,
         series: BTreeMap::new(),
+        drag_seconds: None,
         keyboard: None,
         ime: Outcome::NotRun,
         screen_reader: Outcome::NotRun,
@@ -75,6 +77,7 @@ fn wrong_content_fails_and_passing_report_has_no_fallback() {
         fonts: vec!["f".into()],
         content: Some(FULL),
         series,
+        drag_seconds: Some(10.0),
         keyboard: Some((109, 109)),
         ime: Outcome::Pass,
         screen_reader: Outcome::Pass,
@@ -89,6 +92,41 @@ fn wrong_content_fails_and_passing_report_has_no_fallback() {
     assert!(text.contains("Overall: **fail**"));
     assert!(text.contains("- REQ-001 content: fail, measured 5 pages, 200 blocks, 32 tables, 3D frames: 0."));
     assert!(text.contains("option B"));
+}
+
+/// Review of #577: a drag shorter than 10 s (or of unknown length) does not count for AC-1.
+#[test]
+fn short_drag_is_not_run() {
+    let mut series = BTreeMap::new();
+    for p in [Phase::Drag, Phase::Zoom, Phase::Typing] {
+        series.insert(p, vec![1.0, 2.0]);
+    }
+    let mut r = Results {
+        env: env("x", "y", true),
+        fonts: vec!["f".into()],
+        content: Some(FULL),
+        series,
+        drag_seconds: Some(4.5),
+        keyboard: Some((109, 109)),
+        ime: Outcome::Pass,
+        screen_reader: Outcome::Pass,
+        limitations: vec![],
+    };
+    let row = "| AC-1 drag a block for 10 s, p95 frame time | 2.000 ms (n = 2) over 4.500 s | < 33 ms | not run (needs 10 s) |";
+    let text = render(&r);
+    assert!(text.contains(row), "{text}");
+    assert!(text.contains("Overall: **incomplete**"));
+    assert!(text.contains("Incomplete: 1 criteria not run."));
+    r.drag_seconds = None;
+    assert!(render(&r).contains("| 2.000 ms (n = 2) over an unknown time | < 33 ms | not run (needs 10 s) |"));
+    r.drag_seconds = Some(f64::NAN);
+    assert!(render(&r).contains("not run (needs 10 s)"));
+    // A slow drag that still lasted 10 s or more is judged, so a failing machine fails.
+    r.drag_seconds = Some(12.0);
+    r.series.insert(Phase::Drag, vec![50.0]);
+    let text = render(&r);
+    assert!(text.contains("| 50.000 ms (n = 1) over 12.000 s | < 33 ms | fail |"), "{text}");
+    assert!(text.contains("Overall: **fail**"));
 }
 
 #[test]
