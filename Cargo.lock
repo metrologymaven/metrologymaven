@@ -1854,6 +1854,7 @@ dependencies = [
  "fid-io-reg",
  "fid-registry",
  "fid-types",
+ "toml",
 ]
 
 [[package]]

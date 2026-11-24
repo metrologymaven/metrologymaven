@@ -9,6 +9,8 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-mig]
+built_pr: 578
 satisfies: [REQ-MIG.COVER-005]
 covers: []
 depends_on: [IO.REG.DETECT, MIG.SRC.REG]
@@ -78,7 +80,17 @@ Each migration format has a test corpus: real or synthetic files of that format 
 
 ## Open questions
 
-- None.
+- None blocking. The format-registry check (REQ-001) can only be as strong as the registry manifest's format catalogue, which the workspace manifest does not carry yet (see MIG.SRC.REG Open questions); until it does, `--registry-manifest` is optional and only format-ID syntax is checked without it.
+
+## As built
+
+- `fid-mig` module `cover::corpus` (`load`, `parse_catalogue`, `check`, `check_paths`) and `cargo xtask mig corpus-check --manifest <json> --catalogue <toml> --sources <json> [--registry-manifest <json>]`. Exit 0 pass, 1 findings, 2 usage error or unreadable file. On a pass it prints `corpus_digest: sha256:<hex>` and `private_run: true|false` (the `false` line is printed too). Every run prints `format_registry: checked` or `format_registry: not checked (no --registry-manifest)` (`CorpusReport.registry`, `RegistryCheck`), and the pass line itself carries the same qualifier (`corpus-check: ok (format registry not checked) ...`), so a pass is never reported without saying whether REQ-001's registry membership was checked.
+- An entry's `sha256` uses the shared digest form `sha256:<64 lowercase hex>` (`fid-types`); the catalogue keeps its bare hex, and the two are compared as digests.
+- One manifest per format: every entry's `format_id` must equal the manifest's, else `CORPUS-SCHEMA`. Format IDs follow the format registry's ID rule, so `native:` formats are refused.
+- A format counts as admitted (REQ-004) only through a register entry with that format whose status is `ADMITTED` or `OPEN_EXPORT_ONLY` and which also passes the register's own review, attestation and policy rules; a register that does not load is `CORPUS-SCHEMA sources`.
+- The dataset catalogue is read with the `toml` crate, as `fid-accept` does: `fid-data` (which owns the catalogue parser) is a `tool` crate that a `services` crate may not depend on. Only `id`, `sha256`, `redistribution` and `contains_customer_data` are read; a malformed one of those, a repeated ID, a `[[dataset]]` key outside the 14 ECO.DATA.CAT field names, or a top-level key other than `policy` and `dataset` fails the whole catalogue (`CORPUS-SCHEMA catalogue`), so a misspelt flag cannot pass silently. Licence and owner rules stay with `datasets-check`.
+- Findings print as `<code> <subject>[ <detail>]`, sorted by subject (catalogue ID, format ID, or `manifest`/`catalogue`/`sources`) and then code. A manifest that fails the schema is not checked further.
+- Dependency note: `MIG.SRC.REG` is not marked built because its CLI form is open; this leaf uses only its register library (`src::reg::load` and its checks), which is on main and tested.
 
 ## Children
 

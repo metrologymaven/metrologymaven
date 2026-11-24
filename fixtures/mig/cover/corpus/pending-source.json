@@ -1,0 +1,13 @@
+{
+  "schema": "mig-corpus@1",
+  "format_id": "points-csv",
+  "name": "Point export demo corpus",
+  "entries": [
+    {
+      "catalogue_id": "mig-csv-demo",
+      "sha256": "sha256:5c12818136483de82201bff988785967b56cca993f96c4e5affaeba749ffb0dd",
+      "format_id": "points-csv",
+      "visibility": "public"
+    }
+  ]
+}
