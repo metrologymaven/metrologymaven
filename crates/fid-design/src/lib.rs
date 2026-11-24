@@ -7,6 +7,7 @@
 //! - [`review`]: `review-check` (`UX.SYSTEM.REVIEW`).
 //! - [`screens`]: `screens-check` and `screens-gate` (`UX.SCREENS.INV`).
 //! - [`tokens`]: `tokens-check` (`UX.TOKENS.COLOR`).
+//! - [`fonts`]: `fonts-check` (`UX.TOKENS.TYPE`).
 //! - [`status`]: `status-check` (`UX.TOKENS.STATUS`).
 //! - [`palettes`]: `palettes-check` (`UX.TOKENS.DATAPAL`).
 //! - [`color`]: `color-check`, the release gate over all of them (`UX.TOKENS.CHECK`).
@@ -15,6 +16,7 @@
 
 pub mod color;
 pub mod finding;
+pub mod fonts;
 pub mod icons_prov;
 pub mod palettes;
 pub mod pkg;
