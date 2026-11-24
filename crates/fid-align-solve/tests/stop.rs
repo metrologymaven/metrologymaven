@@ -317,6 +317,36 @@ fn ac3_never_converges() {
     assert_eq!(out.stopped_by().unwrap().to_string(), "limit(max_iterations)");
 }
 
+/// A `-0.0` tolerance set directly on the struct (not through `from_settings`) is a zero
+/// tolerance: the monitor stores it as `+0.0`, so an exact repeat (relative change `+0.0`)
+/// still counts as a small change. Same trace and result as `custom_zero_rel_tol_exact_repeat`.
+#[test]
+fn negative_zero_tolerance_is_zero() {
+    let fx = load("stop-traces.json");
+    let t = fx.at("traces").arr().iter().find(|t| t.at("name").str() == "custom_zero_rel_tol_exact_repeat").unwrap();
+    let e = t.at("expect");
+    let c = StopCriteria { objective_rel_tol: -0.0, ..StopCriteria::default() };
+    assert!(c.validate().is_ok());
+    let mut m = StopMonitor::new(c, t.at("start_objective").f()).unwrap();
+    assert_eq!(m.criteria().objective_rel_tol.to_bits(), 0.0f64.to_bits());
+    let mut v = Verdict::Continue;
+    for (k, (dt, dr, f)) in steps(t).into_iter().enumerate() {
+        v = m.update(k as u64 + 1, dt, dr, f).unwrap();
+        if v.is_terminal() {
+            break;
+        }
+    }
+    assert_eq!(v.as_str(), e.at("verdict").str());
+    assert_eq!(v, Verdict::Converged(Converged::Objective));
+    assert_eq!(m.last_iteration(), e.at("iteration").u());
+    assert_eq!(m.outcome().unwrap().stopped_by().unwrap().to_string(), "converged(objective_rel_tol)");
+    // The same for the increment tolerances: zero steps meet a `-0.0` tolerance.
+    let c = StopCriteria { translation_tol: -0.0, rotation_tol: -0.0, ..StopCriteria::default() };
+    let mut m = StopMonitor::new(c, 1.0).unwrap();
+    assert_eq!(m.update(1, 0.0, -0.0, 0.5), Ok(Verdict::Converged(Converged::Increment)));
+    assert_eq!(m.outcome().unwrap().stopped_by().unwrap().to_string(), "converged(translation_tol)");
+}
+
 // ------------------------------------------------------------------ errors
 
 /// NaN, infinite and negative inputs fail with the reference's code, input and iteration;

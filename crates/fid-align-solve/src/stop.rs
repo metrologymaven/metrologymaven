@@ -31,7 +31,8 @@
 //!
 //! # Monitor (REQ-002, REQ-003)
 //!
-//! [`StopMonitor::new`] takes the criteria and the objective `f_0` of the start pose
+//! [`StopMonitor::new`] takes the criteria (validated, then `-0.0` tolerances stored as
+//! `+0.0`, so that a zero tolerance accepts a zero change) and the objective `f_0` of the start pose
 //! (iteration 0). [`StopMonitor::update`] takes iteration `k` (exactly one more than the last,
 //! starting at 1, else `stop_bad_iteration`), the translation increment `dt` (m), the rotation
 //! increment `dr` (rad) and the objective `f_k`, and:
@@ -69,8 +70,11 @@
 //! status `not_converged` and the pose of the best iteration (possibly 0, the start pose). The
 //! caller keeps the poses: after each `update`, `best().0 == k` says the pose of iteration `k`
 //! is the new best. [`StopOutcome::stopped_by`] is the [`StoppedBy`] of the convergence
-//! history (ALN.QA.HIST): `converged(increment)`, `converged(objective)`,
-//! `limit(max_iterations)` or `diverged(divergence_window)`.
+//! history (ALN.QA.HIST), named by a declared criterion of [`STOP_CRITERIA_DECL`]:
+//! `converged(translation_tol)` (the increment rule), `converged(objective_rel_tol)`,
+//! `limit(max_iterations)` or `diverged(divergence_window)`. The increment rule uses both
+//! increment tolerances and is recorded under `translation_tol` (maintainer decision on the
+//! #570 review, so that every history name is a declared criterion name).
 //!
 //! D0: integer and IEEE comparison logic only, single-threaded, no hash containers.
 
@@ -465,8 +469,8 @@ impl StopOutcome {
     /// fixed and valid, so this does not fail in practice; the `Result` is `StoppedBy::new`'s.
     pub fn stopped_by(&self) -> Result<StoppedBy, HistError> {
         let (outcome, name) = match self.verdict {
-            Verdict::Converged(Converged::Increment) => (Outcome::Converged, "increment"),
-            Verdict::Converged(Converged::Objective) => (Outcome::Converged, "objective"),
+            Verdict::Converged(Converged::Increment) => (Outcome::Converged, "translation_tol"),
+            Verdict::Converged(Converged::Objective) => (Outcome::Converged, "objective_rel_tol"),
             Verdict::Stopped(Stopped::Diverged) => (Outcome::Diverged, "divergence_window"),
             Verdict::Continue | Verdict::Stopped(Stopped::MaxIterations) => (Outcome::Limit, "max_iterations"),
         };
@@ -498,9 +502,15 @@ pub struct StopMonitor {
 
 impl StopMonitor {
     /// A monitor for `criteria` (validated) starting from a pose with objective
-    /// `start_objective` (iteration 0).
+    /// `start_objective` (iteration 0). The three tolerances are kept with `-0.0` as `+0.0`.
     pub fn new(criteria: StopCriteria, start_objective: f64) -> Result<StopMonitor, StopError> {
         criteria.validate()?;
+        let criteria = StopCriteria {
+            translation_tol: plus_zero(criteria.translation_tol),
+            rotation_tol: plus_zero(criteria.rotation_tol),
+            objective_rel_tol: plus_zero(criteria.objective_rel_tol),
+            ..criteria
+        };
         let f0 = check_value(0, "objective", start_objective, false)?;
         Ok(StopMonitor {
             criteria,

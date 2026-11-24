@@ -42,7 +42,7 @@
     "status": "ok",
     "pose_iteration": 4,
     "pose_objective": 1.4999,
-    "stopped_by": "converged(increment)"
+    "stopped_by": "converged(translation_tol)"
    }
   },
   {
@@ -64,7 +64,7 @@
     "status": "ok",
     "pose_iteration": 1,
     "pose_objective": 0.5,
-    "stopped_by": "converged(increment)"
+    "stopped_by": "converged(translation_tol)"
    }
   },
   {
@@ -91,7 +91,7 @@
     "status": "ok",
     "pose_iteration": 2,
     "pose_objective": 0.8,
-    "stopped_by": "converged(increment)"
+    "stopped_by": "converged(translation_tol)"
    }
   },
   {
@@ -128,7 +128,7 @@
     "status": "ok",
     "pose_iteration": 4,
     "pose_objective": 0.6,
-    "stopped_by": "converged(increment)"
+    "stopped_by": "converged(translation_tol)"
    }
   },
   {
@@ -165,7 +165,7 @@
     "status": "ok",
     "pose_iteration": 4,
     "pose_objective": 0.24999999999998,
-    "stopped_by": "converged(objective)"
+    "stopped_by": "converged(objective_rel_tol)"
    }
   },
   {
@@ -212,7 +212,7 @@
     "status": "ok",
     "pose_iteration": 6,
     "pose_objective": 0.4,
-    "stopped_by": "converged(objective)"
+    "stopped_by": "converged(objective_rel_tol)"
    }
   },
   {
@@ -239,7 +239,7 @@
     "status": "ok",
     "pose_iteration": 2,
     "pose_objective": 0.0,
-    "stopped_by": "converged(objective)"
+    "stopped_by": "converged(objective_rel_tol)"
    }
   },
   {
@@ -266,7 +266,7 @@
     "status": "ok",
     "pose_iteration": 2,
     "pose_objective": 1e-320,
-    "stopped_by": "converged(objective)"
+    "stopped_by": "converged(objective_rel_tol)"
    }
   },
   {
@@ -298,7 +298,7 @@
     "status": "ok",
     "pose_iteration": 3,
     "pose_objective": -2.000000000002,
-    "stopped_by": "converged(objective)"
+    "stopped_by": "converged(objective_rel_tol)"
    }
   },
   {
@@ -511,7 +511,7 @@
     "status": "ok",
     "pose_iteration": 10,
     "pose_objective": 8.5,
-    "stopped_by": "converged(increment)"
+    "stopped_by": "converged(translation_tol)"
    }
   },
   {
@@ -543,7 +543,7 @@
     "status": "ok",
     "pose_iteration": 3,
     "pose_objective": 0.5,
-    "stopped_by": "converged(increment)"
+    "stopped_by": "converged(translation_tol)"
    }
   },
   {
@@ -1639,7 +1639,7 @@
     "status": "ok",
     "pose_iteration": 3,
     "pose_objective": 0.7,
-    "stopped_by": "converged(increment)"
+    "stopped_by": "converged(translation_tol)"
    }
   },
   {
@@ -1758,7 +1758,7 @@
     "status": "ok",
     "pose_iteration": 2,
     "pose_objective": 0.8,
-    "stopped_by": "converged(increment)"
+    "stopped_by": "converged(translation_tol)"
    }
   },
   {
@@ -1800,7 +1800,7 @@
     "status": "ok",
     "pose_iteration": 4,
     "pose_objective": 0.4999999999999999,
-    "stopped_by": "converged(objective)"
+    "stopped_by": "converged(objective_rel_tol)"
    }
   }
  ],

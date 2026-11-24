@@ -26,8 +26,10 @@ objective_rel_tol 1e-12, divergence_window 5):
              best = (k, f_k) if f_k < best objective (a tie keeps the earlier iteration)
   outcome    converged(..): status ok, pose of the last iteration;
              stopped(..):   status not_converged, pose of the best iteration.
-             stopped_by (ALN.QA.HIST): converged(increment), converged(objective),
-             limit(max_iterations), diverged(divergence_window).
+             stopped_by (ALN.QA.HIST), always a declared criterion name:
+             converged(translation_tol) for the increment rule,
+             converged(objective_rel_tol), limit(max_iterations),
+             diverged(divergence_window).
 
 Criteria settings: applied over the defaults in input order; an unknown name is
 unknown_stop_criterion, a repeated one duplicate_stop_criterion; a tolerance must be finite
@@ -146,8 +148,8 @@ def run(criteria, f0, steps):
             converged = verdict.startswith("converged")
             pose = (k, f) if converged else best
             stopped_by = {
-                "converged(increment)": "converged(increment)",
-                "converged(objective)": "converged(objective)",
+                "converged(increment)": "converged(translation_tol)",
+                "converged(objective)": "converged(objective_rel_tol)",
                 "stopped(max_iterations)": "limit(max_iterations)",
                 "stopped(diverged)": "diverged(divergence_window)",
             }[verdict]

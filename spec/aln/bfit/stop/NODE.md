@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-24
 ---
 
 # ALN.BFIT.STOP: Best-fit stopping criteria and non-convergence handling
@@ -81,7 +81,18 @@ One stopping-rule object for every iterative best-fit: user-settable criteria wi
 
 ## Open questions
 
-- None blocking.
+- **AC-5 obligation on ALN.BFIT.ICP.CMD (REQ-ALN.BFIT.ICP.CMD-006):** the command `align.run_bestfit@1` does not exist yet. When it is built, its registry manifest entry must emit `fid_align_solve::STOP_CRITERIA_DECL` as its `convergence` block (with `iterative: true`), and CI must then run `cargo xtask convergence-check` on the real exported manifest. Until then AC-5 is checked against the reference manifest `fixtures/aln/bfit/stop-manifest.json`.
+- **As built (#570):** module `fid_align_solve::stop`.
+  - `StopMonitor::new(criteria, start_objective)`: the start pose's objective is iteration 0, so iteration 1 can be a rise (AC-2's divergence at iteration 5) and the start pose can be the lowest-objective pose (REQ-004). `new` stores `-0.0` tolerances as `+0.0`.
+  - Rule order when several rules fire in one iteration: `stopped(diverged)`, then `converged(increment)`, then `converged(objective)`, then `stopped(max_iterations)`. A run whose objective rose `divergence_window` times is never reported converged; a run converging on its last allowed iteration is converged.
+  - Error codes beyond `invalid_stop_criteria` and `nan_in_iteration`: `invalid_iteration_value` (an infinite input or a negative increment), `stop_bad_iteration` (iterations must run 1, 2, 3, ...), `stop_monitor_finished` (no update after a terminal verdict), `unknown_stop_criterion` and `duplicate_stop_criterion` (`StopCriteria::from_settings`). Infinite tolerances and a `divergence_window` of 0 are also `invalid_stop_criteria`.
+  - `max_iterations` and `divergence_window` are `u64` in `1..=100_000`; a negative or non-integral value is refused by `from_settings`, which takes the values as `f64` the way the command receives them.
+- **History criterion names (maintainer decision, #570 review):** the stopping criterion recorded in the ALN.QA.HIST history is always a declared criterion name: `converged(translation_tol)` for the increment rule (which uses both increment tolerances), `converged(objective_rel_tol)`, `limit(max_iterations)`, `diverged(divergence_window)`. The verdict texts of REQ-002 and REQ-003 (`converged(increment)`, ...) are unchanged; only the history name is the declared criterion. Renamed before any history is stored.
+- **Converged pose worse than the start:** a converged run uses its last pose (REQ-004 applies the lowest-objective pose only to `stopped`), and that pose can have a higher objective than the start pose (for example after a rise run shorter than `divergence_window`). ALN.BFIT.ICP.LOOP and ALN.BFIT.FEAT.SOLVE decide whether to warn on it; `StopMonitor::best()` gives the lowest-objective iteration for the comparison.
+
+## Change log
+
+- 2026-11-24 (review of #570, maintainer decision): history criterion names renamed from `converged(increment)` / `converged(objective)` to `converged(translation_tol)` / `converged(objective_rel_tol)`, so every name is a declared criterion; the ALN.QA.HIST AC-2 example follows (maintainer waiver: cross-leaf). No REQ ID was renumbered.
 
 ## Children
 
