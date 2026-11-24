@@ -140,6 +140,24 @@ fn unknown_node_and_bad_format() {
     run_case("bad-format");
 }
 
+/// REQ-UX.SYSTEM.TOOL-002: a source whose only export is the tool's own format fails.
+#[test]
+fn tool_format_only_export_is_missing_open_export() {
+    run_case("tool-export-only");
+    let t = run(&["sources-check", "--root", &fix("tool-export-only")]);
+    assert_eq!(t.status.code(), Some(1));
+    assert!(stdout(&t).contains("SOURCE-EXPORT-MISSING report-penpot-only-v1"), "{}", stdout(&t));
+}
+
+/// A tool row declaring `fig`: `.fig` alone fails, `.fig` plus SVG passes.
+#[test]
+fn fig_tool_row_needs_an_open_export_too() {
+    run_case("fig-tool");
+    let r = check(&repo().join(FX).join("fig-tool"), None).unwrap();
+    let keys: Vec<(String, String)> = r.findings.iter().map(|f| (f.code.to_string(), f.subject.clone())).collect();
+    assert_eq!(keys, [(sources::EXPORT_MISSING.to_string(), "fig-only-v1".to_string())]);
+}
+
 /// Shipped `design/sources.json`, `design/CONTRIBUTING.md` and `.github/ISSUE_TEMPLATE/design-proposal.yml`.
 #[test]
 fn shipped_design_tool_files() {
@@ -280,8 +298,11 @@ fn schema_and_guard_rules() {
     let d = fresh("traversal");
     let t = std::fs::read_to_string(d.join("sources.json")).unwrap().replace("exports/icon-probe.svg", "../escape.svg");
     std::fs::write(d.join("sources.json"), t).unwrap();
-    assert!(codes(&d).iter().all(|(c, _)| c == sources::SCHEMA));
-    assert!(!codes(&d).is_empty());
+    // The refused path was the source's only SVG, so it also has no open-format export left.
+    let got = codes(&d);
+    assert!(got.iter().all(|(c, s)| (c == sources::SCHEMA || c == sources::EXPORT_MISSING) && s == "icon-probe-v1"));
+    assert!(got.iter().any(|(c, _)| c == sources::SCHEMA), "{got:?}");
+    assert!(got.iter().any(|(c, _)| c == sources::EXPORT_MISSING), "{got:?}");
 
     // Duplicate source ID rejected.
     let d = fresh("dup-src");

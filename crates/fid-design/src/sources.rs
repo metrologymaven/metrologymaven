@@ -48,7 +48,10 @@
 //!   path below `--root` with an open-format extension (`svg`, `pdf`, `png`, or one of its tool's
 //!   `export_extensions`), must exist as a regular file on disk (no symbolic links followed;
 //!   missing yields `SOURCE-EXPORT-MISSING <source.id>`), and its SHA-256 digest must match
-//!   `sha256` (mismatch yields `SOURCE-EXPORT-DIGEST <source.id>`).
+//!   `sha256` (mismatch yields `SOURCE-EXPORT-DIGEST <source.id>`). At least one listed export
+//!   must be `svg`, `pdf` or `png` (REQ-UX.SYSTEM.TOOL-002): a tool's own export format is
+//!   accepted only in addition, so a source whose exports are all tool formats yields
+//!   `SOURCE-EXPORT-MISSING <source.id>`.
 //! - Untrusted text fails closed through [`crate::review::guard::value_defect`].
 //!
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable input or bad usage.
@@ -430,6 +433,9 @@ impl CheckCtx<'_> {
             }
             Some(CValue::Arr(exps)) => {
                 let mut seen_paths = BTreeSet::new();
+                // REQ-UX.SYSTEM.TOOL-002: at least one export must be SVG, PDF or PNG. A tool's
+                // own export format (`export_extensions`) is allowed in addition, never instead.
+                let mut open_exports = 0usize;
                 for exp in exps {
                     let CValue::Obj(e) = exp else {
                         schema(f, subj, "each export must be a JSON object");
@@ -469,8 +475,11 @@ impl CheckCtx<'_> {
                     };
                     let ext_ok = match file_extension(path) {
                         Some(ext) => {
-                            OPEN_EXTENSIONS.contains(&ext.as_str())
-                                || resolved_tool.is_some_and(|t| t.export_extensions.contains(&ext))
+                            let open = OPEN_EXTENSIONS.contains(&ext.as_str());
+                            if open {
+                                open_exports += 1;
+                            }
+                            open || resolved_tool.is_some_and(|t| t.export_extensions.contains(&ext))
                         }
                         None => false,
                     };
@@ -507,6 +516,13 @@ impl CheckCtx<'_> {
                             }
                         }
                     }
+                }
+                if open_exports == 0 {
+                    f.push(Finding::new(
+                        EXPORT_MISSING,
+                        subj,
+                        "source has no committed export in an open format (svg, pdf or png)",
+                    ));
                 }
             }
             _ => schema(f, subj, "`exports` must be an array of {path, sha256}"),

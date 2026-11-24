@@ -64,7 +64,28 @@
     "sources": 1,
     "exports_checked": 1,
     "findings": [
+      "SOURCE-EXPORT-MISSING mockup-fig-v1",
       "SOURCES-SCHEMA mockup-fig-v1"
+    ]
+  },
+  "tool-export-only": {
+    "root": "tool-export-only",
+    "exit": 1,
+    "tools": 3,
+    "sources": 1,
+    "exports_checked": 1,
+    "findings": [
+      "SOURCE-EXPORT-MISSING report-penpot-only-v1"
+    ]
+  },
+  "fig-tool": {
+    "root": "fig-tool",
+    "exit": 1,
+    "tools": 4,
+    "sources": 2,
+    "exports_checked": 3,
+    "findings": [
+      "SOURCE-EXPORT-MISSING fig-only-v1"
     ]
   }
 }

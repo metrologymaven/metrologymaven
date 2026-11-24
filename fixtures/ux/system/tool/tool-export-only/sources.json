@@ -1,0 +1,43 @@
+{
+  "format": "design-sources@1",
+  "tools": [
+    {
+      "id": "penpot",
+      "name": "Penpot",
+      "open_source": true,
+      "requires_paid_account": false,
+      "export_extensions": [
+        "penpot"
+      ]
+    },
+    {
+      "id": "inkscape",
+      "name": "Inkscape",
+      "open_source": true,
+      "requires_paid_account": false,
+      "export_extensions": [
+        "svg"
+      ]
+    },
+    {
+      "id": "paid-suite",
+      "name": "Proprietary Paid Suite (synthetic)",
+      "open_source": false,
+      "requires_paid_account": true
+    }
+  ],
+  "sources": [
+    {
+      "id": "report-penpot-only-v1",
+      "node": "UX.REPORT.MOCK",
+      "tool": "penpot",
+      "location": "https://design.penpot.app/#/view/synthetic-report-summary",
+      "exports": [
+        {
+          "path": "exports/report-summary.penpot",
+          "sha256": "sha256:3d512120f21a613e87577e7abbbca49d9cfea0f02a20e79c41f9a06c9883fb1a"
+        }
+      ]
+    }
+  ]
+}

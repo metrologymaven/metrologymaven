@@ -1,0 +1,68 @@
+{
+  "format": "design-sources@1",
+  "tools": [
+    {
+      "id": "penpot",
+      "name": "Penpot",
+      "open_source": true,
+      "requires_paid_account": false,
+      "export_extensions": [
+        "penpot"
+      ]
+    },
+    {
+      "id": "inkscape",
+      "name": "Inkscape",
+      "open_source": true,
+      "requires_paid_account": false,
+      "export_extensions": [
+        "svg"
+      ]
+    },
+    {
+      "id": "paid-suite",
+      "name": "Proprietary Paid Suite (synthetic)",
+      "open_source": false,
+      "requires_paid_account": true
+    },
+    {
+      "id": "fig-tool",
+      "name": "Synthetic fig tool",
+      "open_source": false,
+      "requires_paid_account": false,
+      "export_extensions": [
+        "fig"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "fig-only-v1",
+      "node": "UX.SCREENS.INSPECT",
+      "tool": "fig-tool",
+      "location": "exports/mockup.fig",
+      "exports": [
+        {
+          "path": "exports/mockup.fig",
+          "sha256": "sha256:7a7b6931ef138e08dcb62f82af3d33e05d470ed6c8eb711988fa25f3e17fac05"
+        }
+      ]
+    },
+    {
+      "id": "fig-with-svg-v1",
+      "node": "UX.ICONS.CORESET",
+      "tool": "fig-tool",
+      "location": "exports/icon-probe.svg",
+      "exports": [
+        {
+          "path": "exports/icon-probe.svg",
+          "sha256": "sha256:dc0065aacd9aac96ac74fd97c0c38f27e7d5a39cd479e2aadff84d1364fd9281"
+        },
+        {
+          "path": "exports/mockup.fig",
+          "sha256": "sha256:7a7b6931ef138e08dcb62f82af3d33e05d470ed6c8eb711988fa25f3e17fac05"
+        }
+      ]
+    }
+  ]
+}

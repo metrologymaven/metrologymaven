@@ -51,6 +51,9 @@ PDF_MOCKUP = (
 # Tiny synthetic tool export file (`.penpot` placeholder text, CC-BY-4.0).
 PENPOT_EXPORT = b'{"format":"synthetic-penpot-fixture","licence":"CC-BY-4.0"}\n'
 
+# Tiny synthetic `.fig` tool export placeholder (CC-BY-4.0).
+FIG_EXPORT = b"synthetic fig tool export, CC-BY-4.0\n"
+
 
 def sha(data: bytes) -> str:
     return "sha256:" + hashlib.sha256(data).hexdigest()
@@ -249,6 +252,71 @@ def build_cases():
         ),
     }
 
+    # REQ-UX.SYSTEM.TOOL-002: only the tool's own export format, no SVG/PDF/PNG.
+    cases["tool-export-only"] = {
+        "exports/report-summary.penpot": PENPOT_EXPORT,
+        "sources.json": js(
+            {
+                "format": "design-sources@1",
+                "tools": BASE_TOOLS,
+                "sources": [
+                    {
+                        "id": "report-penpot-only-v1",
+                        "node": "UX.REPORT.MOCK",
+                        "tool": "penpot",
+                        "location": "https://design.penpot.app/#/view/synthetic-report-summary",
+                        "exports": [
+                            {"path": "exports/report-summary.penpot", "sha256": sha(PENPOT_EXPORT)},
+                        ],
+                    },
+                ],
+            }
+        ),
+    }
+
+    # A tool row that declares `fig` as its export format: a `.fig` file alone is not enough,
+    # a `.fig` file next to an SVG is.
+    fig_tools = BASE_TOOLS + [
+        {
+            "id": "fig-tool",
+            "name": "Synthetic fig tool",
+            "open_source": False,
+            "requires_paid_account": False,
+            "export_extensions": ["fig"],
+        },
+    ]
+    cases["fig-tool"] = {
+        "exports/icon-probe.svg": SVG_ICON,
+        "exports/mockup.fig": FIG_EXPORT,
+        "sources.json": js(
+            {
+                "format": "design-sources@1",
+                "tools": fig_tools,
+                "sources": [
+                    {
+                        "id": "fig-only-v1",
+                        "node": "UX.SCREENS.INSPECT",
+                        "tool": "fig-tool",
+                        "location": "exports/mockup.fig",
+                        "exports": [
+                            {"path": "exports/mockup.fig", "sha256": sha(FIG_EXPORT)},
+                        ],
+                    },
+                    {
+                        "id": "fig-with-svg-v1",
+                        "node": "UX.ICONS.CORESET",
+                        "tool": "fig-tool",
+                        "location": "exports/icon-probe.svg",
+                        "exports": [
+                            {"path": "exports/icon-probe.svg", "sha256": sha(SVG_ICON)},
+                            {"path": "exports/mockup.fig", "sha256": sha(FIG_EXPORT)},
+                        ],
+                    },
+                ],
+            }
+        ),
+    }
+
     return cases
 
 
@@ -308,7 +376,23 @@ LABELS = {
         "tools": 3,
         "sources": 1,
         "exports_checked": 1,
-        "findings": ["SOURCES-SCHEMA mockup-fig-v1"],
+        "findings": ["SOURCE-EXPORT-MISSING mockup-fig-v1", "SOURCES-SCHEMA mockup-fig-v1"],
+    },
+    "tool-export-only": {
+        "root": "tool-export-only",
+        "exit": 1,
+        "tools": 3,
+        "sources": 1,
+        "exports_checked": 1,
+        "findings": ["SOURCE-EXPORT-MISSING report-penpot-only-v1"],
+    },
+    "fig-tool": {
+        "root": "fig-tool",
+        "exit": 1,
+        "tools": 4,
+        "sources": 2,
+        "exports_checked": 3,
+        "findings": ["SOURCE-EXPORT-MISSING fig-only-v1"],
     },
 }
 
@@ -335,9 +419,15 @@ def oracle_check(case_dir: pathlib.Path):
         if not exps:
             findings.append(f"SOURCE-EXPORT-MISSING {sid}")
         allowed = set(OPEN_EXTS) | set(tool.get("export_extensions", []) if tool else [])
-        for exp in exps:
+        exts = [
+            (e["path"].rsplit("/", 1)[-1].rsplit(".", 1)[-1].lower() if "." in e["path"].rsplit("/", 1)[-1] else "")
+            for e in exps
+        ]
+        # REQ-UX.SYSTEM.TOOL-002: at least one SVG, PDF or PNG export; a tool format alone is not enough.
+        if exps and not any(x in OPEN_EXTS for x in exts):
+            findings.append(f"SOURCE-EXPORT-MISSING {sid}")
+        for exp, ext in zip(exps, exts):
             rel = exp["path"]
-            ext = rel.rsplit("/", 1)[-1].rsplit(".", 1)[-1].lower() if "." in rel.rsplit("/", 1)[-1] else ""
             if ext not in allowed:
                 findings.append(f"SOURCES-SCHEMA {sid}")
             p = case_dir / rel
