@@ -360,7 +360,7 @@ fn stop_detail_reader_is_strict() {
         r#"{"iteration_path":[],"params":[1],"step_id":"018f0000-0000-7000-8000-000000000304"}"#,
         r#"{"iteration_path":[],"params":[],"step_id":"s4"}"#,
         r#"{"iteration_path":[],"params":[]}"#,
-        r#"[]"#,
+        "[]",
     ] {
         assert_eq!(NotRetargetable::from_value(&fid_canon::parse(bad.as_bytes()).unwrap()), None, "{bad}");
     }

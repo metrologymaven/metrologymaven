@@ -143,7 +143,7 @@ impl NotRetargetable {
         let mut iteration_path = Vec::with_capacity(path.len());
         for n in path {
             match n {
-                CValue::Num(x) if *x >= 0.0 && *x <= f64::from(u32::MAX) && x.fract() == 0.0 => {
+                CValue::Num(x) if (0.0..=f64::from(u32::MAX)).contains(x) && x.fract() == 0.0 => {
                     iteration_path.push(*x as u32)
                 }
                 _ => return None,
