@@ -1,0 +1,10 @@
+{
+  "size": {
+    "$type": "dimension",
+    "target": {
+      "min": {
+        "$value": "24px"
+      }
+    }
+  }
+}

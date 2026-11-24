@@ -1,0 +1,11 @@
+{
+  "artefact": "tokens/density/compact.json",
+  "author": "Claude Code (Claude Opus 5.5), agent author of UX.TOKENS.SPACE; the compact binding of every semantic spacing role to a spacing step and the minimum target per theme (24 px, 44 px in the floor theme) were chosen for this project at the spec's lower bounds",
+  "date": "2026-11-21",
+  "references": [
+    "The UX.TOKENS and UX.TOKENS.SPACE spec nodes in this repository",
+    "WCAG 2.2 success criterion 2.5.8 (target size minimum, the 24 px threshold only)",
+    "The floor-theme 44 px minimum of UX.TOKENS.SPACE REQ-002, marked unverified there"
+  ],
+  "statement_version": "originality-statement@1"
+}
