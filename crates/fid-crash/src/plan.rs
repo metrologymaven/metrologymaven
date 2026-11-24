@@ -30,6 +30,16 @@ impl KillInstant {
         self.kill % 4 == 3
     }
 
+    /// Whether the delay is counted from the writer's first `ACK` rather than from `READY`:
+    /// every eighth kill (kill numbers 0, 8, 16, ...), so runs always exercise kills after
+    /// at least one acknowledged commit even on slow or saturated disks (e.g., parallel
+    /// Windows CI runs where `FlushFileBuffers` can exceed `max_delay_us`). Disjoint from
+    /// [`Self::from_spawn`] and a pure function of the kill number, so printed instants
+    /// reproduce with the same reference point.
+    pub fn from_first_ack(&self) -> bool {
+        self.kill % 8 == 0
+    }
+
     /// Parses `<kill>:<delay_us>`, the form [`KillInstant`]'s `Display` prints.
     pub fn parse(s: &str) -> Option<KillInstant> {
         let (k, d) = s.split_once(':')?;

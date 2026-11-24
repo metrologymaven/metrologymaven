@@ -21,8 +21,8 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 
-DOMAINS = ["AGENT", "ALN", "AUTO", "CMM", "CORE", "ECO", "ENT", "FLOW", "GDT", "GEO", "HAL", "I18N", "IND",
-           "IO", "KRN", "LVM", "MIG", "OUTR", "PLAT", "QUAL", "RPT", "SCAN", "TRUST", "UNC", "UX", "VIZ"]
+DOMAINS = ["AGENT", "ALN", "AUTO", "CAL", "CMM", "CORE", "ECO", "ENT", "FLOW", "GDT", "GEO", "HAL", "I18N", "IND",
+           "IO", "KRN", "LVM", "MIG", "OUTR", "PLAT", "QUAL", "RPT", "SCAN", "SURF", "TRUST", "UNC", "UX", "VIZ"]
 
 POLICY = ('[policy]\n'
           'redistributable = ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0", "MIT", "Apache-2.0", "BSD-3-Clause",\n'

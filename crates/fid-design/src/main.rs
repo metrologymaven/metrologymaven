@@ -2,6 +2,7 @@
 //! `fid-design pkg-diff --from <dir> --to <dir> [--json]`,
 //! `fid-design tokens-check --root <dir> [--json]`,
 //! `fid-design status-check --root <dir> [--json]`,
+//! `fid-design space-check --root <dir> [--json]`,
 //! `fid-design palettes-check --root <dir> [--baseline <digests>] [--json]`,
 //! `fid-design color-check --root <dir> [--baseline <digests>] [--out <file>] [--json]`,
 //! `fid-design princ-check [--file <md>] [--json]` and
@@ -26,6 +27,7 @@ const USAGE: &str =
        fid-design pkg-diff --from <dir> --to <dir> [--json]
        fid-design tokens-check --root <design dir> [--json]
        fid-design status-check --root <design dir> [--json]
+       fid-design space-check --root <design dir> [--json]
        fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]
        fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]
        fid-design princ-check [--file <md>] [--json]
@@ -281,6 +283,10 @@ fn main() -> ExitCode {
             Err(e) => fail(e),
         },
         ("status-check", Some(root), None, None) => match fid_design::status::check(root) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        },
+        ("space-check", Some(root), None, None) => match fid_design::space::check(root) {
             Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
             Err(e) => fail(e),
         },

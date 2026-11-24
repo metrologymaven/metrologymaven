@@ -11,6 +11,7 @@
 //! - [`palettes`]: `palettes-check` (`UX.TOKENS.DATAPAL`).
 //! - [`color`]: `color-check`, the release gate over all of them (`UX.TOKENS.CHECK`).
 //! - [`icons_lint`]: `icons-lint` (`UX.ICONS.GRID`).
+//! - [`space`]: `space-check` (`UX.TOKENS.SPACE`).
 //! - [`icons_prov`]: `icons-prov` and `icons-registry` (`UX.ICONS.PROV`).
 
 pub mod color;
@@ -22,6 +23,7 @@ pub mod pkg;
 pub mod princ;
 pub mod review;
 pub mod screens;
+pub mod space;
 pub mod status;
 pub mod tokens;
 pub mod words;

@@ -1,0 +1,10 @@
+{
+  "artefact": "tokens/space.tokens.json",
+  "author": "Claude Code (Claude Opus 5.5), agent author of UX.TOKENS.SPACE; the spacing scale (eleven steps from 0 to 64 px, each a multiple of 4 px) and the semantic gap, inset and stack roles were chosen for this project on the 4 px grid the spec requires",
+  "date": "2026-11-21",
+  "references": [
+    "The UX.TOKENS and UX.TOKENS.SPACE spec nodes in this repository",
+    "The Design Tokens Community Group format draft pinned by UX.SYSTEM.PKG (token syntax only)"
+  ],
+  "statement_version": "originality-statement@1"
+}
