@@ -212,7 +212,7 @@ fn oversized_inputs_are_refused() {
     let catalogue = String::from_utf8(read("datasets.toml")).unwrap();
     let sources = read("sources.json");
     let mut big = b"{\"schema\":\"mig-corpus@1\",\"format_id\":\"qif\",\"name\":\"".to_vec();
-    big.extend(std::iter::repeat(b'x').take(corpus::MAX_MANIFEST_BYTES));
+    big.resize(big.len() + corpus::MAX_MANIFEST_BYTES, b'x');
     big.extend(b"\",\"entries\":[]}");
     let r = corpus::check(&big, &catalogue, &sources, None);
     assert!(r.manifest.is_none() && r.findings[0].code == Code::Schema);
