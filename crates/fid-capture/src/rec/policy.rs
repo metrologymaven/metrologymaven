@@ -19,10 +19,11 @@
 //! [`RecordingPolicy::current`] and [`RecordingPolicy::retain_until`] are pure over that
 //! snapshot, read-only and total (REQ-005).
 //!
-//! **Fail closed.** A key whose value is not known is [`None`] in the [`Policy`], and every
-//! capture that depends on it is refused with [`ForbidCause::Unknown`]. A value is unknown when
-//! the snapshot lacks the key (not declared, not resolved, or resolved twice), when it came from
-//! a scope other than machine or the default, when the machine-scope value or the machine file
+//! **Fail closed.** A key that is not stored resolves to its default, and the default is used.
+//! A key whose value is not known is [`None`] in the [`Policy`], and every capture that depends
+//! on it is refused with [`ForbidCause::Unknown`]. A value is unknown when the snapshot lacks the
+//! key (the resolver returned no entry for it) or holds it twice, when it came from a scope other
+//! than machine or the default, when the machine-scope value or the machine file
 //! itself could not be used (any resolver warning for that key or file in machine scope), or
 //! when it is not one of the key's values. CORE.STO.SET falls back to the default (`allowed`)
 //! for an unusable stored value; for these keys that would turn a corrupted or hand-edited
@@ -409,14 +410,25 @@ fn as_str(v: &CValue) -> Option<&str> {
 impl RecordingPolicy {
     /// Reads the four keys through the settings resolver with this module's own declarations
     /// ([`capture_settings`]), never declarations supplied by the caller, and returns the policy
-    /// with the warnings of the read (for the Activity Log). If the declarations do not build,
+    /// with the warnings of the read about the policy keys and unreadable files (for the
+    /// Activity Log). If the declarations do not build,
     /// every value is unknown.
     pub fn from_settings(sources: &Sources<'_>) -> (RecordingPolicy, Vec<SettingWarning>) {
         let Ok(registry) = SettingsRegistry::build(&capture_settings()) else {
             return (RecordingPolicy::default(), Vec::new());
         };
         let (values, warnings) = resolve(&registry, sources, |d| POLICY_KEYS.contains(&d.key()));
-        (RecordingPolicy::from_snapshot(&values, &warnings), warnings)
+        let policy = RecordingPolicy::from_snapshot(&values, &warnings);
+        // Only this module's warnings: those about a policy key and whole unreadable files, not
+        // the other keys a shared settings file holds.
+        let warnings = warnings
+            .into_iter()
+            .filter(|w| match &w.key {
+                Some(k) => POLICY_KEYS.contains(&k.as_str()),
+                None => w.reason == WarningReason::Unreadable,
+            })
+            .collect();
+        (policy, warnings)
     }
 
     /// The policy from resolved values and the warnings of the same read (see the module

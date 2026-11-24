@@ -405,7 +405,7 @@ fn all_refused(policy: &RecordingPolicy, cause: ForbidCause) {
 }
 
 #[test]
-fn an_absent_policy_refuses_everything() {
+fn a_snapshot_missing_a_key_refuses() {
     let empty = RecordingPolicy::from_snapshot(&[], &[]);
     assert_eq!(empty, RecordingPolicy::default());
     assert_eq!(empty.current(), Policy::default());
@@ -426,6 +426,23 @@ fn an_absent_policy_refuses_everything() {
         };
         assert_eq!(refused, want, "without {key}");
     }
+}
+
+#[test]
+fn from_settings_reports_only_policy_warnings() {
+    let install = Install::new("warn");
+    install
+        .write(Scope::Machine, r#""capture.recording": "maybe", "journal.activity_log_keep": "x", "other.thing": 1"#);
+    install.write_raw(Scope::User, b"not json");
+    let (policy, warnings) = install.policy();
+    assert_eq!(policy.current().recording, None);
+    assert_eq!(warnings.len(), 2, "{warnings:?}");
+    assert!(warnings.iter().any(|w| w.key.as_deref() == Some(RECORDING_KEY)
+        && w.scope == Scope::Machine
+        && w.reason == WarningReason::InvalidValue));
+    assert!(warnings
+        .iter()
+        .any(|w| w.key.is_none() && w.scope == Scope::User && w.reason == WarningReason::Unreadable));
 }
 
 #[test]
