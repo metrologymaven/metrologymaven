@@ -238,6 +238,17 @@ fn inline_rules() {
         .replacen("[[keyboard]]\nkey = \"Space\"\ncontext = \"The button has focus.\"\naction = \"activate\"\n", "", 1)
         .replacen("title = \"Button\"\n", "title = \"Button\"\nkeyboard = []\n", 1);
     assert_eq!(codes(&no_keys), vec![pair(POINTER_ONLY, "activate"), pair(SCHEMA, "x.md")]);
+    // Untrusted strings never become subjects: a malformed token name or role is named by
+    // its field (control characters, upper case, over-long values).
+    // (`\\u0007` and `\\u001b` are TOML escapes, so the parsed values hold BEL and ESC.)
+    assert_eq!(
+        one("[tokens.label.default]\ntext = \"sem.text.muted\"", "[tokens.label.default]\ntext = \"Sem.Text\\u0007x\""),
+        vec![pair(comp::TOKEN_UNKNOWN, "tokens.label.default.text")]
+    );
+    assert_eq!(one("role = \"button\"", "role = \"wid\\u001b[31mget\""), vec![pair(comp::ROLE, "a11y.role")]);
+    let long = format!("role = \"{}\"", "a".repeat(65));
+    assert_eq!(one("role = \"button\"", &long), vec![pair(comp::ROLE, "a11y.role")]);
+    assert_eq!(one("role = \"button\"", "role = \"Button\""), vec![pair(comp::ROLE, "a11y.role")]);
     // A focus-reachable reason is accepted; a reason on an undeclared part is not.
     assert!(one("shown_as = \"visible\"", "shown_as = \"focus-reachable\"").is_empty());
     assert_eq!(one("part = \"reason\"\n", "part = \"tooltip\"\n"), vec![pair(comp::DISABLED_REASON, "x.md")]);

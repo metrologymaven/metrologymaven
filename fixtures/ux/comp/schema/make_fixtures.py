@@ -7,10 +7,11 @@ Writes, below this directory:
 - ok/button.md: a complete component-spec@1 file (AC-1);
 - pointer-only.md, bad-token.md, no-reason.md, bad-role.md: one defect each (AC-2 .. AC-5);
 - extra/*.md: one defect each for the other rules (state, focus, density, schema);
-- v1.0.0/: the package fixture. It is fixtures/ux/system/pkg/v1.0.0 copied byte for byte, plus
-  what a focus check needs and that package lacks: tokens/pairs.json (fid-design-pairs@1), a
-  surface colour (prim.color.grey.50, sem.surface.base) and a second spacing step (space.1),
-  with names.json updated to list them. The source package itself declares no pairs, so
+- v1.0.0/: the package fixture, derived from fixtures/ux/system/pkg/v1.0.0: unchanged files
+  copied byte for byte; four files rewritten (the primitive and semantic colour token files,
+  space.tokens.json and names.json) to add what a focus check needs and that package lacks, a
+  surface colour (prim.color.grey.50, sem.surface.base) and a second spacing step (space.1);
+  and one file added, tokens/pairs.json (fid-design-pairs@1). The source package itself declares no pairs, so
   REQ-UX.COMP.SCHEMA-004 cannot pass against it (see the `system-pkg` case below);
 - expected.json: the findings (code and subject) each case must produce, hand-labelled here
   from the rules of the spec node, never from the Rust output.
