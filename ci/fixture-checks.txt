@@ -189,6 +189,7 @@ python fixtures/ors/trace/make_fixtures.py --check
 python fixtures/outr/bench/recipe/make_fixtures.py --check
 python fixtures/outr/brand/dress/make_fixtures.py --check
 python fixtures/outr/comm/metric/snap/make_fixtures.py --check
+python fixtures/outr/docs/frame/make_fixtures.py --check
 python fixtures/outr/site/import/make_fixtures.py --check
 python fixtures/pkg/check_package.py --strict
 python fixtures/pkg/check_spec_drift.py
