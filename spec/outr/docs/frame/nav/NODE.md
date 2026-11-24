@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-outreach]
+built_pr: 442
 satisfies: [REQ-OUTR.DOCS.FRAME-002, REQ-OUTR.DOCS.FRAME-006]
 covers: []
 depends_on: []

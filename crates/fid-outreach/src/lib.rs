@@ -16,9 +16,13 @@
 //!   parsed types.
 //! - [`launch_gate`]: the `gate-check` milestone gate report over local spec-tree, parity, CI and
 //!   sign-off data (spec node `OUTR.LAUNCH.GATE`).
+//! - [`link_check`]: internal and external link checks plus `docs-gates.toml` configuration for
+//!   docs editions (spec node `OUTR.DOCS.QA`).
 //! - [`qa::a11y`]: static accessibility gate for built pages (spec node `OUTR.SITE.QA.A11Y`).
 //! - [`doc_run`]: runs the `sh run` blocks of the contributor guide against a temporary copy of
 //!   the revision it documents (spec node `OUTR.DOCS.CONTRIB`).
+//! - [`docs_build`]: builds one static release edition of the docs portal with its shared page
+//!   frame, release banner and `nav.toml` navigation tree (spec node `OUTR.DOCS.FRAME.NAV`).
 //! - [`dress`]: trade-dress distinctness list check and Markdown renderer (spec node
 //!   `OUTR.BRAND.GUIDE.DRESS`).
 //! - [`guide_check`]: brand-guideline family-name token check and publish guard (spec node
@@ -36,10 +40,12 @@ pub mod asset_check;
 pub mod bench;
 pub mod copy_guard;
 pub mod doc_run;
+pub mod docs_build;
 pub mod dress;
 pub mod guide_check;
 pub mod launch_gate;
 pub mod launch_plan;
+pub mod link_check;
 pub mod metrics;
 pub mod moderation;
 pub mod qa;

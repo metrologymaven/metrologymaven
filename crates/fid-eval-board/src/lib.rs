@@ -27,12 +27,17 @@
 mod board;
 mod check;
 mod fraction;
+pub mod guide;
 mod register;
 mod scan;
 
 pub use board::{parse_board, Board, Figures, ModelEntry, Outcome};
 pub use check::{check_claims, Inputs, Report};
 pub use fraction::Fraction;
+pub use guide::{
+    build_guide, valid_model_id, write_guide, GuideError, GuideInputs, GuideOutput, GuideRow, HardwareInfo,
+    WorkflowSuccess, GUIDE_HTML_FILE, GUIDE_MD_FILE, MEETS_THRESHOLD_LABEL, RATES_SCOPE_NOTE,
+};
 pub use register::{is_claim_id, parse_register, Claim, Metric, Register, Scope, ScopeKind, REGISTER_FORMAT};
 pub use scan::{parse_phrases, scan_text, SourceKind, Tag, SOURCE_EXTENSIONS};
 

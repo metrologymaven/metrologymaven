@@ -1,0 +1,43 @@
+{
+  "families": [
+    {
+      "family": "Synth Sans",
+      "files": [
+        "SynthSans-Regular.woff2",
+        "SynthSans-Medium.woff2",
+        "SynthSans-SemiBold.woff2"
+      ],
+      "licence": "OFL-1.1",
+      "scripts": [
+        "Latin"
+      ],
+      "source": "https://example.invalid/synth-sans",
+      "tabular_numerals": true
+    },
+    {
+      "family": "Synth Mono",
+      "files": [
+        "SynthMono-Regular.woff2"
+      ],
+      "licence": "Apache-2.0",
+      "scripts": [
+        "Latin"
+      ],
+      "source": "https://example.invalid/synth-mono",
+      "tabular_numerals": true
+    },
+    {
+      "family": "Synth Display",
+      "files": [
+        "SynthDisplay-Bold.woff2"
+      ],
+      "licence": "MIT",
+      "scripts": [
+        "Latin"
+      ],
+      "source": "https://example.invalid/synth-display",
+      "tabular_numerals": false
+    }
+  ],
+  "format": "font-list@1"
+}

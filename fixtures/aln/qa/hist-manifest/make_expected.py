@@ -6,7 +6,7 @@ and fid-xtask: it reads the hand-authored inputs in this folder and applies the 
 spec/aln/qa/hist/NODE.md as pinned in the crates' module documentation.
 
 Inputs (hand-authored, CC-BY-4.0):
-  trace.txt       12 scripted iterations ending in converged(increment)        (AC-2)
+  trace.txt       12 scripted iterations ending in converged(translation_tol)  (AC-2)
   defective.json  test registry manifest: three iterative commands, one with a
                   criterion missing its default, and one direct command       (AC-1)
   fixed.json      the same with the default added                             (AC-1, AC-4)
@@ -80,7 +80,7 @@ def history():
                 stop = (v[0], v[1])
             else:
                 raise AssertionError(k)
-    assert len(rows) == 12 and stop == ("converged", "increment")
+    assert len(rows) == 12 and stop == ("converged", "translation_tol")
     for i, r in enumerate(rows):
         assert r[0] == i + 1 and r[2] >= 0 and r[3] >= 0
     data = b"FIDHST" + bytes([1]) + struct.pack("<Q", len(rows))

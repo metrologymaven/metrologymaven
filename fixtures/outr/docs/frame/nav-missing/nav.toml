@@ -1,0 +1,12 @@
+version = 1
+
+[[section]]
+title = "User guide"
+
+  [[section.items]]
+  title = "Introduction"
+  source = "book/index.md"
+
+  [[section.items]]
+  title = "Ghost chapter"
+  source = "book/ghost.md"

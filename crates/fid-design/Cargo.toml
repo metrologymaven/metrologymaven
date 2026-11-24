@@ -1,6 +1,6 @@
 [package]
 name = "fid-design"
-description = "Design-system tooling commands: pkg-check and pkg-diff (UX.SYSTEM.PKG), princ-check and words-check (UX.SYSTEM.PRINC), review-check (UX.SYSTEM.REVIEW), screens-check and screens-gate (UX.SCREENS.INV), tokens-check (UX.TOKENS.COLOR), status-check (UX.TOKENS.STATUS), palettes-check (UX.TOKENS.DATAPAL), color-check (UX.TOKENS.CHECK), icons-prov and icons-registry (UX.ICONS.PROV), research-check (UX.RESEARCH.PROTO), space-check (UX.TOKENS.SPACE)"
+description = "Design-system tooling commands: pkg-check and pkg-diff (UX.SYSTEM.PKG), princ-check and words-check (UX.SYSTEM.PRINC), review-check (UX.SYSTEM.REVIEW), screens-check and screens-gate (UX.SCREENS.INV), tokens-check (UX.TOKENS.COLOR), status-check (UX.TOKENS.STATUS), palettes-check (UX.TOKENS.DATAPAL), color-check (UX.TOKENS.CHECK), icons-prov and icons-registry (UX.ICONS.PROV), research-check (UX.RESEARCH.PROTO), lint-literals (UX.SYSTEM.LINT), icons-lint (UX.ICONS.GRID), space-check (UX.TOKENS.SPACE), fonts-check (UX.TOKENS.TYPE), page-check (UX.REPORT.PAGE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -23,6 +23,8 @@ fid-types = { path = "../fid-types" }
 toml = { version = "0.8", default-features = false, features = ["parse"] }
 # NFC check and NFKC folding of untrusted text (already in the workspace).
 unicode-normalization = "0.1.24"
+
+regex = { version = "1", default-features = false, features = ["std", "unicode"] }
 
 [lints]
 workspace = true

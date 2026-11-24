@@ -1,0 +1,1 @@
+{"artifacts":[{"role":"wasm","sha256":"sha256:5eace439054c66964d3ef2999e577098375f20a01b102ae9a7c759d8525a7600","target":"wasm32-wasip1"}],"core":{"algorithms":[],"name":"fid-sandbox-test-kernel","numeric_profile":"knp-1","schema_version":"1","semver":"0.0.0-sandbox-test"}}

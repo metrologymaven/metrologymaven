@@ -1,0 +1,25 @@
+[package]
+name = "fid-guide-wasm"
+description = "Safe-Rust WASM/CLI Field Guide kernel runner exposing live P0/P1a fits, GD&T zones, GUM/MCM uncertainty, ISO 14253 decision rules and RFC 8785 canonicalization (spec node OUTR.DOCS.GUIDE.WASM)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "fid-guide-wasm"
+path = "src/main.rs"
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-fit = { path = "../fid-fit" }
+fid-gps = { path = "../fid-gps" }
+fid-kdec = { path = "../fid-kdec" }
+fid-kunc = { path = "../fid-kunc" }
+fid-num = { path = "../fid-num" }
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true

@@ -8,13 +8,12 @@
 //!
 //! # Monte Carlo samples (maintainer decision 2026-11-21)
 //!
-//! [`evaluate`] never uses samples: until `UNC.UEC.STMT` carries a `samples_digest`, Monte
-//! Carlo samples count as unavailable, so a conformance-probability rule on an MCM
-//! statement is `NOT_DECIDABLE(pdf_unavailable)`. [`evaluate_with_samples`] is the
-//! digest-checked path for when the statement carries that field: it takes the encoded
-//! `mcm-samples@1` bytes and the digest they must have (the statement's, once it exists)
-//! and refuses any other bytes. Callers must not pass a digest computed from the bytes
-//! themselves; `UNC.DEC.DEFAULT` must not call it before the statement field exists.
+//! [`evaluate`] never uses samples, so a conformance-probability rule on an MCM statement
+//! is `NOT_DECIDABLE(pdf_unavailable)` there. [`evaluate_with_samples`] takes the encoded
+//! `mcm-samples@1` bytes and binds them to the statement: their SHA-256 must equal the
+//! statement's own `samples_digest` (`UNC.UEC.STMT`), never a digest the caller supplies
+//! or one computed from the bytes. A statement without `samples_digest` has no bindable
+//! samples (`samples_unbound`).
 //!
 //! # Fail closed
 //!
@@ -34,8 +33,9 @@
 //! 5. The evidence basis of the statement (`EvidenceBasis::of`, `invalid_number{field}`).
 //! 6. `invalid_rule{r}`: the unbound guard-band template `dr:guard-band@v` (only a resolved
 //!    instance names its guard band).
-//! 7. Samples ([`evaluate_with_samples`] only): `samples_unbound` (the SHA-256 of the
-//!    encoded bytes is not the expected digest, the statement's method is not `MCM`, or the
+//! 7. Samples ([`evaluate_with_samples`] only): `samples_unbound` (the statement carries no
+//!    `samples_digest`, the SHA-256 of the encoded bytes is not that digest, the statement's
+//!    method is not `MCM`, or the
 //!    sample set's model digest is not the statement's), `samples_invalid{decode}` (the bytes
 //!    are not a valid `mcm-samples@1` set), `samples_output` (the named output is not in the
 //!    set).
@@ -88,7 +88,6 @@ use fid_kunc::prop::mcm::samples::{decode, SampleSet, DEFAULT_CAP};
 use fid_kunc::{EvidenceClass, Method, NlinVerdict, UncertaintyStatement};
 use fid_num::kdec::{self, Decimal};
 use fid_num::NumError;
-use fid_types::Digest;
 
 use crate::decision::{Decision, EvidenceBasis};
 use crate::rule::{DecError, DecisionRule, NotDecidableReason, Outcome, PdfSource, RuleKind, RuleParams};
@@ -116,15 +115,13 @@ pub struct Tolerance {
     pub unit: String,
 }
 
-/// Encoded Monte Carlo samples, the digest they must have and the output column to use
-/// (see [`evaluate_with_samples`]).
+/// Encoded Monte Carlo samples and the output column to use (see
+/// [`evaluate_with_samples`]). Their digest is not given here: it is the statement's own
+/// `samples_digest`.
 #[derive(Debug, Clone, Copy)]
 pub struct SampleBytes<'a> {
     /// The encoded `mcm-samples@1` set.
     pub encoded: &'a [u8],
-    /// The SHA-256 digest the bytes must have (the statement's `samples_digest`, once
-    /// `UNC.UEC.STMT` carries it).
-    pub expected_digest: &'a Digest,
     /// Output node ID of the column.
     pub output: &'a str,
 }
@@ -476,7 +473,11 @@ struct Counts {
 }
 
 fn count_samples(s: &SampleBytes<'_>, stmt: &UncertaintyStatement, t: &Tolerance) -> Result<Counts, EvalError> {
-    if fid_kci::kci::sha256_digest(s.encoded) != *s.expected_digest {
+    // The only accepted digest is the statement's own (UNC.UEC.STMT `samples_digest`).
+    let Some(bound) = stmt.samples_digest() else {
+        return Err(EvalError::SamplesUnbound);
+    };
+    if fid_kci::kci::sha256_digest(s.encoded) != *bound {
         return Err(EvalError::SamplesUnbound);
     }
     if stmt.method() != Some(Method::Mcm) {
@@ -661,9 +662,8 @@ pub fn evaluate(input: &EvalInput<'_>) -> Result<DecisionRecord, EvalError> {
     run(input, None)
 }
 
-/// Evaluates a rule with encoded Monte Carlo samples whose SHA-256 must equal
-/// `samples.expected_digest` (see the module documentation: not for values of record until
-/// `UNC.UEC.STMT` carries `samples_digest`).
+/// Evaluates a rule with encoded Monte Carlo samples whose SHA-256 must equal the
+/// statement's `samples_digest` (see the module documentation).
 pub fn evaluate_with_samples(input: &EvalInput<'_>, samples: &SampleBytes<'_>) -> Result<DecisionRecord, EvalError> {
     run(input, Some(samples))
 }

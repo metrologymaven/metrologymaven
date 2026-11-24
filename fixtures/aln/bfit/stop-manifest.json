@@ -1,0 +1,43 @@
+{
+ "format": 1,
+ "quantity_catalogue_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+ "commands": [
+  {
+   "id": "align.run_bestfit",
+   "major": 1,
+   "iterative": true,
+   "convergence": [
+    {
+     "name": "max_iterations",
+     "unit": "1",
+     "default": "100",
+     "meaning": "Stop with stopped(max_iterations) and status not_converged when this many iterations ran without convergence."
+    },
+    {
+     "name": "translation_tol",
+     "unit": "m",
+     "default": "1e-9",
+     "meaning": "Converged by increment when the translation step is at or below this length and the rotation step within rotation_tol."
+    },
+    {
+     "name": "rotation_tol",
+     "unit": "rad",
+     "default": "1e-9",
+     "meaning": "Converged by increment when the rotation step is at or below this angle and the translation step within translation_tol."
+    },
+    {
+     "name": "objective_rel_tol",
+     "unit": "1",
+     "default": "1e-12",
+     "meaning": "Converged by objective when the relative objective change is at or below this value on two consecutive iterations."
+    },
+    {
+     "name": "divergence_window",
+     "unit": "1",
+     "default": "5",
+     "meaning": "Stop with stopped(diverged) and status not_converged when the objective rose on this many consecutive iterations."
+    }
+   ]
+  }
+ ]
+}

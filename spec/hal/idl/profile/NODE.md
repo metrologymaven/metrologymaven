@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-hal-idl]
+built_pr: 574
 satisfies: [REQ-HAL.IDL-004]
 covers: []
 depends_on: [HAL.IDL.UNITS, HAL.IDL.STAMP]

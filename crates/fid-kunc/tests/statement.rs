@@ -316,6 +316,49 @@ fn claimed_values_never_look_measured() {
     assert_eq!(err(p), StmtError::ClassRequiresAssignment);
 }
 
+/// `samples_digest` (follow-up of `UNC.DEC.EVAL`): the SHA-256 of a retained `mcm-samples@1`
+/// set, carried by `MCM` statements only. Expected errors are hand-labelled from the Design.
+#[test]
+fn samples_digest_binds_monte_carlo_samples_only() {
+    let d = digest_of("mcm-samples:1");
+    // Absent by default, and then not written: earlier bytes and digests are unchanged.
+    let plain = UncertaintyStatement::new(complete(EvidenceClass::Uec1, Method::Mcm)).unwrap();
+    assert_eq!(plain.samples_digest(), None);
+    assert!(!String::from_utf8(plain.canonical_json().to_vec()).unwrap().contains("samples_digest"));
+    // MCM carries it; it round-trips and changes the digest.
+    let mut p = complete(EvidenceClass::Uec1, Method::Mcm);
+    p.samples_digest = Some(d);
+    let s = UncertaintyStatement::new(p.clone()).unwrap();
+    assert_eq!(s.samples_digest(), Some(&d));
+    assert_ne!(s.digest(), plain.digest());
+    let text = String::from_utf8(s.canonical_json().to_vec()).unwrap();
+    assert!(text.contains(&format!("\"samples_digest\":\"{}\"", d.as_str())), "{text}");
+    assert_eq!(UncertaintyStatement::parse_canonical(s.canonical_json()).unwrap(), s);
+    // A UEC-2 MCM statement may carry it too (still sealed to the assignment).
+    let mut q = complete(EvidenceClass::Uec2, Method::Mcm);
+    q.samples_digest = Some(d);
+    assert_eq!(err(q), StmtError::ClassRequiresAssignment);
+    // Every other method, claims included, fails: a claim never points at a sample set.
+    for m in Method::ALL.iter().copied().filter(|m| *m != Method::Mcm) {
+        let mut q = complete(EvidenceClass::Uec1, m);
+        q.samples_digest = Some(d);
+        assert_eq!(err(q), StmtError::ClassMismatch { field: "samples_digest" }, "{m}");
+    }
+    // UEC-0 carries no evaluation output.
+    let mut q = StatementParts::new(EvidenceClass::Uec0);
+    q.uec0_reason = Some(Uec0Reason::UMissing);
+    q.samples_digest = Some(d);
+    assert_eq!(err(q), StmtError::Uec0HasValue { field: "samples_digest" });
+    // The fixtures of the Python reference.
+    check_invalid("uec0_with_samples_digest.json", "uec0_has_value", "samples_digest");
+    check_invalid("samples_digest_lpu.json", "class_mismatch", "samples_digest");
+    check_invalid("samples_digest_declared.json", "class_mismatch", "samples_digest");
+    check_invalid("samples_digest_spec_derived.json", "class_mismatch", "samples_digest");
+    check_invalid("samples_digest_bad.json", "invalid_field", "samples_digest");
+    let v = UncertaintyStatement::parse_canonical(&read("valid/uec1_mcm_samples.json")).unwrap();
+    assert_eq!(v.samples_digest(), Some(&digest_of("mcm-samples:run-0042")));
+}
+
 #[test]
 fn uec2_and_uec3_need_the_assignment() {
     assert_eq!(StmtError::ClassRequiresAssignment.code(), "class_requires_assignment");
@@ -409,8 +452,12 @@ fn every_field_changes_the_digest() {
         variance_share: 1.0,
     });
     let d0 = UncertaintyStatement::new(base.clone()).unwrap().digest();
-    let edits: [Edit; 8] = [
+    let edits: [Edit; 9] = [
         |p| p.method = Some(Method::Mcm),
+        |p| {
+            p.method = Some(Method::Mcm);
+            p.samples_digest = Some(digest_of("mcm-samples:1"));
+        },
         |p| p.unit = Some("si:rad".into()),
         |p| p.u_std = Some(1e-6),
         |p| p.expanded = Some(Expanded { value: f64::from_bits(2e-6f64.to_bits() + 1), k: 2.0 }),
@@ -603,6 +650,9 @@ impl Gen {
             }
             if p.method == Some(Method::Lpu) && self.coin() {
                 p.lpu_validated_by_mc = Some(self.coin());
+            }
+            if p.method == Some(Method::Mcm) && self.coin() {
+                p.samples_digest = Some(self.digest());
             }
             if !claimed && self.coin() {
                 p.nonlinearity = Some(Nonlinearity {

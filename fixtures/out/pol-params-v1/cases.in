@@ -1,0 +1,152 @@
+# KRN.OUT.POL hand-written parameter sets, masks and guard cases (CC-BY-4.0 project data).
+# Every expected outcome after "=>" is hand-labelled from the leaf's pinned rules
+# (crates/fid-filter/src/policy/mod.rs module documentation); make_pol_fixtures.py checks each
+# label against its own independent model and writes cases.txt. Values are decimal Python
+# float literals (nan, inf, -0.0 and subnormals allowed); index lists are comma separated,
+# a..b is the half-open range.
+#
+# spec   <name> <kind> <field>=<value>... fraction=<f> target=<primitive> => <outcome>
+# decode <name> => <outcome>          (the next line is the input, byte for byte)
+# mask   <name> count=<n> indices=<list> => <outcome>
+# guard  <name> target=<primitive> fraction=<f> count=<n> indices=<list> => <outcome>
+
+# --- n-sigma
+spec nsigma-ok nsigma k=3 side=both fraction=0.25 target=cylinder => ok
+spec nsigma-ok-positive nsigma k=2.5 side=positive fraction=0 target=plane => ok
+spec nsigma-ok-negative nsigma k=1e300 side=negative fraction=0.9999999999999999 target=point => ok
+spec nsigma-k-zero nsigma k=0 side=both fraction=0.25 target=cylinder => invalid_parameter k out_of_range
+spec nsigma-k-negative nsigma k=-1 side=both fraction=0.25 target=cylinder => invalid_parameter k out_of_range
+spec nsigma-k-negzero nsigma k=-0.0 side=both fraction=0.25 target=cylinder => invalid_parameter k out_of_range
+spec nsigma-k-nan nsigma k=nan side=both fraction=0.25 target=cylinder => invalid_parameter k non_finite
+spec nsigma-k-inf nsigma k=inf side=both fraction=0.25 target=cylinder => invalid_parameter k non_finite
+spec nsigma-k-subnormal nsigma k=5e-324 side=both fraction=0.25 target=cylinder => invalid_parameter k subnormal
+spec nsigma-k-before-fraction nsigma k=0 side=both fraction=2 target=cylinder => invalid_parameter k out_of_range
+
+# --- robust scale
+spec robust-ok-mad robust_scale k=3 scale=mad side=negative fraction=0.1 target=sphere => ok
+spec robust-ok-qn robust_scale k=3.5 scale=qn side=both fraction=0.25 target=circle2 => ok
+spec robust-k-neginf robust_scale k=-inf scale=mad side=both fraction=0.25 target=sphere => invalid_parameter k non_finite
+spec robust-k-zero robust_scale k=0 scale=qn side=positive fraction=0.25 target=sphere => invalid_parameter k out_of_range
+spec robust-k-neg-subnormal robust_scale k=-1e-310 scale=qn side=positive fraction=0.25 target=sphere => invalid_parameter k subnormal
+
+# --- RANSAC
+spec ransac-ok ransac threshold_m=1e-5 iterations=500 min_inliers=50 seed=7 fraction=0.5 target=plane => ok
+spec ransac-ok-limits ransac threshold_m=0.002 iterations=1000000 min_inliers=3 seed=18446744073709551615 fraction=0.25 target=circle3 => ok
+spec ransac-ok-seed-zero ransac threshold_m=1 iterations=1 min_inliers=4 seed=0 fraction=0.25 target=sphere => ok
+spec ransac-threshold-zero ransac threshold_m=0 iterations=500 min_inliers=50 seed=7 fraction=0.25 target=plane => invalid_parameter threshold_m out_of_range
+spec ransac-threshold-nan ransac threshold_m=nan iterations=500 min_inliers=50 seed=7 fraction=0.25 target=plane => invalid_parameter threshold_m non_finite
+spec ransac-threshold-first ransac threshold_m=-1 iterations=0 min_inliers=0 seed=7 fraction=0.25 target=plane => invalid_parameter threshold_m out_of_range
+spec ransac-iterations-zero ransac threshold_m=1e-5 iterations=0 min_inliers=50 seed=7 fraction=0.25 target=plane => invalid_parameter iterations out_of_range
+spec ransac-iterations-high ransac threshold_m=1e-5 iterations=1000001 min_inliers=50 seed=7 fraction=0.25 target=plane => invalid_parameter iterations out_of_range
+spec ransac-min-inliers-zero ransac threshold_m=1e-5 iterations=500 min_inliers=0 seed=7 fraction=0.25 target=plane => invalid_parameter min_inliers out_of_range
+spec ransac-min-inliers-below-primitive ransac threshold_m=1e-5 iterations=500 min_inliers=4 seed=7 fraction=0.25 target=cylinder => invalid_parameter min_inliers below_min_points
+spec ransac-fraction-before-target ransac threshold_m=1e-5 iterations=500 min_inliers=4 seed=7 fraction=1 target=cylinder => invalid_parameter max_excluded_fraction out_of_range
+
+# --- distance-to-nominal gate
+spec gate-ok nominal_gate max_distance_m=0.0001 fraction=0.25 target=plane => ok
+spec gate-negative nominal_gate max_distance_m=-0.0001 fraction=0.25 target=plane => invalid_parameter max_distance_m out_of_range
+spec gate-zero nominal_gate max_distance_m=0 fraction=0.25 target=plane => invalid_parameter max_distance_m out_of_range
+spec gate-inf nominal_gate max_distance_m=inf fraction=0.25 target=plane => invalid_parameter max_distance_m non_finite
+spec gate-subnormal nominal_gate max_distance_m=1e-310 fraction=0.25 target=plane => invalid_parameter max_distance_m subnormal
+
+# --- tolerance band
+spec band-ok tolerance_band lower_m=-0.0001 upper_m=0.0002 fraction=0.25 target=plane => ok
+spec band-ok-equal tolerance_band lower_m=0 upper_m=0 fraction=0.25 target=line3 => ok
+spec band-ok-offset tolerance_band lower_m=0.001 upper_m=0.002 fraction=0.25 target=torus => ok
+spec band-lower-negzero tolerance_band lower_m=-0.0 upper_m=0.0002 fraction=0.25 target=plane => invalid_parameter lower_m negative_zero
+spec band-upper-negzero tolerance_band lower_m=-0.001 upper_m=-0.0 fraction=0.25 target=plane => invalid_parameter upper_m negative_zero
+spec band-upper-nan tolerance_band lower_m=-0.0001 upper_m=nan fraction=0.25 target=plane => invalid_parameter upper_m non_finite
+spec band-inverted tolerance_band lower_m=0.0003 upper_m=0.0002 fraction=0.25 target=plane => invalid_parameter lower_m above_upper
+spec band-lower-subnormal tolerance_band lower_m=-1e-320 upper_m=0.0002 fraction=0.25 target=plane => invalid_parameter lower_m subnormal
+
+# --- envelope
+spec fraction-one nsigma k=3 side=both fraction=1 target=cylinder => invalid_parameter max_excluded_fraction out_of_range
+spec fraction-negative nsigma k=3 side=both fraction=-0.1 target=cylinder => invalid_parameter max_excluded_fraction out_of_range
+spec fraction-negzero nsigma k=3 side=both fraction=-0.0 target=cylinder => invalid_parameter max_excluded_fraction negative_zero
+spec fraction-nan nsigma k=3 side=both fraction=nan target=cylinder => invalid_parameter max_excluded_fraction non_finite
+spec fraction-subnormal nsigma k=3 side=both fraction=4e-320 target=cylinder => invalid_parameter max_excluded_fraction subnormal
+
+# --- decoding (AC-1 round trip; malformed and non-canonical inputs)
+decode canonical-nsigma => ok
+{"policy":{"kind":"nsigma","k":"4008000000000000","side":"both"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+decode canonical-ransac => ok
+{"policy":{"kind":"ransac","threshold_m":"3ee4f8b588e368f1","iterations":"500","min_inliers":"50","seed":"7"},"max_excluded_fraction":"3fd0000000000000","target":"plane"}
+decode whitespace => invalid_parameter encoding malformed
+{"policy": {"kind":"nsigma","k":"4008000000000000","side":"both"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+decode empty => invalid_parameter encoding malformed
+
+decode trailing => invalid_parameter encoding malformed
+{"policy":{"kind":"nsigma","k":"4008000000000000","side":"both"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}x
+decode escape => invalid_parameter encoding malformed
+{"policy":{"kind":"nsigma","k":"4008000000000000","side":"bo\th"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+decode too-deep => invalid_parameter encoding malformed
+{"policy":{"kind":"nsigma","k":{"x":{"y":"z"}},"side":"both"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+decode uppercase-hex => invalid_parameter max_excluded_fraction bad_float
+{"policy":{"kind":"nsigma","k":"4008000000000000","side":"both"},"max_excluded_fraction":"3FD0000000000000","target":"cylinder"}
+decode short-hex => invalid_parameter k bad_float
+{"policy":{"kind":"nsigma","k":"400800000000000","side":"both"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+decode k-object => invalid_parameter k wrong_type
+{"policy":{"kind":"nsigma","k":{},"side":"both"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+decode policy-string => invalid_parameter policy wrong_type
+{"policy":"nsigma","max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+decode missing-policy => invalid_parameter policy missing
+{"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+decode missing-side => invalid_parameter side missing
+{"policy":{"kind":"nsigma","k":"4008000000000000"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+decode missing-fraction => invalid_parameter max_excluded_fraction missing
+{"policy":{"kind":"nsigma","k":"4008000000000000","side":"both"},"target":"cylinder"}
+decode extra-key => invalid_parameter encoding unexpected_key
+{"policy":{"kind":"nsigma","k":"4008000000000000","side":"both"},"max_excluded_fraction":"3fd0000000000000","note":"x","target":"cylinder"}
+decode extra-policy-key => invalid_parameter encoding unexpected_key
+{"policy":{"kind":"nsigma","k":"4008000000000000","scale":"mad","side":"both"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+decode duplicate-key => invalid_parameter encoding duplicate_key
+{"policy":{"kind":"nsigma","k":"4008000000000000","k":"4008000000000000","side":"both"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+decode reordered => invalid_parameter encoding not_canonical
+{"policy":{"kind":"nsigma","side":"both","k":"4008000000000000"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+decode unknown-kind => invalid_parameter kind unknown_value
+{"policy":{"kind":"zscore","k":"4008000000000000","side":"both"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+decode unknown-side => invalid_parameter side unknown_value
+{"policy":{"kind":"nsigma","k":"4008000000000000","side":"up"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+decode unknown-target => invalid_parameter target unknown_value
+{"policy":{"kind":"nsigma","k":"4008000000000000","side":"both"},"max_excluded_fraction":"3fd0000000000000","target":"hexagon"}
+decode leading-zero => invalid_parameter iterations bad_integer
+{"policy":{"kind":"ransac","threshold_m":"3ee4f8b588e368f1","iterations":"0500","min_inliers":"50","seed":"7"},"max_excluded_fraction":"3fd0000000000000","target":"plane"}
+decode plus-sign => invalid_parameter seed bad_integer
+{"policy":{"kind":"ransac","threshold_m":"3ee4f8b588e368f1","iterations":"500","min_inliers":"50","seed":"+7"},"max_excluded_fraction":"3fd0000000000000","target":"plane"}
+decode iterations-overflow => invalid_parameter iterations out_of_range
+{"policy":{"kind":"ransac","threshold_m":"3ee4f8b588e368f1","iterations":"4294967296","min_inliers":"50","seed":"7"},"max_excluded_fraction":"3fd0000000000000","target":"plane"}
+decode seed-overflow => invalid_parameter seed out_of_range
+{"policy":{"kind":"ransac","threshold_m":"3ee4f8b588e368f1","iterations":"500","min_inliers":"50","seed":"18446744073709551616"},"max_excluded_fraction":"3fd0000000000000","target":"plane"}
+decode nan-bits => invalid_parameter k non_finite
+{"policy":{"kind":"nsigma","k":"7ff8000000000000","side":"both"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+decode negzero-fraction => invalid_parameter max_excluded_fraction negative_zero
+{"policy":{"kind":"nsigma","k":"4008000000000000","side":"both"},"max_excluded_fraction":"8000000000000000","target":"cylinder"}
+decode below-min-points => invalid_parameter min_inliers below_min_points
+{"policy":{"kind":"ransac","threshold_m":"3ee4f8b588e368f1","iterations":"500","min_inliers":"4","seed":"7"},"max_excluded_fraction":"3fd0000000000000","target":"cylinder"}
+
+# --- exclusion masks (REQ-005, AC-3)
+mask sorted count=100 indices=5,3,99,0 => ok
+mask sorted-duplicate count=100 indices=5,3,3,99,0 => duplicate_index 3
+mask smallest-duplicate count=10 indices=9,9,4,7,4 => duplicate_index 4
+mask all-same count=10 indices=6,6,6 => duplicate_index 6
+mask range-before-duplicate count=100 indices=3,3,100 => index_out_of_range 100
+mask empty-mask count=100 indices= => ok
+mask empty-of-empty count=0 indices= => ok
+mask all count=4 indices=3,2,1,0 => ok
+mask index-at-count count=100 indices=0,100 => index_out_of_range 100
+mask first-offender-in-input-order count=10 indices=12,11,3 => index_out_of_range 12
+mask max-u32 count=10 indices=4294967295 => index_out_of_range 4294967295
+mask any-index-of-empty count=0 indices=0 => index_out_of_range 0
+
+# --- guards (REQ-003, REQ-004, AC-2); the policy is nsigma k=3 side=both
+guard too-few-cylinder target=cylinder fraction=0.25 count=100 indices=0..96 => too_few_remaining 4 5
+guard excessive-cylinder target=cylinder fraction=0.25 count=100 indices=0..30 => excessive_exclusion 0.3 0.25
+guard at-limit target=cylinder fraction=0.25 count=100 indices=0..25 => ok
+guard one-over-limit target=cylinder fraction=0.25 count=100 indices=0..26 => excessive_exclusion 0.26 0.25
+guard rounded-limit target=plane fraction=0.3 count=10 indices=0..3 => ok
+guard zero-limit-none target=plane fraction=0 count=10 indices= => ok
+guard zero-limit-one target=plane fraction=0 count=10 indices=9 => excessive_exclusion 0.1 0
+guard exactly-min target=cylinder fraction=0.9 count=10 indices=0..5 => ok
+guard below-min-and-excessive target=torus fraction=0.25 count=8 indices=0..2 => too_few_remaining 6 7
+guard empty-input target=point fraction=0.25 count=0 indices= => too_few_remaining 0 1
+guard no-exclusion target=sphere fraction=0.25 count=4 indices= => ok

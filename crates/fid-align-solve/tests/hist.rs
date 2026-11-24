@@ -57,7 +57,7 @@ fn trace() -> (Vec<IterationRow>, StoppedBy) {
     (rows, stop.unwrap())
 }
 
-/// AC-2: 12 scripted iterations ending in converged(increment): 12 rows with the given
+/// AC-2: 12 scripted iterations ending in converged(translation_tol): 12 rows with the given
 /// values and the stopping criterion; digest against the reference.
 #[test]
 fn ac2_twelve_iterations() {
@@ -69,7 +69,7 @@ fn ac2_twelve_iterations() {
     }
     let h = rec.finish(stop, &cs, &pose).unwrap();
     assert_eq!(h.len(), 12);
-    assert_eq!(h.stopped_by().to_string(), "converged(increment)");
+    assert_eq!(h.stopped_by().to_string(), "converged(translation_tol)");
     assert!(h.final_pose().is_for(&cs));
     assert_eq!(h.final_pose(), &pose);
     let want = read("expected-history.txt");
