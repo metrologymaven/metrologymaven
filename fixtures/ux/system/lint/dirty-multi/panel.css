@@ -1,0 +1,8 @@
+/* Synthetic fixture (CC-BY-4.0): multi-rule coverage against pkg v1.0.0. */
+.panel {
+  color: #1f5fbf;
+  background: rgb(46, 133, 64);
+  font-size: 12pt;
+  padding: 8px;
+  transition-duration: 0.12s;
+}

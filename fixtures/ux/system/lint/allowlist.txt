@@ -1,0 +1,2 @@
+# Synthetic allowlist (CC-BY-4.0).
+theme.rs: legacy bridge scheduled for removal
