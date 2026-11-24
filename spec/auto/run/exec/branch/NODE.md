@@ -75,7 +75,16 @@ Gives each run its own place: before the first step, it creates a journal branch
 
 ## Open questions
 
-- None.
+- Partial build (maintainer decision, PR 573): `fid-run` module `exec::branch` implements the library half; the leaf is not marked built. Open acceptance criteria:
+  - AC-1: no fixture project `fixtures/projects/bracket-runs/` (tests use the AUTO.RUN.BIND harness and a test bus), and no production `project.create_run@1` that carries the record (below).
+  - AC-2: met on the test bus only; the rule for agent run branches is missing (below).
+  - AC-5: `project.finalise_run@1` does not exist, so finalisation runs only on the test bus.
+  - REQ-002 is partly met: the Run entity write is built and ordered as the branch's first entry, but no CORE command stores the record's fields.
+- Build notes: the bus is reached through the port trait `RunBus` (working branch, branch head = last entry on the branch or none, Run entity read, `execute` of a `fid_bus::Invocation` on a named branch). The adapter (`AUTO.RUN.EXEC.CMD`) must refuse a call whose channel-derived principal differs from the one passed, route to exactly the named branch and give the call a view of that branch. `journal.create_branch@1` carries `expected_head` = the fork point; `project.create_run@1` carries `expected_head` = `GENESIS_PREV`, as `fid_bus::Bus` guards the first entry of an empty branch. `finalise` reads the run branch head first, then the entity, and commits with that head; this refuses a racing finalisation only as far as the bus enforces `expected_head` and the finalise handler refuses a non-pending entity, neither of which is authoritative until the fold below exists. `RunTarget::commit` refuses every `journal.*` command and both Run entity writes (`command_not_allowed`).
+- Parameters (open, obligation on `CORE.PRJ.CONT.HIER`, not edited from here): this module sends `project.create_run@1` `{"record": <run record with branch>}`, but the built command takes `{id, label, plan, revision}` (a Run container under a Plan), which cannot hold the record's fields, and the `RunPlan` names no Plan container. No command sets a Run entity's outcome; this module names `project.finalise_run@1` `{"outcome", "run"}`.
+- Run entity fold (open, obligation on `CORE.PRJ.CONT`, REQ-CORE.RPL.RECON.FOLD-008): the fold of Run entities must bind every event to the entry's verified origin. It must check that `record.principal` is the header principal; that `record.branch` is the entry's branch and is `run/<run_id>`; that the `create_run` entry is the first entry on that branch; and that `finalise_run` comes only from the run's principal, on that branch, from `pending`, with a compare-and-swap on the branch head at the commit stage. Their effects must be reserved in `fid_registry::RESERVED_EFFECTS`, and the fold must ship forged-event oracle cases.
+- Agents (open, obligation on `CORE.JRN.BR.NAME` and `CORE.BUS.ROUTE`): `journal.create_branch@1` refuses agent callers and the bus refuses agent commits outside `agent/`, so against today's bus an agent's run setup fails closed with `run_setup_failed`. A rule for agent run branches is needed.
+- Run ledger (AUTO.RUN.BIND): the ledger admits a run only from a `program.run@1` entry carrying `RunStarted` on `run/<run_id>`. With this module the run branch's first entry is the Run entity and that entry comes later; `AUTO.RUN.EXEC.CMD` must commit it on the run branch through the `RunTarget`.
 
 ## Children
 
