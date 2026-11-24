@@ -368,14 +368,26 @@ fn mig_corpus_check(args: &[String]) -> ExitCode {
     for f in &report.findings {
         println!("{f}");
     }
+    // A pass is never reported without saying whether the format registry was checked.
+    let qualifier = match report.registry {
+        corpus::RegistryCheck::Checked => "format registry checked",
+        corpus::RegistryCheck::NotChecked => "format registry not checked",
+    };
     match (&report.manifest, report.digest()) {
         (Some(m), Some(digest)) => {
-            println!("corpus-check: ok {} format={} entries={}", corpus::SCHEMA, m.format_id.as_str(), m.entries.len());
+            println!(
+                "corpus-check: ok ({qualifier}) {} format={} entries={}",
+                corpus::SCHEMA,
+                m.format_id.as_str(),
+                m.entries.len()
+            );
+            println!("{}", report.registry.line());
             println!("corpus_digest: {}", digest.as_str());
             println!("private_run: {}", m.private_run());
             ExitCode::SUCCESS
         }
         _ => {
+            println!("{}", report.registry.line());
             println!("corpus-check: {} findings", report.findings.len());
             ExitCode::from(1)
         }

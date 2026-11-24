@@ -37,6 +37,11 @@ fn ac1_ok_prints_the_expected_digest() {
     assert_eq!(o.status.code(), Some(0), "{out}");
     assert!(out.lines().any(|l| l == format!("corpus_digest: {}", expected_digest("ok/expected-digest.txt"))), "{out}");
     assert!(out.lines().any(|l| l == "private_run: false"), "{out}");
+    // Without --registry-manifest the pass says the registry was not checked; no bare ok.
+    assert!(out.lines().any(|l| l == "format_registry: not checked (no --registry-manifest)"), "{out}");
+    assert!(!out.lines().any(|l| l == "format_registry: checked"), "{out}");
+    let ok_line = out.lines().find(|l| l.starts_with("corpus-check: ok")).unwrap();
+    assert!(ok_line.starts_with("corpus-check: ok (format registry not checked) "), "{out}");
 }
 
 #[test]
@@ -79,10 +84,12 @@ fn ac6_shuffled_entries_same_digest() {
 
 #[test]
 fn registry_manifest_and_usage_errors() {
-    assert_eq!(
-        run("ok/corpus.json", &["--registry-manifest", fix("registry-qif.json").to_str().unwrap()]).status.code(),
-        Some(0)
-    );
+    let o = run("ok/corpus.json", &["--registry-manifest", fix("registry-qif.json").to_str().unwrap()]);
+    let out = stdout(&o);
+    assert_eq!(o.status.code(), Some(0), "{out}");
+    assert!(out.lines().any(|l| l == "format_registry: checked"), "{out}");
+    assert!(!out.lines().any(|l| l.starts_with("format_registry: not checked")), "{out}");
+    assert!(out.lines().any(|l| l.starts_with("corpus-check: ok (format registry checked) ")), "{out}");
     let o = run("ok/corpus.json", &["--registry-manifest", fix("registry-empty.json").to_str().unwrap()]);
     assert_eq!(o.status.code(), Some(1));
     assert!(stdout(&o).contains("CORPUS-SCHEMA qif not a registered format"), "{}", stdout(&o));

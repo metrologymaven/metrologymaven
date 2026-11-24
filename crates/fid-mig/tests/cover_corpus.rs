@@ -2,7 +2,7 @@
 //! expected digests come from `fixtures/mig/cover/corpus/make_fixtures.py`.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_mig::cover::corpus::{self, Code, CorpusReport, Visibility};
+use fid_mig::cover::corpus::{self, Code, CorpusReport, RegistryCheck, Visibility};
 use std::path::PathBuf;
 
 fn dir() -> PathBuf {
@@ -148,8 +148,8 @@ fn malformed_inputs_fail_closed() {
         br#"{"schema":"mig-corpus@1","format_id":"qif","name":"x","entries":{}}"#,
         br#"{"schema":"mig-corpus@1","format_id":"qif","name":"x","name":"y","entries":[]}"#,
         br#"{"schema":"mig-corpus@1","format_id":"qif","name":"x","entries":[{"catalogue_id":"mig-qif-demo-a","sha256":"sha256:00","format_id":"qif","visibility":"public"}]}"#,
-        br#"{"schema":"mig-corpus@1","format_id":"qif","name":"x","entries":[{"catalogue_id":"Bad ID","sha256":"sha256:00","format_id":"qif","visibility":"public"}]}"#,
-        br#"{"schema":"mig-corpus@1","format_id":"qif","name":"x","entries":[{"catalogue_id":"mig-qif-demo-a","sha256":"sha256:00","format_id":"qif","visibility":"internal"}]}"#,
+        br#"{"schema":"mig-corpus@1","format_id":"qif","name":"x","entries":[{"catalogue_id":"Bad ID","sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000","format_id":"qif","visibility":"public"}]}"#,
+        br#"{"schema":"mig-corpus@1","format_id":"qif","name":"x","entries":[{"catalogue_id":"mig-qif-demo-a","sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000","format_id":"qif","visibility":"internal"}]}"#,
     ] {
         let r = corpus::check(bad, &catalogue, &sources, None);
         assert!(r.manifest.is_none() && !r.findings.is_empty(), "{}", String::from_utf8_lossy(bad));
@@ -254,4 +254,42 @@ fn append_public(text: &str, id: &str) -> String {
         "{},{{\"catalogue_id\":\"{id}\",\"sha256\":\"sha256:{zeros}\",\"format_id\":\"qif\",\"visibility\":\"public\"}}\n{tail}",
         head.trim_end()
     )
+}
+
+#[test]
+fn catalogue_unknown_keys_fail_closed() {
+    let catalogue = String::from_utf8(read("datasets.toml")).unwrap();
+    let sources = read("sources.json");
+    let ok = read("ok/corpus.json");
+    assert!(corpus::check(&ok, &catalogue, &sources, None).is_ok());
+    // A misspelt customer-data flag on the public mig-qif-demo-a would otherwise read as false.
+    let misspelt =
+        catalogue.replacen("id = \"mig-qif-demo-a\"\n", "id = \"mig-qif-demo-a\"\ncontain_customer_data = true\n", 1);
+    assert_ne!(misspelt, catalogue);
+    let r = corpus::check(&ok, &misspelt, &sources, None);
+    assert!(r.manifest.is_none());
+    assert_eq!(r.findings.len(), 1, "{:?}", lines(&r));
+    assert_eq!((r.findings[0].code, r.findings[0].subject.as_str()), (Code::Schema, corpus::CATALOGUE_SUBJECT));
+    assert!(r.findings[0].detail.contains("unknown field contain_customer_data"), "{:?}", lines(&r));
+    // An unknown top-level key fails the catalogue too.
+    let top = format!("extra = 1\n{catalogue}");
+    let r = corpus::check(&ok, &top, &sources, None);
+    assert!(r.findings[0].detail.contains("unknown top-level key extra"), "{:?}", lines(&r));
+    // Every ECO.DATA.CAT field name is accepted (the fixture uses all but notes and
+    // contains_standards_text).
+    let full = catalogue.replacen(
+        "id = \"mig-qif-demo-a\"\n",
+        "id = \"mig-qif-demo-a\"\nnotes = \"n\"\ncontains_standards_text = false\n",
+        1,
+    );
+    assert!(corpus::check(&ok, &full, &sources, None).is_ok());
+    assert_eq!(corpus::CATALOGUE_FIELDS.len(), 14);
+}
+
+#[test]
+fn report_states_whether_the_registry_was_checked() {
+    assert_eq!(run("ok/corpus.json").registry, RegistryCheck::NotChecked);
+    assert_eq!(run_with("ok/corpus.json", Some("registry-qif.json")).registry, RegistryCheck::Checked);
+    assert_eq!(run("missing.json").registry, RegistryCheck::NotChecked);
+    assert_eq!(run_with("ok/corpus.json", Some("registry-empty.json")).registry, RegistryCheck::Checked);
 }

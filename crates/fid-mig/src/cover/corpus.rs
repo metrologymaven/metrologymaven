@@ -19,7 +19,10 @@
 //!   characters. Unknown keys, wrong types, numbers anywhere and malformed values are
 //!   `CORPUS-SCHEMA`; duplicate JSON keys are refused by the parser. A manifest that fails the
 //!   schema is not checked further.
-//! - **Catalogue.** Read with the `toml` crate (duplicate keys refused). Only the fields this
+//! - **Catalogue.** Read with the `toml` crate (duplicate keys refused). Top-level keys other
+//!   than `policy` and `dataset`, and `[[dataset]]` keys outside the ECO.DATA.CAT field
+//!   names ([`CATALOGUE_FIELDS`]), fail the whole catalogue, so a misspelt flag such as
+//!   `contain_customer_data` cannot pass silently. Only the fields this
 //!   check needs are read from each `[[dataset]]`: `id`, `sha256` (64 lowercase hex),
 //!   `redistribution` (`mirror` or `fetch-only`) and the optional boolean
 //!   `contains_customer_data`; a malformed one of those, or a repeated ID, fails the whole
@@ -37,7 +40,8 @@
 //!   `CORPUS-SCHEMA sources`.
 //! - **Registered formats** (REQ-001). With a registry manifest, the format must be in its
 //!   format catalogue ([`crate::src::reg::parse_manifest`]), else
-//!   `CORPUS-SCHEMA <format>`. Without one, only the ID syntax is checked.
+//!   `CORPUS-SCHEMA <format>`. Without one, only the ID syntax is checked, and the report
+//!   says so ([`RegistryCheck::NotChecked`]): a pass is never reported without it.
 //! - **Digest** (REQ-005). SHA-256 of the RFC 8785 canonical JSON (`fid-canon`) of the
 //!   manifest as written, with `entries` sorted by catalogue ID. Entry order in the file
 //!   does not change it.
@@ -75,6 +79,26 @@ pub const MAX_NOTE: usize = 1000;
 const TOP_KEYS: [&str; 4] = ["entries", "format_id", "name", "schema"];
 const ENTRY_REQUIRED: [&str; 4] = ["catalogue_id", "format_id", "sha256", "visibility"];
 const ENTRY_OPTIONAL: [&str; 1] = ["note"];
+/// The `[[dataset]]` field names of the dataset catalogue schema (ECO.DATA.CAT). Any other key
+/// fails the catalogue.
+pub const CATALOGUE_FIELDS: [&str; 14] = [
+    "contains_customer_data",
+    "contains_standards_text",
+    "id",
+    "licence",
+    "notes",
+    "owner",
+    "redistribution",
+    "release_ref",
+    "sha256",
+    "size_bytes",
+    "source",
+    "terms_url",
+    "title",
+    "urls",
+];
+/// The top-level keys of the dataset catalogue.
+const CATALOGUE_TOP: [&str; 2] = ["dataset", "policy"];
 
 /// Subject of findings about the dataset catalogue as a whole.
 pub const CATALOGUE_SUBJECT: &str = "catalogue";
@@ -232,11 +256,32 @@ impl fmt::Display for Finding {
     }
 }
 
-/// The result of [`check`]: the manifest when it loaded, and every finding, sorted.
+/// Whether the format was checked against a registry manifest's format catalogue (REQ-001).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RegistryCheck {
+    /// A registry manifest was given; the format is in its catalogue unless a finding says not.
+    Checked,
+    /// No registry manifest was given: only the format-ID syntax was checked.
+    NotChecked,
+}
+
+impl RegistryCheck {
+    /// The CLI line that states it.
+    pub const fn line(self) -> &'static str {
+        match self {
+            RegistryCheck::Checked => "format_registry: checked",
+            RegistryCheck::NotChecked => "format_registry: not checked (no --registry-manifest)",
+        }
+    }
+}
+
+/// The result of [`check`]: the manifest when it loaded, every finding, sorted, and whether
+/// the format registry was checked.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CorpusReport {
     pub manifest: Option<CorpusManifest>,
     pub findings: Vec<Finding>,
+    pub registry: RegistryCheck,
 }
 
 impl CorpusReport {
@@ -250,8 +295,8 @@ impl CorpusReport {
         self.manifest.as_ref().filter(|_| self.findings.is_empty()).map(|m| &m.digest)
     }
 
-    fn failed(findings: Vec<Finding>) -> CorpusReport {
-        CorpusReport { manifest: None, findings: sorted(findings) }
+    fn failed(findings: Vec<Finding>, registry: RegistryCheck) -> CorpusReport {
+        CorpusReport { manifest: None, findings: sorted(findings), registry }
     }
 }
 
@@ -432,6 +477,9 @@ pub fn parse_catalogue(text: &str) -> Result<DatasetCatalogue, String> {
         return Err(format!("larger than {MAX_CATALOGUE_BYTES} bytes"));
     }
     let table: toml::Table = text.parse().map_err(|e: toml::de::Error| format!("not TOML: {}", e.message()))?;
+    if let Some(k) = table.keys().find(|k| !CATALOGUE_TOP.contains(&k.as_str())) {
+        return Err(format!("unknown top-level key {k}"));
+    }
     let rows = match table.get("dataset") {
         None => return Ok(DatasetCatalogue::default()),
         Some(toml::Value::Array(rows)) => rows,
@@ -440,6 +488,9 @@ pub fn parse_catalogue(text: &str) -> Result<DatasetCatalogue, String> {
     let mut records = BTreeMap::new();
     for (i, row) in rows.iter().enumerate() {
         let toml::Value::Table(t) = row else { return Err(format!("dataset[{i}]: must be a table")) };
+        if let Some(k) = t.keys().find(|k| !CATALOGUE_FIELDS.contains(&k.as_str())) {
+            return Err(format!("dataset[{i}]: unknown field {k}"));
+        }
         let s = |key: &str| match t.get(key) {
             Some(toml::Value::String(v)) => Some(v.as_str()),
             _ => None,
@@ -545,6 +596,7 @@ pub fn check_source(format: &FormatId, register: &SourceRegister) -> Vec<Finding
 /// optionally, a registry manifest whose format catalogue the format must be in.
 pub fn check(manifest: &[u8], catalogue: &str, sources: &[u8], registry_manifest: Option<&[u8]>) -> CorpusReport {
     let mut findings = Vec::new();
+    let registry = if registry_manifest.is_some() { RegistryCheck::Checked } else { RegistryCheck::NotChecked };
     let loaded = load(manifest).map_err(|f| findings.extend(f)).ok();
     let cat =
         parse_catalogue(catalogue).map_err(|e| findings.push(Finding::new(Code::Schema, CATALOGUE_SUBJECT, e))).ok();
@@ -564,20 +616,20 @@ pub fn check(manifest: &[u8], catalogue: &str, sources: &[u8], registry_manifest
         }
     };
     let (Some(m), Some(cat), Some(register)) = (loaded, cat, register) else {
-        return CorpusReport::failed(findings);
+        return CorpusReport::failed(findings, registry);
     };
     if !findings.is_empty() {
-        return CorpusReport::failed(findings);
+        return CorpusReport::failed(findings, registry);
     }
     if let Some(formats) = &formats {
         if !formats.contains(&m.format_id) {
             findings.push(Finding::new(Code::Schema, m.format_id.as_str(), "not a registered format"));
-            return CorpusReport::failed(findings);
+            return CorpusReport::failed(findings, registry);
         }
     }
     findings.extend(check_entries(&m, &cat));
     findings.extend(check_source(&m.format_id, &register));
-    CorpusReport { manifest: Some(m), findings: sorted(findings) }
+    CorpusReport { manifest: Some(m), findings: sorted(findings), registry }
 }
 
 fn read_bounded(path: &Path, limit: usize) -> Result<Vec<u8>, String> {
@@ -607,7 +659,9 @@ pub fn check_paths(
     let c = match String::from_utf8(c) {
         Ok(text) => text,
         Err(_) => {
-            return Ok(CorpusReport::failed(vec![Finding::new(Code::Schema, CATALOGUE_SUBJECT, "not UTF-8")]));
+            let registry = if registry_manifest.is_some() { RegistryCheck::Checked } else { RegistryCheck::NotChecked };
+            let f = Finding::new(Code::Schema, CATALOGUE_SUBJECT, "not UTF-8");
+            return Ok(CorpusReport::failed(vec![f], registry));
         }
     };
     Ok(check(&m, &c, &s, r.as_deref()))
