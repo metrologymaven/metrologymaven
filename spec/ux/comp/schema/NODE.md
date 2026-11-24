@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-design]
+built_pr: 593
 satisfies: [REQ-UX.COMP-001, REQ-UX.COMP-002, REQ-UX.COMP-003, REQ-UX.COMP-004, REQ-UX.COMP-008]
 covers: []
 depends_on: [UX.SYSTEM.PKG, UX.TOKENS.COLOR, UX.TOKENS.SPACE, UX.ICONS.PROV]
