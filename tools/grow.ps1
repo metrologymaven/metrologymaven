@@ -9,7 +9,7 @@
   .\tools\grow.ps1 -Level 2 -Limit 5 -Agent codex
 
 .NOTES
-  Splits at levels 1 and 2 need human review before merging (AGENTS.md rule 8).
+  Splits at levels 1 and 2 require independent agent review before merging (AGENTS.md rule 8, D-052).
   This script never commits or pushes. Review the diff, then open a PR.
   Windows PowerShell 5.1 compatible.
 #>
@@ -41,9 +41,6 @@ if ($nodes.Count -eq 0) {
 $targetLevel = (($nodes[0] -replace '^spec/?', '') -split '/').Count - 1
 Write-Host "Level $targetLevel : $($nodes.Count) open node(s) to expand with '$Agent' (parallel $Parallel)."
 $nodes | ForEach-Object { Write-Host "  $_" }
-if ($targetLevel -le 2) {
-  Write-Host "NOTE: level $targetLevel splits need human review in a PR before merging." -ForegroundColor Yellow
-}
 if ($DryRun) { exit 0 }
 
 $logDir = Join-Path $Root "generated/logs"

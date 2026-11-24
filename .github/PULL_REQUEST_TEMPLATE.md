@@ -9,17 +9,17 @@ Implements: <NODE.ID>
 
 ## Checklist
 
-- [ ] `python tools/scope.py check` passes and `generated/` is committed
+- [ ] `python tools/scope.py check` passes (do not commit regenerated `generated/` files; see `D-042`)
 - [ ] Checked, then claimed: no open PR names this node, and `claimed_by:` is set (stale claims: `python tools/claims.py stale`)
 - [ ] Only the target node, its new children and `decisions/` changed (AGENTS.md rule 1)
 - [ ] Requirements are testable, with one `shall` each
 - [ ] No standards or vendor text pasted; unverified claims marked `[unverified]`
-- [ ] Level 1–2 split: a domain maintainer is requested as reviewer
+- [ ] Spec split, leaf, decision, or implementation PR: reviewed by an independent agent reviewer (`D-052`, `AGENTS.md` rule 8) and required CI checks pass
 - [ ] I report only what I actually ran
 - [ ] App-crate change: reviewed against the [app-crate checklist](https://github.com/metrologymaven/metrologymaven/blob/main/docs/review/app-crate-checklist.md) (`docs/review/app-crate-checklist.md`)
 
-## Design review (only if this PR changes a path in `design/review/paths.toml`)
+## Design review (only if this PR changes a path matching `design/review/paths.toml`; non-design PRs do not require human design review per `D-052`)
 
 - [ ] Every changed design artefact has an `originality@1` declaration (`design/review/checklist.md`)
-- [ ] A person (not an agent or bot) reviewed it against `design/review/checklist.md` and added a `design-review@1` record in `design/review/records/` in this PR
+- [ ] For PRs matching `design/review/paths.toml`: `fid-design review-check` (`UX.SYSTEM.REVIEW` / `design/review/checklist.md`, unamended by `D-052`) requires a `design-review@1` record in `design/review/records/` with `"principal": "human"`
 - [ ] `fid-design review-check --changed <changed paths, relative to design/> --root design` exits 0

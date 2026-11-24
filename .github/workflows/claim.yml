@@ -1,6 +1,6 @@
 name: claim
 # "/claim" on an issue assigns the commenter; "/unclaim" releases it.
-# Works on expert-queue and expand-node issues so contributors never wait for a maintainer.
+# Works on expand-node issues (expert-queue retired under D-052) so contributors never wait for a maintainer.
 on:
   issue_comment:
     types: [created]

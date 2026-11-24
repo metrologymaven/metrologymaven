@@ -107,6 +107,8 @@ jobs:
               if (
                   "AUTO.CLI.DISPATCH" in combined
                   or "PreconditionFailed" in combined
+                  or "precondition_failed" in combined
+                  or "no_bus_host" in combined
                   or "usage_error" in combined
               ):
                   reasons.append("fid `rdl submit-tracim` dispatch is unimplemented (requires M4 AUTO.CLI.DISPATCH + UNC.RDL.TRACIM)")
