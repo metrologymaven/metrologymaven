@@ -1456,12 +1456,11 @@ pub fn show_report(store: &AcceptanceStore, params: &ShowReportParams) -> Result
             // is refused rather than shown (each report is read once).
             let mut reports: BTreeMap<Digest, AcceptanceReport> = BTreeMap::new();
             for rec in &records {
-                if !reports.contains_key(&rec.report) {
-                    reports.insert(rec.report, store.report_of_record(rec)?);
-                }
-                if let Some(report) = reports.get(&rec.report) {
-                    check_record_matches(rec, report)?;
-                }
+                let report = match reports.entry(rec.report) {
+                    std::collections::btree_map::Entry::Occupied(e) => e.into_mut(),
+                    std::collections::btree_map::Entry::Vacant(e) => e.insert(store.report_of_record(rec)?),
+                };
+                check_record_matches(rec, report)?;
             }
             Ok(ShowReportResult::Trend { job: job.clone(), records })
         }
