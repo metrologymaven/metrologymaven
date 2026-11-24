@@ -3,188 +3,189 @@
 order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"]
 
 [crates]
-# Replay equivalence policy (UNC.RDL.REP): table rep-1@1.0.0 and classifier; KNP-1, only fid-num
-# and fid-types, below CORE so fid-replay (engine) and the WASM verifier can use it.
-# Vendored conic solver (KRN.SOLV.CONIC.PATCH): Clarabel 0.11.1 patched to KNP-1, only fid-num;
-# lives in vendor/fid-clarabel/crate and is audited by `cargo xtask conic-audit`.
-# Construction contract (KRN.CONS.DECL): KNP-1, only fid-fit, fid-kci, fid-num, fid-types.
-# Mesh quality report (SCAN.POLY.QUAL) and mesh-operation contract (SCAN.MESHOP.PROV): KNP-1,
-# only fid-geo-types, fid-kci, fid-num and fid-types.
-# B-rep model (GEO.CAD.TOPO.MODEL, ADJ, PCURVE): L0 library code, KNP-1; only fid-geo-nurbs, fid-num,
-# fid-kci, fid-types.
-# Alignment kernel (ALN.QA.REPORT first): residual report, fixed-order statistics, digest;
-# ALN.BFIT.CONSTR locks and weights (adds fid-geo-frame, kernel).
-# GD&T evaluation library (CONSTITUTION §2.1 L0). Model, not kernel: the DMT schema hashes
-# through fid-canon (model) and sha2, which the kernel graph (KNP-1, zero dependencies) cannot reach.
-# Declaration macros (CORE.REG.DEF.MACRO): proc-macro crate used through fid-registry.
-# PLAT.GPU.POLICY schemas and validators, below the tool layer for PLAT.GPU.DETECT (fid-platform re-exports them).
-# Out-of-core point clouds (GEO.OOC.LAYOUT): model, not kernel, because it stores chunks in the
-# CORE.STO blob store (fid-store, model) and spills to files.
-# Verifier-side chain checks (TRUST.CHAIN.CKPT): CORE-free over fid-trust-canon and fid-sign-core.
-# Governance profile definitions (TRUST.PROFILE.DEFS): CORE-free (fid-types, fid-trust-canon) so the verifier can read it.
-# Standalone verifier replay (TRUST.REPLAY.COMPARE, SELECT): over fid-rep (kernel), fid-canon, fid-num and
-# fid-types (fid-pkg for tests only); model, beside fid-pkg, so fid-verify can link it.
-# Normalised QIF 3.0 Schema IR types and canonical JSON codec (IO.QIF.GEN.FLAT); model so both fid-qif and fid-qif-gen can load it.
-# Network facade (CORE.BUS.POL.EGRESS): socket functions that take fid-bus's NetPermit, which only
-# the bus can issue; engine because it depends on fid-bus.
-# Project commands on the bus (CORE.PRJ.CONT.HIER): the handlers and registry definitions of
-# the fid-project (model) container rules; engine because they implement fid-bus handlers.
-# Journal branch commands on the bus (CORE.JRN.BR.NAME, bus half): handlers over fid-journal (model) and fid-bus.
-# Governance-profile commands on the bus (TRUST.PROFILE.SELECT): handlers over fid-profile (model) and fid-bus.
-# Electronic signature catalogue and ceremony (TRUST.ESIG.MEANING): over fid-profile (model) and fid-bus (engine).
-# Alignment element (ALN.MODEL.ELEM): needs fid-dep (engine), so engine, not model.
-# GEO command adapter (GEO.TYPES.REG): element registration and geo.describe_element@1; needs
-# fid-dep (engine), so engine, outside the kernel graph.
-# Uncertainty commands (UNC.MODEL.GRAPH.STORE first): model store, journal and surfaces over the
-# fid-kunc kernel types; needs fid-bus and fid-replay (engine), so engine, outside the kernel graph.
-# MCP surface (AUTO.MCP.PROJ): tool projection over fid-surface (services) and the tool-call adapter;
-# a [surfaces] crate in lint-allowlist.toml, so it never links the bus.
-# Report model (RPT.MODEL): document, pages, blocks and report commands.
-# FAI and PPAP forms (RPT.FORMS): header, accountability data and form assembly.
-# Results catalog (RPT.CATALOG.STORE.SCHEMA first): local SQLite index across projects; over
-# fid-store and fid-project (model). Services, below the registry build step that collects its setting.
-# Registry build step (CORE.REG.MAN): collects every crate's declarations, so it sits above
-# the engine and services crates that declare commands.
-# Record to program and release lifecycle (AUTO.REC.ADOPT first): needs fid-program (services) and fid-bus (engine).
-# Run binding and run records (AUTO.RUN.BIND): needs fid-program-rec (services) and fid-bus (engine).
-# Format-plugin contract, version negotiation and fid-io-reg adapters (IO.REG.PLUGIN.ABI).
-# Bounded 2D drawing reader for PDF page structure, PNG and TIFF (IO.REG.PLUGIN.DRAW).
-# Windows ACL shim for the control-channel token file (AUTO.CTRL.AUTH): the named `unsafe` exception.
-# RDL record format (UNC.RDL.FORMAT): needs fid-surface (services) and fid-replay (engine).
-# Open Reference Suites (UNC.ORS.TRACE): over fid-rdl and fid-surface (services), fid-gps (model).
-# Installation and operational qualification records and commands (QUAL.IQOQ.RECORD): L3 services.
-# Cross-host and cross-artifact bit-identity gate (KRN.MAN.XART): CI tool over fid-kci and fid-canon.
-# Kernel validation harness (KRN.MAN.VAL.RUN): CI tool outside the kernel graph over fid-rdl, fid-kci, fid-canon and fid-num.
-# Tier-G RDL generator foundation (UNC.RDL.GEN.HPREC): pure-Rust 256-bit Hp, round16, hp_refine.
-# Surface generator (AUTO.SURF.GEN): build-time xtask library over fid-surface (services).
-# Agent experience CI checks and L3 proposal brief command (AGENT.SKILLS.*, AGENT.PROPOSE.BRIEF).
-# Crash and power-loss harness (CORE.STO.SQL.CRASH): test support over fid-store and fid-canon (model),
-# usable as a dev-dependency by CORE.JRN.CHAIN and CORE.RPL.RECON.FOLD tests. Its optional `bus-errors`
-# feature adds fid-bus (engine); nothing ships it.
-# GPU adapter probing and backend selection (PLAT.GPU.DETECT): wgpu, on fid-gpu-policy; outside the kernel graph.
-# Status markers, palette guard, provenance badges (VIZ.OVERLAY.STATUS).
-# Proposal Inbox governance gates (VIZ.INBOX.GATES.PLAN): pure over fid-profile, fid-journal, fid-canon, fid-types.
-# View state model (VIZ.VIEW.STATE): ViewState, its canonical form and digest.
-# View and render commands on the bus (VIZ.RENDER.FRAME.TIER: view.get_render_info@1).
-# VIZ.SHELL.SPKTREE throwaway toolkit spike; never a dependency of product crates.
-"fid-accept" = "app"
-"fid-agent" = "services"
-"fid-agent" = "tool"
-"fid-align" = "engine"
-"fid-align-solve" = "kernel"
-"fid-brand-lint" = "tool"
-"fid-bus" = "engine"
-"fid-cad-proto" = "services"
-"fid-canon" = "model"
-"fid-catalog" = "services"
-"fid-chain" = "model"
-"fid-clarabel" = "kernel"
-"fid-cli" = "app"
-"fid-construct" = "kernel"
-"fid-crash" = "test-support"
-"fid-ctrl" = "services"
-"fid-ctrl-acl" = "services"
-"fid-data" = "tool"
-"fid-dep" = "engine"
-"fid-design" = "tool"
-"fid-design-pkg" = "model"
-"fid-esig" = "engine"
-"fid-eval-board" = "tool"
-"fid-eval-harness" = "tool"
-"fid-eval-pred" = "model"
-"fid-eval-redteam" = "tool"
-"fid-eval-suite" = "tool"
-"fid-fit" = "kernel"
-"fid-fixes" = "services"
-"fid-gdt" = "services"
-"fid-geo-cad" = "kernel"
-"fid-geo-cmd" = "engine"
+"fid-num" = "num"
+"fid-types" = "num"
+"fid-kci" = "kernel"
 "fid-geo-dist" = "kernel"
+"fid-geo-nurbs" = "kernel"
+"fid-geo-types" = "kernel"
+"fid-geo-sel" = "kernel"
 "fid-geo-frame" = "kernel"
 "fid-geo-index" = "kernel"
-"fid-geo-nurbs" = "kernel"
-"fid-geo-ooc" = "model"
-"fid-geo-sel" = "kernel"
-"fid-geo-types" = "kernel"
+"fid-kunc" = "kernel"
+"fid-kdec" = "kernel"
+# Replay equivalence policy (UNC.RDL.REP): table rep-1@1.0.0 and classifier; KNP-1, only fid-num
+# and fid-types, below CORE so fid-replay (engine) and the WASM verifier can use it.
+"fid-rep" = "kernel"
+"fid-solv" = "kernel"
+# Vendored conic solver (KRN.SOLV.CONIC.PATCH): Clarabel 0.11.1 patched to KNP-1, only fid-num;
+# lives in vendor/fid-clarabel/crate and is audited by `cargo xtask conic-audit`.
+"fid-clarabel" = "kernel"
+"fid-fit" = "kernel"
+# Construction contract (KRN.CONS.DECL): KNP-1, only fid-fit, fid-kci, fid-num, fid-types.
+"fid-construct" = "kernel"
+"fid-scan-cmp" = "kernel"
+# Mesh quality report (SCAN.POLY.QUAL) and mesh-operation contract (SCAN.MESHOP.PROV): KNP-1,
+# only fid-geo-types, fid-kci, fid-num and fid-types.
+"fid-scan-mesh" = "kernel"
+# B-rep model (GEO.CAD.TOPO.MODEL, ADJ, PCURVE): L0 library code, KNP-1; only fid-geo-nurbs, fid-num,
+# fid-kci, fid-types.
+"fid-geo-cad" = "kernel"
+# Alignment kernel (ALN.QA.REPORT first): residual report, fixed-order statistics, digest;
+# ALN.BFIT.CONSTR locks and weights (adds fid-geo-frame, kernel).
+"fid-align-solve" = "kernel"
+"fid-canon" = "model"
+# GD&T evaluation library (CONSTITUTION §2.1 L0). Model, not kernel: the DMT schema hashes
+# through fid-canon (model) and sha2, which the kernel graph (KNP-1, zero dependencies) cannot reach.
 "fid-gps" = "model"
+"fid-registry" = "model"
+# Declaration macros (CORE.REG.DEF.MACRO): proc-macro crate used through fid-registry.
+"fid-registry-macros" = "model"
+"fid-store" = "model"
+# PLAT.GPU.POLICY schemas and validators, below the tool layer for PLAT.GPU.DETECT (fid-platform re-exports them).
 "fid-gpu-policy" = "model"
-"fid-gpu-select" = "viewer"
+"fid-journal" = "model"
+# Out-of-core point clouds (GEO.OOC.LAYOUT): model, not kernel, because it stores chunks in the
+# CORE.STO blob store (fid-store, model) and spills to files.
+"fid-geo-ooc" = "model"
+"fid-trust-canon" = "model"
+"fid-sign-core" = "model"
+# Verifier-side chain checks (TRUST.CHAIN.CKPT): CORE-free over fid-trust-canon and fid-sign-core.
+"fid-chain" = "model"
+# Governance profile definitions (TRUST.PROFILE.DEFS): CORE-free (fid-types, fid-trust-canon) so the verifier can read it.
+"fid-profile" = "model"
+"fid-project" = "model"
+"fid-pkg" = "model"
+# Standalone verifier replay (TRUST.REPLAY.COMPARE, SELECT): over fid-rep (kernel), fid-canon, fid-num and
+# fid-types (fid-pkg for tests only); model, beside fid-pkg, so fid-verify can link it.
+"fid-vreplay" = "model"
+"fid-uuid" = "model"
 "fid-hal-idl" = "model"
+# Normalised QIF 3.0 Schema IR types and canonical JSON codec (IO.QIF.GEN.FLAT); model so both fid-qif and fid-qif-gen can load it.
+"fid-qif-ir" = "model"
+"fid-replay" = "engine"
+"fid-bus" = "engine"
+# Network facade (CORE.BUS.POL.EGRESS): socket functions that take fid-bus's NetPermit, which only
+# the bus can issue; engine because it depends on fid-bus.
+"fid-net" = "engine"
+"fid-jobs" = "engine"
+# Project commands on the bus (CORE.PRJ.CONT.HIER): the handlers and registry definitions of
+# the fid-project (model) container rules; engine because they implement fid-bus handlers.
+"fid-project-cmd" = "engine"
+# Journal branch commands on the bus (CORE.JRN.BR.NAME, bus half): handlers over fid-journal (model) and fid-bus.
+"fid-journal-cmd" = "engine"
+# Governance-profile commands on the bus (TRUST.PROFILE.SELECT): handlers over fid-profile (model) and fid-bus.
+"fid-profile-cmd" = "engine"
+# Electronic signature catalogue and ceremony (TRUST.ESIG.MEANING): over fid-profile (model) and fid-bus (engine).
+"fid-esig" = "engine"
+"fid-dep" = "engine"
+# Alignment element (ALN.MODEL.ELEM): needs fid-dep (engine), so engine, not model.
+"fid-align" = "engine"
+# GEO command adapter (GEO.TYPES.REG): element registration and geo.describe_element@1; needs
+# fid-dep (engine), so engine, outside the kernel graph.
+"fid-geo-cmd" = "engine"
 "fid-hal-runtime" = "engine"
-"fid-inbox" = "viewer"
-"fid-io-corp" = "tool"
-"fid-io-dmis" = "services"
+# Uncertainty commands (UNC.MODEL.GRAPH.STORE first): model store, journal and surfaces over the
+# fid-kunc kernel types; needs fid-bus and fid-replay (engine), so engine, outside the kernel graph.
+"fid-unc" = "engine"
+"fid-surface" = "services"
+# MCP surface (AUTO.MCP.PROJ): tool projection over fid-surface (services) and the tool-call adapter;
+# a [surfaces] crate in lint-allowlist.toml, so it never links the bus.
+"fid-mcp" = "services"
+"fid-report-pdf" = "services"
+# Report model (RPT.MODEL): document, pages, blocks and report commands.
+"fid-report" = "services"
+# FAI and PPAP forms (RPT.FORMS): header, accountability data and form assembly.
+"fid-report-forms" = "services"
+# Results catalog (RPT.CATALOG.STORE.SCHEMA first): local SQLite index across projects; over
+# fid-store and fid-project (model). Services, below the registry build step that collects its setting.
+"fid-catalog" = "services"
+# Registry build step (CORE.REG.MAN): collects every crate's declarations, so it sits above
+# the engine and services crates that declare commands.
+"fid-registry-build" = "services"
+"fid-program" = "services"
+# Record to program and release lifecycle (AUTO.REC.ADOPT first): needs fid-program (services) and fid-bus (engine).
+"fid-program-rec" = "services"
+# Run binding and run records (AUTO.RUN.BIND): needs fid-program-rec (services) and fid-bus (engine).
+"fid-run" = "services"
+"fid-io-reg" = "services"
+# Format-plugin contract, version negotiation and fid-io-reg adapters (IO.REG.PLUGIN.ABI).
+"fid-io-plugin" = "services"
+# Bounded 2D drawing reader for PDF page structure, PNG and TIFF (IO.REG.PLUGIN.DRAW).
 "fid-io-draw" = "services"
+"fid-io-dmis" = "services"
 "fid-io-e57" = "services"
 "fid-io-las" = "services"
 "fid-io-mesh" = "services"
-"fid-io-plugin" = "services"
-"fid-io-reg" = "services"
-"fid-io-res" = "services"
 "fid-io-step" = "services"
-"fid-jobs" = "engine"
-"fid-journal" = "model"
-"fid-journal-cmd" = "engine"
-"fid-kci" = "kernel"
-"fid-kdec" = "kernel"
-"fid-kernel-wasm" = "app"
-"fid-keystore" = "services"
-"fid-knp1-lint" = "tool"
-"fid-kunc" = "kernel"
-"fid-manifest-gen" = "tool"
-"fid-mcp" = "services"
-"fid-mig" = "services"
-"fid-net" = "engine"
-"fid-num" = "num"
-"fid-ors" = "services"
-"fid-outreach" = "tool"
-"fid-overlay" = "viewer"
-"fid-pkg" = "model"
-"fid-platform" = "tool"
-"fid-profile" = "model"
-"fid-profile-cmd" = "engine"
-"fid-program" = "services"
-"fid-program-rec" = "services"
-"fid-project" = "model"
-"fid-project-cmd" = "engine"
-"fid-qif" = "services"
-"fid-qif-gen" = "tool"
-"fid-qif-ir" = "model"
-"fid-qual" = "services"
-"fid-rdl" = "services"
-"fid-rdl-gen" = "tool"
-"fid-registry" = "model"
-"fid-registry-build" = "services"
-"fid-registry-macros" = "model"
-"fid-render" = "viewer"
-"fid-rep" = "kernel"
-"fid-replay" = "engine"
-"fid-report" = "services"
-"fid-report-forms" = "services"
-"fid-report-pdf" = "services"
-"fid-run" = "services"
-"fid-scan-cmp" = "kernel"
-"fid-scan-mesh" = "kernel"
-"fid-shlint" = "tool"
-"fid-sign-core" = "model"
-"fid-slice" = "app"
-"fid-solv" = "kernel"
-"fid-spike-ui" = "viewer"
-"fid-store" = "model"
-"fid-surface" = "services"
-"fid-surface-gen" = "tool"
-"fid-testkit" = "test-support"
-"fid-timeline" = "tool"
-"fid-trust-canon" = "model"
-"fid-types" = "num"
-"fid-unc" = "engine"
-"fid-uuid" = "model"
-"fid-val" = "tool"
-"fid-view" = "viewer"
-"fid-view-cmd" = "viewer"
-"fid-vocab" = "app"
-"fid-vreplay" = "model"
-"fid-wasm-check" = "tool"
-"fid-xart" = "tool"
+"fid-cad-proto" = "services"
+"fid-io-res" = "services"
 "fid-xml" = "services"
+"fid-qif" = "services"
+"fid-ctrl" = "services"
+# Windows ACL shim for the control-channel token file (AUTO.CTRL.AUTH): the named `unsafe` exception.
+"fid-ctrl-acl" = "services"
+# Key store contract (TRUST.SIGN.KEYSTORE.TRAIT): KeyStore trait, test backend and conformance suite
+# over fid-sign-core and fid-canon (model).
+"fid-keystore" = "services"
+"fid-gdt" = "services"
+"fid-mig" = "services"
+# RDL record format (UNC.RDL.FORMAT): needs fid-surface (services) and fid-replay (engine).
+"fid-rdl" = "services"
+# Open Reference Suites (UNC.ORS.TRACE): over fid-rdl and fid-surface (services), fid-gps (model).
+"fid-ors" = "services"
+# Installation and operational qualification records and commands (QUAL.IQOQ.RECORD): L3 services.
+"fid-qual" = "services"
+"fid-cli" = "app"
+"fid-slice" = "app"
+"fid-kernel-wasm" = "app"
 "fid-xtask" = "tool"
+"fid-wasm-check" = "tool"
+# Cross-host and cross-artifact bit-identity gate (KRN.MAN.XART): CI tool over fid-kci and fid-canon.
+"fid-xart" = "tool"
+# Kernel validation harness (KRN.MAN.VAL.RUN): CI tool outside the kernel graph over fid-rdl, fid-kci, fid-canon and fid-num.
+"fid-val" = "tool"
+"fid-data" = "tool"
+"fid-knp1-lint" = "tool"
+"fid-manifest-gen" = "tool"
+"fid-vocab" = "app"
+"fid-accept" = "app"
+"fid-fixes" = "services"
+"fid-io-corp" = "tool"
+"fid-eval-suite" = "tool"
+"fid-qif-gen" = "tool"
+# Tier-G RDL generator foundation (UNC.RDL.GEN.HPREC): pure-Rust 256-bit Hp, round16, hp_refine.
+"fid-rdl-gen" = "tool"
+# Surface generator (AUTO.SURF.GEN): build-time xtask library over fid-surface (services).
+"fid-surface-gen" = "tool"
+# Agent experience CI checks and L3 proposal brief command (AGENT.SKILLS.*, AGENT.PROPOSE.BRIEF).
+"fid-agent" = "services"
+"fid-timeline" = "tool"
+"fid-outreach" = "tool"
+"fid-platform" = "tool"
+# Crash and power-loss harness (CORE.STO.SQL.CRASH): test support over fid-store and fid-canon (model),
+# usable as a dev-dependency by CORE.JRN.CHAIN and CORE.RPL.RECON.FOLD tests. Its optional `bus-errors`
+# feature adds fid-bus (engine); nothing ships it.
+"fid-crash" = "test-support"
+"fid-design" = "tool"
+"fid-design-pkg" = "model"
+"fid-eval-pred" = "model"
+"fid-brand-lint" = "tool"
+"fid-eval-board" = "tool"
+"fid-shlint" = "tool"
+"fid-render" = "viewer"
+# GPU adapter probing and backend selection (PLAT.GPU.DETECT): wgpu, on fid-gpu-policy; outside the kernel graph.
+"fid-gpu-select" = "viewer"
+# Status markers, palette guard, provenance badges (VIZ.OVERLAY.STATUS).
+"fid-overlay" = "viewer"
+# Proposal Inbox governance gates (VIZ.INBOX.GATES.PLAN): pure over fid-profile, fid-journal, fid-canon, fid-types.
+"fid-inbox" = "viewer"
+# View state model (VIZ.VIEW.STATE): ViewState, its canonical form and digest.
+"fid-view" = "viewer"
+# View and render commands on the bus (VIZ.RENDER.FRAME.TIER: view.get_render_info@1).
+"fid-view-cmd" = "viewer"
+"fid-eval-harness" = "tool"
+"fid-eval-redteam" = "tool"
+"fid-testkit" = "test-support"
+# VIZ.SHELL.SPKTREE throwaway toolkit spike; never a dependency of product crates.
+"fid-spike-ui" = "viewer"
