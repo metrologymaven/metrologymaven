@@ -236,10 +236,13 @@ fn mvp(angle: f32, aspect: f32) -> Mat4 {
     mul(&proj, &mul(&view, &mul(&ry, &rx)))
 }
 
+/// One cube face: outward normal, two tangents with `u x v = n`, colour.
+type Face = ([f32; 3], [f32; 3], [f32; 3], [f32; 3]);
+
 /// 36 vertices (position, colour) of a cube with outward counter-clockwise faces, so
 /// back-face culling alone draws it correctly without a depth buffer.
 fn cube_bytes() -> Vec<u8> {
-    let axes: [([f32; 3], [f32; 3], [f32; 3], [f32; 3]); 6] = [
+    let axes: [Face; 6] = [
         ([1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0], [0.85, 0.35, 0.3]),
         ([-1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0], [0.3, 0.75, 0.4]),
         ([0.0, 1.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.3, 0.45, 0.85]),
