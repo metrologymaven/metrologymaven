@@ -19,17 +19,32 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # The same pinned channel as kernel-repro.yml (kernel-build/rust-toolchain.toml), so the
+      # published Field Guide WASM never floats with `stable`.
+      - name: Pinned channel
+        id: pin
+        shell: bash
+        run: echo "channel=$(sed -n 's/^channel = "\([0-9.]*\)"$/\1/p' kernel-build/rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
-          toolchain: stable
+          toolchain: ${{ steps.pin.outputs.channel }}
           targets: wasm32-wasip1
       - name: Build Field Guide WASM kernel (OUTR.DOCS.GUIDE.WASM)
+        shell: bash
         run: |
+          test -n "${{ steps.pin.outputs.channel }}" || { echo "no pinned channel"; exit 1; }
+          rustc -V
           cargo build --locked -q -p fid-guide-wasm
-          cargo build --locked --release --target wasm32-wasip1 -p fid-guide-wasm
+          # Strip the runner's home and checkout paths from the published binary (the last
+          # matching prefix wins, so the checkout maps to /src and the rest of $HOME to /~).
+          CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS="--remap-path-prefix=$HOME=/~ --remap-path-prefix=$GITHUB_WORKSPACE=/src" \
+            cargo build --locked --release --target wasm32-wasip1 -p fid-guide-wasm
       - name: Build static site
         run: python site/build.py
-      - name: Verify Field Guide map, topics, CSP and WASM bit-identity
+      - name: Verify Field Guide map, topics, CSP, WASM bit-identity and no home paths
+        env:
+          # A missing WASM binary fails here instead of skipping.
+          FID_GUIDE_REQUIRE_WASM: "1"
         run: python -m unittest discover -s tools/tests -p "test_guide.py" -v
       - name: No third-party origins in built pages (REQ-OUTR.SITE-007)
         run: |
