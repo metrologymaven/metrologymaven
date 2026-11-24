@@ -1,0 +1,43 @@
+{
+  "format": "design-sources@1",
+  "tools": [
+    {
+      "id": "penpot",
+      "name": "Penpot",
+      "open_source": true,
+      "requires_paid_account": false,
+      "export_extensions": [
+        "penpot"
+      ]
+    },
+    {
+      "id": "inkscape",
+      "name": "Inkscape",
+      "open_source": true,
+      "requires_paid_account": false,
+      "export_extensions": [
+        "svg"
+      ]
+    },
+    {
+      "id": "paid-suite",
+      "name": "Proprietary Paid Suite (synthetic)",
+      "open_source": false,
+      "requires_paid_account": true
+    }
+  ],
+  "sources": [
+    {
+      "id": "icon-stale-v1",
+      "node": "UX.ICONS.CORESET",
+      "tool": "inkscape",
+      "location": "exports/icon-probe.svg",
+      "exports": [
+        {
+          "path": "exports/icon-probe.svg",
+          "sha256": "sha256:dc0065aacd9aac96ac74fd97c0c38f27e7d5a39cd479e2aadff84d1364fd9281"
+        }
+      ]
+    }
+  ]
+}

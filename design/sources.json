@@ -1,0 +1,26 @@
+{
+  "format": "design-sources@1",
+  "tools": [
+    {
+      "id": "penpot",
+      "name": "Penpot",
+      "open_source": true,
+      "requires_paid_account": false,
+      "export_extensions": ["penpot"]
+    },
+    {
+      "id": "inkscape",
+      "name": "Inkscape",
+      "open_source": true,
+      "requires_paid_account": false,
+      "export_extensions": ["svg"]
+    },
+    {
+      "id": "text-svg",
+      "name": "Plain text and hand-authored SVG",
+      "open_source": true,
+      "requires_paid_account": false
+    }
+  ],
+  "sources": []
+}

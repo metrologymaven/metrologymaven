@@ -1,0 +1,11 @@
+{
+  "artefact": "CONTRIBUTING.md",
+  "author": "Antigravity (Google DeepMind), agent author of UX.SYSTEM.TOOL",
+  "date": "2026-11-22",
+  "references": [
+    "The UX.SYSTEM.TOOL and UX.SYSTEM spec nodes in this repository",
+    "The design review checklist (design/review/checklist.md) in this repository",
+    "The project constitution (spec/CONSTITUTION.md) in this repository"
+  ],
+  "statement_version": "originality-statement@1"
+}
