@@ -7,7 +7,7 @@ use super::{Arch, CpuInfo, Env, GpuSelection, OsInfo, Probed, RamInfo, UnknownRe
 use std::path::PathBuf;
 use std::time::Duration;
 
-#[cfg(any(target_os = "linux", feature = "gpu"))]
+#[cfg(any(target_os = "linux", target_os = "windows", feature = "gpu"))]
 use std::io::Read;
 #[cfg(any(target_os = "linux", feature = "gpu"))]
 use std::path::Path;
@@ -167,6 +167,7 @@ fn read_text_bounded(path: &Path) -> Result<String, String> {
     String::from_utf8(buf).map_err(|_| "system file is not UTF-8".to_string())
 }
 
+#[cfg(not(target_os = "windows"))]
 fn fallback_cores() -> Option<u32> {
     std::thread::available_parallelism().ok().and_then(|n| u32::try_from(n.get()).ok()).filter(|&n| n > 0)
 }
@@ -416,16 +417,65 @@ fn probe_display_impl() -> Probed<(u32, u32)> {
 
 // ------------------------------------------------------------------ Windows probes
 
+/// Largest PowerShell output a probe reads (4 KiB; the probes print one short line).
 #[cfg(target_os = "windows")]
-fn run_powershell(script: &str) -> Result<String, String> {
-    let out = std::process::Command::new("powershell")
+const MAX_POWERSHELL_STDOUT: u64 = 4096;
+
+/// Polling interval while waiting for a PowerShell child.
+#[cfg(target_os = "windows")]
+const POWERSHELL_POLL: Duration = Duration::from_millis(20);
+
+/// Runs a constant PowerShell `script` with a hard time budget.
+///
+/// The script is always a fixed string literal: no path or other caller data is ever
+/// interpolated into it, so there is nothing to quote. The child is killed and reaped when it
+/// outlives [`super::DEFAULT_DEADLINE`] (REQ-PLAT.DOCTOR.PROBE-002), so a slow PowerShell or
+/// WinForms start-up cannot leave a process running after `probe_all` has given up on it.
+/// Its stdout is read only after exit and is bounded; stdin and stderr are null.
+#[cfg(target_os = "windows")]
+fn run_powershell(script: &'static str) -> Result<String, String> {
+    use std::process::{Command, Stdio};
+    use std::time::Instant;
+    let started = Instant::now();
+    let mut child = Command::new("powershell")
         .args(["-NoProfile", "-NonInteractive", "-Command", script])
-        .output()
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
         .map_err(|e| e.to_string())?;
-    if !out.status.success() {
-        return Err("powershell command failed".to_string());
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                if !status.success() {
+                    return Err("powershell command failed".to_string());
+                }
+                let mut buf = Vec::new();
+                if let Some(out) = child.stdout.take() {
+                    out.take(MAX_POWERSHELL_STDOUT).read_to_end(&mut buf).map_err(|e| e.to_string())?;
+                }
+                return Ok(String::from_utf8_lossy(&buf).trim().to_string());
+            }
+            Ok(None) if started.elapsed() < super::DEFAULT_DEADLINE => std::thread::sleep(POWERSHELL_POLL),
+            Ok(None) => {
+                kill_and_reap(&mut child);
+                return Err("powershell command exceeded the probe time budget".to_string());
+            }
+            Err(e) => {
+                kill_and_reap(&mut child);
+                return Err(e.to_string());
+            }
+        }
     }
-    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
+#[cfg(target_os = "windows")]
+fn kill_and_reap(child: &mut std::process::Child) {
+    // Both results are deliberately ignored: the child may already have exited, and the probe
+    // reports the timeout either way.
+    if child.kill().is_ok() {
+        child.wait().ok();
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -461,8 +511,10 @@ fn parse_windows_ver(text: &str) -> Option<String> {
 
 #[cfg(target_os = "windows")]
 fn probe_cpu_impl() -> Probed<CpuInfo> {
-    // Avoid spawning two slow PowerShell/CIM processes that can exceed DEFAULT_DEADLINE
-    // on CI runners: query the registry or PROCESSOR_IDENTIFIER and use available_parallelism.
+    // Avoid spawning slow PowerShell/CIM processes that can exceed DEFAULT_DEADLINE on CI
+    // runners: the model comes from the registry (or PROCESSOR_IDENTIFIER) and the physical
+    // core count from the OS API via `sysinfo` (logical processors are not physical cores, so
+    // `available_parallelism` is never used here).
     let model = run_stdout(
         "reg",
         &["query", r"HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\0", "/v", "ProcessorNameString"],
@@ -477,7 +529,9 @@ fn probe_cpu_impl() -> Probed<CpuInfo> {
     })
     .or_else(|| std::env::var("PROCESSOR_IDENTIFIER").ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()))
     .unwrap_or_else(|| "unknown".to_string());
-    let Some(physical_cores) = fallback_cores() else {
+    let Some(physical_cores) =
+        sysinfo::System::physical_core_count().and_then(|n| u32::try_from(n).ok()).filter(|&n| n > 0)
+    else {
         return Probed::unknown(UnknownReason::Error, "could not determine physical core count");
     };
     Probed::Known(CpuInfo { model, physical_cores, instruction_set_level: detect_cpu_level() })
@@ -567,17 +621,56 @@ fn df_volume(role: VolumeRole, dir: &std::path::Path) -> Result<VolumeInfo, Stri
     Ok(VolumeInfo { role, free_gib: kib_to_gib(avail_kib), total_gib: kib_to_gib(total_kib) })
 }
 
+/// Windows storage probe through the OS volume API (via `sysinfo`'s `disk` feature): no
+/// PowerShell process and no path ever placed in a command string. The volume is the mounted
+/// disk whose mount point is the longest component prefix of the canonical `dir`.
 #[cfg(target_os = "windows")]
 fn df_volume(role: VolumeRole, dir: &std::path::Path) -> Result<VolumeInfo, String> {
-    let dir_s = dir.to_string_lossy().replace('\'', "''");
-    let script = format!(
-        "$r=(Get-Item -LiteralPath '{dir_s}').Root.Name; $d=[System.IO.DriveInfo]::new($r); \"$($d.TotalSize) $($d.AvailableFreeSpace)\""
-    );
-    let text = run_powershell(&script)?;
-    let mut parts = text.split_whitespace();
-    let total = parts.next().and_then(|s| s.parse::<u64>().ok()).ok_or_else(|| "invalid total".to_string())?;
-    let free = parts.next().and_then(|s| s.parse::<u64>().ok()).ok_or_else(|| "invalid free".to_string())?;
+    use sysinfo::{DiskRefreshKind, Disks};
+    let canon = std::fs::canonicalize(dir).map_err(|_| "cannot resolve volume directory".to_string())?;
+    let target = strip_verbatim_prefix(&canon);
+    let disks = Disks::new_with_refreshed_list_specifics(DiskRefreshKind::nothing().with_storage());
+    let disk = disks
+        .list()
+        .iter()
+        .filter(|d| path_has_prefix_ci(&target, d.mount_point()))
+        .max_by_key(|d| d.mount_point().components().count())
+        .ok_or_else(|| "no mounted volume contains the directory".to_string())?;
+    let total = disk.total_space();
+    if total == 0 {
+        return Err("volume reported zero total size".to_string());
+    }
+    let free = disk.available_space().min(total);
     Ok(VolumeInfo { role, free_gib: bytes_to_gib(free), total_gib: bytes_to_gib(total) })
+}
+
+/// Turns `\\?\C:\x` into `C:\x` and `\\?\UNC\srv\share` into `\\srv\share`, the forms
+/// `sysinfo` reports mount points in; other paths are returned unchanged.
+#[cfg(target_os = "windows")]
+fn strip_verbatim_prefix(p: &std::path::Path) -> PathBuf {
+    let s = p.to_string_lossy();
+    match s.strip_prefix(r"\\?\") {
+        Some(rest) => match rest.strip_prefix(r"UNC\") {
+            Some(unc) => PathBuf::from(format!(r"\\{unc}")),
+            None => PathBuf::from(rest),
+        },
+        None => p.to_path_buf(),
+    }
+}
+
+/// Component-wise, ASCII-case-insensitive `starts_with` (Windows paths are case-insensitive).
+#[cfg(target_os = "windows")]
+fn path_has_prefix_ci(path: &std::path::Path, prefix: &std::path::Path) -> bool {
+    let mut it = path.components();
+    let mut any = false;
+    for want in prefix.components() {
+        any = true;
+        match it.next() {
+            Some(got) if got.as_os_str().eq_ignore_ascii_case(want.as_os_str()) => {}
+            _ => return false,
+        }
+    }
+    any
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
@@ -654,4 +747,47 @@ fn probe_gpu_impl(env: &RealEnv, deadline: Duration) -> Probed<GpuSelection> {
     let report = fid_gpu_select::Probe::wgpu().run(&row, deadline);
     let sel = fid_gpu_select::select(&report.adapters, &report.rejections, &row, &known_bad, None);
     Probed::Known(GpuSelection::from(&sel))
+}
+
+#[cfg(all(test, target_os = "windows"))]
+mod windows_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn verbatim_prefix_is_stripped_for_disk_and_unc_paths() {
+        assert_eq!(strip_verbatim_prefix(Path::new(r"\?\C:\Users\x")), PathBuf::from(r"C:\Users\x"));
+        assert_eq!(strip_verbatim_prefix(Path::new(r"\?\UNC\srv\share\d")), PathBuf::from(r"\srv\share\d"));
+        assert_eq!(strip_verbatim_prefix(Path::new(r"D:\data")), PathBuf::from(r"D:\data"));
+    }
+
+    #[test]
+    fn mount_prefix_match_is_component_wise_and_case_insensitive() {
+        assert!(path_has_prefix_ci(Path::new(r"c:\Users\x"), Path::new(r"C:\")));
+        assert!(path_has_prefix_ci(Path::new(r"D:\mnt\vol\a"), Path::new(r"d:\MNT\vol")));
+        assert!(!path_has_prefix_ci(Path::new(r"D:\mnt\volume2"), Path::new(r"D:\mnt\vol")));
+        assert!(!path_has_prefix_ci(Path::new(r"E:\x"), Path::new(r"C:\")));
+        assert!(!path_has_prefix_ci(Path::new(r"C:\x"), Path::new("")));
+    }
+
+    #[test]
+    fn storage_probe_finds_the_temp_volume_without_powershell() {
+        let v = df_volume(VolumeRole::Data, &std::env::temp_dir()).unwrap();
+        assert!(v.total_gib > 0.0);
+        assert!(v.free_gib <= v.total_gib);
+    }
+
+    #[test]
+    fn physical_core_count_comes_from_the_os_api() {
+        let Probed::Known(cpu) = probe_cpu_impl() else { panic!("CPU probe unknown on Windows") };
+        assert_eq!(Some(cpu.physical_cores as usize), sysinfo::System::physical_core_count());
+    }
+
+    #[test]
+    fn powershell_probe_honours_the_time_budget() {
+        let started = std::time::Instant::now();
+        let _ = run_powershell("Start-Sleep -Seconds 10; 'late'");
+        assert!(started.elapsed() < Duration::from_secs(4), "took {:?}", started.elapsed());
+    }
 }

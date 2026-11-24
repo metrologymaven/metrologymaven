@@ -260,3 +260,11 @@ fn worker_panic_and_detail_bounds_and_schema_rejections() {
     let over_detail = valid_str.replace("cannot read meminfo", &"a".repeat(201));
     assert!(EnvSnapshot::from_json(over_detail.as_bytes()).is_err());
 }
+
+#[test]
+fn real_env_probe_all_holds_the_per_probe_deadline() {
+    let started = Instant::now();
+    let _snap = probe_all(RealEnv::new(), DEFAULT_DEADLINE);
+    let elapsed = started.elapsed();
+    assert!(elapsed < DEFAULT_DEADLINE + Duration::from_secs(1), "probe_all took {elapsed:?}");
+}
