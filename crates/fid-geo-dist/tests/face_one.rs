@@ -108,7 +108,7 @@ fn hit_bytes(h: &mut Sha256, r: &Result<FaceProjection, FaceError>) {
 
 /// Regression pin over every face result of every query of `ref_v1` (AC-5); see the module
 /// documentation.
-const OUTPUT_PIN: &str = "54d7239f1fd3ef6fba5e1759d57c82035dee4571db3d18abb435770a44fdf487";
+const OUTPUT_PIN: &str = "52ba780bc80554bdc0b508e65b50e5b0d67b3158e4ad5924ddaaece2acc4db28";
 
 /// AC-1: every single-face query of the reference bodies agrees with the oracle: foot and
 /// distance within 1e-9 m and the feature by the fixture rule (the body answer is the
@@ -393,5 +393,110 @@ fn ellipse_and_nurbs_edges() {
             }
         }
         assert!(edge_answers >= 10, "{file}: {edge_answers} answers on the curved edge");
+    }
+}
+
+/// A NURBS cone (hand-made: a closed cubic B-spline base loop at z = 0 ruled to the apex
+/// (0, 0, 0.08)), trimmed to its whole domain: base edge E1, seam E2 (base to apex, used
+/// twice) and pole edge E3 at the apex. For a query on the axis beyond the apex the closest
+/// point is the apex (hand-labelled: along every generator the distance grows from the
+/// apex), which is neither a stationary point nor on a boundary edge: the seam and pole
+/// candidates must supply it.
+#[test]
+fn nurbs_cone_tip() {
+    let j = parse_json(
+        r#"{"body_id": "nurbs_cone", "vertices": [
+              {"label": "VB", "point": [0.05, 0, 0]}, {"label": "VA", "point": [0, 0, 0.08]}],
+            "edges": [
+              {"label": "E1", "start": "VB", "end": "VB", "curve": null, "param_range": [0, 1]},
+              {"label": "E2", "start": "VB", "end": "VA", "curve": null, "param_range": [0, 1]},
+              {"label": "E3", "start": "VA", "end": "VA", "curve": null, "param_range": null, "degenerate": true}],
+            "faces": [{"label": "F1", "sense": "same",
+              "surface": {"type": "nurbs", "degree_u": 3, "degree_v": 1, "n_u": 6, "n_v": 2,
+                "knots_u": [0, 0, 0, 0, 0.3333333333333333, 0.6666666666666666, 1, 1, 1, 1],
+                "knots_v": [0, 0, 1, 1],
+                "ctrl": [[0.05, 0, 0], [0, 0, 0.08], [0.05, 0.05, 0], [0, 0, 0.08], [-0.05, 0.05, 0], [0, 0, 0.08],
+                         [-0.05, -0.05, 0], [0, 0, 0.08], [0.05, -0.05, 0], [0, 0, 0.08], [0.05, 0, 0], [0, 0, 0.08]],
+                "weights": null},
+              "loops": [{"label": "F1L1", "outer": true, "coedges": [
+                {"label": "C1", "edge": "E1", "sense": "same", "pcurve": {"type": "line2", "from": [0, 0], "to": [1, 0]}},
+                {"label": "C2", "edge": "E2", "sense": "same", "pcurve": {"type": "line2", "from": [1, 0], "to": [1, 1]}},
+                {"label": "C3", "edge": "E3", "sense": "same", "pcurve": {"type": "line2", "from": [1, 1], "to": [0, 1]}},
+                {"label": "C4", "edge": "E2", "sense": "reversed", "pcurve": {"type": "line2", "from": [0, 0], "to": [0, 1]}}]}]}],
+            "shells": [{"label": "S1", "faces": ["F1"]}]}"#,
+    );
+    let body = build_face_body(&j, "F1");
+    let pc = derive_pcurves(&body, DEFAULT_TOL_M).unwrap();
+    let fp = FaceProjector::new(&body, &pc, only_face(&body)).unwrap();
+    for d in [0.02, 0.5, 3.0] {
+        let FaceProjection::Hit(h) = fp.project([0.0, 0.0, 0.08 + d], FaceQueryOptions::default()).unwrap() else {
+            panic!("no hit")
+        };
+        assert!(norm(sub(h.foot, [0.0, 0.0, 0.08])) <= 1e-12, "{d}: foot {:?}", h.foot);
+        assert!((h.distance - d).abs() <= 1e-12, "{d}: distance {}", h.distance);
+        assert_eq!(h.feature, FaceFeature::Interior, "{d}");
+    }
+}
+
+/// Adds `off` to every 3-vector under the keys `point` and `ctrl` of a body description.
+fn translate(j: &mut Json, off: V3) {
+    let shift = |v: &mut Json| {
+        if let Json::Arr(a) = v {
+            for (k, x) in a.iter_mut().enumerate() {
+                if let Json::Num(n) = x {
+                    *n += off[k];
+                }
+            }
+        }
+    };
+    match j {
+        Json::Obj(kv) => {
+            for (k, v) in kv.iter_mut() {
+                if k == "point" {
+                    shift(v);
+                } else if k == "ctrl" {
+                    if let Json::Arr(rows) = v {
+                        rows.iter_mut().for_each(shift);
+                    }
+                } else {
+                    translate(v, off);
+                }
+            }
+        }
+        Json::Arr(a) => a.iter_mut().for_each(|x| translate(x, off)),
+        _ => {}
+    }
+}
+
+/// The NURBS saddle moved several metres from the origin (every coordinate and the oracle's
+/// answers shifted by the same offset, exact for the dyadic control points; the query and foot
+/// shifts round by under 1e-15 m): still within 1e-9 m of the oracle.
+#[test]
+fn far_from_origin() {
+    let off = [3.0, -4.0, 5.0];
+    let mut fx = load("saddle_two_minima.json");
+    translate(&mut fx.body, off);
+    let add = |v: V3| [v[0] + off[0], v[1] + off[1], v[2] + off[2]];
+    for q in fx.queries.iter_mut() {
+        q.p = add(q.p);
+        q.answer.foot = add(q.answer.foot);
+        for a in q.alternatives.iter_mut() {
+            a.foot = add(a.foot);
+        }
+    }
+    let bodies = face_bodies(&fx);
+    let pr = prepare(&bodies);
+    for q in &fx.queries {
+        let h = project_all(&pr, q.p, FaceQueryOptions::default()).unwrap().unwrap();
+        let hit = to_hit(&h);
+        assert!(
+            matches(&fx, q, &hit),
+            "{}: got {:?} {:?}; want {:?} {:?}",
+            q.id,
+            hit.feature,
+            hit.foot,
+            q.answer.feature,
+            q.answer.foot
+        );
     }
 }

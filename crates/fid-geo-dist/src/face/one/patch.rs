@@ -22,9 +22,12 @@
 //!    definite on the node (Bernstein coefficient ranges), `H` is injective there: at most one
 //!    stationary point, a strict minimum that is also the minimum of the node. A box-limited
 //!    damped Newton iteration from the node centre finds it; a point that passes the
-//!    orthogonality test `|S_x . r| <= |S_x| max(1e-12 max(d, 1e-9 m), 2^-46 M)`, or whose
-//!    full Newton step (positive definite Hessian, inside the node) moves the foot by at most
-//!    `2^-30 M`, is a candidate (then classified against the trim by the caller).
+//!    orthogonality test `|S_x . r| <= |S_x| max(1e-12 max(d, 1e-9 m), 2^-46 M)`, or the
+//!    point after a full Newton step (positive definite Hessian, inside the node) that moves
+//!    the foot by at most `2^-30 M`, is a candidate (then classified against the trim by the
+//!    caller). A run that ends neither there nor at a point of the node's box meeting the
+//!    Karush-Kuhn-Tucker conditions leaves the node unresolved, and the query then fails
+//!    with `NonConvergence` (fails closed).
 //! 5. Otherwise the node is halved along the direction where its control net extends most,
 //!    until [`MAX_DEPTH`] (a Newton run from the centre, flagged unresolved) or [`BUDGET`]
 //!    nodes (flagged unresolved).
@@ -608,11 +611,17 @@ impl Patches {
                     out.unresolved = true;
                 }
                 let seed = [mid(node.u), mid(node.v)];
-                if let Some(f) = newton(s, q, [node.u[0], node.v[0]], [node.u[1], node.v[1]], seed, m)? {
-                    if f.distance <= best && accept(f.uv, f.foot)? {
-                        best = f.distance;
-                        out.found.push(f);
+                match newton(s, q, [node.u[0], node.v[0]], [node.u[1], node.v[1]], seed, m)? {
+                    NewtonEnd::Critical(f) => {
+                        if f.distance <= best && accept(f.uv, f.foot)? {
+                            best = f.distance;
+                            out.found.push(f);
+                        }
                     }
+                    // The minimum of the node is on its box: no stationary point inside.
+                    NewtonEnd::Boundary => {}
+                    // Neither: the node is not resolved (fails closed).
+                    NewtonEnd::Failed => out.unresolved = true,
                 }
                 continue;
             }
@@ -650,9 +659,31 @@ fn clamp(x: f64, lo: f64, hi: f64) -> f64 {
     }
 }
 
+/// How a [`newton`] run ended.
+#[derive(Debug, Clone, Copy)]
+pub(super) enum NewtonEnd {
+    /// A stationary point (orthogonality test, or a converged full Newton step).
+    Critical(Found),
+    /// A point of the box boundary that meets the Karush-Kuhn-Tucker conditions of the box
+    /// without being stationary: the minimum of the box lies on its boundary.
+    Boundary,
+    /// Neither (the iteration stalled or ran out of steps).
+    Failed,
+}
+
+/// Per direction: orthogonal (`g^2 <= e T^2`), or at a bound with the gradient pointing out
+/// of the box.
+fn kkt_dir(x: f64, lo: f64, hi: f64, g: f64, e: f64, t2: f64) -> (bool, bool) {
+    let ortho = g * g <= e * t2;
+    let outward = (x == lo && g >= 0.0) || (x == hi && g <= 0.0);
+    (ortho, ortho || outward)
+}
+
 /// Damped Newton iteration for a stationary point of `|S - q|^2 / 2` in the box
-/// `[lo, hi]`; `Some` when the final point passes the orthogonality test
-/// `|S_x . r| <= |S_x| T`, `T = max(REL max(d, FLOOR), NOISE m)`.
+/// `[lo, hi]`. A point is stationary when it passes the orthogonality test
+/// `|S_x . r| <= |S_x| T`, `T = max(REL max(d, FLOOR), NOISE m)`, in both directions, or when
+/// the full Newton step (positive definite Hessian, inside the box) moves the foot by at most
+/// `STEP_REL m`; the point returned is then the one after that step, evaluated.
 pub(super) fn newton(
     s: &NurbsSurface,
     q: [f64; 3],
@@ -660,8 +691,12 @@ pub(super) fn newton(
     hi: [f64; 2],
     seed: [f64; 2],
     m: f64,
-) -> Result<Option<Found>, FaceError> {
+) -> Result<NewtonEnd, FaceError> {
     let ev = |x: [f64; 2], order: usize| s.eval(x[0], x[1], order).map_err(|_| FaceError::NonFinite);
+    let found = |x: [f64; 2]| -> Result<Found, FaceError> {
+        let p = ev(x, 0)?.p;
+        Ok(Found { uv: x, foot: p, distance: super::norm3(sub3(p, q))? })
+    };
     let mut x = [clamp(seed[0], lo[0], hi[0]), clamp(seed[1], lo[1], hi[1])];
     for _ in 0..=MAX_ITER {
         let d = ev(x, 2)?;
@@ -674,14 +709,16 @@ pub(super) fn newton(
         let (eu, ev2) = (dot3(su, su), dot3(sv, sv));
         let t = fmax(REL * fmax(dist, FLOOR), NOISE * m);
         let t2 = t * t;
-        if gu * gu <= eu * t2 && gv * gv <= ev2 * t2 {
-            return Ok(Some(Found { uv: x, foot: d.p, distance: dist }));
+        let (ou, ku) = kkt_dir(x[0], lo[0], hi[0], gu, eu, t2);
+        let (ov, kv) = kkt_dir(x[1], lo[1], hi[1], gv, ev2, t2);
+        if ou && ov {
+            return Ok(NewtonEnd::Critical(Found { uv: x, foot: d.p, distance: dist }));
+        }
+        if ku && kv {
+            return Ok(NewtonEnd::Boundary);
         }
         let fu = !((x[0] == lo[0] && gu > 0.0) || (x[0] == hi[0] && gu < 0.0));
         let fv = !((x[1] == lo[1] && gv > 0.0) || (x[1] == hi[1] && gv < 0.0));
-        if !fu && !fv {
-            return Ok(None);
-        }
         let a = eu + dot3(r, suu);
         let b = dot3(su, sv) + dot3(r, suv);
         let c = ev2 + dot3(r, svv);
@@ -700,20 +737,34 @@ pub(super) fn newton(
             if a > 0.0 && det > 0.0 {
                 newton_pd = true;
                 let (du, dv) = (-(c * gu - b * gv) / det, -(a * gv - b * gu) / det);
-                // Converged: the full Newton step moves the foot by at most STEP_REL M.
+                // Converged: the full Newton step moves the foot by at most STEP_REL m; the
+                // point after the step is returned.
                 let mv: [f64; 3] = core::array::from_fn(|k| du * su[k] + dv * sv[k]);
-                let inside = (lo[0]..=hi[0]).contains(&(x[0] + du)) && (lo[1]..=hi[1]).contains(&(x[1] + dv));
+                let xn = [x[0] + du, x[1] + dv];
+                let inside = (lo[0]..=hi[0]).contains(&xn[0]) && (lo[1]..=hi[1]).contains(&xn[1]);
                 if inside && super::norm3(mv)? <= STEP_REL * m {
-                    return Ok(Some(Found { uv: x, foot: d.p, distance: dist }));
+                    return Ok(NewtonEnd::Critical(found(xn)?));
                 }
                 (du, dv)
             } else {
                 (step1(gu, 0.0, eu), step1(gv, 0.0, ev2))
             }
-        } else if fu {
-            (step1(gu, a, eu), 0.0)
         } else {
-            (0.0, step1(gv, c, ev2))
+            // One direction is held at a bound with the gradient pointing out of the box: a
+            // one-dimensional Newton step in the other. A converged step (as above) ends at a
+            // point that meets the box conditions.
+            let (du, dv, h, sx) = if fu { (step1(gu, a, eu), 0.0, a, su) } else { (0.0, step1(gv, c, ev2), c, sv) };
+            if h > 0.0 {
+                newton_pd = true;
+                let st = if fu { du } else { dv };
+                let mv: [f64; 3] = core::array::from_fn(|k| st * sx[k]);
+                let xn = [x[0] + du, x[1] + dv];
+                let inside = (lo[0]..=hi[0]).contains(&xn[0]) && (lo[1]..=hi[1]).contains(&xn[1]);
+                if inside && super::norm3(mv)? <= STEP_REL * m {
+                    return Ok(NewtonEnd::Boundary);
+                }
+            }
+            (du, dv)
         };
         let f0 = dot3(r, r);
         let mut lam = 1.0;
@@ -742,12 +793,15 @@ pub(super) fn newton(
     let (Some(su), Some(sv)) = (d.su, d.sv) else { return Err(FaceError::NonFinite) };
     let r = sub3(d.p, q);
     let dist = super::norm3(r)?;
-    let (gu, gv) = (dot3(su, r), dot3(sv, r));
     let t = fmax(REL * fmax(dist, FLOOR), NOISE * m);
     let t2 = t * t;
-    if gu * gu <= dot3(su, su) * t2 && gv * gv <= dot3(sv, sv) * t2 {
-        Ok(Some(Found { uv: x, foot: d.p, distance: dist }))
+    let (ou, ku) = kkt_dir(x[0], lo[0], hi[0], dot3(su, r), dot3(su, su), t2);
+    let (ov, kv) = kkt_dir(x[1], lo[1], hi[1], dot3(sv, r), dot3(sv, sv), t2);
+    Ok(if ou && ov {
+        NewtonEnd::Critical(Found { uv: x, foot: d.p, distance: dist })
+    } else if ku && kv {
+        NewtonEnd::Boundary
     } else {
-        Ok(None)
-    }
+        NewtonEnd::Failed
+    })
 }

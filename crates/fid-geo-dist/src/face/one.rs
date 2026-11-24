@@ -20,6 +20,14 @@
 //!    end of an open edge is left to the vertex candidate; a closed edge (start vertex = end
 //!    vertex) has no corner, and its feet are always the edge's.
 //! 2. **Boundary vertices**: the ends of open boundary edges, in ascending vertex ID.
+//! 2a. **NURBS seams and poles** (points of the face, reported as Interior): on a NURBS
+//!    face, where the surface may be only C0 across a seam or singular at a pole (so the
+//!    closest point need not be a stationary point of any patch), every seam edge is a curve
+//!    candidate over its whole range (ascending edge ID), and every pole is a point
+//!    candidate: the vertex of a pole edge, and the image of a degenerate boundary line of
+//!    the parameter domain (all its control points equal within `2^-40` of the largest
+//!    coordinate) that a trimming segment ends on. On analytic faces the closed forms below
+//!    already cover seams and poles.
 //! 3. **Interior stationary points** that could still win (lower distance, or a tie the
 //!    interior wins), kept when the face contains them (REQ-002, see *Trim test*). Analytic
 //!    surfaces in closed form, in the surface's placement with `rho = hypot(x, y)`,
@@ -333,6 +341,10 @@ pub struct FaceProjector<'a> {
     patches: Option<patch::Patches>,
     edges: Vec<BEdge<'a>>,
     vertices: Vec<(TopologyId, [f64; 3])>,
+    /// NURBS face: seam edges (points of the face, not boundary), ascending edge ID.
+    seams: Vec<BEdge<'a>>,
+    /// NURBS face: pole points of the face with their parameters.
+    poles: Vec<([f64; 3], [f64; 2])>,
 }
 
 impl fmt::Debug for FaceProjector<'_> {
@@ -475,6 +487,59 @@ fn on_surface_lip(s: SurfRef<'_>, c: &Curve2, t0: f64, t1: f64) -> Result<f64, F
     }
 }
 
+/// Pole points of a NURBS face: a boundary line of the parameter domain whose control
+/// points all coincide (within `2^-40` of the largest coordinate) is a single point of the
+/// surface; it belongs to the face when a trimming segment ends on that line (within
+/// `2^-40` of the domain width). Returned with its parameters (the line's midpoint).
+fn pole_lines(n: &NurbsSurface, trim: &TrimIndex) -> Result<Vec<([f64; 3], [f64; 2])>, FaceError> {
+    const REL: f64 = 1.0 / 1_099_511_627_776.0;
+    let (n_u, n_v) = n.shape();
+    let ((u0, u1), (v0, v1)) = n.domain();
+    let ctrl = n.ctrl();
+    let mut scale = 0.0;
+    for c in ctrl {
+        for x in c {
+            scale = fmax(scale, x.abs());
+        }
+    }
+    let at = |i: usize, j: usize| -> Option<[f64; 3]> { ctrl.get(i * n_v + j).copied() };
+    let mut out = Vec::new();
+    // (direction of the fixed parameter, its value, the other range, control points)
+    let lines = [
+        (0, u0, [v0, v1], (0..n_v).map(|j| at(0, j)).collect()),
+        (0, u1, [v0, v1], (0..n_v).map(|j| at(n_u.saturating_sub(1), j)).collect()),
+        (1, v0, [u0, u1], (0..n_u).map(|i| at(i, 0)).collect()),
+        (1, v1, [u0, u1], (0..n_u).map(|i| at(i, n_v.saturating_sub(1))).collect()),
+    ];
+    for (dir, value, other, pts) in lines {
+        let Some(Some(first)) = pts.first().copied() else { continue };
+        let mut degenerate = true;
+        for pt in &pts {
+            let Some(pt) = pt else { return Err(FaceError::NonFinite) };
+            for (a, b) in pt.iter().zip(first.iter()) {
+                if (a - b).abs() > REL * scale {
+                    degenerate = false;
+                }
+            }
+        }
+        if !degenerate {
+            continue;
+        }
+        let width = if dir == 0 { u1 - u0 } else { v1 - v0 };
+        let touched = trim
+            .segments()
+            .iter()
+            .any(|g| (g.a[dir] - value).abs() <= REL * width || (g.b[dir] - value).abs() <= REL * width);
+        if touched {
+            let m = other[0] + (other[1] - other[0]) * 0.5;
+            let uv = if dir == 0 { [value, m] } else { [m, value] };
+            let pt = n.eval(uv[0], uv[1], 0).map_err(|_| FaceError::NonFinite)?.p;
+            out.push((pt, uv));
+        }
+    }
+    Ok(out)
+}
+
 impl<'a> FaceProjector<'a> {
     /// Prepares `face` of `body`, whose pcurves [`derive_pcurves`] gave as `pcurves`.
     pub fn new(body: &'a Body, pcurves: &Pcurves, face: FaceIx) -> Result<FaceProjector<'a>, FaceError> {
@@ -504,10 +569,10 @@ impl<'a> FaceProjector<'a> {
         let s_dyn = surf.dyn_surface();
         let mut edges: Vec<BEdge<'a>> = Vec::new();
         let mut corner_ix: Vec<VertexIx> = Vec::new();
+        let nurbs = matches!(surf, SurfRef::Nurbs(_));
+        let mut seams: Vec<BEdge<'a>> = Vec::new();
+        let mut poles: Vec<([f64; 3], [f64; 2])> = Vec::new();
         for &(ex, count, pc) in &uses {
-            if count >= 2 {
-                continue; // a seam: crossed, not boundary
-            }
             let e = body.edge(ex).ok_or(FaceError::UnknownFace)?;
             let range = e.param_range();
             let closed = e.start() == e.end();
@@ -528,7 +593,7 @@ impl<'a> FaceProjector<'a> {
                 },
                 None => {
                     let pc = pc.ok_or_else(|| FaceError::NoEdgeGeometry { edge: id.clone() })?;
-                    if closed {
+                    if closed && count < 2 {
                         let vp = body.vertex(e.start()).ok_or(FaceError::UnknownFace)?.point();
                         let mut pole = true;
                         for k in 0..5 {
@@ -539,12 +604,25 @@ impl<'a> FaceProjector<'a> {
                             }
                         }
                         if pole {
-                            continue; // a pole: a single point, not boundary
+                            // A pole: a single point, not boundary; on a NURBS face a point
+                            // candidate (where the surface is not smooth).
+                            if nurbs {
+                                poles.push((vp, pcurve_eval(pc, range[0])?[0]));
+                            }
+                            continue;
                         }
                     }
                     (Geom::OnSurface(pc), on_surface_lip(surf, pc, range[0], range[1])?)
                 }
             };
+            if count >= 2 {
+                // A seam: crossed, not boundary; on a NURBS face (which may be only C0 there)
+                // a curve candidate over its whole range.
+                if nurbs {
+                    seams.push(BEdge { id, geom, range, closed: true, lip });
+                }
+                continue;
+            }
             if !closed {
                 for v in [e.start(), e.end()] {
                     if !corner_ix.contains(&v) {
@@ -554,6 +632,20 @@ impl<'a> FaceProjector<'a> {
             }
             edges.push(BEdge { id, geom, range, closed, lip });
         }
+        seams.sort_by(|a, b| a.id.cmp(&b.id));
+        if let SurfRef::Nurbs(n) = surf {
+            for (pt, uv) in pole_lines(n, &trim)? {
+                let mut dup = false;
+                for (o, _) in &poles {
+                    if norm3(sub3(*o, pt))? <= DEFAULT_TOL_M {
+                        dup = true;
+                    }
+                }
+                if !dup {
+                    poles.push((pt, uv));
+                }
+            }
+        }
         edges.sort_by(|a, b| a.id.cmp(&b.id));
         let mut vertices: Vec<(TopologyId, [f64; 3])> = Vec::with_capacity(corner_ix.len());
         for vx in corner_ix {
@@ -561,7 +653,7 @@ impl<'a> FaceProjector<'a> {
             vertices.push((v.id().clone(), v.point()));
         }
         vertices.sort_by(|a, b| a.0.cmp(&b.0));
-        Ok(FaceProjector { face_id: f.id().clone(), trim, surf, patches, edges, vertices })
+        Ok(FaceProjector { face_id: f.id().clone(), trim, surf, patches, edges, vertices, seams, poles })
     }
 
     /// The face's topology ID.
@@ -885,6 +977,17 @@ impl<'a> FaceProjector<'a> {
         }
         for (k, (_, pt)) in self.vertices.iter().enumerate() {
             let c = Cand { distance: norm3(sub3(*pt, p))?, foot: *pt, uv: None, feat: Feat::Vertex(k) };
+            offer(&mut best, c);
+        }
+        // NURBS seams and poles: points of the face (Interior), not boundary.
+        for e in &self.seams {
+            if let Some(f) = self.edge_foot(e, p)? {
+                let c = Cand { distance: norm3(sub3(f.foot, p))?, foot: f.foot, uv: f.uv, feat: Feat::Interior };
+                offer(&mut best, c);
+            }
+        }
+        for (pt, uv) in &self.poles {
+            let c = Cand { distance: norm3(sub3(*pt, p))?, foot: *pt, uv: Some(*uv), feat: Feat::Interior };
             offer(&mut best, c);
         }
         let mut unresolved = false;

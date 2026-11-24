@@ -11,7 +11,7 @@
 //! 2. **Refinement.** Among the surviving leaves (ordered by `t`), every leaf whose midpoint
 //!    value is not above its touching neighbours' seeds a safeguarded Newton iteration on
 //!    `g(t) = (C - q) . C'` (bisection whenever the Newton step leaves the bracket of the
-//!    neighbouring midpoints), at most [`MAX_SEEDS`] seeds in `(value, t)` order.
+//!    neighbouring midpoints); every seed is refined, in `(value, t)` order.
 //! 3. The answer is the smallest distance found (earliest on a tie).
 
 use core::cmp::Reverse;
@@ -27,8 +27,6 @@ pub const MAX_PIECES: usize = 1 << 14;
 pub const RES_REL: f64 = 1.0 / 4096.0;
 /// Evaluation guard relative to the coordinates (`2^-40`).
 pub const GUARD_REL: f64 = 1.0 / 1_099_511_627_776.0;
-/// Newton seeds refined.
-pub const MAX_SEEDS: usize = 8;
 /// Newton and bisection steps per seed.
 pub const MAX_STEPS: usize = 200;
 
@@ -132,7 +130,6 @@ pub(super) fn closest(
         }
     }
     seeds.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.total_cmp(&b.1)));
-    seeds.truncate(MAX_SEEDS);
     for &(_, _, i) in &seeds {
         let here = leaves[i];
         let a = if i > 0 && leaves[i - 1].hi == here.lo { leaves[i - 1].mid } else { here.lo };
