@@ -366,9 +366,7 @@ impl Canvas {
     /// inside its page. Returns how many blocks changed. Not undoable.
     pub fn set_paper(&mut self, paper: Paper) -> usize {
         let (pw, ph) = paper.size();
-        for p in &mut self.pages {
-            *p = paper;
-        }
+        self.pages.fill(paper);
         let mut changed = 0;
         for b in &mut self.blocks {
             let r = b.rect;
