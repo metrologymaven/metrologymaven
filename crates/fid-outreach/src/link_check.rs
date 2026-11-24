@@ -16,7 +16,11 @@
 //!   sends one `HEAD` request per URL (falling back to `GET` when `HEAD` is refused) with a 10 s
 //!   timeout, at most 4 concurrent requests, and a fixed generic user agent, and writes
 //!   `external.json` (RFC 8785 canonical JSON) and `issue.md` (Markdown tracking-issue body for
-//!   `docs-external-links`).
+//!   `docs-external-links`). Requests are made by the system `curl` executable, which external
+//!   mode requires: when it cannot be started the run stops with `tool_unavailable` (exit 2)
+//!   instead of reporting every URL as a failed link.
+//!
+//! An edition directory without any HTML page is `edition_unreadable` (exit 2) in both modes.
 //!
 //! Also provides [`DocsGatesConfig`] for reading `docs/qa/docs-gates.toml`, selecting hand-written
 //! `lint_sources` (excluding generated reference pages), and checking pages for off-origin
@@ -58,9 +62,23 @@ const LOOPBACK_HOSTS: [&str; 3] = ["127.0.0.1", "::1", "localhost"];
 /// Fatal errors (exit 2).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LinkCheckError {
-    EditionUnreadable { path: String, reason: String },
-    OutputUnwritable { path: String, reason: String },
-    ConfigParse { path: String, reason: String },
+    EditionUnreadable {
+        path: String,
+        reason: String,
+    },
+    OutputUnwritable {
+        path: String,
+        reason: String,
+    },
+    ConfigParse {
+        path: String,
+        reason: String,
+    },
+    /// A required external tool (`curl` for `--external`) cannot be run; `path` names the tool.
+    ToolUnavailable {
+        path: String,
+        reason: String,
+    },
 }
 
 impl LinkCheckError {
@@ -69,6 +87,7 @@ impl LinkCheckError {
             LinkCheckError::EditionUnreadable { .. } => "edition_unreadable",
             LinkCheckError::OutputUnwritable { .. } => "output_unwritable",
             LinkCheckError::ConfigParse { .. } => "config_parse",
+            LinkCheckError::ToolUnavailable { .. } => "tool_unavailable",
         }
     }
 
@@ -76,7 +95,8 @@ impl LinkCheckError {
         match self {
             LinkCheckError::EditionUnreadable { path, reason }
             | LinkCheckError::OutputUnwritable { path, reason }
-            | LinkCheckError::ConfigParse { path, reason } => (path, reason),
+            | LinkCheckError::ConfigParse { path, reason }
+            | LinkCheckError::ToolUnavailable { path, reason } => (path, reason),
         }
     }
 
@@ -184,6 +204,8 @@ pub struct ExternalOptions {
     pub timeout: Duration,
     pub max_concurrent: usize,
     pub user_agent: String,
+    /// The `curl` program to run (default `curl` from `PATH`).
+    pub curl: PathBuf,
 }
 
 impl Default for ExternalOptions {
@@ -192,6 +214,7 @@ impl Default for ExternalOptions {
             timeout: DEFAULT_EXTERNAL_TIMEOUT,
             max_concurrent: MAX_CONCURRENT_REQUESTS,
             user_agent: USER_AGENT.to_string(),
+            curl: PathBuf::from("curl"),
         }
     }
 }
@@ -410,6 +433,12 @@ fn scan_edition(edition: &Path) -> Result<ScannedEdition, LinkCheckError> {
         }
     }
 
+    if pages.is_empty() {
+        return Err(LinkCheckError::EditionUnreadable {
+            path: display_path(edition),
+            reason: "edition contains no HTML pages".into(),
+        });
+    }
     Ok(ScannedEdition { all_files, pages })
 }
 
@@ -513,6 +542,7 @@ pub fn check_internal(edition: &Path) -> Result<InternalReport, LinkCheckError> 
 /// Runs the external HTTP(S) link check (X1, observed class N).
 pub fn check_external(edition: &Path, options: &ExternalOptions) -> Result<ExternalReport, LinkCheckError> {
     let scanned = scan_edition(edition)?;
+    require_curl(options)?;
     let mut url_pages: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
 
     for (page_rel, page) in &scanned.pages {
@@ -562,12 +592,39 @@ pub fn check_external(edition: &Path, options: &ExternalOptions) -> Result<Exter
         }
     });
 
-    let results = match results_map.into_inner() {
+    let results: Vec<ExternalEntry> = match results_map.into_inner() {
         Ok(map) => map.into_values().collect(),
         Err(poisoned) => poisoned.into_inner().into_values().collect(),
     };
+    // curl vanishing mid-run is a tool error too, never a list of failed links.
+    if results.iter().any(|r| r.error.as_deref() == Some(CURL_UNAVAILABLE)) {
+        return Err(LinkCheckError::ToolUnavailable {
+            path: display_path(&options.curl),
+            reason: "curl could not be started during the run".into(),
+        });
+    }
 
     Ok(ExternalReport { pages: scanned.pages.len(), results })
+}
+
+/// Error string a probe records when `curl` cannot be spawned.
+const CURL_UNAVAILABLE: &str = "curl_unavailable";
+
+/// External mode requires `curl`: `curl -q --version` must start and exit 0.
+fn require_curl(options: &ExternalOptions) -> Result<(), LinkCheckError> {
+    let unavailable = |reason: String| LinkCheckError::ToolUnavailable { path: display_path(&options.curl), reason };
+    let status = Command::new(&options.curl)
+        .args(["-q", "--version"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map_err(|e| unavailable(format!("curl is required for --external and cannot be run: {e}")))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(unavailable("curl is required for --external; `curl --version` failed".into()))
+    }
 }
 
 struct ProbeOutcome {
@@ -630,7 +687,7 @@ enum CurlResult {
 
 fn run_curl(url: &str, head_only: bool, loopback: bool, options: &ExternalOptions) -> CurlResult {
     let timeout_secs = options.timeout.as_secs().max(1).to_string();
-    let mut cmd = Command::new("curl");
+    let mut cmd = Command::new(&options.curl);
     // `-q` must come first so curl ignores any ~/.curlrc.
     cmd.args(["-q", "--globoff", "--silent", "--show-error", "--location", "--max-redirs", "5"])
         .args(["--proto", "=http,https", "--proto-redir", "=http,https"])
@@ -648,7 +705,7 @@ fn run_curl(url: &str, head_only: bool, loopback: bool, options: &ExternalOption
     let Ok(mut child) =
         cmd.args(["--", url]).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()
     else {
-        return CurlResult::Error("curl_unavailable".to_string());
+        return CurlResult::Error(CURL_UNAVAILABLE.to_string());
     };
 
     // Drain stdout up to MAX_GET_BODY_BYTES so large pages never stall or blow memory.
@@ -954,13 +1011,32 @@ pub fn glob_matches(pattern: &str, path: &str) -> bool {
     glob_segs(&pat_segs, &path_segs)
 }
 
+/// Segment-level two-pointer matcher: `**` plays the role `*` plays in [`seg_matches`], so the
+/// work is O(pattern segments x path segments) even with many `**` (no exponential backtracking).
 fn glob_segs(pat: &[&str], path: &[&str]) -> bool {
-    match (pat.first(), path.first()) {
-        (None, None) => true,
-        (Some(&"**"), _) => glob_segs(&pat[1..], path) || (!path.is_empty() && glob_segs(pat, &path[1..])),
-        (Some(&p), Some(&s)) => seg_matches(p.as_bytes(), s.as_bytes()) && glob_segs(&pat[1..], &path[1..]),
-        _ => false,
+    let (mut pi, mut ti) = (0usize, 0usize);
+    let mut star_pi: Option<usize> = None;
+    let mut star_ti: usize = 0;
+    while ti < path.len() {
+        if pi < pat.len() && pat[pi] == "**" {
+            star_pi = Some(pi);
+            star_ti = ti;
+            pi += 1;
+        } else if pi < pat.len() && seg_matches(pat[pi].as_bytes(), path[ti].as_bytes()) {
+            pi += 1;
+            ti += 1;
+        } else if let Some(sp) = star_pi {
+            pi = sp + 1;
+            star_ti += 1;
+            ti = star_ti;
+        } else {
+            return false;
+        }
     }
+    while pi < pat.len() && pat[pi] == "**" {
+        pi += 1;
+    }
+    pi == pat.len()
 }
 
 fn seg_matches(pat: &[u8], text: &[u8]) -> bool {
@@ -1087,6 +1163,19 @@ mod tests {
         assert!(glob_matches("book/**/*.md", "book/concepts/units.md"));
         assert!(!glob_matches("book/**/*.md", "ref/cli/demo.read_item@1.html"));
         assert!(!glob_matches("book/**/*.md", "book/intro.html"));
+        assert!(glob_matches("**/x/**/y.md", "a/x/b/c/y.md"));
+        assert!(glob_matches("**", "a/b"));
+        assert!(!glob_matches("a/**/b", "a/c"));
+    }
+
+    /// Repeated `**` must not backtrack exponentially (the old recursive matcher needed about
+    /// C(80, 40) steps for this non-match).
+    #[test]
+    fn glob_with_repeated_double_star_is_polynomial() {
+        let pattern = vec!["**"; 40].join("/") + "/z";
+        let path = vec!["a"; 40].join("/");
+        assert!(!glob_matches(&pattern, &path));
+        assert!(glob_matches(&pattern, &(path.clone() + "/z")));
     }
 
     #[test]

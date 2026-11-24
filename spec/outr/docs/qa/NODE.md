@@ -86,6 +86,9 @@ Synthetic editions under `fixtures/outr/docs/qa/` (`ok`, `broken`, `external`, `
 
 - The weekly external-link cadence is a proposal carried from OUTR.DOCS.
 - OUTR.SITE.QA is still open; its gate command name and configuration keys may differ from `docs-gates.toml` above, in which case only the configuration file changes.
+- **Deferred in PR #445: CI wiring.** The edition build gate (running internal `link-check`, the OUTR.SITE.QA off-origin and accessibility gates and the claim lint when an edition is built; REQ-001, REQ-002, REQ-003, REQ-006) and the weekly scheduled external-link job that maintains the single `docs-external-links` issue (REQ-005) are not wired into `.github/workflows/` yet. The commands and `docs/qa/docs-gates.toml` exist. The workflow comes in a follow-up once OUTR.DOCS.FRAME builds editions in CI and OUTR.SITE.QA.CRAWL lands. A scheduled job that writes issues needs a P1 human review.
+- **Stand-in for OUTR.SITE.QA (PR #445).** OUTR.SITE.QA.CRAWL is not built, so AC-4 is tested with `link_check::check_off_origin`, a static off-origin scan of `src`/`href` resource URLs against `docs-gates.toml` `origin`. It is not the real crawl. AC-5 runs the real `fid-brand-lint claim-lint` binary with its shipped `claim-rules.toml`.
+- **`--external` requires `curl`** on `PATH`. When it cannot be run, `link-check --external` exits 2 with `tool_unavailable` and writes no report.
 
 ## Children
 

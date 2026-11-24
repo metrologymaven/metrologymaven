@@ -291,6 +291,25 @@ fn ac4_tracker_fails_off_origin_gate_with_docs_gates_toml() {
     assert_eq!(findings[0].url, "https://tracker.example/analytics.js");
 }
 
+/// Runs the real OUTR.BRAND.LINT binary (`fid-brand-lint claim-lint`) with its shipped rule
+/// file. `fid-brand-lint` is a tool-layer crate, so it cannot be a dev-dependency of this
+/// tool-layer crate (LAYER-TOOL); the test runs it through `cargo run`, as `fid-solv`'s
+/// conic cross-test does for its example.
+fn brand_lint(paths: &[PathBuf]) -> (i32, BTreeMap<String, CValue>) {
+    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    let out = Command::new(cargo)
+        .current_dir(repo_root())
+        .args(["run", "--quiet", "--locked", "-p", "fid-brand-lint", "--", "claim-lint", "--rules"])
+        .arg(repo_root().join("crates/fid-brand-lint/rules/claim-rules.toml"))
+        .arg("--json")
+        .args(paths)
+        .output()
+        .unwrap();
+    let code = out.status.code().unwrap();
+    assert!(code == 0 || code == 1, "fid-brand-lint failed: {}", show(&out));
+    (code, parse_json_obj(&out.stdout))
+}
+
 #[test]
 fn ac5_claim_lint_runs_only_on_hand_written_sources_not_ref_pages() {
     let gates = DocsGatesConfig::load(&repo_root().join("docs/qa/docs-gates.toml")).unwrap();
@@ -298,41 +317,64 @@ fn ac5_claim_lint_runs_only_on_hand_written_sources_not_ref_pages() {
     assert_eq!(selected.len(), 1, "only hand-written book source must be selected: {selected:?}");
     assert!(selected[0].ends_with("book/intro.md"));
 
-    // Read the real OUTR.BRAND.LINT rule file (`claim-rules.toml`) and verify that CL001 matches
-    // the selected hand-written book source, while the generated reference page under `ref/`
-    // (which also contains "certified") is excluded by `docs-gates.toml`.
-    let rules_text = std::fs::read_to_string(repo_root().join("crates/fid-brand-lint/rules/claim-rules.toml")).unwrap();
-    let rules_tbl: toml::Value = toml::from_str(&rules_text).unwrap();
-    let cl001_words: Vec<String> = rules_tbl
-        .get("rule")
-        .and_then(toml::Value::as_array)
-        .unwrap()
+    // The real claim lint on the selected sources: exactly one error, CL001 on the book page.
+    let (code, report) = brand_lint(&selected);
+    assert_eq!(code, 1, "{report:?}");
+    let errors: Vec<&BTreeMap<String, CValue>> = as_arr(report.get("findings").unwrap())
         .iter()
-        .find(|r| r.get("id").and_then(toml::Value::as_str) == Some("CL001"))
-        .unwrap()
-        .get("words")
-        .and_then(toml::Value::as_array)
-        .unwrap()
-        .iter()
-        .filter_map(toml::Value::as_str)
-        .map(str::to_ascii_lowercase)
+        .map(as_obj)
+        .filter(|f| as_str(f.get("severity").unwrap()) == "error")
         .collect();
-    assert!(cl001_words.contains(&"certified".to_string()));
+    assert_eq!(errors.len(), 1, "expected exactly one claim-lint error, got {errors:?}");
+    assert_eq!(as_str(errors[0].get("rule").unwrap()), "CL001");
+    assert!(as_str(errors[0].get("file").unwrap()).replace('\\', "/").ends_with("book/intro.md"));
 
-    let mut errors: Vec<(String, &'static str)> = Vec::new();
-    for path in &selected {
-        let text = std::fs::read_to_string(path).unwrap().to_ascii_lowercase();
-        if cl001_words.iter().any(|w| text.split(|c: char| !c.is_ascii_alphanumeric()).any(|tok| tok == w)) {
-            errors.push((s(path), "CL001"));
-        }
+    // The excluded generated reference page would fail the same lint, so excluding it matters.
+    let ref_page = fix("lint/ref/cli/demo.read_item@1.html");
+    assert!(!selected.contains(&ref_page));
+    let (ref_code, ref_report) = brand_lint(&[ref_page]);
+    assert_eq!(ref_code, 1, "{ref_report:?}");
+    let ref_rules: Vec<&str> =
+        as_arr(ref_report.get("findings").unwrap()).iter().map(|f| as_str(as_obj(f).get("rule").unwrap())).collect();
+    assert!(ref_rules.contains(&"CL001"), "{ref_rules:?}");
+}
+
+/// An edition directory without any HTML page is unreadable (exit 2), in both modes.
+#[test]
+fn edition_without_pages_is_unreadable() {
+    let root = tmp("no-pages");
+    let empty = root.join("empty");
+    std::fs::create_dir_all(&empty).unwrap();
+    let assets_only = root.join("assets-only");
+    std::fs::create_dir_all(assets_only.join("css")).unwrap();
+    std::fs::write(assets_only.join("css/site.css"), "body{}\n").unwrap();
+    for ed in [&empty, &assets_only] {
+        let o = bin(&["link-check".into(), "--edition".into(), s(ed), "--json".into()]);
+        assert_eq!(o.status.code(), Some(2), "{}", show(&o));
+        let obj = parse_json_obj(&o.stdout);
+        assert_eq!(obj.get("ok"), Some(&CValue::Bool(false)));
+        assert_eq!(as_str(as_obj(obj.get("error").unwrap()).get("code").unwrap()), "edition_unreadable");
+        let err = check_external(ed, &ExternalOptions::default()).unwrap_err();
+        assert_eq!(err.code(), "edition_unreadable");
     }
-    assert_eq!(errors.len(), 1, "expected exactly one CL001 finding, got {errors:?}");
-    assert!(errors[0].0.replace('\\', "/").ends_with("book/intro.md"));
-    assert_eq!(errors[0].1, "CL001");
+}
 
-    // Confirm the excluded ref page really does contain "certified" so exclusion is meaningful.
-    let ref_text = std::fs::read_to_string(fix("lint/ref/cli/demo.read_item@1.html")).unwrap();
-    assert!(ref_text.contains("certified"));
+/// Without a runnable `curl`, `--external` is a tool error (exit 2), not a list of failed links.
+#[test]
+fn external_without_curl_is_a_tool_error() {
+    let root = tmp("no-curl");
+    let edition = root.join("ed");
+    std::fs::create_dir_all(&edition).unwrap();
+    std::fs::write(
+        edition.join("index.html"),
+        "<!doctype html><html><body><a href=\"https://example.invalid/x\">x</a></body></html>",
+    )
+    .unwrap();
+    let opts = ExternalOptions { curl: root.join("no-such-curl-binary"), ..ExternalOptions::default() };
+    let err = check_external(&edition, &opts).unwrap_err();
+    assert_eq!(err.code(), "tool_unavailable", "{err}");
+    let obj = parse_json_obj(&err.to_json());
+    assert_eq!(obj.get("ok"), Some(&CValue::Bool(false)));
 }
 
 #[test]
