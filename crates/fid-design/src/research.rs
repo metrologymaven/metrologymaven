@@ -328,10 +328,7 @@ fn is_phone_candidate(s: &str) -> bool {
         .split(|c: char| !c.is_ascii_digit())
         .find(|g| !g.is_empty())
         .is_some_and(|g| g.starts_with('0') && (2..=5).contains(&g.len()));
-    if first_trunk && !s.contains('.') && (2..=4).contains(&groups.len()) && digits >= 9 && s.starts_with('0') {
-        return true;
-    }
-    false
+    first_trunk && !s.contains('.') && (2..=4).contains(&groups.len()) && digits >= 9 && s.starts_with('0')
 }
 
 fn parse_csv_row(line: &str) -> Result<Vec<String>, ()> {
