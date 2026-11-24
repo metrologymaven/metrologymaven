@@ -546,7 +546,7 @@ fn run(
     let mut per_capability = BTreeMap::new();
     let mut ignored_features = Vec::new();
     for offer in &decl.capabilities {
-        let in_profile = offer.name == DEVICE || allowed.map_or(true, |a| a.iter().any(|c| *c == offer.name));
+        let in_profile = offer.name == DEVICE || allowed.map_or(true, |a| a.contains(&offer.name));
         let outcome = if !in_profile {
             Outcome::Unsupported(UnsupportedReason::NotInProfile)
         } else {

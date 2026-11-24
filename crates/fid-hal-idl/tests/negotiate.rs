@@ -328,7 +328,7 @@ fn profile_restricts_granted_capabilities() {
             .unwrap(),
     )
     .unwrap();
-    assert!(!profile.device_class.iter().any(|c| c == "LineScan"));
+    assert!(!profile.device_class.contains(&"LineScan".to_string()));
     let r = negotiate_with_profile(&table, &d, &profile).unwrap();
     assert_eq!(r.per_capability.get("LineScan"), Some(&Outcome::Unsupported(UnsupportedReason::NotInProfile)));
     assert!(r.granted("Device").is_some(), "Device is the implicit base");
