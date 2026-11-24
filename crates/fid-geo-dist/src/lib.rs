@@ -1,6 +1,7 @@
 //! Point-to-geometry distance for Metrology Maven (spec node GEO.DIST). Pure Rust, `f64`,
 //! no I/O, no `unsafe`, no third-party dependencies: only the kernel-layer workspace crates
-//! `fid-geo-types`, `fid-geo-index`, `fid-geo-frame` and `fid-num` (KNP-1, CONSTITUTION §4).
+//! `fid-geo-types`, `fid-geo-index`, `fid-geo-frame`, `fid-geo-nurbs`, `fid-geo-cad` and
+//! `fid-num` (KNP-1, CONSTITUTION §4).
 //!
 //! Modules land one spec leaf at a time; see `spec/geo/dist/`.
 //!
@@ -10,6 +11,9 @@
 //! - [`sign`] (GEO.DIST.SIGN): angle-weighted pseudo-normals, topology statuses and the certified
 //!   sign of a mesh projection (outside, inside, on the surface, undecidable, or undefined at
 //!   boundary, non-manifold, misoriented or degenerate features), and the same rule for CAD feet.
+//! - [`face::one`] (GEO.DIST.FACE.ONE): the closest point on one trimmed CAD face from its
+//!   exact surface, edge curves and trimming loops: interior stationary points kept by the
+//!   GEO.CAD.TOPO.TRIM classification, boundary edges and corners, with fixed tie rules.
 //! - [`batch`] (GEO.DIST.BATCH): the [`ProjectionTarget`] trait (implemented for meshes by
 //!   [`SignTarget`]), projection options (maximum distance, subset, direction), deterministic
 //!   multi-threaded [`project_batch`] with cancellation, and fixed-order [`summary`]
@@ -23,6 +27,7 @@
 //! projectors into that comparison.
 
 pub mod batch;
+pub mod face;
 pub mod mesh;
 pub mod sign;
 
@@ -31,6 +36,9 @@ pub use batch::{
     ProjectionHit, ProjectionOptions, ProjectionTarget,
 };
 
+pub use face::one::{
+    project_face, FaceError, FaceFeature, FaceHit, FaceProjection, FaceProjector, FaceQueryOptions, Unsupported,
+};
 pub use mesh::{
     closest_on_mesh, closest_on_triangle, DistError, Feature, MeshHit, MeshProjection, MeshQuery, MeshTarget,
     TriangleFoot, TriangleSubset,

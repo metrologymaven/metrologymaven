@@ -11,9 +11,14 @@ repository.workspace = true
 # fid-geo-types (Mesh), fid-geo-index (PrimitiveBvh ordered visitor) and fid-num (sqrt).
 # GEO.DIST.BATCH adds fid-geo-frame (kernel layer, zero third-party dependencies) for the
 # frame-mismatch guard `require_same_frame_ref` and its `GeoError::FrameMismatch`.
+# GEO.DIST.FACE.ONE adds fid-geo-cad (the B-rep body, pcurves and trim classification) and
+# fid-geo-nurbs (curve and surface evaluation, analytic and NURBS inversion), both kernel
+# layer with zero third-party dependencies.
 [dependencies]
 fid-geo-types = { path = "../fid-geo-types" }
 fid-geo-frame = { path = "../fid-geo-frame" }
+fid-geo-cad = { path = "../fid-geo-cad" }
+fid-geo-nurbs = { path = "../fid-geo-nurbs" }
 fid-geo-index = { path = "../fid-geo-index" }
 fid-num = { path = "../fid-num" }
 
