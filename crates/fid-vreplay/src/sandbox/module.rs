@@ -907,7 +907,7 @@ impl Validator<'_> {
             r.pos += 1;
             return Ok((Vec::new(), Vec::new()));
         }
-        if matches!(first, 0x7f | 0x7e | 0x7d | 0x7c) {
+        if matches!(first, 0x7c..=0x7f) {
             r.pos += 1;
             return Ok((Vec::new(), vec![val_type_of(first)?]));
         }
