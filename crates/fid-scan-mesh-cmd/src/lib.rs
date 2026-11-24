@@ -139,7 +139,7 @@ fn kept(s: &str) -> String {
 #[derive(Debug, Clone)]
 pub enum MeshVersion {
     /// A mesh without the attribute; its version digest is the GEO.TYPES element digest.
-    Raw(Mesh),
+    Raw(Box<Mesh>),
     /// An operation output; its version digest is the derived-mesh digest.
     Derived(Box<MeshOpOutput>),
 }
@@ -181,7 +181,7 @@ impl MeshStore {
             return Err(MeshCmdError::IdCollision(id));
         }
         let digest = MeshView::unflagged(&mesh).digest();
-        self.versions.insert(id, (MeshVersion::Raw(mesh), digest));
+        self.versions.insert(id, (MeshVersion::Raw(Box::new(mesh)), digest));
         Ok(digest)
     }
 
