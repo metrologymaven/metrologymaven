@@ -11,12 +11,17 @@ Checks:
 5. `site/build.py` output: `/guide/` + all topic pages built, < 500 KB budget, zero third-party
    origins, zero inline executable `<script>` tags, zero inline `style=` attributes (strict
    `style-src 'self'`), and scoped CSP in `site/worker.js`.
+6. The staged `site/dist/guide/fid-guide-wasm.wasm` embeds no user-home path.
+
+The WASM parts (4 and 6) skip with a visible reason when the binary is not built, except under
+`FID_GUIDE_REQUIRE_WASM=1` (set by `.github/workflows/site.yml`), where they fail.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -33,6 +38,17 @@ INCUMBENTS = ROOT / "house-rules" / "vocab" / "incumbents.txt"
 NATIVE_BIN = ROOT / "target" / "debug" / "fid-guide-wasm"
 WASM_BIN = ROOT / "target" / "wasm32-wasip1" / "release" / "fid-guide-wasm.wasm"
 DIST = ROOT / "site" / "dist"
+STAGED_WASM = DIST / "guide" / "fid-guide-wasm.wasm"
+# The site workflow sets this: there a missing WASM binary is a failure, never a skip. Other
+# runners (the fixture-checks step, a contributor's machine) skip the WASM parts visibly.
+REQUIRE_WASM = os.environ.get("FID_GUIDE_REQUIRE_WASM") == "1"
+# User-home paths a build must not leak into the staged binary (#567). `/home/runner` is the
+# GitHub runner's own home and is allowed.
+HOME_PATH_RES = (
+    re.compile(rb"[A-Za-z]:[\\/]+Users[\\/]+", re.I),
+    re.compile(rb"/home/(?!runner(?![A-Za-z0-9._-]))[A-Za-z0-9._-]+"),
+    re.compile(rb"/Users/[A-Za-z0-9._-]+/"),
+)
 
 
 def _load_incumbent_terms() -> list[str]:
@@ -63,6 +79,16 @@ def _check_vocab_hygiene(text: str, where: str, incumbents: list[str]) -> list[s
 
 
 class FieldGuideTest(unittest.TestCase):
+    def _require_wasm_or_skip(self, what: str) -> None:
+        """Fails under FID_GUIDE_REQUIRE_WASM=1 when the WASM binary is missing, else skips visibly."""
+        if WASM_BIN.exists():
+            return
+        msg = f"{what}: {WASM_BIN.relative_to(ROOT)} is not built"
+        if REQUIRE_WASM:
+            self.fail(msg + " (FID_GUIDE_REQUIRE_WASM=1); run "
+                      "cargo build --release --target wasm32-wasip1 -p fid-guide-wasm first")
+        self.skipTest(msg + "; SKIPPED (set FID_GUIDE_REQUIRE_WASM=1 to make this a failure)")
+
     @classmethod
     def setUpClass(cls) -> None:
         rep = scope.Report()
@@ -198,13 +224,14 @@ class FieldGuideTest(unittest.TestCase):
         js_src = (ROOT / "site" / "src" / "guide-lab.js").read_text(encoding="utf-8")
         self.assertIsNone(re.search(r"\.style\.", js_src), "runtime .style. write violates strict style-src 'self'")
 
-        staged_wasm = DIST / "guide" / "fid-guide-wasm.wasm"
-        if WASM_BIN.exists():
-            self.assertTrue(staged_wasm.exists())
-            expected_sha = "sha256:" + hashlib.sha256(staged_wasm.read_bytes()).hexdigest()
-            self.assertIn(expected_sha, (DIST / "guide" / "fits" / "index.html").read_text(encoding="utf-8"))
+        # The non-WASM checks above have passed; the WASM bit-identity part follows.
+        self._require_wasm_or_skip("AC-4 browser WASI bit-identity")
+        staged_wasm = STAGED_WASM
+        self.assertTrue(staged_wasm.exists())
+        expected_sha = "sha256:" + hashlib.sha256(staged_wasm.read_bytes()).hexdigest()
+        self.assertIn(expected_sha, (DIST / "guide" / "fits" / "index.html").read_text(encoding="utf-8"))
 
-            js_check = r"""
+        js_check = r"""
 const fs = require("fs");
 const path = require("path");
 const { runKernelWasm } = require(path.resolve("site/src/guide-lab.js"));
@@ -245,9 +272,19 @@ if (single.exitCode !== 0 || !single.response.ok || single.response.result.canon
 }
 console.log(`WASM bit-exact verified ${count} presets + UI round-trip + single-doc canon`);
 """
-            nproc = subprocess.run(["node", "-e", js_check], cwd=ROOT, capture_output=True, text=True, check=False)
-            self.assertEqual(nproc.returncode, 0, nproc.stdout + nproc.stderr)
-            self.assertIn("WASM bit-exact verified", nproc.stdout)
+        nproc = subprocess.run(["node", "-e", js_check], cwd=ROOT, capture_output=True, text=True, check=False)
+        self.assertEqual(nproc.returncode, 0, nproc.stdout + nproc.stderr)
+        self.assertIn("WASM bit-exact verified", nproc.stdout)
+
+    def test_ac5_staged_wasm_has_no_user_home_path(self) -> None:
+        self._require_wasm_or_skip("AC-5 staged WASM home-path check")
+        if not STAGED_WASM.exists():
+            proc = subprocess.run([sys.executable, str(ROOT / "site" / "build.py")], cwd=ROOT,
+                                  capture_output=True, text=True, check=False)
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        raw = STAGED_WASM.read_bytes()
+        leaks = sorted({m.group(0).decode("latin-1") for rx in HOME_PATH_RES for m in rx.finditer(raw)})
+        self.assertEqual(leaks, [], f"staged {STAGED_WASM.relative_to(ROOT)} embeds user-home paths: {leaks}")
 
 
 if __name__ == "__main__":
