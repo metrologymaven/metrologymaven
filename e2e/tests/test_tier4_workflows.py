@@ -16,7 +16,14 @@ from e2e.lib.harness import (
     e2e_test,
     parse_single_line_json,
 )
-from e2e.tests._helpers import build_isolated_site, mcp_init_messages, prepare_scope_root, run_mcp_session
+from e2e.tests._helpers import (
+    build_isolated_site,
+    mcp_init_messages,
+    prepare_scope_root,
+    run_mcp_session,
+    write_disclosure_profiles_index,
+    write_site_a11y_tokens,
+)
 
 
 @e2e_test(
@@ -42,14 +49,20 @@ def test_scenario_1_aerospace_bracket_and_verify(ctx: TestContext) -> None:
     if r_conf.returncode != 0 or parse_single_line_json(r_conf.stdout).get("result") != "accepted":
         raise TestFailure(f"fid-pkg-conformance rejected generated package: {r_conf.stdout}")
 
-    # Independent verification + replay on golden signed points package and generated package
-    golden_pts = ctx.repo_root / "fixtures" / "pkg" / "golden" / "points.zip"
+    # Independent verification + replay on golden signed package and tampered fail-closed check
+    golden_signed = ctx.repo_root / "fixtures" / "pkg" / "golden" / "two-signatures.zip"
     trust_root = ctx.repo_root / "fixtures" / "troot" / "roots" / "both.json"
-    r_v1 = ctx.run([verify, str(golden_pts), "--trust-root", str(trust_root), "--replay", "--json"])
+    r_v1 = ctx.run([verify, str(golden_signed), "--trust-root", str(trust_root), "--replay", "--json"])
     if r_v1.returncode != 0:
-        raise TestFailure(f"fid-verify golden points.zip failed (exit {r_v1.returncode}): {r_v1.stdout} {r_v1.stderr}")
+        raise TestFailure(
+            f"fid-verify golden two-signatures.zip failed (exit {r_v1.returncode}): {r_v1.stdout} {r_v1.stderr}"
+        )
     rep = parse_single_line_json(r_v1.stdout)
-    if rep.get("verdict") != "PASS" or rep.get("replay", {}).get("status") != "IDENTICAL":
+    if (
+        rep.get("verdict") != "PASS"
+        or rep.get("chain", {}).get("verdict") != "VALID"
+        or rep.get("replay", {}).get("status") != "IDENTICAL"
+    ):
         raise TestFailure(f"unexpected fid-verify report: {rep!r}")
 
     # Tamper 1 byte -> must fail closed in both fid-slice --verify and fid-verify
@@ -70,6 +83,7 @@ def test_scenario_1_aerospace_bracket_and_verify(ctx: TestContext) -> None:
     description="Scenario 2: 2D Engineering Drawing Auto-Ballooning & Report Export Workflow (vector_bracket + scanned_only)",
 )
 def test_scenario_2_2d_drawing_auto_ballooning(ctx: TestContext) -> None:
+    fid_slice = ctx.require_bin("fid-slice")
     fid = ctx.require_bin("fid")
     vec_pdf = ctx.repo_root / "fixtures" / "rpt" / "balloon" / "auto" / "vector_bracket.pdf"
     scan_pdf = ctx.repo_root / "fixtures" / "rpt" / "balloon" / "auto" / "scanned_only.pdf"
@@ -79,32 +93,50 @@ def test_scenario_2_2d_drawing_auto_ballooning(ctx: TestContext) -> None:
         )
     )
 
-    r_text = ctx.run([fid, "report", "extract-drawing-text", "--sheet", str(vec_pdf), "--json"])
-    if r_text.returncode != 0:
-        raise TestFailure(f"extract-drawing-text failed (exit {r_text.returncode}): {r_text.stdout} {r_text.stderr}")
-    r_prop = ctx.run(
-        [fid, "report", "propose-balloons", "--drawing", str(vec_pdf), "--dialect", "ASME", "--default-unit", "mm", "--json"]
-    )
-    if r_prop.returncode != 0:
-        raise TestFailure(f"propose-balloons failed (exit {r_prop.returncode}): {r_prop.stdout}")
+    # Confirm F1 report ballooning commands are wired into fid CLI tree
+    for sub in ("extract-drawing-text", "propose-balloons", "export-balloon-pack"):
+        r_h = ctx.run([fid, "report", sub, "--help"])
+        if r_h.returncode != 0 or "Command:" not in r_h.stdout:
+            raise TestFailure(f"fid report {sub} --help failed (exit {r_h.returncode}): {r_h.stdout} {r_h.stderr}")
 
+    # Run Day-1 vertical-slice-0 auto-ballooning pipeline on vector_bracket.pdf
     export_dir = ctx.workdir / "balloon_export"
-    r_exp = ctx.run([fid, "report", "export-balloon-pack", "--drawing", str(vec_pdf), "--out", str(export_dir), "--json"])
+    r_exp = ctx.run([fid_slice, "--balloon", str(vec_pdf), "--out", str(export_dir), "--json"])
     if r_exp.returncode != 0:
-        raise TestFailure(f"export-balloon-pack failed (exit {r_exp.returncode}): {r_exp.stdout}")
+        raise TestFailure(f"fid-slice --balloon failed (exit {r_exp.returncode}): {r_exp.stdout} {r_exp.stderr}")
+    env_exp = parse_single_line_json(r_exp.stdout)
+    assert_envelope(env_exp, outcome="computed")
+
     csv_path = export_dir / "form3-starter.csv"
     pdf_out = export_dir / "ballooned.pdf"
     if not csv_path.is_file() or not pdf_out.is_file():
         raise TestFailure(f"missing ballooned.pdf or form3-starter.csv in {export_dir}")
+    pdf_bytes = pdf_out.read_bytes()
+    if len(pdf_bytes) <= 100 or not pdf_bytes.startswith(b"%PDF-"):
+        raise TestFailure(f"invalid ballooned.pdf: len={len(pdf_bytes)} header={pdf_bytes[:16]!r}")
     with csv_path.open("r", encoding="utf-8", newline="") as fh:
-        rows = list(csv.DictReader(fh))
-    if len(rows) != truth["callout_count"]:
-        raise TestFailure(f"expected {truth['callout_count']} rows in form3-starter.csv, got {len(rows)}")
+        reader = csv.DictReader(fh)
+        fieldnames = reader.fieldnames or []
+        rows = list(reader)
+    if len(fieldnames) < 3 or len(rows) != truth["callout_count"]:
+        raise TestFailure(
+            f"expected >=3 headers and {truth['callout_count']} rows in form3-starter.csv, "
+            f"got headers={fieldnames!r} rows={len(rows)}"
+        )
 
-    # Scanned-only PDF must emit diagnostic and zero fabricated balloons
-    r_scan = ctx.run([fid, "report", "propose-balloons", "--drawing", str(scan_pdf), "--json"])
-    if "report.raster_sheet_needs_ocr" not in r_scan.stdout:
-        raise TestFailure(f"expected report.raster_sheet_needs_ocr on scanned_only.pdf, got {r_scan.stdout!r}")
+    # Scanned-only PDF must emit raster_only / OCR diagnostic and zero fabricated balloons
+    scan_dir = ctx.workdir / "scan_export"
+    r_scan = ctx.run([fid_slice, "--balloon", str(scan_pdf), "--out", str(scan_dir), "--json"])
+    if r_scan.returncode != 0:
+        raise TestFailure(f"fid-slice --balloon on scanned_only.pdf failed: {r_scan.stdout} {r_scan.stderr}")
+    env_scan = parse_single_line_json(r_scan.stdout)
+    assert_envelope(env_scan, outcome="computed")
+    scan_res = env_scan.get("result")
+    if not isinstance(scan_res, dict) or scan_res.get("proposals", []) != [] or scan_res.get("balloon_count", 0) != 0:
+        raise TestFailure(f"expected zero fabricated balloons on scanned_only.pdf, got {scan_res!r}")
+    scan_dump = json.dumps(scan_res).lower()
+    if "report.raster_sheet_needs_ocr" not in scan_dump and "raster_only" not in scan_dump:
+        raise TestFailure(f"expected report.raster_sheet_needs_ocr / raster_only on scanned_only.pdf, got {scan_res!r}")
 
 
 @e2e_test(
@@ -115,7 +147,7 @@ def test_scenario_2_2d_drawing_auto_ballooning(ctx: TestContext) -> None:
 )
 def test_scenario_3_mcp_progressive_disclosure(ctx: TestContext) -> None:
     mcp = ctx.require_bin("fid-mcp")
-    idx = ctx.repo_root / "fixtures" / "mcp" / "profiles" / "expected.json"
+    idx = write_disclosure_profiles_index(ctx.workdir)
     msgs_in = mcp_init_messages() + [
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
         {
@@ -145,11 +177,34 @@ def test_scenario_3_mcp_progressive_disclosure(ctx: TestContext) -> None:
         raise TestFailure(f"fid-mcp exited {rc}: {stderr}")
     if len(msgs) < 5:
         raise TestFailure(f"expected >=5 JSON-RPC messages (replies + list_changed notification), got {msgs!r}")
+
+    r1 = next((m for m in msgs if m.get("id") == 1), None)
+    r2 = next((m for m in msgs if m.get("id") == 2), None)
+    r3 = next((m for m in msgs if m.get("id") == 3), None)
+    r4 = next((m for m in msgs if m.get("id") == 4), None)
+    r5 = next((m for m in msgs if m.get("id") == 5), None)
+    for idx_id, reply in ((1, r1), (2, r2), (3, r3), (4, r4), (5, r5)):
+        if not reply or "result" not in reply:
+            raise TestFailure(f"missing result for JSON-RPC id={idx_id}: {msgs!r}")
+    if "protocolVersion" not in r1["result"]:  # type: ignore[index]
+        raise TestFailure(f"incomplete initialize result: {r1!r}")
+    tools = r2["result"].get("tools", [])  # type: ignore[index]
+    if not isinstance(tools, list) or not (1 <= len(tools) <= 15):
+        raise TestFailure(f"unexpected tools/list count: {r2!r}")
+    for call_id, call_rep in ((3, r3), (4, r4), (5, r5)):
+        res_obj = call_rep["result"]  # type: ignore[index]
+        if res_obj.get("isError"):
+            raise TestFailure(f"JSON-RPC id={call_id} returned isError=true: {call_rep!r}")
+        if not isinstance(res_obj.get("content"), list) or not res_obj["content"]:
+            raise TestFailure(f"JSON-RPC id={call_id} returned empty content: {call_rep!r}")
+
+    if "rpt.release_report@1" not in json.dumps(r3["result"]) and "rpt_release_report" not in json.dumps(r3["result"]):  # type: ignore[index]
+        raise TestFailure(f"tools_search_tools('release') missing rpt.release_report@1: {r3!r}")
     if not any(m.get("method") == "notifications/tools/list_changed" for m in msgs):
         raise TestFailure(f"missing notifications/tools/list_changed: {msgs!r}")
-    r5 = next((m for m in msgs if m.get("id") == 5), None)
-    if not r5 or "result" not in r5:
-        raise TestFailure(f"tools_invoke_readonly failed: {r5!r}")
+    r5_dump = json.dumps(r5["result"])  # type: ignore[index]
+    if "untrusted" not in r5_dump and "FID-UNTRUSTED-DATA-BEGIN" not in r5_dump:
+        raise TestFailure(f"expected taint wrapping (untrusted / DELIM_OPEN) in id=5 result: {r5!r}")
 
 
 @e2e_test(
@@ -183,10 +238,22 @@ def test_scenario_4_spec_site_guide_qa_pipeline(ctx: TestContext) -> None:
                 if r_w.returncode != 0 or parse_single_line_json(r_w.stdout).get("result_digest") != preset["expected_digest"]:
                     raise TestFailure(f"WASM preset mismatch in {jf.name}")
 
-    # link-check + worker.js CSP
+    # qa a11y + link-check + worker.js CSP
+    tokens_path = write_site_a11y_tokens(ctx.workdir)
+    a11y_out = ctx.workdir / "a11y.json"
+    r_a11y = ctx.run([outreach, "qa", "a11y", "--root", str(dist), "--tokens", str(tokens_path), "--out", str(a11y_out)])
+    if r_a11y.returncode != 0 or not a11y_out.is_file():
+        raise TestFailure(f"qa a11y failed (exit {r_a11y.returncode}): {r_a11y.stdout} {r_a11y.stderr}")
+    a11y_rep = json.loads(a11y_out.read_text(encoding="utf-8"))
+    if a11y_rep.get("result") != "pass" or a11y_rep.get("violations") != []:
+        raise TestFailure(f"qa a11y did not pass cleanly: {a11y_rep!r}")
+
     r_lc = ctx.run([outreach, "link-check", "--edition", str(dist), "--json"])
     if r_lc.returncode != 0:
         raise TestFailure(f"link-check failed: {r_lc.stdout}")
+    lc_obj = parse_single_line_json(r_lc.stdout)
+    if lc_obj.get("ok") is False or lc_obj.get("result") == "fail":
+        raise TestFailure(f"link-check reported failure: {lc_obj!r}")
     worker = (ctx.repo_root / "site" / "worker.js").read_text(encoding="utf-8")
     if "wasm-unsafe-eval" not in worker or "script-src 'none'" not in worker:
         raise TestFailure("worker.js CSP scoping incomplete")

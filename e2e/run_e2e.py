@@ -79,7 +79,6 @@ def main(argv: list[str] | None = None) -> int:
 
     caps = probe_capabilities(REPO_ROOT)
     binaries = BinaryManager(REPO_ROOT, caps)
-    build_results = binaries.build_all(SUT_BINARIES)
 
     out_path = args.out
     if out_path is None:
@@ -94,6 +93,8 @@ def main(argv: list[str] | None = None) -> int:
         feature_filter=args.feature,
         keep_workdirs=args.keep_workdirs,
     )
+    # Record all binaries requested/built during this run (filtered runs avoid compiling unneeded crates).
+    build_results = binaries.cached_results()
     report["binaries"] = {
         name: {
             "crate": res.crate_name,

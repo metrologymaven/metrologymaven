@@ -28,10 +28,30 @@ def test_site_csp_and_no_inline_script_invariant(ctx: TestContext) -> None:
     dist = copy_root / "site" / "dist"
     for p in dist.rglob("*.html"):
         txt = p.read_text(encoding="utf-8")
+        rel_p = p.relative_to(dist).as_posix()
+        is_guide = rel_p.startswith("guide/")
+        if not is_guide and re.search(r"<script\b", txt, re.I):
+            raise TestFailure(f"<script> tag forbidden outside /guide/ found in {rel_p}")
         if re.search(r"<script\b(?![^>]*\bsrc=)[^>]*>", txt, re.I):
-            raise TestFailure(f"inline script tag found in {p.relative_to(dist)}")
+            raise TestFailure(f"inline script tag found in {rel_p}")
         if "wasm-unsafe-eval" in txt:
-            raise TestFailure(f"HTML page {p.relative_to(dist)} should never embed wasm-unsafe-eval")
+            raise TestFailure(f"HTML page {rel_p} should never embed wasm-unsafe-eval")
+        for m in re.finditer(
+            r'''(?:src|href|action|poster)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))''',
+            txt,
+            re.I,
+        ):
+            url = (m.group(1) or m.group(2) or m.group(3) or "").strip()
+            if url.startswith("//") or (
+                re.match(r"https?://", url, re.I)
+                and not (
+                    url.startswith("https://metrologymaven.io")
+                    or url.startswith("https://github.com/metrologymaven/")
+                )
+            ):
+                raise TestFailure(f"disallowed external/protocol-relative URL {url!r} in {rel_p}")
+        for m in re.finditer(r'''url\(\s*["']?\s*(https?:|//)[^)"'\s]+''', txt, re.I):
+            raise TestFailure(f"external CSS url() {m.group(0)!r} in {rel_p}")
 
     worker = (ctx.repo_root / "site" / "worker.js").read_text(encoding="utf-8")
     # Default route CSP must remain script-src 'none'
@@ -155,6 +175,17 @@ def test_verify_guide_tamper_and_missing_tag(ctx: TestContext) -> None:
     r_noop = ctx.run([sys.executable, str(script), "--tag", tag, "--doc", str(noop_doc)])
     if r_noop.returncode == 0:
         raise TestFailure("verify_guide.py should fail when tampered copy is accepted with exit 0")
+
+    # Direct 1-byte tampered SHA256SUMS negative test against real VERIFY.md
+    tampered_rel = ctx.workdir / "tampered_sums_rel"
+    shutil.copytree(ctx.repo_root / "fixtures" / "rel" / "guide" / "release", tampered_rel)
+    sums_path = tampered_rel / "SHA256SUMS"
+    sums_txt = sums_path.read_text(encoding="ascii")
+    flipped_char = "1" if sums_txt[0] != "1" else "2"
+    sums_path.write_text(flipped_char + sums_txt[1:], encoding="ascii")
+    r_bad_sums = ctx.run([sys.executable, str(script), "--tag", tag, "--release", str(tampered_rel)], timeout=120)
+    if r_bad_sums.returncode == 0:
+        raise TestFailure("verify_guide.py accepted a 1-byte tampered SHA256SUMS file")
 
 
 # ===========================================================================
@@ -342,12 +373,32 @@ def test_xtask_rel_notes_hostile_and_missing(ctx: TestContext) -> None:
     test_id="T2-F6-05",
     tier=2,
     feature="F6",
-    description="M4 SCAN.CMP.DEV.PRIM rejects invalid params (s <= 0, max_angle > pi) with scan.cmp.invalid_parameter",
+    description="M4 SCAN.CMP.DEV.PRIM invalid-parameter / boundary tests exist and pass via cargo test -p fid-scan-cmp",
 )
 def test_scan_cmp_dev_prim_invalid_params(ctx: TestContext) -> None:
-    dev_rs = (ctx.repo_root / "crates" / "fid-scan-cmp" / "src" / "dev.rs").read_text(encoding="utf-8")
-    if "not built yet" in dev_rs or "scan.cmp.invalid_parameter" not in dev_rs:
-        raise TestFailure("SCAN.CMP.DEV.PRIM invalid parameter error (`scan.cmp.invalid_parameter`) not implemented yet")
+    if not ctx.caps.cargo_path:
+        raise TestFailure("cargo executable required for fid-scan-cmp tests")
+    r_list = ctx.run([ctx.caps.cargo_path, "test", "--locked", "-p", "fid-scan-cmp", "--", "--list"])
+    if r_list.returncode != 0:
+        raise TestFailure(f"cargo test -p fid-scan-cmp --list failed: {r_list.stdout} {r_list.stderr}")
+    dev_boundary_tests = [
+        line.split(": test")[0].strip()
+        for line in r_list.stdout.splitlines()
+        if ": test" in line
+        and not line.lstrip().startswith("field::")
+        and (line.lstrip().startswith("dev::") or "deviation" in line.lower())
+        and any(tok in line.lower() for tok in ("invalid", "param", "angle", "distance", "ac4", "reject"))
+    ]
+    if not dev_boundary_tests:
+        raise TestFailure(
+            "SCAN.CMP.DEV.PRIM boundary/invalid_parameter tests missing in `cargo test -p fid-scan-cmp -- --list`"
+        )
+    r_run = ctx.run([ctx.caps.cargo_path, "test", "--locked", "-p", "fid-scan-cmp", "--", "dev"])
+    if r_run.returncode != 0:
+        raise TestFailure(f"cargo test -p fid-scan-cmp failed: {r_run.stdout} {r_run.stderr}")
+    m_pass = re.search(r"test result:\s*ok\.\s*(\d+)\s+passed;\s*0\s+failed", r_run.stdout)
+    if not m_pass or int(m_pass.group(1)) == 0:
+        raise TestFailure(f"expected >=1 passing SCAN.CMP.DEV.PRIM boundary test, got:\n{r_run.stdout}")
 
 
 # ===========================================================================
@@ -359,17 +410,34 @@ def test_scan_cmp_dev_prim_invalid_params(ctx: TestContext) -> None:
     test_id="T2-F7-01",
     tier=2,
     feature="F7",
-    description="check_spec_drift.py detects injected drift in code and v1.md path drift",
+    description="check_spec_drift.py detects injected drift in temp repo copy and v1.md path/interp alignment",
 )
 def test_check_spec_drift_catches_drift(ctx: TestContext) -> None:
-    # Verify check_spec_drift self-test actually ran and passed, and also check v1.md CAS path accuracy.
     script = ctx.repo_root / "fixtures" / "pkg" / "check_spec_drift.py"
     res = ctx.run([sys.executable, str(script)])
     if res.returncode != 0:
         raise TestFailure(f"check_spec_drift.py failed: {res.stdout} {res.stderr}")
+    if "spec and code agree" not in res.stdout:
+        raise TestFailure(f"unexpected check_spec_drift.py output: {res.stdout!r}")
+
+    # Inject spec drift in an isolated temp copy and verify check_spec_drift.py exits 1 naming the drift.
+    probe_root = ctx.workdir / "drift_probe"
+    ctx.copy_repo_subset(probe_root, ["fixtures/pkg/check_spec_drift.py", "docs/result-package/v1.md", "crates/fid-pkg/src"])
+    v1_copy = probe_root / "docs" / "result-package" / "v1.md"
+    v1_txt = v1_copy.read_text(encoding="utf-8")
+    v1_copy.write_text(v1_txt + "\n### `pkg.injected_e2e_drift`\n\nInjected drift.\n", encoding="utf-8")
+    r_drift = ctx.run([sys.executable, str(probe_root / "fixtures" / "pkg" / "check_spec_drift.py")], cwd=probe_root)
+    if r_drift.returncode != 1 or "pkg.injected_e2e_drift" not in r_drift.stdout:
+        raise TestFailure(
+            f"check_spec_drift.py failed to catch injected drift (exit {r_drift.returncode}): {r_drift.stdout}"
+        )
+
     v1_md = (ctx.repo_root / "docs" / "result-package" / "v1.md").read_text(encoding="utf-8")
     if "evidence/points/" in v1_md or "evidence/register/" in v1_md:
         raise TestFailure("docs/result-package/v1.md contains incorrect evidence/points/ or evidence/register/ path")
+    m = re.search(r"<!-- members -->(.*?)<!-- /members -->", v1_md, re.S)
+    if not m or "interp/registers/<sha256>.json" not in m.group(1) or "interp/rosters/<sha256>.json" not in m.group(1):
+        raise TestFailure("docs/result-package/v1.md <!-- members --> omits interp/registers/<sha256>.json or interp/rosters/<sha256>.json")
 
 
 @e2e_test(

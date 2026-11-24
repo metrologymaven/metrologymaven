@@ -14,7 +14,14 @@ from e2e.lib.harness import (
     e2e_test,
     parse_single_line_json,
 )
-from e2e.tests._helpers import build_isolated_site, mcp_init_messages, prepare_scope_root, run_mcp_session
+from e2e.tests._helpers import (
+    build_isolated_site,
+    mcp_init_messages,
+    prepare_scope_root,
+    run_mcp_session,
+    write_disclosure_profiles_index,
+    write_site_a11y_tokens,
+)
 
 
 # ===========================================================================
@@ -99,11 +106,11 @@ def test_fid_verify_signed_package(ctx: TestContext) -> None:
     test_id="T1-F3-05",
     tier=1,
     feature="F3",
-    description="M4 fid-verify --replay --json verifies points.zip and conforms to schema/verify-report-1.json",
+    description="M4 fid-verify --replay --json verifies golden/two-signatures.zip and conforms to schema/verify-report-1.json",
 )
 def test_fid_verify_replay_and_schema(ctx: TestContext) -> None:
     verify = ctx.require_bin("fid-verify")
-    pkg = ctx.repo_root / "fixtures" / "pkg" / "golden" / "points.zip"
+    pkg = ctx.repo_root / "fixtures" / "pkg" / "golden" / "two-signatures.zip"
     root = ctx.repo_root / "fixtures" / "troot" / "roots" / "both.json"
     schema_path = ctx.repo_root / "schema" / "verify-report-1.json"
     if not schema_path.is_file():
@@ -112,8 +119,14 @@ def test_fid_verify_replay_and_schema(ctx: TestContext) -> None:
     if res.returncode != 0:
         raise TestFailure(f"fid-verify --replay exited {res.returncode}: {res.stdout} {res.stderr}")
     rep = parse_single_line_json(res.stdout)
-    if rep.get("verdict") != "PASS":
-        raise TestFailure(f"expected verdict=PASS, got {rep!r}")
+    required_keys = ("report_version", "verdict", "exit_code", "package", "signatures", "chain", "replay")
+    missing_keys = [k for k in required_keys if k not in rep]
+    if missing_keys:
+        raise TestFailure(f"fid-verify report missing required schema keys {missing_keys}: {rep!r}")
+    if rep.get("verdict") != "PASS" or rep.get("exit_code") != 0:
+        raise TestFailure(f"expected verdict=PASS exit_code=0, got {rep!r}")
+    if rep.get("chain", {}).get("verdict") != "VALID":  # type: ignore[union-attr]
+        raise TestFailure(f"expected chain.verdict=VALID, got {rep.get('chain')!r}")
     if rep.get("replay", {}).get("status") != "IDENTICAL":  # type: ignore[union-attr]
         raise TestFailure(f"expected replay IDENTICAL, got {rep.get('replay')!r}")
     try:
@@ -211,7 +224,7 @@ def test_mcp_stdio_initialize(ctx: TestContext) -> None:
 )
 def test_mcp_stdio_tools_list(ctx: TestContext) -> None:
     mcp = ctx.require_bin("fid-mcp")
-    idx = ctx.repo_root / "fixtures" / "mcp" / "profiles" / "expected.json"
+    idx = write_disclosure_profiles_index(ctx.workdir)
     msgs_in = mcp_init_messages() + [{"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}]
     rc, msgs, _, stderr = run_mcp_session(mcp, ["--headless", "--profiles-index", str(idx)], msgs_in, cwd=ctx.repo_root)
     if rc != 0:
@@ -239,7 +252,7 @@ def test_mcp_stdio_tools_list(ctx: TestContext) -> None:
 )
 def test_mcp_stdio_search_and_describe(ctx: TestContext) -> None:
     mcp = ctx.require_bin("fid-mcp")
-    idx = ctx.repo_root / "fixtures" / "mcp" / "profiles" / "expected.json"
+    idx = write_disclosure_profiles_index(ctx.workdir)
     msgs_in = mcp_init_messages() + [
         {
             "jsonrpc": "2.0",
@@ -263,6 +276,18 @@ def test_mcp_stdio_search_and_describe(ctx: TestContext) -> None:
         raise TestFailure(f"tools_search_tools failed: {r2!r} (all={msgs!r})")
     if not r3 or "result" not in r3 or r3["result"].get("isError"):
         raise TestFailure(f"tools_describe_tool failed: {r3!r} (all={msgs!r})")
+    c2 = r2["result"].get("content")
+    c3 = r3["result"].get("content")
+    if not isinstance(c2, list) or not c2:
+        raise TestFailure(f"tools_search_tools returned empty content: {r2!r}")
+    if not isinstance(c3, list) or not c3:
+        raise TestFailure(f"tools_describe_tool returned empty content: {r3!r}")
+    s2 = json.dumps(r2["result"])
+    s3 = json.dumps(r3["result"])
+    if "program.save_draft@1" not in s2 and "program_save_draft" not in s2:
+        raise TestFailure(f"tools_search_tools did not return expected program.save_draft@1 match: {r2!r}")
+    if "program.save_draft@1" not in s3 and "program_save_draft" not in s3:
+        raise TestFailure(f"tools_describe_tool did not describe program.save_draft@1: {r3!r}")
 
 
 @e2e_test(
@@ -273,7 +298,7 @@ def test_mcp_stdio_search_and_describe(ctx: TestContext) -> None:
 )
 def test_mcp_stdio_enable_tools_and_eof(ctx: TestContext) -> None:
     mcp = ctx.require_bin("fid-mcp")
-    idx = ctx.repo_root / "fixtures" / "mcp" / "profiles" / "expected.json"
+    idx = write_disclosure_profiles_index(ctx.workdir)
     msgs_in = mcp_init_messages() + [
         {
             "jsonrpc": "2.0",
@@ -319,15 +344,34 @@ def test_site_build_clean_budget(ctx: TestContext) -> None:
         if size >= 500_000:
             raise TestFailure(f"{p.relative_to(dist)} exceeds 500 KB budget ({size} bytes)")
         txt = p.read_text(encoding="utf-8")
-        if re.search(r"<script\b[^>]*>(?!\s*</script>)", txt, re.I):
-            raise TestFailure(f"inline <script> found in {p.relative_to(dist)}")
-        for m in re.finditer(r'(?:src|href)=["\'](https?://[^"\']+)["\']', txt, re.I):
-            url = m.group(1)
-            if not (
+        rel_p = p.relative_to(dist).as_posix()
+        is_guide = rel_p.startswith("guide/")
+        if not is_guide and re.search(r"<script\b", txt, re.I):
+            raise TestFailure(f"unexpected <script> tag outside /guide/ in {rel_p}")
+        if re.search(r"<script\b(?![^>]*\bsrc=)[^>]*>", txt, re.I):
+            raise TestFailure(f"inline <script> found in {rel_p}")
+        # Catch quoted, unquoted, and protocol-relative (//...) src/href/action/poster URLs.
+        for m in re.finditer(
+            r'''(?:src|href|action|poster)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))''',
+            txt,
+            re.I,
+        ):
+            url = (m.group(1) or m.group(2) or m.group(3) or "").strip()
+            if url.startswith("//"):
+                raise TestFailure(f"protocol-relative external URL {url!r} in {rel_p}")
+            if re.match(r"https?://", url, re.I) and not (
                 url.startswith("https://metrologymaven.io")
                 or url.startswith("https://github.com/metrologymaven/")
             ):
-                raise TestFailure(f"unexpected external URL {url!r} in {p.relative_to(dist)}")
+                raise TestFailure(f"unexpected external URL {url!r} in {rel_p}")
+        # Catch CSS url(...) / @import external or protocol-relative references in HTML <style> or stylesheets.
+        for m in re.finditer(r'''url\(\s*["']?\s*(https?:|//)[^)"'\s]+''', txt, re.I):
+            raise TestFailure(f"external CSS url() {m.group(0)!r} in {rel_p}")
+    for css_p in dist.rglob("*.css"):
+        css_txt = css_p.read_text(encoding="utf-8")
+        rel_css = css_p.relative_to(dist).as_posix()
+        for m in re.finditer(r'''(?:url\(\s*|@import\s+)["']?\s*(https?:|//)[^)"'\s;]+''', css_txt, re.I):
+            raise TestFailure(f"external CSS reference {m.group(0)!r} in {rel_css}")
 
 
 @e2e_test(
@@ -453,47 +497,18 @@ def test_outreach_qa_a11y_and_link_check(ctx: TestContext) -> None:
     outreach = ctx.require_bin("fid-outreach")
     copy_root = build_isolated_site(ctx)
     dist = copy_root / "site" / "dist"
-    tokens_path = ctx.workdir / "tokens.json"
-    tokens_path.write_text(
-        json.dumps(
-            {
-                "themes": {
-                    "light": {
-                        "bg": "#ffffff",
-                        "surface": "#f7f8fa",
-                        "sheet": "#ffffff",
-                        "ink": "#111827",
-                        "text.muted": "#5c6670",
-                        "muted": "#5c6670",
-                        "border": "#d0d7de",
-                        "accent": "#0b5fff",
-                        "ruby": "#b91c1c",
-                    },
-                    "dark": {
-                        "bg": "#0d1117",
-                        "surface": "#161b22",
-                        "sheet": "#0d1117",
-                        "ink": "#f0f6fc",
-                        "text.muted": "#8b949e",
-                        "muted": "#8b949e",
-                        "border": "#30363d",
-                        "accent": "#58a6ff",
-                        "ruby": "#f85149",
-                    },
-                }
-            }
-        ),
-        encoding="utf-8",
-    )
+    tokens_path = write_site_a11y_tokens(ctx.workdir)
     a11y_out = ctx.workdir / "a11y-report.json"
     r_a11y = ctx.run([outreach, "qa", "a11y", "--root", str(dist), "--tokens", str(tokens_path), "--out", str(a11y_out)])
-    if r_a11y.returncode not in (0, 1):
-        raise TestFailure(f"qa a11y IO/parse error (exit {r_a11y.returncode}): {r_a11y.stderr}")
+    if r_a11y.returncode != 0:
+        raise TestFailure(
+            f"qa a11y failed (exit {r_a11y.returncode}): stdout={r_a11y.stdout!r} stderr={r_a11y.stderr!r}"
+        )
     if not a11y_out.is_file():
         raise TestFailure("qa a11y did not write report JSON")
     rep = json.loads(a11y_out.read_text(encoding="utf-8"))
-    if rep.get("schema") != "a11y-report@1":
-        raise TestFailure(f"unexpected a11y report schema: {rep!r}")
+    if rep.get("schema") != "a11y-report@1" or rep.get("result") != "pass" or rep.get("violations") != []:
+        raise TestFailure(f"qa a11y did not pass cleanly: {rep!r}")
 
     # M2 #445 link-check contract
     edition = ctx.repo_root / "fixtures" / "outr" / "docs" / "qa" / "ok"
@@ -502,6 +517,14 @@ def test_outreach_qa_a11y_and_link_check(ctx: TestContext) -> None:
     r_lc = ctx.run([outreach, "link-check", "--edition", str(edition), "--json"])
     if r_lc.returncode != 0:
         raise TestFailure(f"fid-outreach link-check failed (exit {r_lc.returncode}): {r_lc.stdout} {r_lc.stderr}")
+    lc_obj = parse_single_line_json(r_lc.stdout)
+    if lc_obj.get("ok") is False or lc_obj.get("result") == "fail":
+        raise TestFailure(f"link-check reported failure: {lc_obj!r}")
+    if "ok" in lc_obj and lc_obj.get("ok") is not True:
+        raise TestFailure(f"link-check expected ok=true, got: {lc_obj!r}")
+    for key in ("findings", "broken", "violations", "errors"):
+        if key in lc_obj and lc_obj[key] != []:
+            raise TestFailure(f"link-check reported {key}: {lc_obj!r}")
 
 
 @e2e_test(
@@ -557,13 +580,11 @@ def test_scope_stats_and_milestone(ctx: TestContext) -> None:
     if "built:" not in r_stats.stdout:
         raise TestFailure(f"missing built: line in scope.py stats: {r_stats.stdout!r}")
 
-    copy_root = ctx.workdir / "ms_copy"
-    ctx.copy_repo_subset(copy_root, ["spec", "seeds", "decisions", "crates", "milestones"])
-    (copy_root / "generated").mkdir(parents=True, exist_ok=True)
+    copy_root = prepare_scope_root(ctx, "ms_copy")
     r_ms = ctx.run(
         [
             sys.executable,
-            str(ctx.repo_root / "tools" / "scope.py"),
+            str(copy_root / "tools" / "scope.py"),
             "milestone",
             str(copy_root / "milestones" / "launch-1.md"),
             "--root",
@@ -610,6 +631,8 @@ def test_xtask_fmt_check(ctx: TestContext) -> None:
     res = ctx.run([xtask, "fmt", "--check", "--workspace", str(ctx.repo_root)], timeout=180)
     if res.returncode != 0:
         raise TestFailure(f"fid-xtask fmt --check failed (exit {res.returncode}):\n{res.stdout}\n{res.stderr}")
+    if not res.stdout.strip():
+        raise TestFailure("fid-xtask fmt --check exited 0 with empty stdout")
 
 
 @e2e_test(
@@ -621,10 +644,17 @@ def test_xtask_fmt_check(ctx: TestContext) -> None:
 )
 def test_xtask_arch_gates(ctx: TestContext) -> None:
     xtask = ctx.require_bin("fid-xtask")
-    for sub in (["layers"], ["lint-crate-graph"], ["plat-matrix", "lint-tiers"]):
+    expected_tokens = (
+        (["layers"], "layers: ok"),
+        (["lint-crate-graph"], "lint-crate-graph: ok"),
+        (["plat-matrix", "lint-tiers"], "lint-tiers: ok"),
+    )
+    for sub, expected_ok in expected_tokens:
         res = ctx.run([xtask, *sub], cwd=ctx.repo_root, timeout=180)
         if res.returncode != 0:
             raise TestFailure(f"fid-xtask {' '.join(sub)} exited {res.returncode}:\n{res.stdout}\n{res.stderr}")
+        if expected_ok not in res.stdout:
+            raise TestFailure(f"fid-xtask {' '.join(sub)} missing {expected_ok!r} in stdout: {res.stdout!r}")
 
 
 @e2e_test(
@@ -635,20 +665,37 @@ def test_xtask_arch_gates(ctx: TestContext) -> None:
     capabilities_required=("c_toolchain",),
 )
 def test_m4_rel_flow_sim_and_scan_cmp_prim(ctx: TestContext) -> None:
-    # Check SCAN.CMP.DEV.PRIM first (pure Rust)
-    dev_rs = (ctx.repo_root / "crates" / "fid-scan-cmp" / "src" / "dev.rs").read_text(encoding="utf-8")
-    if "not built yet" in dev_rs or "fn deviation(" not in dev_rs:
-        raise TestFailure("SCAN.CMP.DEV.PRIM (deviation / deviation_batch) is not yet implemented in fid-scan-cmp")
-    assert ctx.caps.cargo_path is not None
-    r_scan = ctx.run([ctx.caps.cargo_path, "test", "--locked", "-p", "fid-scan-cmp"])
+    # Check SCAN.CMP.DEV.PRIM via executable `cargo test` (pure Rust, opaque-box, zero .rs source grepping)
+    if not ctx.caps.cargo_path:
+        raise TestFailure("cargo executable required for fid-scan-cmp tests")
+    r_list = ctx.run([ctx.caps.cargo_path, "test", "--locked", "-p", "fid-scan-cmp", "--", "--list"])
+    if r_list.returncode != 0:
+        raise TestFailure(f"cargo test -p fid-scan-cmp --list failed: {r_list.stdout} {r_list.stderr}")
+    dev_tests = [
+        line.split(": test")[0].strip()
+        for line in r_list.stdout.splitlines()
+        if ": test" in line
+        and not line.lstrip().startswith("field::")
+        and ("deviation" in line.lower() or line.lstrip().startswith("dev::"))
+    ]
+    if not dev_tests:
+        raise TestFailure(
+            "SCAN.CMP.DEV.PRIM executable tests (deviation / dev::) not found in `cargo test -p fid-scan-cmp -- --list`"
+        )
+    r_scan = ctx.run([ctx.caps.cargo_path, "test", "--locked", "-p", "fid-scan-cmp", "--", "dev"])
     if r_scan.returncode != 0:
         raise TestFailure(f"cargo test -p fid-scan-cmp failed: {r_scan.stdout} {r_scan.stderr}")
+    m_pass = re.search(r"test result:\s*ok\.\s*(\d+)\s+passed;\s*0\s+failed", r_scan.stdout)
+    if not m_pass or int(m_pass.group(1)) == 0:
+        raise TestFailure(f"expected >=1 passing SCAN.CMP.DEV.PRIM test, got:\n{r_scan.stdout}")
 
     xtask = ctx.require_bin("fid-xtask")
     pass_dir = ctx.repo_root / "fixtures" / "rel" / "flow" / "pass"
     res = ctx.run([xtask, "rel", "flow-sim", "--tag", "v1.4.0-beta.1", "--fixtures", str(pass_dir)])
     if res.returncode != 0:
         raise TestFailure(f"fid-xtask rel flow-sim exited {res.returncode}: {res.stdout} {res.stderr}")
+    if not res.stdout.strip():
+        raise TestFailure("fid-xtask rel flow-sim exited 0 with empty stdout")
 
 
 # ===========================================================================

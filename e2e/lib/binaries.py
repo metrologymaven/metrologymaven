@@ -206,3 +206,6 @@ class BinaryManager:
 
     def build_all(self, bins: tuple[str, ...] = SUT_BINARIES) -> dict[str, BuildResult]:
         return {name: self.build_bin(name) for name in bins}
+
+    def cached_results(self) -> dict[str, BuildResult]:
+        return dict(sorted(self._cache.items()))
