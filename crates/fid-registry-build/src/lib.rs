@@ -123,8 +123,9 @@ fn report_defs() -> Result<Vec<CommandDef>, DefError> {
 /// `fid-journal` declares the four branch commands of CORE.JRN.BR.NAME and the branch diff of
 /// CORE.JRN.BR.DIFF (handlers in `fid-journal-cmd`). `fid-profile-cmd` declares
 /// `sign.set_profile@1` and `sign.show_profile@1` of TRUST.PROFILE.SELECT. `fid-mig` declares
-/// `migrate.list_sources@1` of MIG.SRC.REG.
-pub const SOURCES: [Source; 17] = [
+/// `migrate.list_sources@1` of MIG.SRC.REG. `fid-scan-mesh-cmd` declares `mesh.invert_normals@1`
+/// of SCAN.MESHOP.CUT.INVERT.
+pub const SOURCES: [Source; 18] = [
     Source { krate: "fid-align", defs: fid_align::command_defs },
     Source { krate: "fid-bus", defs: fid_bus::policy::projection::command_defs },
     Source { krate: "fid-dep", defs: dep_defs },
@@ -140,6 +141,7 @@ pub const SOURCES: [Source; 17] = [
     Source { krate: "fid-qual", defs: fid_qual::command_defs },
     Source { krate: "fid-registry", defs: registry_defs },
     Source { krate: "fid-report", defs: report_defs },
+    Source { krate: "fid-scan-mesh-cmd", defs: fid_scan_mesh_cmd::command_defs },
     Source { krate: "fid-store", defs: store_defs },
     Source { krate: "fid-unc", defs: unc_defs },
 ];

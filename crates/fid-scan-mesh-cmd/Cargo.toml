@@ -1,0 +1,40 @@
+[package]
+name = "fid-scan-mesh-cmd"
+description = "Metrology Maven SCAN mesh-operation command adapter: mesh.invert_normals@1 (SCAN.MESHOP.CUT.INVERT) with its CLI, MCP and registry definition"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Engine-layer adapter: the kernel crate fid-scan-mesh cannot depend on the registry (model
+# layer), so the registry definition, CLI and MCP entry points and the journal entry of its
+# commands live here, as fid-geo-cmd does for GEO.
+[dependencies]
+# RFC 8785 canonical JSON for parameters, results and journal entries; strict parameter
+# parsing (duplicate keys, size and depth limits) (CORE.JRN.CANON). Layer model.
+fid-canon = { path = "../fid-canon" }
+# Stored selections, the agent/human principal and the UUIDv5 derivation of new element IDs
+# (GEO.SEL.CMD, GEO.FRAME.CMD, GEO.TYPES.REG). Layer engine, the same layer as this crate.
+fid-geo-cmd = { path = "../fid-geo-cmd" }
+# The GEO.SEL selection model the command resolves. Layer kernel.
+fid-geo-sel = { path = "../fid-geo-sel" }
+# The GEO.TYPES mesh. Layer kernel.
+fid-geo-types = { path = "../fid-geo-types" }
+# The registry definition of mesh.invert_normals@1, built through the registry's field rules
+# (CORE.REG.DEF). Layer model.
+fid-registry = { path = "../fid-registry" }
+# The kernel operation and the MeshOp contract (SCAN.MESHOP.CUT.INVERT, SCAN.MESHOP.PROV).
+# Layer kernel.
+fid-scan-mesh = { path = "../fid-scan-mesh" }
+# Shared `sha256:` digest and command-ID types (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+# Entity IDs (CONSTITUTION §5). Layer model.
+fid-uuid = { path = "../fid-uuid" }
+
+[dev-dependencies]
+# Test-support only: the workspace root for fixture paths.
+fid-testkit = { path = "../fid-testkit" }
+
+[lints]
+workspace = true

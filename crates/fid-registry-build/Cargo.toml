@@ -28,6 +28,9 @@ fid-jobs = { path = "../fid-jobs" }
 fid-profile-cmd = { path = "../fid-profile-cmd" }
 fid-project-cmd = { path = "../fid-project-cmd" }
 fid-report = { path = "../fid-report" }
+# `mesh.invert_normals@1` (SCAN.MESHOP.CUT.INVERT), read through
+# `fid_scan_mesh_cmd::command_defs()`. Layer engine.
+fid-scan-mesh-cmd = { path = "../fid-scan-mesh-cmd" }
 # The adoption commands of AUTO.REC.ADOPT and the lifecycle commands of AUTO.REC.LIFE, read
 # through `fid_program_rec::{adopt,life}::declarations()`.
 # Layer services, as this crate.
