@@ -24,15 +24,17 @@
 //! - **Purity** (REQ-004). The decision is a function of the plan and the step key only: no
 //!   I/O, no clock, no state changed by `after_step`. O(log n) per step (a `BTreeSet` lookup).
 //!
-//! The guard compares digests only; it never reads an input. The digests come from
-//! `prepare_run` (`AUTO.RUN.BIND`), which hashes the bound inputs and the default of every
-//! `data_handle` parameter through the host's input source.
+//! The guard compares digests only; it never reads an input. The bound inputs' digests come
+//! from `prepare_run` (`AUTO.RUN.BIND`); the recorded default digests come from the plan.
 //!
-//! **Not settled by this leaf** (NODE.md, Open questions): no stored program can mark a step
-//! `retargetable: false` yet (`AUTO.PROG.FMT` has no per-step field; `AUTO.REC.LIFT` sets it),
-//! so `prepare_run` lists every step re-targetable and the guard allows every step of a real
-//! plan. A program stores a default's handle, not its digest, so the recorded default is the
-//! dataset that handle names when the run is prepared.
+//! **Partial build** (NODE.md, Open questions). Two inputs of the guard do not exist yet:
+//!
+//! - No stored program carries a recorded default digest (`AUTO.PROG.FMT` stores a default's
+//!   handle only), so [`RunPlan::default_digests`] is empty and every run that binds a data
+//!   input counts as re-targeted ("no recorded default"), even on the recorded dataset.
+//! - No stored program can mark a step `retargetable: false` (`AUTO.REC.LIFT` sets the mark;
+//!   `AUTO.PROG.FMT` has no field), so `prepare_run` lists every step re-targetable and the
+//!   guard allows every step of a real plan.
 
 use crate::prepare::RunPlan;
 use fid_canon::CValue;

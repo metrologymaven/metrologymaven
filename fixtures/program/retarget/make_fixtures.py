@@ -14,7 +14,12 @@ Writes:
   same seed, every point moved +1 mm in x. Project-authored; its only role is to be hashed.
 - `fixtures/program/retarget/expected.json`: the step IDs, the steps marked not re-targetable,
   both scans' SHA-256 (hashlib), and one case per binding with the guard's decision at each step
-  key, HAND-LABELLED from spec/auto/run/exec/retgt/NODE.md:
+  key in two settings, HAND-LABELLED from spec/auto/run/exec/retgt/NODE.md:
+    `today`     the plan as prepare_run builds it: no stored program carries a recorded default
+                digest (AUTO.PROG.FMT stores handles only), so no parameter has one;
+    `recorded`  the plan given `recorded_defaults` (scan -> SHA-256 of bracket-120.ply), standing
+                in for the digest FMT is to store with the default;
+  under the rules:
     REQ-001  a run is re-targeted iff some bound input parameter has no recorded default, or
              its SHA-256 differs from the recorded default's;
     REQ-002  a re-targeted run stops at a step marked `retargetable: false` with
@@ -24,7 +29,9 @@ Writes:
   A plain reading of those rules (`cross_check`) only guards against a mislabelled case.
 
 `AUTO.PROG.FMT` has no per-step `retargetable` field yet, so the marking of s4 is written here
-(`not_retargetable`) and the test applies it to the plan, standing in for AUTO.REC.LIFT.
+(`not_retargetable`) and the test applies it to the plan, standing in for AUTO.REC.LIFT. Nothing
+here reads the default's dataset to make a recorded digest: what a handle names today is not
+evidence of what was recorded.
 
 Canonical JSON: every string here is ASCII and every number a small integer, so json.dumps with
 sorted keys and no whitespace is the RFC 8785 form.
@@ -145,15 +152,17 @@ def scan_bytes(shift_x, comment):
 
 # ------------------------------------------------------------------ cases
 #
-# (name, binding as authored, hand-labelled (retargeted, differing params)). Every case is
-# evaluated at the step keys KEYS; the decision at each key follows from the label.
+# (name, binding as authored, hand-labelled (retargeted, differing params) for `today`, the same
+# for `recorded`). Every case is evaluated at the step keys KEYS; the decision at each key
+# follows from the label. Today no parameter has a recorded default, so every bound input
+# differs (fail closed).
 
 CASES = [
-    ("ac1_recorded_scan_by_default", {}, (False, [])),
-    ("ac1_recorded_scan_bound", {"scan": SCAN}, (False, [])),
-    ("ac2_shifted_scan", {"scan": SHIFTED}, (True, ["scan"])),
-    ("ac3_reference_has_no_default", {"reference": SCAN, "scan": SCAN}, (True, ["reference"])),
-    ("ac3_shifted_and_no_default", {"reference": SCAN, "scan": SHIFTED}, (True, ["reference", "scan"])),
+    ("ac1_recorded_scan_by_default", {}, (True, ["scan"]), (False, [])),
+    ("ac1_recorded_scan_bound", {"scan": SCAN}, (True, ["scan"]), (False, [])),
+    ("ac2_shifted_scan", {"scan": SHIFTED}, (True, ["scan"]), (True, ["scan"])),
+    ("ac3_reference_has_no_default", {"reference": SCAN, "scan": SCAN}, (True, ["reference", "scan"]), (True, ["reference"])),
+    ("ac3_shifted_and_no_default", {"reference": SCAN, "scan": SHIFTED}, (True, ["reference", "scan"]), (True, ["reference", "scan"])),
 ]
 
 # Step keys the guard is asked about: each step outside any loop, and s4 and s1 as if inside
@@ -194,27 +203,29 @@ def build():
     shifted = scan_bytes(1, "Metrology Maven synthetic fixture: bracket B-120 shifted +1 mm in x (AUTO.RUN.EXEC.RETGT), seed 120")
     digests = {SCAN: sha(scan), SHIFTED: sha(shifted)}
     assert digests[SCAN] != digests[SHIFTED]
-    defaults = {"scan": digests[SCAN]}
+    recorded = {"scan": digests[SCAN]}
     cases = []
-    for name, binding, label in CASES:
-        got = cross_check(binding, digests, defaults)
-        assert got == label, "%s: hand label %s, rules say %s" % (name, label, got)
-        retargeted, differing = label
-        cases.append({
-            "binding": binding,
-            "decisions": [
-                {"decision": decision(step, path, retargeted, differing), "iteration_path": path, "step": step}
-                for step, path in KEYS
-            ],
-            "differing": differing,
-            "name": name,
-            "retargeted": retargeted,
-        })
+    for name, binding, today, with_recorded in CASES:
+        case = {"binding": binding, "name": name}
+        for setting, defaults, label in (("today", {}, today), ("recorded", recorded, with_recorded)):
+            got = cross_check(binding, digests, defaults)
+            assert got == label, "%s/%s: hand label %s, rules say %s" % (name, setting, label, got)
+            retargeted, differing = label
+            case[setting] = {
+                "decisions": [
+                    {"decision": decision(step, path, retargeted, differing), "iteration_path": path, "step": step}
+                    for step, path in KEYS
+                ],
+                "differing": differing,
+                "retargeted": retargeted,
+            }
+        cases.append(case)
     expected = {
         "cases": cases,
         "not_retargetable": NOT_RETARGETABLE,
         "program_digest": sha(prog),
         "program_id": PROGRAM_ID,
+        "recorded_defaults": recorded,
         "scan_sha256": {"bracket-120": digests[SCAN], "bracket-120-shifted": digests[SHIFTED]},
         "steps": STEPS,
     }

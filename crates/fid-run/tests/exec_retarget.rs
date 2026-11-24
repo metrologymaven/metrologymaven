@@ -7,9 +7,12 @@
 //! `fixtures/program/retarget/make_fixtures.py` (digests from hashlib, decisions hand-labelled
 //! from the leaf's REQ-001..003).
 //!
-//! `AUTO.PROG.FMT` has no per-step `retargetable` field yet, so `prepare_run` lists every step
-//! re-targetable; each test applies the fixture's marking of `s4` to the plan, standing in for
-//! `AUTO.REC.LIFT`.
+//! Partial build (NODE.md). `AUTO.PROG.FMT` has no per-step `retargetable` field yet, so
+//! `prepare_run` lists every step re-targetable; each test applies the fixture's marking of `s4`
+//! to the plan, standing in for `AUTO.REC.LIFT`. No stored program carries a recorded default
+//! digest either, so `prepare_run` records none and every case is checked twice: `today` (every
+//! bound input re-targets the run) and `recorded` (the fixture's digest put into the plan,
+//! standing in for FMT).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 mod common;
@@ -133,24 +136,40 @@ fn expected_decision(d: &CValue) -> GateDecision {
     }
 }
 
-/// Evaluates the guard at every key of a case and compares with the hand-labelled decision.
-fn run_case(name: &str) -> RetargetGuard {
+/// The fixture's recorded default digests put into the plan, standing in for the digest
+/// `AUTO.PROG.FMT` is to store with a default (no stored program carries one yet).
+fn with_recorded(fx: &Fixture, plan: &mut RunPlan) {
+    for (param, d) in obj(&fx.ex["recorded_defaults"]) {
+        plan.default_digests.insert(param.clone(), fid_types::Digest::parse(st(d)).unwrap());
+    }
+}
+
+/// Evaluates the guard at every key of a case in `setting` (`today`: the plan as prepared;
+/// `recorded`: with the fixture's recorded default digests) and compares with the
+/// hand-labelled decisions.
+fn run_case(name: &str, setting: &str) -> RetargetGuard {
     let fx = Fixture::load();
     let w = World::new();
     let case = fx.case(name);
-    let plan = plan_for(&fx, &w, &case["binding"]);
+    let mut plan = plan_for(&fx, &w, &case["binding"]);
+    // prepare_run records no default digest: no stored program carries one.
+    assert!(plan.default_digests.is_empty());
+    if setting == "recorded" {
+        with_recorded(&fx, &mut plan);
+    }
+    let label = obj(&case[setting]);
     let guard = RetargetGuard::from_plan(&plan);
-    assert_eq!(guard.retargeted(), matches!(case["retargeted"], CValue::Bool(true)), "{name}");
-    let differing: Vec<String> = arr(&case["differing"]).iter().map(|p| st(p).to_owned()).collect();
-    assert_eq!(guard.differing(), differing.as_slice(), "{name}");
-    for d in arr(&case["decisions"]) {
+    assert_eq!(guard.retargeted(), matches!(label["retargeted"], CValue::Bool(true)), "{name}/{setting}");
+    let differing: Vec<String> = arr(&label["differing"]).iter().map(|p| st(p).to_owned()).collect();
+    assert_eq!(guard.differing(), differing.as_slice(), "{name}/{setting}");
+    for d in arr(&label["decisions"]) {
         let d = obj(d);
         let key = StepKey {
             step_id: fx.step(st(&d["step"])),
             iteration_path: arr(&d["iteration_path"]).iter().map(num).collect(),
         };
         let got = guard.before_step(&key, &info());
-        assert_eq!(got, expected_decision(&d["decision"]), "{name} at {key:?}");
+        assert_eq!(got, expected_decision(&d["decision"]), "{name}/{setting} at {key:?}");
         // A stop's detail reads back to the step key and the differing parameters.
         if let GateDecision::Stop(code, detail) = &got {
             assert_eq!(*code, "not_retargetable");
@@ -164,22 +183,44 @@ fn run_case(name: &str) -> RetargetGuard {
     guard
 }
 
+const CASES: [&str; 5] = [
+    "ac1_recorded_scan_by_default",
+    "ac1_recorded_scan_bound",
+    "ac2_shifted_scan",
+    "ac3_reference_has_no_default",
+    "ac3_shifted_and_no_default",
+];
+
+#[test]
+fn every_case_in_both_settings() {
+    for name in CASES {
+        for setting in ["today", "recorded"] {
+            run_case(name, setting);
+        }
+    }
+}
+
 // ------------------------------------------------------------------ AC-1
 
 #[test]
-fn ac1_recorded_scan_allows_every_step() {
+fn ac1_recorded_scan() {
     let fx = Fixture::load();
     let w = World::new();
     let plan = plan_for(&fx, &w, &fx.case("ac1_recorded_scan_by_default")["binding"]);
-    // The input digest and the recorded default digest are both hashlib's digest of the scan.
     assert_eq!(plan.record.inputs()["scan"].sha256.as_str(), fx.scan("bracket-120"));
-    assert_eq!(plan.default_digests["scan"].as_str(), fx.scan("bracket-120"));
     assert_eq!(plan.record.program_digest().as_str(), st(&fx.ex["program_digest"]));
-    let g = run_case("ac1_recorded_scan_by_default");
+    // Today (open, NODE.md): no recorded default digest, so even the recorded scan re-targets
+    // the run and s4 stops (fail closed).
+    for name in ["ac1_recorded_scan_by_default", "ac1_recorded_scan_bound"] {
+        let g = run_case(name, "today");
+        assert!(g.retargeted());
+        assert!(matches!(g.decide(&StepKey::top(fx.step("s4"))), GateDecision::Stop(NOT_RETARGETABLE, _)));
+    }
+    // Given the recorded digest FMT is to store: every step allowed.
+    let g = run_case("ac1_recorded_scan_by_default", "recorded");
     assert!(!g.retargeted());
     assert_eq!(g.blocked().iter().copied().collect::<Vec<_>>(), vec![fx.step("s4")]);
-    // Bound explicitly to the same handle, the run is not re-targeted either.
-    assert!(!run_case("ac1_recorded_scan_bound").retargeted());
+    assert!(!run_case("ac1_recorded_scan_bound", "recorded").retargeted());
 }
 
 // ------------------------------------------------------------------ AC-2
@@ -190,17 +231,17 @@ fn ac2_shifted_scan_stops_at_s4() {
     let w = World::new();
     let plan = plan_for(&fx, &w, &fx.case("ac2_shifted_scan")["binding"]);
     assert_eq!(plan.record.inputs()["scan"].sha256.as_str(), fx.scan("bracket-120-shifted"));
-    // The recorded default is still hashed, though the run binds another scan.
-    assert_eq!(plan.default_digests["scan"].as_str(), fx.scan("bracket-120"));
-    let g = run_case("ac2_shifted_scan");
-    assert_eq!(g.differing(), ["scan".to_owned()]);
-    let stop = g.decide(&StepKey::top(fx.step("s4")));
-    let GateDecision::Stop(code, detail) = stop else { panic!("{stop:?}") };
-    assert_eq!(code, NOT_RETARGETABLE);
-    assert_eq!(
-        String::from_utf8(fid_canon::to_canonical_bytes(&detail).unwrap()).unwrap(),
-        format!(r#"{{"iteration_path":[],"params":["scan"],"step_id":"{}"}}"#, fx.step("s4"))
-    );
+    for setting in ["today", "recorded"] {
+        let g = run_case("ac2_shifted_scan", setting);
+        assert_eq!(g.differing(), ["scan".to_owned()]);
+        let stop = g.decide(&StepKey::top(fx.step("s4")));
+        let GateDecision::Stop(code, detail) = stop else { panic!("{stop:?}") };
+        assert_eq!(code, NOT_RETARGETABLE);
+        assert_eq!(
+            String::from_utf8(fid_canon::to_canonical_bytes(&detail).unwrap()).unwrap(),
+            format!(r#"{{"iteration_path":[],"params":["scan"],"step_id":"{}"}}"#, fx.step("s4"))
+        );
+    }
 }
 
 // ------------------------------------------------------------------ AC-3
@@ -212,9 +253,15 @@ fn ac3_parameter_without_recorded_default_retargets() {
     let plan = plan_for(&fx, &w, &fx.case("ac3_reference_has_no_default")["binding"]);
     // `reference` is bound to the very scan `scan` was recorded on, but it has no default.
     assert_eq!(plan.record.inputs()["reference"].sha256.as_str(), fx.scan("bracket-120"));
-    assert!(!plan.default_digests.contains_key("reference"));
-    assert_eq!(run_case("ac3_reference_has_no_default").differing(), ["reference".to_owned()]);
-    assert_eq!(run_case("ac3_shifted_and_no_default").differing(), ["reference".to_owned(), "scan".to_owned()]);
+    assert_eq!(run_case("ac3_reference_has_no_default", "recorded").differing(), ["reference".to_owned()]);
+    assert_eq!(
+        run_case("ac3_reference_has_no_default", "today").differing(),
+        ["reference".to_owned(), "scan".to_owned()]
+    );
+    assert_eq!(
+        run_case("ac3_shifted_and_no_default", "recorded").differing(),
+        ["reference".to_owned(), "scan".to_owned()]
+    );
 }
 
 #[test]
@@ -248,8 +295,9 @@ impl InputSource for DefaultGone {
 }
 
 #[test]
-fn ac3_unreadable_default_is_not_recorded_and_retargets() {
-    // A default that cannot be read is left out of the plan (fail closed), never an error.
+fn prepare_never_reads_an_unused_default() {
+    // The default's dataset is not opened when the run binds another one, and it never
+    // becomes a recorded digest.
     let fx = Fixture::load();
     let w = World::new();
     let p = program();
@@ -260,14 +308,6 @@ fn ac3_unreadable_default_is_not_recorded_and_retargets() {
     let mut plan = prepare_run(&mut ctx, ProgramRef::Draft(&p), BindingSource::Binding(b), &w.alice, TRIAL).unwrap();
     assert!(plan.default_digests.is_empty());
     mark(&fx, &mut plan);
-    let g = RetargetGuard::from_plan(&plan);
-    assert_eq!(g.differing(), ["scan".to_owned()]);
-    assert!(matches!(g.decide(&StepKey::top(fx.step("s4"))), GateDecision::Stop(NOT_RETARGETABLE, _)));
-
-    // A plan whose recorded default digest is missing for a parameter bound to the recorded
-    // scan is re-targeted too (REQ-001, second clause).
-    let mut plan = plan_for(&fx, &w, &fx.case("ac1_recorded_scan_bound")["binding"]);
-    plan.default_digests.clear();
     let g = RetargetGuard::from_plan(&plan);
     assert_eq!(g.differing(), ["scan".to_owned()]);
     assert!(matches!(g.decide(&StepKey::top(fx.step("s4"))), GateDecision::Stop(NOT_RETARGETABLE, _)));
