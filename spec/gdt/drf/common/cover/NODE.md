@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-gps]
+built_pr: 576
 satisfies: [REQ-GDT.DRF.COMMON-003]
 covers: []
 depends_on: [GDT.DRF.DATUM, GEO.FRAME, KRN.NUM]
