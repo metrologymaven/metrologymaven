@@ -1004,8 +1004,13 @@ mod tests {
         let cat = Catalog::open(&path, Mode::ReadWrite).unwrap();
         for sql in [ENTRIES_AFTER_SQL, PROJECT_ENTRIES_AFTER_SQL, PROJECT_ENTRIES_FIRST_SQL, TAGS_SQL] {
             let mut st = cat.connection().prepare(&format!("EXPLAIN QUERY PLAN {sql}")).unwrap();
-            let details: Vec<String> =
-                st.query_map([], |r| r.get::<_, String>(3)).unwrap().map(|d| d.unwrap()).collect();
+            // The plan is fixed at prepare time; the parameters are bound only to run it.
+            let nulls = vec![rusqlite::types::Null; st.parameter_count()];
+            let details: Vec<String> = st
+                .query_map(rusqlite::params_from_iter(nulls), |r| r.get::<_, String>(3))
+                .unwrap()
+                .map(|d| d.unwrap())
+                .collect();
             assert!(!details.is_empty(), "{sql}");
             for d in &details {
                 assert!(d.starts_with("SEARCH "), "{sql}: {d}");

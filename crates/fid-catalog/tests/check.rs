@@ -581,6 +581,8 @@ fn orphaned_entries_are_refused() {
     let path = fixture_catalog(&dir, &c);
     {
         let conn = rusqlite::Connection::open(&path).unwrap();
+        // rusqlite's bundled SQLite turns foreign keys on by default; an outside editor may not.
+        conn.execute_batch("PRAGMA foreign_keys = OFF").unwrap();
         let fk: i64 = conn.query_row("PRAGMA foreign_keys", [], |r| r.get(0)).unwrap();
         assert_eq!(fk, 0);
         let n = conn
