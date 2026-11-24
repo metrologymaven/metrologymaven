@@ -9,6 +9,7 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-scan-cmp]
 satisfies: [REQ-SCAN.CMP.DEV-001, REQ-SCAN.CMP.DEV-002, REQ-SCAN.CMP.DEV-005, REQ-SCAN.CMP.DEV-006]
 covers: []
 depends_on: [SCAN.CMP.DEV.FIELD, GEO.DIST.BATCH, GEO.DIST.SIGN, GEO.DIST.FACE.BODY, GEO.DIST.FACE.INCID, KRN.NUM]

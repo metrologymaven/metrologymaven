@@ -356,3 +356,21 @@ fn ac5_export_round_trip_bit_identical_and_conformance_kit() {
     assert!(written.contains("vn "));
     assert!(written.contains("//1"));
 }
+
+#[test]
+fn export_overflow_in_um_fails_atomically_and_m_succeeds() {
+    let mesh =
+        Mesh::from_points(frame0(), &[[1e305, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], &[[0, 1, 2]]).unwrap();
+    let mut um_sink = VecSink(Vec::new());
+    let um_opts = ObjExportOptions { unit: LengthUnit::Um, ..ObjExportOptions::default() };
+    let err = write_obj(&mesh, &um_opts, &mut um_sink).unwrap_err();
+    assert!(matches!(err, IoError::Malformed { reason: "non_finite_coordinate", .. }), "unexpected error: {err:?}");
+    assert!(um_sink.0.is_empty(), "failed OBJ export must write 0 bytes, wrote {}", um_sink.0.len());
+
+    let mut m_sink = VecSink(Vec::new());
+    let m_opts = ObjExportOptions { unit: LengthUnit::M, ..ObjExportOptions::default() };
+    write_obj(&mesh, &m_opts, &mut m_sink).unwrap();
+    let mut bc = default_budget();
+    let rt = read_obj_bytes(&m_sink.0, LengthUnit::M, frame0(), &mut bc).unwrap();
+    assert_eq!(rt.built.mesh.vertex(0), Some([1e305, 0.0, 0.0]));
+}

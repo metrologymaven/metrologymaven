@@ -1,6 +1,6 @@
 [package]
 name = "fid-scan-cmp"
-description = "Metrology Maven scan comparison: the DeviationField element, its crate-private builder and canonical digest (spec node SCAN.CMP.DEV.FIELD)"
+description = "Metrology Maven scan comparison: signed deviation primitive, DeviationField element, crate-private builder and canonical digest (spec nodes SCAN.CMP.DEV.PRIM, SCAN.CMP.DEV.FIELD)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,18 +9,22 @@ repository.workspace = true
 
 # Kernel crate (KNP-1): no third-party dependencies and no GPU crate (CONSTITUTION C2).
 # Only first-party num/kernel-layer crates: fid-types (`sha256:` digests), fid-num
-# (fixed-order mean and totalOrder min/max for field statistics, KRN.NUM.RED), fid-kci
-# (portable SHA-256 and the kernel canonical JSON writer) and fid-geo-types (the
-# nominal's element kind, GEO.TYPES.ENV).
+# (trigonometry, sqrt, fixed-order mean and totalOrder min/max), fid-kci (portable
+# SHA-256 and canonical JSON), fid-geo-types (PointSet, Mesh, ElementKind), fid-geo-dist
+# (closest-point projection and signed distance) and fid-geo-frame (frame matching).
 [dependencies]
 fid-types = { path = "../fid-types" }
 fid-num = { path = "../fid-num" }
 fid-kci = { path = "../fid-kci" }
 fid-geo-types = { path = "../fid-geo-types" }
+fid-geo-dist = { path = "../fid-geo-dist" }
+fid-geo-frame = { path = "../fid-geo-frame" }
 
 [dev-dependencies]
-# Test-support only (never in the kernel graph): the workspace root for fixture paths.
+# Test-support only (never in the kernel graph): workspace root, BVH and analytic CAD sphere.
 fid-testkit = { path = "../fid-testkit" }
+fid-geo-index = { path = "../fid-geo-index" }
+fid-geo-nurbs = { path = "../fid-geo-nurbs" }
 
 [lints]
 workspace = true

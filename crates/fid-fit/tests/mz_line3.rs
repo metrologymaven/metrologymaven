@@ -224,3 +224,74 @@ fn ac4_command_row_and_spec_card_pass() {
     assert!(report.is_clean(), "{report:?}");
     CardRegistry::new(vec![card]).unwrap();
 }
+
+/// Cause A contract (`median_line_bowed.json`): a planar `< 5`-contact cloud (`y = 0`) has
+/// 5-parameter free-axis Jacobian rank `<= 3 < 5` and only 3 envelope contacts, so free-direction
+/// `fit_mz_line3` fails closed (`SeqFailed { cause: "cert", starts: 5 }`) by mathematical design
+/// (`KRN.SOLV.CERT.AS`), while `Constraint::FixedAxisDirection([0, 0, 1])` certifies cleanly.
+#[test]
+fn bowed_planar_cloud_fails_closed_free_and_succeeds_fixed_axis() {
+    let raw = include_str!("../../../fixtures/gdt/form/median_line_bowed.json");
+    let (_, after) = raw.split_once("\"points\":[[").unwrap();
+    let (body, _) = after.split_once("]]").unwrap();
+    let mut xyz = Vec::new();
+    for tuple in body.split("],[") {
+        for num in tuple.split(',') {
+            xyz.push(num.parse::<f64>().unwrap());
+        }
+    }
+    assert_eq!(xyz.len(), 60);
+    let pts = PointsView::new(&xyz, None).unwrap();
+    let extra = MzLine3Params::default();
+
+    let free_err = fit_mz_line3(&pts, &FitParams::new(Method::MinimumZone), &extra).unwrap_err();
+    assert_eq!(free_err, FitError::SeqFailed { cause: "cert", starts: 5 });
+
+    let mut fixed_params = FitParams::new(Method::MinimumZone);
+    fixed_params.constraints.push(Constraint::FixedAxisDirection([0.0, 0.0, 1.0]));
+    let fixed = fit_mz_line3(&pts, &fixed_params, &extra).unwrap();
+    assert!((fixed.diameter - 1e-5).abs() <= 1e-10, "got {}", fixed.diameter);
+    assert_eq!(fixed.critical_points, vec![0, 10, 19]);
+}
+
+/// Cause B contract (exact-shell 3D cylindrical shells): when all 3D points lie on an exact
+/// cylinder (`rho_i == r` to ~`1e-16`), `seq::solve` converges to `local.b() = r - rho_i ~ 1e-16`
+/// while Clarabel's box-LP slack is `~1e-11`. Per `REQ-KRN.SOLV.CERT.AS-001`, `scale_s = max |b|`
+/// collapses to `~1e-16` (`TooFewRows`), whereas a well-conditioned 5-contact cylinder with
+/// interior points (`max |b| ~ 1e-4`) sets `scale_b` at the zone scale and certifies cleanly.
+#[test]
+fn exact_shell_3d_rod_scale_b_contract() {
+    let extra = MzLine3Params::default();
+    let params = FitParams::new(Method::MinimumZone);
+
+    // Multi-ring exact-shell 3D cylinders (r = 0.064 m, axial span = 0.5 m):
+    // full-circle 3D shell converges to the exact cylinder (b_i ~ 1e-16) and fails cert (`TooFewRows`).
+    let mut exact = Vec::new();
+    for &z in &[-0.25_f64, 0.0, 0.25] {
+        for k in 0..4 {
+            let th = (k as f64) * core::f64::consts::TAU / 4.0 + z * 0.2;
+            exact.extend_from_slice(&[0.064 * th.cos(), 0.064 * th.sin(), z]);
+        }
+    }
+    let pv_exact = PointsView::new(&exact, None).unwrap();
+    let err = fit_mz_line3(&pv_exact, &params, &extra).unwrap_err();
+    assert_eq!(err, FitError::SeqFailed { cause: "cert", starts: 5 });
+
+    // Well-conditioned 5-contact cylinder (5 contacts on r = 0.064 m at z = -L..+L with
+    // full-rank 5x5 Jacobian + interior points at r = 0.063 m so max |b| = 1e-3 m).
+    let mut non_exact = Vec::new();
+    let contacts: [([f64; 2], f64); 5] =
+        [([1.0, 0.0], -0.25), ([0.0, 1.0], -0.125), ([-0.6, -0.8], 0.0), ([0.0, 1.0], 0.125), ([1.0, 0.0], 0.25)];
+    for &(n, z) in &contacts {
+        non_exact.extend_from_slice(&[0.064 * n[0], 0.064 * n[1], z]);
+    }
+    for k in 0..5 {
+        let th = (k as f64) * 1.2 + 0.3;
+        let z = -0.15 + 0.075 * (k as f64);
+        non_exact.extend_from_slice(&[0.063 * th.cos(), 0.063 * th.sin(), z]);
+    }
+    let pv_ok = PointsView::new(&non_exact, None).unwrap();
+    let ok = fit_mz_line3(&pv_ok, &params, &extra).unwrap();
+    assert!((ok.diameter - 0.128).abs() <= 1e-10, "got {}", ok.diameter);
+    assert!(ok.certificate.is_some());
+}

@@ -416,7 +416,7 @@ fn one_million_registrations() {
 /// 1 µs. Wall-clock limits are not asserted in shared CI; run with
 /// `cargo test --release -p fid-render -- --ignored --nocapture`.
 #[test]
-#[ignore]
+#[ignore = "wall-clock release performance budget (<200ms / <1us); fails in debug and noisy on shared CI"]
 fn bench_budget() {
     let start = std::time::Instant::now();
     let mut t = IdTable::new();

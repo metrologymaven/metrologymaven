@@ -570,9 +570,24 @@ fn compute_face_normal_f32(a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> [f32; 3] {
     }
 }
 
-fn coord_to_f32(v_m: [f64; 3], unit: LengthUnit) -> [f32; 3] {
+fn coord_to_f32(v_m: [f64; 3], unit: LengthUnit) -> Result<[f32; 3], IoError> {
     let inv = unit_scale_to_metres(unit);
-    [(v_m[0] / inv) as f32, (v_m[1] / inv) as f32, (v_m[2] / inv) as f32]
+    let out = [(v_m[0] / inv) as f32, (v_m[1] / inv) as f32, (v_m[2] / inv) as f32];
+    if out.iter().all(|c| c.is_finite()) {
+        Ok(out)
+    } else {
+        Err(IoError::Malformed { at: Position::byte(0), reason: "non_finite_coordinate" })
+    }
+}
+
+fn precheck_stl_triangles(mesh: &Mesh, unit: LengthUnit) -> Result<(), IoError> {
+    for tri in mesh.triangles() {
+        for &vid in &tri {
+            let p = mesh.vertex(vid).ok_or(IoError::Malformed { at: Position::byte(0), reason: "vertex_missing" })?;
+            let _ = coord_to_f32(p, unit)?;
+        }
+    }
+    Ok(())
 }
 
 fn sanitize_solid_name(raw: &str) -> String {
@@ -594,6 +609,7 @@ pub fn write_stl_binary(mesh: &Mesh, unit: LengthUnit, sink: &mut dyn ByteSink) 
         value: u64::from(u32::MAX),
         at: Position::byte(0),
     })?;
+    precheck_stl_triangles(mesh, unit)?;
     let precision = f32_rounding_report(mesh);
     let start_bytes = sink.bytes_written();
 
@@ -608,9 +624,9 @@ pub fn write_stl_binary(mesh: &Mesh, unit: LengthUnit, sink: &mut dyn ByteSink) 
         let b = mesh.vertex(tri[1]).ok_or(IoError::Malformed { at: Position::byte(0), reason: "vertex_missing" })?;
         let c = mesh.vertex(tri[2]).ok_or(IoError::Malformed { at: Position::byte(0), reason: "vertex_missing" })?;
         let n = compute_face_normal_f32(a, b, c);
-        let va = coord_to_f32(a, unit);
-        let vb = coord_to_f32(b, unit);
-        let vc = coord_to_f32(c, unit);
+        let va = coord_to_f32(a, unit)?;
+        let vb = coord_to_f32(b, unit)?;
+        let vc = coord_to_f32(c, unit)?;
 
         for f in [n[0], n[1], n[2], va[0], va[1], va[2], vb[0], vb[1], vb[2], vc[0], vc[1], vc[2]] {
             buf.extend_from_slice(&f.to_le_bytes());
@@ -643,6 +659,7 @@ pub fn write_stl_ascii(
     solid_name: &str,
     sink: &mut dyn ByteSink,
 ) -> Result<StlExportSummary, IoError> {
+    precheck_stl_triangles(mesh, unit)?;
     let precision = f32_rounding_report(mesh);
     let start_bytes = sink.bytes_written();
     let name = sanitize_solid_name(solid_name);
@@ -657,9 +674,9 @@ pub fn write_stl_ascii(
         let b = mesh.vertex(tri[1]).ok_or(IoError::Malformed { at: Position::byte(0), reason: "vertex_missing" })?;
         let c = mesh.vertex(tri[2]).ok_or(IoError::Malformed { at: Position::byte(0), reason: "vertex_missing" })?;
         let n = compute_face_normal_f32(a, b, c);
-        let va = coord_to_f32(a, unit);
-        let vb = coord_to_f32(b, unit);
-        let vc = coord_to_f32(c, unit);
+        let va = coord_to_f32(a, unit)?;
+        let vb = coord_to_f32(b, unit)?;
+        let vc = coord_to_f32(c, unit)?;
 
         use std::fmt::Write as _;
         let _ = writeln!(out, "  facet normal {} {} {}", n[0], n[1], n[2]);

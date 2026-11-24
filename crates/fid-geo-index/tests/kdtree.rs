@@ -340,7 +340,7 @@ fn ac4_memory_accounting_is_exact() {
 
 /// AC-4 on a real 10^8-point cloud: needs about 4 GB; run with `--ignored` on a large runner.
 #[test]
-#[ignore]
+#[ignore = "allocates ~4 GB for 1e8 points; run manually on large-memory runner"]
 fn ac4_seeded_1e8_cloud() {
     let n = 100_000_000usize;
     let mut g = SplitMix(4);

@@ -1,0 +1,133 @@
+{
+ "about": "SCAN.CMP.DEV.PRIM AC-3 open 50 mm plate fixture; written by make_prim_fixtures.py (CC0)",
+ "cases": [
+  {
+   "name": "interior_above",
+   "normal_hex": "3f60624dd2f1a9fc",
+   "normal_m": 0.002,
+   "normal_status": "valid",
+   "point": [
+    0.02,
+    0.03,
+    0.002
+   ],
+   "shortest_hex": "3f60624dd2f1a9fc",
+   "shortest_m": 0.002
+  },
+  {
+   "name": "interior_below",
+   "normal_hex": "bf60624dd2f1a9fc",
+   "normal_m": -0.002,
+   "normal_status": "valid",
+   "point": [
+    0.02,
+    0.03,
+    -0.002
+   ],
+   "shortest_hex": "bf60624dd2f1a9fc",
+   "shortest_m": -0.002
+  },
+  {
+   "name": "interior_diagonal_above",
+   "normal_hex": "3f689374bc6a7efa",
+   "normal_m": 0.003,
+   "normal_status": "valid",
+   "point": [
+    0.025,
+    0.025,
+    0.003
+   ],
+   "shortest_hex": "3f689374bc6a7efa",
+   "shortest_m": 0.003
+  },
+  {
+   "name": "beyond_pos_x_above",
+   "normal_hex": "",
+   "normal_m": null,
+   "normal_status": "off_edge",
+   "point": [
+    0.055,
+    0.025,
+    0.001
+   ],
+   "shortest_hex": "3f74e2b5a0d73b58",
+   "shortest_m": 0.005099019513592783
+  },
+  {
+   "name": "beyond_neg_x_below",
+   "normal_hex": "",
+   "normal_m": null,
+   "normal_status": "off_edge",
+   "point": [
+    -0.003,
+    0.025,
+    -0.004
+   ],
+   "shortest_hex": "3f747ae147ae147b",
+   "shortest_m": 0.005
+  },
+  {
+   "name": "beyond_corner_in_plane",
+   "normal_hex": "",
+   "normal_m": null,
+   "normal_status": "off_edge",
+   "point": [
+    -0.003,
+    -0.004,
+    0.0
+   ],
+   "shortest_hex": "3f747ae147ae147b",
+   "shortest_m": 0.005
+  },
+  {
+   "name": "on_border_edge",
+   "normal_hex": "",
+   "normal_m": null,
+   "normal_status": "off_edge",
+   "point": [
+    0.05,
+    0.025,
+    0.002
+   ],
+   "shortest_hex": "3f60624dd2f1a9fc",
+   "shortest_m": 0.002
+  }
+ ],
+ "max_angle_rad": 0.5235987755982988,
+ "max_distance_m": 0.02,
+ "size_m": 0.05,
+ "triangles": [
+  [
+   0,
+   1,
+   2
+  ],
+  [
+   0,
+   2,
+   3
+  ]
+ ],
+ "vertices": [
+  [
+   0.0,
+   0.0,
+   0.0
+  ],
+  [
+   0.05,
+   0.0,
+   0.0
+  ],
+  [
+   0.05,
+   0.05,
+   0.0
+  ],
+  [
+   0.0,
+   0.05,
+   0.0
+  ]
+ ]
+}

@@ -310,7 +310,6 @@ fn write_layout(prov: &[u8], status: &[DevStatus], values: &[f64], mut sink: imp
     }
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 fn layout_digest(prov: &[u8], status: &[DevStatus], values: &[f64]) -> Digest {
     let mut h = Sha256::new();
     write_layout(prov, status, values, |b| h.update(b));
@@ -318,10 +317,9 @@ fn layout_digest(prov: &[u8], status: &[DevStatus], values: &[f64]) -> Digest {
 }
 
 /// The only way to create a [`DeviationField`]: one `set` per point index in any order,
-/// then `finish`. Crate-private; the CPU deviation path (SCAN.CMP.DEV.PRIM's
-/// `deviation_batch`, not yet built) hands it out.
+/// then `finish`. Crate-private; the CPU deviation path (`SCAN.CMP.DEV.PRIM`'s
+/// `deviation_batch`) hands it out.
 #[derive(Debug)]
-#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) struct FieldBuilder {
     provenance: FieldProvenance,
     provenance_json: Vec<u8>,
@@ -331,7 +329,6 @@ pub(crate) struct FieldBuilder {
     seen: Vec<u8>,
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 impl FieldBuilder {
     /// A builder for `n` points. Fails `scan.cmp.invalid_parameter` on a bad provenance
     /// and `scan.cmp.allocation_failed` if the three columns (10 bytes per point) cannot be

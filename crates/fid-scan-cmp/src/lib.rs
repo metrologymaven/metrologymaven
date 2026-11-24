@@ -1,10 +1,11 @@
 //! Scan comparison of Metrology Maven (spec node `SCAN.CMP`). Pure Rust, `f64` metres, no
 //! I/O, no `unsafe`, no GPU dependency; kernel layer, KNP-1.
 //!
-//! Implemented leaves: `SCAN.CMP.DEV.FIELD` (the [`DeviationField`] element, its
-//! crate-private builder and its canonical digest, see [`field`]). The [`dev`] module holds
-//! the result and method types the deviation primitive (`SCAN.CMP.DEV.PRIM`, not yet built)
-//! hands to the builder.
+//! Implemented leaves:
+//! - `SCAN.CMP.DEV.PRIM`: [`deviation`], [`deviation_field`], [`DevParams`], [`NominalRef`],
+//!   [`CadNominal`], [`CadHit`], [`DevResult`], [`Method`], [`NoMatchReason`] (see [`dev`]).
+//! - `SCAN.CMP.DEV.FIELD`: the [`DeviationField`] element, its crate-private builder and its
+//!   canonical digest (see [`field`]).
 //!
 //! # Only the CPU kernel path builds a field (REQ-SCAN.CMP.DEV.FIELD-002, AC-3)
 //!
@@ -71,6 +72,9 @@ pub mod error;
 pub mod field;
 mod number;
 
-pub use dev::{DevResult, Method, NoMatchReason};
-pub use error::{FieldError, IncompleteKind};
+pub use dev::{
+    deviation, deviation_field, BatchConfig, CadHit, CadNominal, DevParams, DevResult, Method, NoMatchReason,
+    NominalRef,
+};
+pub use error::{DevError, FieldError, IncompleteKind};
 pub use field::{DevStatus, DeviationField, FieldProvenance, FieldStats};

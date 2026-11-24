@@ -3,13 +3,19 @@
 //!
 //! Every `.html`/`.htm` page and `.css` stylesheet under the site root is read and checked
 //! against rules A01 to A13, each mapped to a WCAG 2.2 success criterion. Contrast (A12) is
-//! computed per theme of the token file; colours are resolved only through token custom
+//! computed per theme of the token input; colours are resolved only through token custom
 //! properties, and any literal colour is rule A13. The rule set is the automatable subset of
 //! WCAG 2.2 AA for static pages, not a conformance claim.
 //!
-//! Token file (placeholder format until UX.SYSTEM fixes the package format):
-//! `{"themes": {"light": {"text.muted": "#5c6670"}, "dark": {}}}`. A value may also be an
-//! object with a `$value` string. Token `text.muted` is custom property `--text-muted`.
+//! Supported `--tokens <path>` inputs:
+//! 1. Design-system package / UX token directory (`<dir>/tokens/**/*.tokens.json` in DTCG
+//!    format via `fid-design-pkg`, `<dir>/tokens/themes/*.json` in `fid-design-theme@1` or
+//!    default `"light"` from DTCG `$value` when `tokens/themes/` is absent, and optional
+//!    `deprecations.json`). Exposes `sem.*` and `comp.*` colour tokens (`--sem-*`, `--comp-*`)
+//!    while skipping `prim.*` and non-colour tokens (`dimension`, `duration`, `typography`, ...).
+//! 2. Single DTCG `.tokens.json` file (no `"themes"` wrapper, loaded as `"light"`).
+//! 3. Multi-theme JSON file (`{"themes": {"<theme>": ...}}`), supporting both nested DTCG
+//!    groups per theme and legacy flat `"name": "#rrggbb"` / `{"$value": "#rrggbb"}` entries.
 //!
 //! Configuration: `{"suppressions": [{"page": "a.html", "rule": "A04", "reason": "..."}]}`.
 
@@ -19,10 +25,16 @@ pub mod rules;
 pub mod vocab;
 
 use css::{Rgba, Scope, StyleRule, WHITE};
-use fid_canon::{parse as parse_json, to_canonical_bytes, CValue};
+use fid_canon::{parse as parse_json, parse_with_limits, to_canonical_bytes, CValue};
+use fid_design_pkg::tokens::{collect as collect_dtcg, parse_alias, Token};
+use fid_design_pkg::{
+    is_valid_name, MAX_ALIAS_DEPTH, MAX_DIR_DEPTH as PKG_MAX_DIR_DEPTH, MAX_FILES as PKG_MAX_FILES,
+    MAX_FILE_BYTES as PKG_MAX_FILE_BYTES, MAX_JSON_DEPTH, MAX_RETAINED_BYTES,
+};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::fs;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
 /// Largest page, stylesheet, token or configuration file accepted, in bytes.
@@ -236,45 +248,444 @@ pub struct Tokens {
     pub props: BTreeSet<String>,
 }
 
-/// Reads the theme names and colour values of the token file.
+fn token_tier(name: &str) -> &str {
+    name.split('.').next().unwrap_or("")
+}
+
+fn effective_type<'a>(tokens: &'a BTreeMap<String, Token>, tok: &'a Token) -> Option<&'a str> {
+    let mut cur = tok;
+    for _ in 0..=MAX_ALIAS_DEPTH {
+        if let Some(ty) = cur.ty.as_deref() {
+            return Some(ty);
+        }
+        cur = tokens.get(cur.alias()?)?;
+    }
+    None
+}
+
+fn is_colour_token(tokens: &BTreeMap<String, Token>, tok: &Token) -> bool {
+    match effective_type(tokens, tok) {
+        Some(ty) => ty == "color",
+        None => matches!(token_tier(&tok.name), "prim" | "sem" | "comp"),
+    }
+}
+
+fn resolve_dtcg_colour(
+    start: &str,
+    tokens: &BTreeMap<String, Token>,
+    colour_names: &BTreeSet<String>,
+    sem_names: &BTreeSet<String>,
+    bindings: Option<&BTreeMap<String, String>>,
+    deprecations: &BTreeMap<String, String>,
+    require_prim_literal: bool,
+) -> Result<Rgba, String> {
+    let mut visited: Vec<String> = Vec::new();
+    let mut cur = start.to_string();
+    loop {
+        if let Some(pos) = visited.iter().position(|n| n == &cur) {
+            let cycle = visited[pos..].join(" -> ");
+            return Err(format!("alias cycle: {cycle} -> {cur}"));
+        }
+        if visited.len() > MAX_ALIAS_DEPTH {
+            return Err(format!("{start}: more than {MAX_ALIAS_DEPTH} alias hops"));
+        }
+        visited.push(cur.clone());
+
+        if let Some(binds) = bindings {
+            if sem_names.contains(&cur) {
+                let target = binds.get(&cur).ok_or_else(|| format!("no theme binding for {cur}"))?;
+                cur = target.clone();
+                continue;
+            }
+        }
+
+        if let Some(tok) = tokens.get(&cur) {
+            if visited.len() >= 2 && !colour_names.contains(&cur) {
+                return Err(format!("{cur} is not a colour token"));
+            }
+            if let Some(alias) = tok.alias() {
+                cur = alias.to_string();
+                continue;
+            }
+            let CValue::Str(s) = &tok.value else {
+                return Err(format!("{cur}: colour value must be a string"));
+            };
+            if require_prim_literal && token_tier(&cur) != "prim" {
+                return Err(format!("{cur}: literal colour outside prim tier (colour tokens must resolve to prim.*)"));
+            }
+            return css::parse_colour(s).ok_or_else(|| format!("{cur}: invalid colour value {s:?}"));
+        }
+
+        if let Some(repl) = deprecations.get(&cur) {
+            cur = repl.clone();
+            continue;
+        }
+
+        return Err(format!("{cur} is not a token"));
+    }
+}
+
+fn populate_dtcg_theme(
+    theme: &str,
+    tokens: &BTreeMap<String, Token>,
+    bindings: Option<&BTreeMap<String, String>>,
+    deprecations: &BTreeMap<String, String>,
+    require_prim_literal: bool,
+    out: &mut Tokens,
+) -> Result<(), String> {
+    let mut colour_names = BTreeSet::new();
+    let mut sem_names = BTreeSet::new();
+    let mut has_tiers = false;
+    for (name, tok) in tokens {
+        if is_colour_token(tokens, tok) {
+            let tier = token_tier(name);
+            if matches!(tier, "prim" | "sem" | "comp") {
+                has_tiers = true;
+            }
+            if tier == "sem" {
+                sem_names.insert(name.clone());
+            }
+            colour_names.insert(name.clone());
+        }
+    }
+    if colour_names.is_empty() {
+        return Err(format!("theme \"{theme}\" has no colour tokens"));
+    }
+
+    let mut m = BTreeMap::new();
+    for name in &colour_names {
+        let c = resolve_dtcg_colour(
+            name,
+            tokens,
+            &colour_names,
+            &sem_names,
+            bindings,
+            deprecations,
+            require_prim_literal && has_tiers,
+        )?;
+        let expose = if has_tiers { matches!(token_tier(name), "sem" | "comp") } else { true };
+        if expose {
+            let prop = format!("--{}", name.replace('.', "-"));
+            out.props.insert(prop.clone());
+            m.insert(prop, c);
+        }
+    }
+    if m.is_empty() {
+        return Err(format!("theme \"{theme}\" has no exposed colour tokens"));
+    }
+    out.themes.insert(theme.to_string(), m);
+    Ok(())
+}
+
+fn collect_dtcg_map(file: &str, root: &CValue) -> Result<BTreeMap<String, Token>, String> {
+    let mut raw = Vec::new();
+    let mut findings = Vec::new();
+    collect_dtcg(file, root, &mut raw, &mut findings);
+    if let Some(first) = findings.first() {
+        return Err(first.to_string());
+    }
+    let mut map = BTreeMap::new();
+    for tok in raw {
+        if map.contains_key(&tok.name) {
+            return Err(format!("{file}: duplicate token name {:?}", tok.name));
+        }
+        map.insert(tok.name.clone(), tok);
+    }
+    Ok(map)
+}
+
+fn is_legacy_flat_theme(values: &BTreeMap<String, CValue>) -> bool {
+    !values.is_empty()
+        && values.iter().all(|(k, v)| {
+            !k.starts_with('$')
+                && match v {
+                    CValue::Str(_) => true,
+                    CValue::Obj(o) => o.len() == 1 && matches!(o.get("$value"), Some(CValue::Str(_))),
+                    _ => false,
+                }
+        })
+}
+
+/// Reads the theme names and colour values of a token JSON file (single DTCG token file,
+/// multi-theme DTCG JSON, or legacy flat `{"themes": ...}`).
 pub fn load_tokens(bytes: &[u8]) -> Result<Tokens, String> {
-    let v = parse_json(bytes).map_err(|e| format!("invalid JSON: {e}"))?;
-    let CValue::Obj(top) = v else { return Err("token file is not a JSON object".to_string()) };
-    let Some(CValue::Obj(themes)) = top.get("themes") else {
-        return Err("token file has no \"themes\" object".to_string());
+    let v =
+        parse_with_limits(bytes, MAX_FILE_BYTES as usize, MAX_JSON_DEPTH).map_err(|e| format!("invalid JSON: {e}"))?;
+    let CValue::Obj(top) = &v else { return Err("token file is not a JSON object".to_string()) };
+    let mut out = Tokens::default();
+    let empty_deps = BTreeMap::new();
+
+    let Some(themes_val) = top.get("themes") else {
+        let map = collect_dtcg_map("tokens", &v)?;
+        populate_dtcg_theme("light", &map, None, &empty_deps, false, &mut out)?;
+        return Ok(out);
+    };
+
+    let CValue::Obj(themes) = themes_val else {
+        return Err("token file \"themes\" field is not an object".to_string());
     };
     if themes.is_empty() {
         return Err("token file defines no theme".to_string());
     }
-    let mut out = Tokens::default();
+
     for (theme, values) in themes {
-        let CValue::Obj(values) = values else { return Err(format!("theme \"{theme}\" is not an object")) };
-        let mut m = BTreeMap::new();
-        for (name, val) in values {
-            let text = match val {
-                CValue::Str(t) => Some(t.as_str()),
-                CValue::Obj(o) => match o.get("$value") {
-                    Some(CValue::Str(t)) => Some(t.as_str()),
-                    _ => {
-                        return Err(format!(
-                            "theme \"{theme}\": token \"{name}\" is a nested group; only flat entries are read"
-                        ))
-                    }
-                },
-                _ => None,
-            };
-            if let Some(c) = text.and_then(css::parse_colour) {
-                let prop = format!("--{}", name.replace('.', "-"));
-                out.props.insert(prop.clone());
-                m.insert(prop, c);
+        let CValue::Obj(values_obj) = values else { return Err(format!("theme \"{theme}\" is not an object")) };
+        if is_legacy_flat_theme(values_obj) {
+            let mut m = BTreeMap::new();
+            for (name, val) in values_obj {
+                let text = match val {
+                    CValue::Str(t) => Some(t.as_str()),
+                    CValue::Obj(o) => match o.get("$value") {
+                        Some(CValue::Str(t)) => Some(t.as_str()),
+                        _ => None,
+                    },
+                    _ => None,
+                };
+                if let Some(c) = text.and_then(css::parse_colour) {
+                    let prop = format!("--{}", name.replace('.', "-"));
+                    out.props.insert(prop.clone());
+                    m.insert(prop, c);
+                }
+            }
+            if m.is_empty() {
+                return Err(format!(
+                    "theme \"{theme}\" has no colour values (only flat \"name\": \"#rrggbb\" or {{\"$value\": ...}} entries are read)"
+                ));
+            }
+            out.themes.insert(theme.clone(), m);
+        } else {
+            let map = collect_dtcg_map(theme, values)?;
+            populate_dtcg_theme(theme, &map, None, &empty_deps, false, &mut out)?;
+        }
+    }
+    Ok(out)
+}
+
+fn read_pkg_json(path: &Path, label: &str, retained: &mut usize) -> Result<CValue, A11yError> {
+    let io = |e: std::io::Error| A11yError::Io { file: label.to_string(), message: e.to_string() };
+    let meta = fs::symlink_metadata(path).map_err(io)?;
+    if meta.file_type().is_symlink() {
+        return Err(parse_err(label, "symbolic links are not allowed in token packages".to_string()));
+    }
+    if !meta.is_file() {
+        return Err(parse_err(label, "expected a regular file".to_string()));
+    }
+    if meta.len() > PKG_MAX_FILE_BYTES as u64 {
+        return Err(parse_err(label, format!("larger than {PKG_MAX_FILE_BYTES} bytes")));
+    }
+    let bytes = fs::read(path).map_err(io)?;
+    if bytes.len() > PKG_MAX_FILE_BYTES {
+        return Err(parse_err(label, format!("larger than {PKG_MAX_FILE_BYTES} bytes")));
+    }
+    *retained = retained.saturating_add(bytes.len());
+    if *retained > MAX_RETAINED_BYTES {
+        return Err(parse_err(label, format!("token package exceeds {MAX_RETAINED_BYTES} retained bytes")));
+    }
+    parse_with_limits(&bytes, PKG_MAX_FILE_BYTES, MAX_JSON_DEPTH).map_err(|e| parse_err(label, e.to_string()))
+}
+
+fn collect_token_files(
+    dir: &Path,
+    rel: &str,
+    depth: usize,
+    seen_files: &mut usize,
+    out: &mut Vec<(String, PathBuf)>,
+) -> Result<(), A11yError> {
+    if depth > PKG_MAX_DIR_DEPTH {
+        return Err(parse_err(&show(dir), format!("deeper than {PKG_MAX_DIR_DEPTH} directories")));
+    }
+    let io = |e: std::io::Error| A11yError::Io { file: show(dir), message: e.to_string() };
+    let mut entries = Vec::new();
+    for entry in fs::read_dir(dir).map_err(io)? {
+        let entry = entry.map_err(io)?;
+        entries.push((entry.file_name(), entry.path()));
+    }
+    entries.sort_by(|a, b| a.0.cmp(&b.0));
+    for (os_name, child_path) in entries {
+        let name = os_name
+            .to_str()
+            .ok_or_else(|| parse_err(&show(&child_path), "file name is not valid UTF-8".to_string()))?;
+        let child_rel = if rel.is_empty() { name.to_string() } else { format!("{rel}/{name}") };
+        *seen_files += 1;
+        if *seen_files > PKG_MAX_FILES {
+            return Err(parse_err(&show(dir), format!("more than {PKG_MAX_FILES} files in token package")));
+        }
+        let meta = fs::symlink_metadata(&child_path)
+            .map_err(|e| A11yError::Io { file: show(&child_path), message: e.to_string() })?;
+        if meta.file_type().is_symlink() {
+            return Err(parse_err(&child_rel, "symbolic links are not allowed in token packages".to_string()));
+        }
+        if meta.is_dir() {
+            collect_token_files(&child_path, &child_rel, depth + 1, seen_files, out)?;
+        } else if meta.is_file() && name.ends_with(".tokens.json") {
+            out.push((child_rel, child_path));
+        }
+    }
+    Ok(())
+}
+
+fn parse_theme_file(v: &CValue, rel: &str, expected_theme: &str) -> Result<BTreeMap<String, String>, A11yError> {
+    let CValue::Obj(obj) = v else {
+        return Err(parse_err(rel, "theme file must be a JSON object".to_string()));
+    };
+    let keys: Vec<&str> = obj.keys().map(String::as_str).collect();
+    if keys != ["bindings", "format", "theme"] {
+        return Err(parse_err(rel, "theme file must have exact keys bindings, format, theme".to_string()));
+    }
+    if obj.get("format") != Some(&CValue::Str("fid-design-theme@1".to_string())) {
+        return Err(parse_err(rel, "theme format must be \"fid-design-theme@1\"".to_string()));
+    }
+    if obj.get("theme") != Some(&CValue::Str(expected_theme.to_string())) {
+        return Err(parse_err(rel, format!("theme field must match filename {expected_theme:?}")));
+    }
+    let Some(CValue::Obj(bindings_obj)) = obj.get("bindings") else {
+        return Err(parse_err(rel, "bindings must be a JSON object".to_string()));
+    };
+    let mut out = BTreeMap::new();
+    for (k, val) in bindings_obj {
+        let CValue::Str(raw) = val else {
+            return Err(parse_err(rel, format!("binding {k:?} must be a \"{{target}}\" alias string")));
+        };
+        let Some(target) = parse_alias(raw).filter(|t| is_valid_name(t)) else {
+            return Err(parse_err(rel, format!("binding {k:?} value {raw:?} is not a valid \"{{name}}\" alias")));
+        };
+        out.insert(k.clone(), target.to_string());
+    }
+    Ok(out)
+}
+
+fn read_deprecations(root: &Path, retained: &mut usize) -> Result<BTreeMap<String, String>, A11yError> {
+    let dep_path = root.join("deprecations.json");
+    let dep_label = show(&dep_path);
+    match fs::symlink_metadata(&dep_path) {
+        Err(e) if e.kind() == ErrorKind::NotFound => return Ok(BTreeMap::new()),
+        Err(e) => return Err(A11yError::Io { file: dep_label, message: e.to_string() }),
+        Ok(m) => {
+            if m.file_type().is_symlink() {
+                return Err(parse_err(&dep_label, "symbolic links are not allowed in token packages".to_string()));
+            }
+            if !m.is_file() {
+                return Err(parse_err(&dep_label, "deprecations.json must be a regular file".to_string()));
             }
         }
-        if m.is_empty() {
-            return Err(format!(
-                "theme \"{theme}\" has no colour values (only flat \"name\": \"#rrggbb\" or {{\"$value\": ...}} entries are read)"
-            ));
+    }
+    let val = read_pkg_json(&dep_path, &dep_label, retained)?;
+    let CValue::Arr(items) = val else {
+        return Err(parse_err(&dep_label, "deprecations.json must be a JSON array".to_string()));
+    };
+    let mut out = BTreeMap::new();
+    for (i, item) in items.iter().enumerate() {
+        let CValue::Obj(o) = item else {
+            return Err(parse_err(&dep_label, format!("deprecation entry {i} is not an object")));
+        };
+        let Some(CValue::Str(name)) = o.get("name") else {
+            return Err(parse_err(&dep_label, format!("deprecation entry {i}: missing string \"name\"")));
+        };
+        if let Some(CValue::Str(repl)) = o.get("replacement") {
+            if !repl.is_empty() {
+                out.insert(name.clone(), repl.clone());
+            }
         }
-        out.themes.insert(theme.clone(), m);
+    }
+    Ok(out)
+}
+
+/// Loads tokens from either a JSON file or a design-system UX package directory (`<dir>/tokens/`).
+pub fn load_tokens_path(path: &Path) -> Result<Tokens, A11yError> {
+    let label = show(path);
+    let meta = fs::symlink_metadata(path).map_err(|e| A11yError::Io { file: label.clone(), message: e.to_string() })?;
+    if meta.file_type().is_symlink() {
+        return Err(parse_err(&label, "symbolic links are not allowed as token input".to_string()));
+    }
+    if meta.is_file() {
+        let bytes = read_bytes(path)?;
+        return load_tokens(&bytes).map_err(|message| A11yError::Parse { file: label, message });
+    }
+    if !meta.is_dir() {
+        return Err(parse_err(&label, "token input must be a file or directory".to_string()));
+    }
+
+    let tokens_dir = path.join("tokens");
+    let tokens_label = show(&tokens_dir);
+    let tokens_meta = fs::symlink_metadata(&tokens_dir)
+        .map_err(|e| parse_err(&tokens_label, format!("missing tokens directory: {e}")))?;
+    if tokens_meta.file_type().is_symlink() || !tokens_meta.is_dir() {
+        return Err(parse_err(&tokens_label, "tokens entry must be a real directory".to_string()));
+    }
+
+    let mut seen_files = 0usize;
+    let mut token_files = Vec::new();
+    collect_token_files(&tokens_dir, "tokens", 0, &mut seen_files, &mut token_files)?;
+    if token_files.is_empty() {
+        return Err(parse_err(&label, "no *.tokens.json files found under tokens/".to_string()));
+    }
+
+    let mut retained = 0usize;
+    let deprecations = read_deprecations(path, &mut retained)?;
+
+    let mut token_map: BTreeMap<String, Token> = BTreeMap::new();
+    for (rel, file_path) in &token_files {
+        let val = read_pkg_json(file_path, rel, &mut retained)?;
+        let mut collected = Vec::new();
+        let mut findings = Vec::new();
+        collect_dtcg(rel, &val, &mut collected, &mut findings);
+        if let Some(first) = findings.first() {
+            return Err(parse_err(rel, first.to_string()));
+        }
+        for tok in collected {
+            if let Some(prev) = token_map.get(&tok.name) {
+                return Err(parse_err(
+                    rel,
+                    format!("duplicate token {:?} (already defined in {})", tok.name, prev.file),
+                ));
+            }
+            token_map.insert(tok.name.clone(), tok);
+        }
+    }
+
+    let mut out = Tokens::default();
+    let themes_dir = tokens_dir.join("themes");
+    match fs::symlink_metadata(&themes_dir) {
+        Err(e) if e.kind() == ErrorKind::NotFound => {
+            populate_dtcg_theme("light", &token_map, None, &deprecations, true, &mut out)
+                .map_err(|m| parse_err(&label, m))?;
+        }
+        Err(e) => return Err(A11yError::Io { file: show(&themes_dir), message: e.to_string() }),
+        Ok(tm) => {
+            if tm.file_type().is_symlink() || !tm.is_dir() {
+                return Err(parse_err(&show(&themes_dir), "tokens/themes must be a real directory".to_string()));
+            }
+            let io = |e: std::io::Error| A11yError::Io { file: show(&themes_dir), message: e.to_string() };
+            let mut theme_entries = Vec::new();
+            for entry in fs::read_dir(&themes_dir).map_err(io)? {
+                let entry = entry.map_err(io)?;
+                theme_entries.push((entry.file_name(), entry.path()));
+            }
+            theme_entries.sort_by(|a, b| a.0.cmp(&b.0));
+
+            let mut found_themes = 0usize;
+            for (os_name, theme_path) in theme_entries {
+                let Some(name) = os_name.to_str() else {
+                    return Err(parse_err(&show(&theme_path), "theme file name is not valid UTF-8".to_string()));
+                };
+                let Some(theme_name) = name.strip_suffix(".json") else {
+                    continue;
+                };
+                let rel = format!("tokens/themes/{name}");
+                let val = read_pkg_json(&theme_path, &rel, &mut retained)?;
+                let bindings = parse_theme_file(&val, &rel, theme_name)?;
+                populate_dtcg_theme(theme_name, &token_map, Some(&bindings), &deprecations, true, &mut out)
+                    .map_err(|m| parse_err(&rel, m))?;
+                found_themes += 1;
+            }
+            if found_themes == 0 {
+                return Err(parse_err(&show(&themes_dir), "tokens/themes contains no *.json theme files".to_string()));
+            }
+        }
+    }
+
+    if out.themes.is_empty() {
+        return Err(parse_err(&label, "token package defines no theme".to_string()));
     }
     Ok(out)
 }
@@ -564,8 +975,7 @@ impl ColourCtx<'_> {
 /// Runs the gate. Returns the report, or the error that makes the run exit with code 2.
 pub fn run(opts: &Options) -> Result<Report, A11yError> {
     let tokens_label = show(&opts.tokens);
-    let tokens = load_tokens(&read_bytes(&opts.tokens)?)
-        .map_err(|message| A11yError::Parse { file: tokens_label.clone(), message })?;
+    let tokens = load_tokens_path(&opts.tokens)?;
     let suppressions = match &opts.config {
         Some(p) => load_config(&read_bytes(p)?).map_err(|message| A11yError::Parse { file: show(p), message })?,
         None => Vec::new(),

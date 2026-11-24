@@ -700,7 +700,7 @@ impl CommitProbe for HangAt {
 
 /// The child side of the crash tests (runs only when spawned by them).
 #[test]
-#[ignore]
+#[ignore = "helper subprocess spawned by crash_at_* tests via --exact --ignored"]
 fn crash_child() {
     let Some(root) = std::env::var_os(CRASH_ROOT_ENV) else { return };
     let mode = std::env::var(CRASH_MODE_ENV).unwrap();

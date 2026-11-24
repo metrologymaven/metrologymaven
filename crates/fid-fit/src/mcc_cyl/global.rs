@@ -637,7 +637,7 @@ mod tests {
     /// points of a cylinder: `cargo test --release -p fid-fit --lib full_test_cost -- --ignored
     /// --nocapture`.
     #[test]
-    #[ignore]
+    #[ignore = "timing benchmark on 200k points (no assertions; ~2.2s debug); run with --release --ignored --nocapture"]
     fn full_test_cost() {
         let n = 200_000;
         let mut q = Vec::with_capacity(3 * n);

@@ -1153,17 +1153,40 @@ pub fn write_ply(
         let _ = writeln!(header, "element face {tri_count}");
         header.push_str("property list uchar uint vertex_indices\n");
     }
-    header.push_str("end_header\n");
-    sink.write_bytes(header.as_bytes())?;
-
     let get_xyz = |i: u64| -> Result<[f64; 3], IoError> {
         let p = match geom {
             BuiltGeometry::Mesh(bm) => bm.mesh.vertex(i),
             BuiltGeometry::PointSet(bp) => bp.points.point(i),
         }
         .ok_or(IoError::Malformed { at: Position::byte(0), reason: "vertex_missing" })?;
-        Ok(if is_metres { p } else { [p[0] / inv, p[1] / inv, p[2] / inv] })
+        let scaled = if is_metres { p } else { [p[0] / inv, p[1] / inv, p[2] / inv] };
+        if !scaled.iter().all(|c| c.is_finite()) {
+            return Err(IoError::Malformed { at: Position::byte(0), reason: "non_finite_coordinate" });
+        }
+        if opts.precision == PlyExportPrecision::Float && !scaled.iter().all(|&c| (c as f32).is_finite()) {
+            return Err(IoError::Malformed { at: Position::byte(0), reason: "non_finite_coordinate" });
+        }
+        Ok(scaled)
     };
+
+    for i in 0..v_count {
+        let _ = get_xyz(i)?;
+        if include_normals && opts.precision == PlyExportPrecision::Float {
+            if let Some(ncols) = &attrs.normal {
+                let idx = usize::try_from(i).unwrap_or(usize::MAX);
+                for col in ncols {
+                    if let Some(&c) = col.get(idx) {
+                        if !(c as f32).is_finite() {
+                            return Err(IoError::Malformed { at: Position::byte(0), reason: "non_finite_coordinate" });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    header.push_str("end_header\n");
+    sink.write_bytes(header.as_bytes())?;
 
     match opts.encoding {
         PlyExportEncoding::BinaryLe => {

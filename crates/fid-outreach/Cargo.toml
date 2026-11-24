@@ -15,13 +15,16 @@ path = "src/main.rs"
 # toml: reads the definition, source, criteria, app-list and base files as untyped tables (no serde derive); same pinned
 # dependency as fid-platform and fid-knp1-lint, already in Cargo.lock. Duplicate keys and
 # malformed TOML are rejected by the parser. fid-canon: writes the --json reports as canonical JSON,
-# and reads the a11y token and configuration JSON. HTML and CSS (qa a11y) use bounded in-house parsers.
+# and reads the a11y token and configuration JSON. fid-design-pkg: reads DTCG token trees
+# (`tokens/**/*.tokens.json`) and validates token names/aliases for `qa a11y`. HTML and CSS (qa a11y)
+# use bounded in-house parsers.
 # fid-types: side-effect and determinism classes, command names and sha256: digests read from the
 # docs-ref-v1 records (ref-render, ref-check), and the digest type of the site import lock file.
 # sha2 (site import, OUTR.SITE.GEN.IMPORT): streaming SHA-256 of vendored inputs; sha2 0.10 is
 # already in the graph through fid-canon.
 [dependencies]
 fid-canon = { path = "../fid-canon" }
+fid-design-pkg = { path = "../fid-design-pkg" }
 fid-types = { path = "../fid-types" }
 sha2 = "0.10"
 toml = { version = "0.8", default-features = false, features = ["parse"] }

@@ -10,7 +10,7 @@ use fid_io_mesh::ply::{
     write_ply, PlyExportEncoding, PlyExportOptions, PlyExportPrecision, PlyFormat, PLY_POINT_SET_ELEMENT_TYPE,
 };
 use fid_io_mesh::stl::STL_ELEMENT_TYPE;
-use fid_io_mesh::{BuiltGeometry, SourcePrecision};
+use fid_io_mesh::{BuiltGeometry, MeshBuilder, SourcePrecision};
 use fid_io_reg::detect::Registry;
 use fid_io_reg::env::export::{
     conformance as export_conformance, ByteSink, ExportEnv, ExportParams, ExportRun, SourceRef,
@@ -21,7 +21,7 @@ use fid_io_reg::env::import::{
 use fid_io_reg::prov::{PrincipalCommit, PrincipalKind};
 use fid_io_reg::report::TypeName;
 use fid_io_reg::roots::{RootAccess, RootId, RootSet};
-use fid_io_reg::{Budget, IoError, LimitKind, LimitRequest, Principal};
+use fid_io_reg::{Budget, IoError, LimitKind, LimitRequest, Position, Principal};
 use fid_project::{ElementTypeDef, ElementTypeRegistry, Tree, Uuid, STAGE_ADDED};
 use fid_replay::ReplayOutcome;
 use fid_types::Digest;
@@ -443,4 +443,53 @@ fn ac7_replay_identical_and_export_conformance_kit() {
         fid_canon::parse(b"{\"encoding\":\"binary_le\",\"precision\":\"float\",\"properties\":[\"quality\"]}").unwrap();
     let exp_out = exp_cmd.prepare(&exp_env, &ep, &geom).unwrap().place().unwrap();
     assert!(!exp_out.report.warnings().is_empty(), "expected f32_rounding warning when downcasting double to float");
+}
+
+#[test]
+fn export_overflow_fails_atomically_without_writing_header() {
+    let mut b_huge = MeshBuilder::new(SourcePrecision::F64);
+    let mut budget = default_budget();
+    let v0 = b_huge.push_vertex([1e305, 0.0, 0.0], &mut budget, Position::byte(0)).unwrap();
+    let v1 = b_huge.push_vertex([0.0, 1.0, 0.0], &mut budget, Position::byte(0)).unwrap();
+    let v2 = b_huge.push_vertex([0.0, 0.0, 1.0], &mut budget, Position::byte(0)).unwrap();
+    b_huge.push_face_u64([v0, v1, v2], &mut budget, Position::byte(0)).unwrap();
+    let geom_huge = b_huge.build(frame0(), &mut budget, Position::byte(0)).unwrap();
+
+    let mut sink_um = VecSink(Vec::new());
+    let opts_um = PlyExportOptions {
+        encoding: PlyExportEncoding::Ascii,
+        precision: PlyExportPrecision::Double,
+        unit: LengthUnit::Um,
+        properties: Vec::new(),
+    };
+    let err = write_ply(&geom_huge, &opts_um, &mut sink_um).unwrap_err();
+    assert!(matches!(err, IoError::Malformed { reason: "non_finite_coordinate", .. }), "unexpected error: {err:?}");
+    assert!(sink_um.0.is_empty(), "failed PLY export must write 0 bytes, wrote {}", sink_um.0.len());
+
+    let mut b_f32 = MeshBuilder::new(SourcePrecision::F64);
+    let v0 = b_f32.push_vertex([1e39, 0.0, 0.0], &mut budget, Position::byte(0)).unwrap();
+    let v1 = b_f32.push_vertex([0.0, 1.0, 0.0], &mut budget, Position::byte(0)).unwrap();
+    let v2 = b_f32.push_vertex([0.0, 0.0, 1.0], &mut budget, Position::byte(0)).unwrap();
+    b_f32.push_face_u64([v0, v1, v2], &mut budget, Position::byte(0)).unwrap();
+    let geom_f32_ovf = b_f32.build(frame0(), &mut budget, Position::byte(0)).unwrap();
+    for encoding in [PlyExportEncoding::BinaryLe, PlyExportEncoding::Ascii] {
+        let mut sink = VecSink(Vec::new());
+        let opts = PlyExportOptions {
+            encoding,
+            precision: PlyExportPrecision::Float,
+            unit: LengthUnit::M,
+            properties: Vec::new(),
+        };
+        let err = write_ply(&geom_f32_ovf, &opts, &mut sink).unwrap_err();
+        assert!(matches!(err, IoError::Malformed { reason: "non_finite_coordinate", .. }));
+        assert!(sink.0.is_empty(), "failed PLY float export must write 0 bytes");
+    }
+
+    let mut b_pts = MeshBuilder::new(SourcePrecision::F64);
+    b_pts.push_vertex([1e305, 0.0, 0.0], &mut budget, Position::byte(0)).unwrap();
+    let geom_pts = b_pts.build(frame0(), &mut budget, Position::byte(0)).unwrap();
+    let mut sink_pts = VecSink(Vec::new());
+    let err_pts = write_ply(&geom_pts, &opts_um, &mut sink_pts).unwrap_err();
+    assert!(matches!(err_pts, IoError::Malformed { reason: "non_finite_coordinate", .. }));
+    assert!(sink_pts.0.is_empty());
 }

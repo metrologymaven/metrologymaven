@@ -89,7 +89,7 @@ pub fn run_balloon_file(
     ]))
     .ok_or_else(|| SliceError::new("internal", "invalid demo RevisionId"))?;
 
-    let drawing_number = file_name.trim_end_matches(".pdf").to_string();
+    let drawing_number = strip_pdf_suffix_ascii(&file_name).to_string();
     let imported = {
         let mut env = ImportEnv { roots: &roots, principal: Principal::Agent, blobs: &mut blobs, ids: &mut ids };
         add_drawing_balloon(
@@ -217,5 +217,29 @@ fn proposal_to_row(p: &BalloonProposal) -> BalloonSummaryRow {
         confidence: p.confidence.as_str().to_string(),
         anchor_cmm: (p.anchor.x, p.anchor.y),
         label_cmm: (p.label.x, p.label.y),
+    }
+}
+
+fn strip_pdf_suffix_ascii(name: &str) -> &str {
+    if name.len() >= 4 && name.as_bytes()[name.len() - 4..].eq_ignore_ascii_case(b".pdf") {
+        &name[..name.len() - 4]
+    } else {
+        name
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::strip_pdf_suffix_ascii;
+
+    #[test]
+    fn strip_pdf_suffix_is_single_and_case_insensitive() {
+        assert_eq!(strip_pdf_suffix_ascii("vector_bracket.pdf"), "vector_bracket");
+        assert_eq!(strip_pdf_suffix_ascii("VECTOR_BRACKET.PDF"), "VECTOR_BRACKET");
+        assert_eq!(strip_pdf_suffix_ascii("Bracket.Pdf"), "Bracket");
+        assert_eq!(strip_pdf_suffix_ascii("foo.pdf.pdf"), "foo.pdf");
+        assert_eq!(strip_pdf_suffix_ascii("drawing.dwg"), "drawing.dwg");
+        assert_eq!(strip_pdf_suffix_ascii(".PDF"), "");
+        assert_eq!(strip_pdf_suffix_ascii("零件.PDF"), "零件");
     }
 }

@@ -581,3 +581,19 @@ fn ac7_ten_million_triangles_benchmark() {
     assert_eq!(res.built.counts.vertices, 3 * u64::from(n));
     assert!(elapsed.as_secs_f64() < 5.0, "10M binary STL took {:.3}s (> 5 s)", elapsed.as_secs_f64());
 }
+
+#[test]
+fn export_overflow_fails_atomically_in_binary_and_ascii() {
+    let mesh =
+        Mesh::from_points(frame0(), &[[1e35, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], &[[0, 1, 2]]).unwrap();
+    for encoding in [StlEncoding::Binary, StlEncoding::Ascii] {
+        let mut sink = VecSink(Vec::new());
+        let opts = StlExportOptions { encoding, unit: LengthUnit::Um, solid_name: "ovf".to_string() };
+        let err = write_stl(&mesh, &opts, &mut sink).unwrap_err();
+        assert!(
+            matches!(err, IoError::Malformed { reason: "non_finite_coordinate", .. }),
+            "unexpected error for {encoding:?}: {err:?}"
+        );
+        assert!(sink.0.is_empty(), "failed STL {encoding:?} export must write 0 bytes, wrote {}", sink.0.len());
+    }
+}

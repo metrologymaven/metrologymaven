@@ -1,0 +1,281 @@
+{
+ "about": "SCAN.CMP.DEV.PRIM AC-2 / REQ-006 20 mm cube fixture; written by make_prim_fixtures.py (CC0)",
+ "cases": [
+  {
+   "name": "face_pos_x_out",
+   "normal_hex": "3f689374bc6a7ef8",
+   "normal_m": 0.002999999999999999,
+   "point": [
+    0.013,
+    0.002,
+    -0.003
+   ],
+   "region": "face",
+   "shortest_hex": "3f689374bc6a7ef8",
+   "shortest_m": 0.002999999999999999
+  },
+  {
+   "name": "face_neg_z_out",
+   "normal_hex": "3f647ae147ae147c",
+   "normal_m": 0.0025000000000000005,
+   "point": [
+    0.001,
+    -0.004,
+    -0.0125
+   ],
+   "region": "face",
+   "shortest_hex": "3f647ae147ae147c",
+   "shortest_m": 0.0025000000000000005
+  },
+  {
+   "name": "face_pos_y_in",
+   "normal_hex": "bf689374bc6a7efa",
+   "normal_m": -0.003,
+   "point": [
+    0.002,
+    0.007,
+    -0.001
+   ],
+   "region": "face",
+   "shortest_hex": "bf689374bc6a7efa",
+   "shortest_m": -0.003
+  },
+  {
+   "name": "face_neg_x_in",
+   "normal_hex": "bf589374bc6a7ef8",
+   "normal_m": -0.0014999999999999996,
+   "point": [
+    -0.0085,
+    0.001,
+    0.002
+   ],
+   "region": "face",
+   "shortest_hex": "bf589374bc6a7ef8",
+   "shortest_m": -0.0014999999999999996
+  },
+  {
+   "name": "edge_xy_out",
+   "normal_hex": "3f74462fb7ff5034",
+   "normal_m": 0.0049497474683058325,
+   "point": [
+    0.013,
+    0.014,
+    0.002
+   ],
+   "region": "edge",
+   "shortest_hex": "3f747ae147ae147a",
+   "shortest_m": 0.004999999999999999
+  },
+  {
+   "name": "edge_xz_out",
+   "normal_hex": "3f6160bb2fff6950",
+   "normal_m": 0.002121320343559642,
+   "point": [
+    -0.012,
+    0.003,
+    0.011
+   ],
+   "region": "edge",
+   "shortest_hex": "3f62515fdab8464c",
+   "shortest_m": 0.002236067977499789
+  },
+  {
+   "name": "edge_yz_out",
+   "normal_hex": "3f74462fb7ff5034",
+   "normal_m": 0.0049497474683058325,
+   "point": [
+    0.0,
+    -0.013,
+    -0.014
+   ],
+   "region": "edge",
+   "shortest_hex": "3f747ae147ae147a",
+   "shortest_m": 0.004999999999999999
+  },
+  {
+   "name": "corner_ppp_out",
+   "normal_hex": "3f7c60bf64b487da",
+   "normal_m": 0.0069282032302755096,
+   "point": [
+    0.013,
+    0.014,
+    0.015
+   ],
+   "region": "corner",
+   "shortest_hex": "3f7cf68d4fff04db",
+   "shortest_m": 0.007071067811865474
+  },
+  {
+   "name": "corner_nnn_out",
+   "normal_hex": "3f67a5f4d3ebc68b",
+   "normal_m": 0.002886751345948129,
+   "point": [
+    -0.012,
+    -0.011,
+    -0.012
+   ],
+   "region": "corner",
+   "shortest_hex": "3f689374bc6a7ef9",
+   "shortest_m": 0.0029999999999999996
+  },
+  {
+   "name": "corner_pmp_out",
+   "normal_hex": "3f65488f8b8765e2",
+   "normal_m": 0.0025980762113533154,
+   "point": [
+    0.0115,
+    -0.012,
+    0.011
+   ],
+   "region": "corner",
+   "shortest_hex": "3f660ec12baef3a8",
+   "shortest_m": 0.0026925824035672515
+  },
+  {
+   "name": "on_face",
+   "normal_hex": "0000000000000000",
+   "normal_m": 0.0,
+   "point": [
+    0.01,
+    0.002,
+    -0.003
+   ],
+   "region": "surface",
+   "shortest_hex": "0000000000000000",
+   "shortest_m": 0.0
+  },
+  {
+   "name": "on_edge",
+   "normal_hex": "0000000000000000",
+   "normal_m": 0.0,
+   "point": [
+    0.01,
+    0.01,
+    0.002
+   ],
+   "region": "surface",
+   "shortest_hex": "0000000000000000",
+   "shortest_m": 0.0
+  },
+  {
+   "name": "on_corner",
+   "normal_hex": "0000000000000000",
+   "normal_m": 0.0,
+   "point": [
+    0.01,
+    0.01,
+    0.01
+   ],
+   "region": "surface",
+   "shortest_hex": "0000000000000000",
+   "shortest_m": 0.0
+  }
+ ],
+ "half_extent_m": 0.01,
+ "max_angle_rad": 3.141592653589793,
+ "max_distance_m": 0.02,
+ "triangles": [
+  [
+   0,
+   2,
+   1
+  ],
+  [
+   0,
+   3,
+   2
+  ],
+  [
+   4,
+   5,
+   6
+  ],
+  [
+   4,
+   6,
+   7
+  ],
+  [
+   0,
+   1,
+   5
+  ],
+  [
+   0,
+   5,
+   4
+  ],
+  [
+   3,
+   7,
+   6
+  ],
+  [
+   3,
+   6,
+   2
+  ],
+  [
+   0,
+   4,
+   7
+  ],
+  [
+   0,
+   7,
+   3
+  ],
+  [
+   1,
+   2,
+   6
+  ],
+  [
+   1,
+   6,
+   5
+  ]
+ ],
+ "vertices": [
+  [
+   -0.01,
+   -0.01,
+   -0.01
+  ],
+  [
+   0.01,
+   -0.01,
+   -0.01
+  ],
+  [
+   0.01,
+   0.01,
+   -0.01
+  ],
+  [
+   -0.01,
+   0.01,
+   -0.01
+  ],
+  [
+   -0.01,
+   -0.01,
+   0.01
+  ],
+  [
+   0.01,
+   -0.01,
+   0.01
+  ],
+  [
+   0.01,
+   0.01,
+   0.01
+  ],
+  [
+   -0.01,
+   0.01,
+   0.01
+  ]
+ ]
+}

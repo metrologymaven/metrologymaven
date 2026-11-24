@@ -1894,6 +1894,7 @@ name = "fid-outreach"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-design-pkg",
  "fid-types",
  "sha2 0.10.9",
  "toml",
@@ -2254,6 +2255,10 @@ dependencies = [
 name = "fid-scan-cmp"
 version = "0.0.1"
 dependencies = [
+ "fid-geo-dist",
+ "fid-geo-frame",
+ "fid-geo-index",
+ "fid-geo-nurbs",
  "fid-geo-types",
  "fid-kci",
  "fid-num",

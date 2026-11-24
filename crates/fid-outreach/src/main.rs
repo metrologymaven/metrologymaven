@@ -28,7 +28,7 @@
 //! rule, plan-document dates and announced criteria. Exits 0 with no findings, 1 with any, and 2
 //! when an input cannot be read or parsed, or on bad usage.
 //!
-//! `qa a11y --root <dir> --tokens <file> --out <file> [--config <file>]` (spec node
+//! `qa a11y --root <dir> --tokens <path> --out <file> [--config <file>]` (spec node
 //! `OUTR.SITE.QA.A11Y`): writes the report to `--out`, prints one line per unsuppressed
 //! violation, and exits 0 when there is none, 1 when there is any, and 2 on unreadable or
 //! unparsable input or bad usage.
@@ -129,7 +129,7 @@ commands:
   metric-quarter --store <dir> --defs <file> --quarter <YYYYQn> --out <dir> [--json]
   plan-check --criteria <file> --apps <apps.toml> --plan <file> --reviews <dir> [--base <file>] [--json]
   gate-check --milestone <id> --release <tag> --author <handle> --criteria <file> --tree <dir> --trace <file> --status <file> --tests <file> --signoffs <dir> --roster <file> --out <dir> [--json]
-  qa a11y --root <dir> --tokens <file> --out <file> [--config <file>]
+  qa a11y --root <dir> --tokens <path> --out <file> [--config <file>]
   doc-run --guide <file> --repo <dir> [--json]
   docs-build --src <dir> --ref <dir> --release <tag> --out <dir> [--guides <file>]
   dress-render --list <file> --out <file> [--incumbents <file>]

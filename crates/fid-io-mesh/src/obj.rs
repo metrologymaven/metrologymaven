@@ -341,6 +341,15 @@ fn format_shortest_f64(v: f64) -> String {
     format!("{clean}")
 }
 
+fn scale_point_finite(p: [f64; 3], inv: f64) -> Result<[f64; 3], IoError> {
+    let out = [p[0] / inv, p[1] / inv, p[2] / inv];
+    if out.iter().all(|c| c.is_finite()) {
+        Ok(out)
+    } else {
+        Err(IoError::Malformed { at: Position::byte(0), reason: "non_finite_coordinate" })
+    }
+}
+
 /// Writes `mesh` as Wavefront OBJ into `sink` using shortest round-trip `f64` decimals
 /// (`REQ-004`). When `opts.normals` is true, emits per-face `vn` normals and `f i//n` indices.
 pub fn write_obj(mesh: &Mesh, opts: &ObjExportOptions, sink: &mut dyn ByteSink) -> Result<ObjExportSummary, IoError> {
@@ -348,17 +357,23 @@ pub fn write_obj(mesh: &Mesh, opts: &ObjExportOptions, sink: &mut dyn ByteSink) 
     let inv = unit_scale_to_metres(opts.unit);
     let name = sanitize_object_name(&opts.object_name);
 
+    let v_count = mesh.vertex_count();
+    for i in 0..v_count {
+        let p = mesh.vertex(i).ok_or(IoError::Malformed { at: Position::byte(0), reason: "vertex_missing" })?;
+        let _ = scale_point_finite(p, inv)?;
+    }
+
     let mut out = String::with_capacity(64 * 1024);
     out.push_str("# fiducial wavefront obj\no ");
     out.push_str(&name);
     out.push('\n');
 
-    let v_count = mesh.vertex_count();
     for i in 0..v_count {
         let p = mesh.vertex(i).ok_or(IoError::Malformed { at: Position::byte(0), reason: "vertex_missing" })?;
-        let x = format_shortest_f64(p[0] / inv);
-        let y = format_shortest_f64(p[1] / inv);
-        let z = format_shortest_f64(p[2] / inv);
+        let s = scale_point_finite(p, inv)?;
+        let x = format_shortest_f64(s[0]);
+        let y = format_shortest_f64(s[1]);
+        let z = format_shortest_f64(s[2]);
         use std::fmt::Write as _;
         let _ = writeln!(out, "v {x} {y} {z}");
         if out.len() >= 60 * 1024 {
