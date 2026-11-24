@@ -15,9 +15,11 @@
 //! environment, `proc_exit`); there is no host function for files, sockets, clocks,
 //! randomness or environment variables (REQ-003), and the sealed clock imports trap.
 //!
-//! Limits (REQ-004/005): linear memory capped at [`Limits::memory_bytes`] (default 4 GiB,
-//! `sandbox.memory_limit`), fuel per call and a wall-clock budget per sandbox, i.e. per
-//! package (`sandbox.budget_exhausted`, no partial result). A trap is `sandbox.trap` with its
+//! Limits (REQ-004/005): linear memory capped at [`Limits::memory_bytes`] (default 1 GiB,
+//! KRN.MAN.WASM's `max_memory_size`; `sandbox.memory_limit`), fuel per call and a wall-clock
+//! budget per sandbox, i.e. per package (`sandbox.budget_exhausted`, no partial result).
+//! Loading is bounded too: every parse and validation step is charged to a work budget of 64
+//! units per artifact byte plus 2^20, beyond which the module is `sandbox.malformed_module`. A trap is `sandbox.trap` with its
 //! [`TrapKind`] and never aborts the process (REQ-006). The interpreter is deterministic, so
 //! the same call gives byte-identical envelopes (REQ-007); the watchdog only ever stops a call.
 //!
@@ -33,7 +35,31 @@ use crate::kart::KernelManifest;
 use fid_canon::digest_bytes;
 use fid_types::Digest;
 use std::fmt;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+
+/// A monotonic clock: the time since a fixed origin of the caller's choosing. The sandbox
+/// reads it only when [`Limits::wall_clock`] is set, and only to stop a call.
+pub type Clock = fn() -> Duration;
+
+/// The default clock: [`std::time::Instant`] since the first reading in this process.
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+fn std_clock() -> Duration {
+    static ORIGIN: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+    ORIGIN.get_or_init(std::time::Instant::now).elapsed()
+}
+
+/// The clock used when the caller set none. `wasm32-unknown-unknown` has no clock
+/// (`Instant::now` panics there), so a wall-clock budget needs [`Sandbox::with_clock`].
+fn default_clock() -> Option<Clock> {
+    #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+    {
+        Some(std_clock)
+    }
+    #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+    {
+        None
+    }
+}
 
 /// Function imports a kernel may have, as allowlisted by KRN.MAN.WASM
 /// (`crates/fid-kernel-wasm/wasm-imports.allow`), each bound to a deterministic stub.
@@ -172,15 +198,19 @@ impl std::error::Error for SandboxError {}
 /// Caller-set limits (REQ-004, REQ-005).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Limits {
-    /// Linear-memory cap in bytes, rounded down to whole 64 KiB pages. Default 4 GiB
-    /// \[unverified default, spec REQ-004\].
+    /// Linear-memory cap in bytes, rounded down to whole 64 KiB pages. Default
+    /// [`DEFAULT_MEMORY_BYTES`], 1 GiB: KRN.MAN.WASM's pinned `max_memory_size`.
     pub memory_bytes: u64,
-    /// Fuel per call: one unit per executed operation, plus one per WASI iovec and per KiB
-    /// moved by `memory.copy`, `memory.fill` and WASI reads and writes. Default
+    /// Fuel per call: one unit per executed operation, plus one per WASI iovec, per KiB
+    /// moved by `memory.copy`, `memory.fill` and WASI reads and writes, and per KiB of locals
+    /// zeroed when a function is entered. Default
     /// 4 000 000 000, the KRN.MAN.WASM pinned `fuel`.
     pub fuel_per_call: u64,
     /// Wall-clock budget of the sandbox, counted from its first call over all its calls (one
-    /// sandbox per package). `None` disables the watchdog. Default 120 s \[unverified\].
+    /// sandbox per package). `None` disables the watchdog and the clock is never read. On
+    /// `wasm32-unknown-unknown` a budget needs a caller-provided [`Clock`]
+    /// ([`Sandbox::with_clock`]); without one every call is refused with
+    /// `sandbox.bad_request`. Default 120 s \[unverified\].
     pub wall_clock: Option<Duration>,
     /// Maximum call depth. Default 10 000.
     pub max_call_depth: u32,
@@ -192,10 +222,14 @@ pub struct Limits {
     pub max_module_bytes: u64,
 }
 
+/// Default linear-memory cap: 1 GiB, KRN.MAN.WASM's pinned `max_memory_size`
+/// (`crates/fid-kernel-wasm/wasm-runtime.toml`; maintainer decision 2026-11-23).
+pub const DEFAULT_MEMORY_BYTES: u64 = 1_073_741_824;
+
 impl Default for Limits {
     fn default() -> Self {
         Limits {
-            memory_bytes: 4 * 1024 * 1024 * 1024,
+            memory_bytes: DEFAULT_MEMORY_BYTES,
             fuel_per_call: 4_000_000_000,
             wall_clock: Some(Duration::from_secs(120)),
             max_call_depth: 10_000,
@@ -317,7 +351,10 @@ pub struct Sandbox {
     engine: module::Module,
     limits: Limits,
     digest: Digest,
-    started: Option<Instant>,
+    /// Caller-provided clock; `None` uses [`default_clock`].
+    clock: Option<Clock>,
+    /// Clock reading at the first call that had a wall-clock budget.
+    started: Option<Duration>,
 }
 
 impl Sandbox {
@@ -346,7 +383,14 @@ impl Sandbox {
         if !entry.is_some_and(|t| t.params.is_empty() && t.results.is_empty()) {
             return Err(SandboxError::new(ErrorCode::MalformedModule, "no `_start` export of type [] -> []"));
         }
-        Ok(Sandbox { engine, limits, digest: actual, started: None })
+        Ok(Sandbox { engine, limits, digest: actual, clock: None, started: None })
+    }
+
+    /// Uses `clock` for the wall-clock budget instead of the default monotonic clock. Needed
+    /// on `wasm32-unknown-unknown`, which has none.
+    pub fn with_clock(mut self, clock: Clock) -> Sandbox {
+        self.clock = Some(clock);
+        self
     }
 
     /// The verified artifact digest.
@@ -384,18 +428,27 @@ impl Sandbox {
         ))
     }
 
+    /// The limits of the next run. Reads the clock only when a wall-clock budget is set.
     fn run_limits(&mut self) -> Result<exec::RunLimits, SandboxError> {
-        let now = Instant::now();
-        let started = *self.started.get_or_insert(now);
         let deadline = match self.limits.wall_clock {
-            Some(budget) => {
-                let d = started.checked_add(budget);
-                if d.is_some_and(|d| now >= d) {
-                    return Err(SandboxError::new(ErrorCode::BudgetExhausted, "wall-clock budget exhausted"));
-                }
-                d
-            }
             None => None,
+            Some(budget) => {
+                let clock = self.clock.or_else(default_clock).ok_or_else(|| {
+                    SandboxError::new(
+                        ErrorCode::BadRequest,
+                        "a wall-clock budget needs a caller-provided clock on this target (Sandbox::with_clock)",
+                    )
+                })?;
+                let now = clock();
+                let started = *self.started.get_or_insert(now);
+                match started.checked_add(budget) {
+                    Some(at) if now >= at => {
+                        return Err(SandboxError::new(ErrorCode::BudgetExhausted, "wall-clock budget exhausted"));
+                    }
+                    Some(at) => Some(exec::Deadline { clock, at }),
+                    None => None,
+                }
+            }
         };
         Ok(exec::RunLimits { max_depth: self.limits.max_call_depth, max_slots: self.limits.max_stack_slots, deadline })
     }

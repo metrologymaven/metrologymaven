@@ -16,6 +16,7 @@
 //! signatures, pass; anything else is `sandbox.forbidden_import`.
 
 use super::{ErrorCode, SandboxError, IMPORT_ALLOWLIST, TRAPPED_IMPORTS};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// WebAssembly page size in bytes.
 pub(crate) const PAGE: u64 = 65_536;
@@ -38,8 +39,55 @@ const MAX_OPS: usize = 1 << 24;
 /// Cap on the nesting depth of blocks inside one function.
 const MAX_NESTING: usize = 10_000;
 
-/// Number types. Vector and reference types are refused.
+/// Load work allowed per artifact byte. Together with [`WORK_BASE`] this bounds everything
+/// [`parse`] does, linearly in the artifact size.
+pub(crate) const WORK_PER_BYTE: u64 = 64;
+/// Load work allowed for any module on top of [`WORK_PER_BYTE`].
+pub(crate) const WORK_BASE: u64 = 1 << 20;
+/// Largest work one validation step may do before the budget is checked again: one
+/// `br_table` target (copying and checking at most 2 x [`MAX_PARAMS`] label types), one call
+/// (popping and pushing at most 2 x [`MAX_PARAMS`] operands) or one block end, plus slack.
+#[cfg(test)]
+pub(crate) const WORK_MAX_STEP: u64 = 4 * MAX_PARAMS as u64 + 64;
+
+/// Work done while loading a module, and its cap. Every parse step charges it: one unit per
+/// section byte read, the sorted-set work of type and export deduplication, one unit per
+/// declared local, and the operand-stack work of validation. Loading stops with
+/// `sandbox.malformed_module` as soon as `used` exceeds `cap`, so a hostile module cannot make
+/// loading superlinear in its size.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct Work {
+    pub used: u64,
+    pub cap: u64,
+}
+
+impl Work {
+    /// The budget for an artifact of `len` bytes.
+    pub(crate) fn for_module(len: usize) -> Self {
+        Work { used: 0, cap: WORK_PER_BYTE.saturating_mul(len as u64).saturating_add(WORK_BASE) }
+    }
+
+    fn spend(&mut self, n: u64) -> Result<(), SandboxError> {
+        self.used = self.used.saturating_add(n);
+        if self.used > self.cap {
+            return Err(too_expensive());
+        }
+        Ok(())
+    }
+}
+
+fn too_expensive() -> SandboxError {
+    malformed("limit_exceeded: module too expensive to validate")
+}
+
+/// Cost of one insertion into a sorted set of `n` entries whose key has `len` parts.
+fn sorted_insert_cost(len: usize, n: u32) -> u64 {
+    let depth = u64::from(32 - n.leading_zeros()) + 1;
+    (len as u64 + 1).saturating_mul(depth)
+}
+
+/// Number types. Vector and reference types are refused.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum ValType {
     I32,
     I64,
@@ -48,7 +96,7 @@ pub(crate) enum ValType {
 }
 
 /// A function type.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct FuncType {
     pub params: Vec<ValType>,
     pub results: Vec<ValType>,
@@ -406,8 +454,13 @@ fn section_rank(id: u8) -> Option<u8> {
     }
 }
 
-/// Parses, checks imports, validates and compiles `bytes`.
+/// Parses, checks imports, validates and compiles `bytes` within [`Work::for_module`].
 pub(crate) fn parse(bytes: &[u8]) -> Result<Module, SandboxError> {
+    parse_counted(bytes, &mut Work::for_module(bytes.len()))
+}
+
+/// [`parse`] charging `work`, which holds the work done when it returns, also on refusal.
+pub(crate) fn parse_counted(bytes: &[u8], work: &mut Work) -> Result<Module, SandboxError> {
     let mut r = Reader::new(bytes);
     if r.bytes(4)? != b"\0asm" {
         return Err(malformed("bad_magic"));
@@ -425,6 +478,7 @@ pub(crate) fn parse(bytes: &[u8]) -> Result<Module, SandboxError> {
         let id = r.byte()?;
         let size = r.u32()? as usize;
         let body = r.bytes(size)?;
+        work.spend(size as u64 + 1)?;
         if id == 0 {
             // Custom section: the name must be well formed; the contents are ignored.
             let mut s = Reader::new(body);
@@ -438,7 +492,7 @@ pub(crate) fn parse(bytes: &[u8]) -> Result<Module, SandboxError> {
         last_rank = rank;
         let mut s = Reader::new(body);
         match id {
-            1 => read_types(&mut s, &mut m)?,
+            1 => read_types(&mut s, &mut m, work)?,
             2 => read_imports(&mut s, &mut m)?,
             3 => {
                 let n = s.count(MAX_FUNCS, "functions")?;
@@ -478,7 +532,7 @@ pub(crate) fn parse(bytes: &[u8]) -> Result<Module, SandboxError> {
                     m.globals.push(Global { ty: t, mutable, init });
                 }
             }
-            7 => read_exports(&mut s, &mut m, func_types.len())?,
+            7 => read_exports(&mut s, &mut m, func_types.len(), work)?,
             8 => {
                 let f = s.u32()?;
                 if f as usize >= m.imports.len() + func_types.len() {
@@ -495,6 +549,7 @@ pub(crate) fn parse(bytes: &[u8]) -> Result<Module, SandboxError> {
                     return Err(malformed("function and code section counts differ"));
                 }
                 // Signatures of every function must be known before bodies reference them.
+                work.spend(r.pos as u64)?;
                 let mut skeleton = m.clone();
                 skeleton.funcs = func_types
                     .iter()
@@ -506,7 +561,7 @@ pub(crate) fn parse(bytes: &[u8]) -> Result<Module, SandboxError> {
                         return Err(malformed("limit_exceeded: function body too large"));
                     }
                     let body = s.bytes(size as usize)?;
-                    let f = compile_body(&skeleton, t, body)?;
+                    let f = compile_body(&skeleton, t, body, work)?;
                     ops_total = ops_total.saturating_add(f.code.len()).saturating_add(f.table.len());
                     if ops_total > MAX_OPS {
                         return Err(malformed("limit_exceeded: code too large"));
@@ -560,8 +615,10 @@ pub(crate) fn parse(bytes: &[u8]) -> Result<Module, SandboxError> {
     Ok(m)
 }
 
-fn read_types(s: &mut Reader<'_>, m: &mut Module) -> Result<(), SandboxError> {
+fn read_types(s: &mut Reader<'_>, m: &mut Module, work: &mut Work) -> Result<(), SandboxError> {
     let n = s.count(MAX_TYPES, "types")?;
+    // First index of each distinct type: signature identity in O(n log n), not O(n^2).
+    let mut first: BTreeMap<FuncType, u32> = BTreeMap::new();
     for i in 0..n {
         if s.byte()? != 0x60 {
             return Err(malformed("bad_type: expected function type 0x60"));
@@ -571,7 +628,8 @@ fn read_types(s: &mut Reader<'_>, m: &mut Module) -> Result<(), SandboxError> {
         let nr = s.count(MAX_PARAMS, "results")?;
         let results = (0..nr).map(|_| s.val_type()).collect::<Result<Vec<_>, _>>()?;
         let ft = FuncType { params, results };
-        let canon = m.types.iter().position(|t| *t == ft).map_or(i, |p| p as u32);
+        work.spend(sorted_insert_cost(ft.params.len() + ft.results.len(), i))?;
+        let canon = *first.entry(ft.clone()).or_insert(i);
         m.types.push(ft);
         m.canon_types.push(canon);
     }
@@ -610,9 +668,10 @@ fn read_imports(s: &mut Reader<'_>, m: &mut Module) -> Result<(), SandboxError> 
     Ok(())
 }
 
-fn read_exports(s: &mut Reader<'_>, m: &mut Module, defined: usize) -> Result<(), SandboxError> {
+fn read_exports(s: &mut Reader<'_>, m: &mut Module, defined: usize, work: &mut Work) -> Result<(), SandboxError> {
     let n = s.count(MAX_EXPORTS, "exports")?;
-    for _ in 0..n {
+    let mut names: BTreeSet<String> = BTreeSet::new();
+    for i in 0..n {
         let name = s.name()?;
         let kind = match s.byte()? {
             0 => ExportKind::Func,
@@ -631,7 +690,8 @@ fn read_exports(s: &mut Reader<'_>, m: &mut Module, defined: usize) -> Result<()
         if !in_range {
             return Err(malformed(format!("export {name:?} index out of range")));
         }
-        if m.exports.iter().any(|e| e.name == name) {
+        work.spend(sorted_insert_cost(name.len(), i))?;
+        if !names.insert(name.clone()) {
             return Err(malformed(format!("duplicate export {name:?}")));
         }
         m.exports.push(Export { name, kind, index });
@@ -757,8 +817,9 @@ struct Validator<'m> {
     code: Vec<Op>,
     table: Vec<Target>,
     max_height: usize,
-    /// Validation work done (operand pushes, pops and checks) and its cap, so a hostile body
-    /// cannot make validation quadratic.
+    /// Module load work so far, including this body's operand pushes, pops and checks;
+    /// checked against `budget` after every instruction and every `br_table` target, so a
+    /// hostile body cannot make validation quadratic.
     work: u64,
     budget: u64,
 }
@@ -768,6 +829,14 @@ fn type_err(detail: &str) -> SandboxError {
 }
 
 impl Validator<'_> {
+    /// Refuses the module once the load work exceeds its budget.
+    fn check_budget(&self) -> Result<(), SandboxError> {
+        if self.work > self.budget {
+            return Err(too_expensive());
+        }
+        Ok(())
+    }
+
     fn push(&mut self, t: Opd) {
         self.work += 1;
         self.vals.push(t);
@@ -886,6 +955,7 @@ impl Validator<'_> {
         let idx = n.checked_sub(1 + depth as usize).ok_or_else(|| malformed("branch label out of range"))?;
         let c = self.ctrls.get(idx).ok_or_else(|| malformed("branch label out of range"))?;
         let labels = c.labels().to_vec();
+        self.work += labels.len() as u64 + 1;
         let keep = labels.len();
         let drop = self.vals.len().saturating_sub(c.height).saturating_sub(keep);
         let pc = if c.kind == Kind::Loop { c.start_pc } else { 0 };
@@ -1037,7 +1107,7 @@ pub(crate) fn trunc_sat_sig(n: u32) -> Option<(ValType, ValType)> {
     })
 }
 
-fn compile_body(m: &Module, type_idx: u32, body: &[u8]) -> Result<Func, SandboxError> {
+fn compile_body(m: &Module, type_idx: u32, body: &[u8], work: &mut Work) -> Result<Func, SandboxError> {
     let ft = m.types.get(type_idx as usize).ok_or_else(|| malformed("bad_type_index"))?;
     let mut r = Reader::new(body);
     let mut locals = ft.params.clone();
@@ -1046,10 +1116,12 @@ fn compile_body(m: &Module, type_idx: u32, body: &[u8]) -> Result<Func, SandboxE
     for _ in 0..groups {
         let n = r.u32()?;
         let t = r.val_type()?;
-        declared += u64::from(n);
-        if declared + locals.len() as u64 > MAX_LOCALS {
+        // `locals` already holds the parameters and the earlier groups.
+        if locals.len() as u64 + u64::from(n) > MAX_LOCALS {
             return Err(malformed("limit_exceeded: too many locals"));
         }
+        work.spend(u64::from(n))?;
+        declared += u64::from(n);
         locals.extend(std::iter::repeat_n(t, n as usize));
     }
     let mut v = Validator {
@@ -1060,8 +1132,8 @@ fn compile_body(m: &Module, type_idx: u32, body: &[u8]) -> Result<Func, SandboxE
         code: Vec::new(),
         table: Vec::new(),
         max_height: 0,
-        work: 0,
-        budget: 64 * body.len() as u64 + 65_536,
+        work: work.used,
+        budget: work.cap,
     };
     v.ctrls.push(Ctrl {
         kind: Kind::Func,
@@ -1073,17 +1145,23 @@ fn compile_body(m: &Module, type_idx: u32, body: &[u8]) -> Result<Func, SandboxE
         if_op: None,
         fixups: Vec::new(),
     });
-    while !v.ctrls.is_empty() {
-        let op = r.byte()?;
-        step(&mut v, &mut r, op)?;
-        if v.work > v.budget {
-            return Err(malformed("limit_exceeded: function body too expensive to validate"));
-        }
-    }
+    let result = compile_steps(&mut v, &mut r);
+    work.used = v.work;
+    result?;
     if !r.eof() {
         return Err(malformed("bytes after the end of a function body"));
     }
     Ok(Func { type_idx, locals: declared as u32, max_height: v.max_height as u32, code: v.code, table: v.table })
+}
+
+/// Validates and compiles instructions until the function body's final `end`.
+fn compile_steps(v: &mut Validator<'_>, r: &mut Reader<'_>) -> Result<(), SandboxError> {
+    while !v.ctrls.is_empty() {
+        let op = r.byte()?;
+        step(v, r, op)?;
+        v.check_budget()?;
+    }
+    Ok(())
 }
 
 fn local_type(v: &Validator<'_>, i: u32) -> Result<ValType, SandboxError> {
@@ -1136,6 +1214,7 @@ fn step(v: &mut Validator<'_>, r: &mut Reader<'_>, op: u8) -> Result<(), Sandbox
         }
         0x0b => {
             let c = v.pop_ctrl()?;
+            v.work += (c.fixups.len() + c.params.len()) as u64;
             if c.kind == Kind::If && c.params != c.results {
                 return Err(type_err("if without else must not change the stack type"));
             }
@@ -1194,6 +1273,8 @@ fn step(v: &mut Validator<'_>, r: &mut Reader<'_>, op: u8) -> Result<(), Sandbox
                 v.check_top(&labels)?;
                 v.add_fixup(idx, Fixup::Table(v.table.len()))?;
                 v.table.push(t);
+                // One instruction may hold a million targets: check the budget per target.
+                v.check_budget()?;
             }
             v.emit(Op::BrTable { start: start as u32, len: n + 1 })?;
             v.set_unreachable()?;

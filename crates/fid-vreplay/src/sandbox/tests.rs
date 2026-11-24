@@ -220,3 +220,446 @@ fn bulk_memory_costs_fuel_per_kib() {
     rich.memory.read(65_534, &mut b).unwrap();
     assert_eq!(b, [1, 1]);
 }
+
+// ------------------------------------------------------------------ module builder
+
+fn sleb(mut v: i64, out: &mut Vec<u8>) {
+    loop {
+        let b = (v & 0x7f) as u8;
+        v >>= 7;
+        if (v == 0 && b & 0x40 == 0) || (v == -1 && b & 0x40 != 0) {
+            out.push(b);
+            return;
+        }
+        out.push(b | 0x80);
+    }
+}
+
+fn i32c(v: i32) -> Vec<u8> {
+    let mut o = vec![0x41];
+    sleb(i64::from(v), &mut o);
+    o
+}
+
+fn vector(items: &[Vec<u8>]) -> Vec<u8> {
+    let mut o = Vec::new();
+    uleb(items.len() as u32, &mut o);
+    for i in items {
+        o.extend_from_slice(i);
+    }
+    o
+}
+
+fn name(s: &str) -> Vec<u8> {
+    let mut o = Vec::new();
+    uleb(s.len() as u32, &mut o);
+    o.extend_from_slice(s.as_bytes());
+    o
+}
+
+fn functype(params: &[u8], results: &[u8]) -> Vec<u8> {
+    let mut o = vec![0x60];
+    uleb(params.len() as u32, &mut o);
+    o.extend_from_slice(params);
+    uleb(results.len() as u32, &mut o);
+    o.extend_from_slice(results);
+    o
+}
+
+fn export_func(n: &str, idx: u32) -> Vec<u8> {
+    let mut o = name(n);
+    o.push(0);
+    uleb(idx, &mut o);
+    o
+}
+
+/// A code-section entry: local groups `(count, type)` and the instructions (ending in `end`).
+fn body(locals: &[(u32, u8)], instrs: &[u8]) -> Vec<u8> {
+    let mut b = Vec::new();
+    uleb(locals.len() as u32, &mut b);
+    for &(n, t) in locals {
+        uleb(n, &mut b);
+        b.push(t);
+    }
+    b.extend_from_slice(instrs);
+    let mut o = Vec::new();
+    uleb(b.len() as u32, &mut o);
+    o.extend_from_slice(&b);
+    o
+}
+
+fn build(sections: &[(u8, Vec<u8>)]) -> Vec<u8> {
+    let mut m = b"\0asm\x01\0\0\0".to_vec();
+    for (id, p) in sections {
+        section(*id, p, &mut m);
+    }
+    m
+}
+
+fn cat(parts: &[&[u8]]) -> Vec<u8> {
+    parts.concat()
+}
+
+fn host() -> Host<'static> {
+    Host { stdin: &[], cursor: 0, stdout: Vec::new(), stderr_bytes: 0, max_output: 1 << 20 }
+}
+
+fn run(inst: &mut Instance<'_>, m: &super::module::Module, f: &str) -> Result<End, super::SandboxError> {
+    inst.invoke(m.export_func(f).unwrap(), &mut host(), &limits())
+}
+
+fn assert_trap(got: Result<End, super::SandboxError>, kind: TrapKind) {
+    let err = got.expect_err("expected a trap");
+    assert_eq!((err.code, err.trap), (ErrorCode::Trap, Some(kind)), "{err}");
+}
+
+fn instantiate_err(m: &super::module::Module, cap_pages: u32) -> super::SandboxError {
+    match Instance::new(m, cap_pages, 1_000) {
+        Ok(_) => panic!("instantiation succeeded"),
+        Err(e) => e,
+    }
+}
+
+// ------------------------------------------------------------------ load-time bounds
+
+use super::module::{parse_counted, Work, WORK_MAX_STEP};
+use std::time::{Duration, Instant};
+
+/// Generous wall-clock backstop for the worst-case load shapes (debug build, wasm32 under
+/// wasmtime included); the quadratic versions of these loads take minutes.
+const LOAD_BACKSTOP: Duration = Duration::from_secs(10);
+
+/// 100 000 distinct function types (the type-count cap): signature identity is a sorted map,
+/// not a linear search per type.
+#[test]
+fn many_distinct_types_load_in_n_log_n() {
+    let n = 100_000u32;
+    let mut types = Vec::new();
+    uleb(n, &mut types);
+    for i in 0..n - 1 {
+        let params: Vec<u8> = (0..17).map(|b| if (i >> b) & 1 == 1 { 0x7e } else { 0x7f }).collect();
+        types.extend_from_slice(&functype(&params, &[]));
+    }
+    // The last type repeats type 7.
+    let params7: Vec<u8> = (0..17).map(|b| if (7u32 >> b) & 1 == 1 { 0x7e } else { 0x7f }).collect();
+    types.extend_from_slice(&functype(&params7, &[]));
+    let bytes = build(&[(1, types)]);
+    let t0 = Instant::now();
+    let mut work = Work::for_module(bytes.len());
+    let m = parse_counted(&bytes, &mut work).unwrap();
+    assert!(t0.elapsed() < LOAD_BACKSTOP, "took {:?}", t0.elapsed());
+    assert!(work.used <= work.cap);
+    assert_eq!(m.canon_types.len(), n as usize);
+    assert!(m.canon_types[..n as usize - 1].iter().enumerate().all(|(i, &c)| c as usize == i));
+    assert_eq!(m.canon_types[n as usize - 1], 7);
+}
+
+/// 100 000 exports (the export-count cap): duplicate names are found with a sorted set.
+#[test]
+fn many_exports_load_in_n_log_n_and_duplicates_are_refused() {
+    let n = 100_000u32;
+    let exports: Vec<Vec<u8>> = (0..n).map(|i| export_func(&format!("e{i}"), 0)).collect();
+    let sections = |exports: Vec<Vec<u8>>| {
+        build(&[
+            (1, vector(&[functype(&[], &[])])),
+            (3, vec![1, 0]),
+            (7, vector(&exports)),
+            (10, vector(&[body(&[], &[0x0b])])),
+        ])
+    };
+    let bytes = sections(exports.clone());
+    let t0 = Instant::now();
+    let mut work = Work::for_module(bytes.len());
+    let m = parse_counted(&bytes, &mut work).unwrap();
+    assert!(t0.elapsed() < LOAD_BACKSTOP, "took {:?}", t0.elapsed());
+    assert!(work.used <= work.cap);
+    assert_eq!(m.exports.len(), n as usize);
+    let mut dup = exports;
+    *dup.last_mut().unwrap() = export_func("e4242", 0);
+    let err = parse(&sections(dup)).unwrap_err();
+    assert_eq!(err.code, ErrorCode::MalformedModule);
+    assert!(err.detail.contains("duplicate export"), "{err}");
+}
+
+/// A `br_table` with 100 000 targets to a label of 1 000 values: the budget is checked per
+/// target, so the refusal comes within one target's work of the cap instead of after all
+/// 2 * 10^8 units.
+#[test]
+fn br_table_work_is_checked_per_target() {
+    let arity = 1_000u32;
+    let targets = 100_000u32;
+    let types = vector(&[functype(&[], &[]), functype(&vec![0x7f; arity as usize], &[])]);
+    let mut code = Vec::new();
+    for _ in 0..arity {
+        code.extend_from_slice(&[0x41, 0x00]);
+    }
+    code.extend_from_slice(&[0x03, 0x01, 0x41, 0x00, 0x0e]);
+    uleb(targets, &mut code);
+    code.extend(std::iter::repeat_n(0u8, targets as usize + 1));
+    code.extend_from_slice(&[0x0b, 0x0b]);
+    let bytes = build(&[(1, types), (3, vec![1, 0]), (10, vector(&[body(&[], &code)]))]);
+    let t0 = Instant::now();
+    let mut work = Work::for_module(bytes.len());
+    let err = parse_counted(&bytes, &mut work).unwrap_err();
+    assert!(t0.elapsed() < LOAD_BACKSTOP, "took {:?}", t0.elapsed());
+    assert_eq!(err.code, ErrorCode::MalformedModule);
+    assert!(err.detail.contains("too expensive"), "{err}");
+    assert!(work.used > work.cap);
+    assert!(work.used <= work.cap + WORK_MAX_STEP, "work {} overshoots the cap {}", work.used, work.cap);
+}
+
+/// Thousands of tiny bodies each declaring 50 000 locals: locals are charged to the
+/// module-wide budget, so the total stays linear in the artifact size.
+#[test]
+fn locals_are_charged_to_the_module_budget() {
+    let funcs = 2_000u32;
+    let mut fsec = Vec::new();
+    uleb(funcs, &mut fsec);
+    fsec.extend(std::iter::repeat_n(0u8, funcs as usize));
+    let bodies: Vec<Vec<u8>> = (0..funcs).map(|_| body(&[(50_000, 0x7f)], &[0x0b])).collect();
+    let bytes = build(&[(1, vector(&[functype(&[], &[])])), (3, fsec), (10, vector(&bodies))]);
+    let t0 = Instant::now();
+    let mut work = Work::for_module(bytes.len());
+    let err = parse_counted(&bytes, &mut work).unwrap_err();
+    assert!(t0.elapsed() < LOAD_BACKSTOP, "took {:?}", t0.elapsed());
+    assert!(err.detail.contains("too expensive"), "{err}");
+    assert!(work.used <= work.cap + 50_000, "work {} overshoots the cap {}", work.used, work.cap);
+}
+
+/// Parameters plus declared locals may total exactly 50 000, split over several groups.
+#[test]
+fn locals_are_counted_once() {
+    let module = |groups: &[(u32, u8)]| {
+        build(&[(1, vector(&[functype(&[0x7f, 0x7e], &[])])), (3, vec![1, 0]), (10, vector(&[body(groups, &[0x0b])]))])
+    };
+    let m = parse(&module(&[(20_000, 0x7f), (20_000, 0x7e), (9_998, 0x7c)])).unwrap();
+    assert_eq!(m.funcs[0].locals, 49_998);
+    let err = parse(&module(&[(20_000, 0x7f), (20_000, 0x7e), (9_999, 0x7c)])).unwrap_err();
+    assert!(err.detail.contains("too many locals"), "{err}");
+}
+
+// ------------------------------------------------------------------ memory addressing
+
+/// `u32` address plus `u32` offset is a 33-bit effective address: it never wraps to a valid
+/// low address.
+#[test]
+fn address_plus_offset_does_not_wrap() {
+    let mut code_load = i32c(1);
+    code_load.extend_from_slice(&[0x28, 0x02]);
+    uleb(u32::MAX, &mut code_load);
+    code_load.push(0x0b);
+    let mut code_store = cat(&[&i32c(-1), &i32c(7), &[0x36, 0x02]]);
+    uleb(1, &mut code_store);
+    code_store.extend_from_slice(&i32c(0));
+    code_store.push(0x0b);
+    let mut code_ok = i32c(0);
+    code_ok.extend_from_slice(&[0x28, 0x02]);
+    uleb(65_532, &mut code_ok);
+    code_ok.push(0x0b);
+    let bytes = build(&[
+        (1, vector(&[functype(&[], &[0x7f])])),
+        (3, vec![3, 0, 0, 0]),
+        (5, vec![1, 0, 1]),
+        (7, vector(&[export_func("load", 0), export_func("store", 1), export_func("ok", 2)])),
+        (10, vector(&[body(&[], &code_load), body(&[], &code_store), body(&[], &code_ok)])),
+    ]);
+    let m = parse(&bytes).unwrap();
+    let mut inst = Instance::new(&m, 1, 1_000_000).unwrap();
+    assert_trap(run(&mut inst, &m, "load"), TrapKind::OutOfBoundsMemoryAccess);
+    assert_trap(run(&mut inst, &m, "store"), TrapKind::OutOfBoundsMemoryAccess);
+    assert_eq!(run(&mut inst, &m, "ok").unwrap(), End::Returned(vec![0]));
+}
+
+/// Accesses at the last bytes of a full 4 GiB memory: the address arithmetic must not
+/// overflow `usize` on a 32-bit host (the wasm32 CI job runs this).
+#[test]
+fn four_gib_edge_access() {
+    let edge = cat(&[&i32c(-1), &i32c(0xab), &[0x3a, 0x00, 0x00], &i32c(-4), &[0x28, 0x02, 0x00, 0x0b]]);
+    let offset_edge = cat(&[&i32c(-2), &[0x2d, 0x00, 0x01, 0x0b]]);
+    let past = cat(&[&i32c(-3), &[0x28, 0x02, 0x00, 0x0b]]);
+    let bulk = cat(&[
+        &i32c(-2),
+        &i32c(0x5a),
+        &i32c(2),
+        &[0xfc, 0x0b, 0x00],
+        &i32c(0),
+        &i32c(-2),
+        &i32c(2),
+        &[0xfc, 0x0a, 0x00, 0x00],
+        &i32c(0),
+        &[0x2f, 0x01, 0x00, 0x0b],
+    ]);
+    let bytes = build(&[
+        (1, vector(&[functype(&[], &[0x7f])])),
+        (3, vec![4, 0, 0, 0, 0]),
+        (5, vec![1, 0, 0x80, 0x80, 0x04]),
+        (
+            7,
+            vector(&[
+                export_func("edge", 0),
+                export_func("offset_edge", 1),
+                export_func("past", 2),
+                export_func("bulk", 3),
+            ]),
+        ),
+        (10, vector(&[body(&[], &edge), body(&[], &offset_edge), body(&[], &past), body(&[], &bulk)])),
+    ]);
+    let m = parse(&bytes).unwrap();
+    let mut inst = Instance::new(&m, 65_536, 1_000_000).unwrap();
+    assert_eq!(run(&mut inst, &m, "edge").unwrap(), End::Returned(vec![0xab00_0000]));
+    assert_eq!(run(&mut inst, &m, "offset_edge").unwrap(), End::Returned(vec![0xab]));
+    assert_trap(run(&mut inst, &m, "past"), TrapKind::OutOfBoundsMemoryAccess);
+    assert_eq!(run(&mut inst, &m, "bulk").unwrap(), End::Returned(vec![0x5a5a]));
+    let mut last = [0u8; 1];
+    inst.memory.read(0xffff_ffff, &mut last).unwrap();
+    assert_eq!(last, [0x5a]);
+    assert!(inst.memory.read(0xffff_ffff, &mut [0u8; 2]).is_err());
+}
+
+// ------------------------------------------------------------------ tables and segments
+
+fn table_module(elem_offset: i32, elem_funcs: &[u8]) -> Vec<u8> {
+    let call = |i: i32| cat(&[&i32c(i), &[0x11, 0x00, 0x00, 0x0b]]);
+    let elem =
+        cat(&[&[1, 0], &i32c(elem_offset), &[0x0b], &vector(&elem_funcs.iter().map(|&f| vec![f]).collect::<Vec<_>>())]);
+    build(&[
+        (1, vector(&[functype(&[], &[])])),
+        (3, vec![3, 0, 0, 0]),
+        (4, vec![1, 0x70, 0, 1]),
+        (7, vector(&[export_func("ok", 1), export_func("oob", 2)])),
+        (9, elem),
+        (10, vector(&[body(&[], &[0x0b]), body(&[], &call(0)), body(&[], &call(1))])),
+    ])
+}
+
+/// `call_indirect` with an index at or past the table length is `table_out_of_bounds`.
+#[test]
+fn call_indirect_outside_the_table_is_table_out_of_bounds() {
+    let m = parse(&table_module(0, &[0])).unwrap();
+    let mut inst = Instance::new(&m, 0, 1_000_000).unwrap();
+    assert_eq!(run(&mut inst, &m, "ok").unwrap(), End::Returned(vec![]));
+    assert_trap(run(&mut inst, &m, "oob"), TrapKind::TableOutOfBounds);
+}
+
+/// An element segment that does not fit the table fails instantiation with
+/// `table_out_of_bounds`; one ending exactly at the table's end fits.
+#[test]
+fn element_segment_out_of_bounds_at_instantiation() {
+    for (offset, funcs) in [(1, &[0u8][..]), (0, &[0, 0][..]), (-1, &[0][..]), (2, &[][..])] {
+        let m = parse(&table_module(offset, funcs)).unwrap();
+        let err = instantiate_err(&m, 0);
+        assert_eq!((err.code, err.trap), (ErrorCode::Trap, Some(TrapKind::TableOutOfBounds)), "{offset}: {err}");
+    }
+    for (offset, funcs) in [(0, &[0u8][..]), (1, &[][..])] {
+        let m = parse(&table_module(offset, funcs)).unwrap();
+        assert!(Instance::new(&m, 0, 1_000).is_ok(), "{offset} {funcs:?}");
+    }
+}
+
+/// A data segment that does not fit linear memory fails instantiation with
+/// `out_of_bounds_memory_access`; one ending exactly at the memory's end fits.
+#[test]
+fn data_segment_out_of_bounds_at_instantiation() {
+    let module = |offset: i32, len: u32| {
+        let mut seg = cat(&[&[1, 0], &i32c(offset), &[0x0b]]);
+        uleb(len, &mut seg);
+        seg.extend(std::iter::repeat_n(0x11u8, len as usize));
+        build(&[(5, vec![1, 0, 1]), (11, seg)])
+    };
+    for (offset, len) in [(65_535, 2), (-1, 1), (65_537, 0), (i32::MIN, 1)] {
+        let m = parse(&module(offset, len)).unwrap();
+        let err = instantiate_err(&m, 1);
+        assert_eq!(
+            (err.code, err.trap),
+            (ErrorCode::Trap, Some(TrapKind::OutOfBoundsMemoryAccess)),
+            "{offset} {len}: {err}"
+        );
+    }
+    for (offset, len) in [(65_534, 2), (65_536, 0)] {
+        let m = parse(&module(offset, len)).unwrap();
+        let inst = Instance::new(&m, 1, 1_000).map_err(|e| e.to_string()).unwrap();
+        if len > 0 {
+            let mut b = [0u8; 2];
+            inst.memory.read(65_534, &mut b).unwrap();
+            assert_eq!(b, [0x11, 0x11]);
+        }
+    }
+}
+
+// ------------------------------------------------------------------ WASI host loops
+
+fn wasi_module() -> super::module::Module {
+    let call = |fd: i32, n: i32, import: u8| cat(&[&i32c(fd), &i32c(0), &i32c(n), &i32c(8_192), &[0x10, import, 0x0b]]);
+    let import = |n: &str| cat(&[&name("wasi_snapshot_preview1"), &name(n), &[0x00, 0x00]]);
+    let bytes = build(&[
+        (1, vector(&[functype(&[0x7f; 4], &[0x7f]), functype(&[], &[0x7f])])),
+        (2, vector(&[import("fd_write"), import("fd_read")])),
+        (3, vec![4, 1, 1, 1, 1]),
+        (5, vec![1, 0, 1]),
+        (
+            7,
+            vector(&[
+                export_func("w1025", 2),
+                export_func("w1024", 3),
+                export_func("r1025", 4),
+                export_func("r1024", 5),
+            ]),
+        ),
+        (
+            10,
+            vector(&[
+                body(&[], &call(1, 1025, 0)),
+                body(&[], &call(1, 1024, 0)),
+                body(&[], &call(0, 1025, 1)),
+                body(&[], &call(0, 1024, 1)),
+            ]),
+        ),
+    ]);
+    parse(&bytes).unwrap()
+}
+
+/// `fd_read` and `fd_write` refuse more than 1 024 iovecs with `EINVAL` (28).
+#[test]
+fn wasi_iovec_count_is_capped() {
+    let m = wasi_module();
+    let mut inst = Instance::new(&m, 1, 1_000_000).unwrap();
+    for (f, errno) in [("w1025", 28), ("w1024", 0), ("r1025", 28), ("r1024", 0)] {
+        assert_eq!(run(&mut inst, &m, f).unwrap(), End::Returned(vec![errno]), "{f}");
+    }
+}
+
+thread_local! {
+    static TICKS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// A clock that advances 1 ms on every reading (per thread, so parallel tests do not interfere).
+fn ticking_clock() -> Duration {
+    TICKS.with(|t| {
+        t.set(t.get() + 1);
+        Duration::from_millis(t.get())
+    })
+}
+
+/// The watchdog is polled inside WASI iovec loops: a 1 024-iovec write with a 100-tick
+/// deadline stops in the host loop, though the guest executed far fewer than 65 536 operations.
+#[test]
+fn watchdog_is_polled_inside_host_loops() {
+    use super::exec::Deadline;
+    let m = wasi_module();
+    let f = m.export_func("w1024").unwrap();
+    let mut inst = Instance::new(&m, 1, 1_000_000).unwrap();
+    let near = RunLimits {
+        max_depth: 1000,
+        max_slots: 1 << 20,
+        deadline: Some(Deadline { clock: ticking_clock, at: ticking_clock() + Duration::from_millis(100) }),
+    };
+    let err = inst.invoke(f, &mut host(), &near).unwrap_err();
+    assert_eq!(err.code, ErrorCode::BudgetExhausted, "{err}");
+    let far = RunLimits {
+        max_depth: 1000,
+        max_slots: 1 << 20,
+        deadline: Some(Deadline { clock: ticking_clock, at: ticking_clock() + Duration::from_secs(3600) }),
+    };
+    let mut inst = Instance::new(&m, 1, 1_000_000).unwrap();
+    assert_eq!(inst.invoke(f, &mut host(), &far).unwrap(), End::Returned(vec![0]));
+}

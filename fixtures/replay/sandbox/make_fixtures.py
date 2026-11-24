@@ -595,8 +595,9 @@ HOSTILE = [
     ("loop.wasm", "", {"fuel_per_call": "1000000000000", "wall_clock_ms": "1500"}, "sandbox.budget_exhausted", None),
     ("grow.wasm", "", {}, "sandbox.memory_limit", None),
     ("grow.wasm", "", {"memory_bytes": "16777216"}, "sandbox.memory_limit", None),
+    ("big-memory.wasm", "", {}, "sandbox.memory_limit", None),
     ("big-memory.wasm", "", {"memory_bytes": "1073741824"}, "sandbox.memory_limit", None),
-    ("big-memory.wasm", "", {}, "sandbox.trap", "unexpected_exit"),
+    ("big-memory.wasm", "", {"memory_bytes": "4294967296"}, "sandbox.trap", "unexpected_exit"),
     ("imports-fd.wasm", "", {}, "sandbox.forbidden_import", None),
     ("imports-random.wasm", "", {}, "sandbox.forbidden_import", None),
     ("imports-clock.wasm", "", {}, "sandbox.forbidden_import", None),
@@ -703,8 +704,9 @@ file byte for byte.
   overrides and the hand-labelled outcome from the spec's rules (REQ-001..REQ-006):
   - `loop.wasm`: infinite loop; `sandbox.budget_exhausted` by fuel and by wall clock.
   - `grow.wasm`: unbounded `memory.grow`; `sandbox.memory_limit`.
-  - `big-memory.wasm`: 4 GiB initial memory; `sandbox.memory_limit` under a smaller cap, and under
-    the default cap it runs without allocating the untouched pages.
+  - `big-memory.wasm`: 4 GiB initial memory; `sandbox.memory_limit` under the default 1 GiB cap
+    (KRN.MAN.WASM `max_memory_size`) or any cap below 4 GiB, and under a 4 GiB cap it writes the
+    last byte of memory without allocating the untouched pages, then exits without an envelope.
   - `imports-*.wasm`: file, randomness, clock, socket, environment, memory and wrong-signature
     imports; `sandbox.forbidden_import` at load.
   - `clock-trap.wasm`: calls the sealed `fid_trap` clock; `sandbox.trap` `host_trap`.

@@ -8,7 +8,8 @@ use fid_canon::{digest_bytes, parse_with_limits, CValue};
 use fid_types::Digest;
 use fid_vreplay::kart::KernelManifest;
 use fid_vreplay::sandbox::{
-    CallInput, CallRequest, CallResult, ErrorCode, Limits, Sandbox, SandboxError, IMPORT_ALLOWLIST, TRAPPED_IMPORTS,
+    CallInput, CallRequest, CallResult, ErrorCode, Limits, Sandbox, SandboxError, DEFAULT_MEMORY_BYTES,
+    IMPORT_ALLOWLIST, TRAPPED_IMPORTS,
 };
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
@@ -276,4 +277,66 @@ fn allowlist_matches_krn_man_wasm() {
     ours.sort();
     assert_eq!(listed, ours);
     assert!(TRAPPED_IMPORTS.iter().all(|(m, _)| *m == "fid_trap"));
+}
+
+/// Maintainer decision (2026-11-23): the default memory cap is KRN.MAN.WASM's pinned
+/// `max_memory_size`, read here from `crates/fid-kernel-wasm/wasm-runtime.toml`.
+#[test]
+fn default_memory_cap_matches_krn_wasm_runtime() {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../fid-kernel-wasm/wasm-runtime.toml");
+    let text = std::fs::read_to_string(path).unwrap();
+    let values: Vec<u64> = text
+        .lines()
+        .filter_map(|l| l.split_once('='))
+        .filter(|(k, _)| k.trim() == "max_memory_size")
+        .map(|(_, v)| v.trim().parse().unwrap())
+        .collect();
+    assert_eq!(values.len(), 1, "max_memory_size must appear exactly once");
+    assert_eq!(Limits::default().memory_bytes, values[0]);
+    assert_eq!(DEFAULT_MEMORY_BYTES, values[0]);
+    assert_eq!(DEFAULT_MEMORY_BYTES, 1_073_741_824);
+}
+
+fn panicking_clock() -> Duration {
+    panic!("the clock was read without a wall-clock budget")
+}
+
+/// The clock is read only when a wall-clock budget is set.
+#[test]
+fn clock_is_not_read_without_a_wall_clock_budget() {
+    let e = expect();
+    let req = kernel_request(&e);
+    let mut sb = load_kernel(Limits { wall_clock: None, ..Limits::default() }).unwrap().with_clock(panicking_clock);
+    assert!(matches!(sb.call(&req).unwrap(), CallResult::Envelope(_)));
+    let bytes = read("loop.wasm");
+    let limits = Limits { wall_clock: None, fuel_per_call: 1_000_000, ..Limits::default() };
+    let mut sb = Sandbox::load_with_digest(&bytes, &sha(&bytes), limits).unwrap().with_clock(panicking_clock);
+    assert_eq!(sb.run_command(b"").unwrap_err().code, ErrorCode::BudgetExhausted);
+}
+
+thread_local! {
+    static SECONDS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// A caller-provided clock that advances one second per reading (per thread).
+fn fast_clock() -> Duration {
+    SECONDS.with(|s| {
+        s.set(s.get() + 1);
+        Duration::from_secs(s.get())
+    })
+}
+
+/// A caller-provided clock drives the wall-clock budget (the only way to set one on
+/// `wasm32-unknown-unknown`): the infinite loop stops after ten readings of a clock that
+/// gains a second per reading, long before its fuel would run out.
+#[test]
+fn caller_clock_drives_the_wall_clock_budget() {
+    let bytes = read("loop.wasm");
+    let limits = Limits { wall_clock: Some(Duration::from_secs(10)), fuel_per_call: u64::MAX, ..Limits::default() };
+    let mut sb = Sandbox::load_with_digest(&bytes, &sha(&bytes), limits).unwrap().with_clock(fast_clock);
+    let t0 = Instant::now();
+    assert_eq!(sb.run_command(b"").unwrap_err().code, ErrorCode::BudgetExhausted);
+    assert!(t0.elapsed() < Duration::from_secs(10), "took {:?}", t0.elapsed());
+    // The package budget is spent: the next call is refused at once.
+    assert_eq!(sb.run_command(b"").unwrap_err().code, ErrorCode::BudgetExhausted);
 }

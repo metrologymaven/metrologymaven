@@ -17,8 +17,9 @@ file byte for byte.
   overrides and the hand-labelled outcome from the spec's rules (REQ-001..REQ-006):
   - `loop.wasm`: infinite loop; `sandbox.budget_exhausted` by fuel and by wall clock.
   - `grow.wasm`: unbounded `memory.grow`; `sandbox.memory_limit`.
-  - `big-memory.wasm`: 4 GiB initial memory; `sandbox.memory_limit` under a smaller cap, and under
-    the default cap it runs without allocating the untouched pages.
+  - `big-memory.wasm`: 4 GiB initial memory; `sandbox.memory_limit` under the default 1 GiB cap
+    (KRN.MAN.WASM `max_memory_size`) or any cap below 4 GiB, and under a 4 GiB cap it writes the
+    last byte of memory without allocating the untouched pages, then exits without an envelope.
   - `imports-*.wasm`: file, randomness, clock, socket, environment, memory and wrong-signature
     imports; `sandbox.forbidden_import` at load.
   - `clock-trap.wasm`: calls the sealed `fid_trap` clock; `sandbox.trap` `host_trap`.

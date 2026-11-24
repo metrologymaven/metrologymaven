@@ -12,13 +12,17 @@
 //!   operator canonicalised (KRN.MAN.WASM `nan_canonicalization = true`); `abs`, `neg`,
 //!   `copysign`, loads, stores and reinterpretations keep NaN payloads bit for bit.
 //! - Each executed operation costs one unit of fuel, and bulk byte moves (`memory.copy`,
-//!   `memory.fill`, WASI reads and writes) one more unit per 1 KiB; fuel is per call (start
-//!   function and `_start` together). The wall-clock watchdog is polled whenever another
-//!   65 536 units are spent and only ever stops a call.
+//!   `memory.fill`, WASI reads and writes) and the zeroed locals of a called function one more
+//!   unit per 1 KiB; fuel is per call (start function and `_start` together). The wall-clock
+//!   watchdog is polled whenever another 65 536 units are spent and on every iovec of a WASI
+//!   read or write, and only ever stops a call. The clock is read only when a wall-clock
+//!   budget is set, and only through the [`Clock`] the run was given.
+//! - All linear-memory address arithmetic is done in `u64`: an effective address (`u32`
+//!   base plus `u32` offset) reaches 2^33 - 2, which overflows `usize` on a 32-bit host.
 
 use super::module::{DataSeg, ElemSeg, HostFn, Module, Op, Target, MAX_PAGES, PAGE};
-use super::{ErrorCode, SandboxError, TrapKind};
-use std::time::Instant;
+use super::{Clock, ErrorCode, SandboxError, TrapKind};
+use std::time::Duration;
 
 const CANON_F32: u64 = 0x7fc0_0000;
 const CANON_F64: u64 = 0x7ff8_0000_0000_0000;
@@ -26,11 +30,16 @@ const PAGE_USIZE: usize = PAGE as usize;
 const WATCHDOG_INTERVAL: u64 = 0x1_0000;
 /// Bytes moved per extra unit of fuel by bulk operations.
 const BYTES_PER_FUEL: u64 = 1024;
+/// Zeroed local slots (8 bytes each) per extra unit of fuel on a call.
+const LOCALS_PER_FUEL: u64 = BYTES_PER_FUEL / 8;
+/// Largest `iovs_len` a WASI read or write accepts; above it the call returns `EINVAL`.
+pub(crate) const MAX_IOVS: u32 = 1024;
 
 /// WASI errno values used by the stubs.
 const ERRNO_SUCCESS: u32 = 0;
 const ERRNO_BADF: u32 = 8;
 const ERRNO_FAULT: u32 = 21;
+const ERRNO_INVAL: u32 = 28;
 
 pub(crate) fn trap(kind: TrapKind, detail: impl Into<String>) -> SandboxError {
     SandboxError::trap(kind, detail)
@@ -46,6 +55,20 @@ fn oob() -> SandboxError {
 
 fn mem_limit(detail: impl Into<String>) -> SandboxError {
     SandboxError::new(ErrorCode::MemoryLimit, detail)
+}
+
+fn wall_clock_exhausted() -> SandboxError {
+    SandboxError::new(ErrorCode::BudgetExhausted, "wall-clock budget exhausted")
+}
+
+fn fuel_exhausted() -> SandboxError {
+    SandboxError::new(ErrorCode::BudgetExhausted, "fuel budget of the call exhausted")
+}
+
+/// Page index and offset of a linear-memory address. Addresses stay below 2^33 and pages
+/// below 2^17, so both fit `usize` on 32-bit hosts too.
+fn split(addr: u64) -> (usize, usize) {
+    ((addr / PAGE) as usize, (addr % PAGE) as usize)
 }
 
 // ------------------------------------------------------------------ linear memory
@@ -108,10 +131,10 @@ impl Memory {
     /// Reads `out.len()` bytes at `addr` (bounds already checked by the caller or here).
     pub(crate) fn read(&self, addr: u64, out: &mut [u8]) -> Result<(), SandboxError> {
         self.check(addr, out.len() as u64)?;
-        let mut a = addr as usize;
+        let mut a = addr;
         let mut done = 0;
         while done < out.len() {
-            let (p, off) = (a / PAGE_USIZE, a % PAGE_USIZE);
+            let (p, off) = split(a);
             let n = (PAGE_USIZE - off).min(out.len() - done);
             let dst = out.get_mut(done..done + n).ok_or_else(|| fault("read"))?;
             match self.pages.get(p) {
@@ -120,38 +143,38 @@ impl Memory {
                 None => return Err(oob()),
             }
             done += n;
-            a += n;
+            a += n as u64;
         }
         Ok(())
     }
 
     pub(crate) fn write(&mut self, addr: u64, data: &[u8]) -> Result<(), SandboxError> {
         self.check(addr, data.len() as u64)?;
-        let mut a = addr as usize;
+        let mut a = addr;
         let mut done = 0;
         while done < data.len() {
-            let (p, off) = (a / PAGE_USIZE, a % PAGE_USIZE);
+            let (p, off) = split(a);
             let n = (PAGE_USIZE - off).min(data.len() - done);
             let src = data.get(done..done + n).ok_or_else(|| fault("write"))?;
             let page = self.page_mut(p)?;
             page.get_mut(off..off + n).ok_or_else(|| fault("write"))?.copy_from_slice(src);
             done += n;
-            a += n;
+            a += n as u64;
         }
         Ok(())
     }
 
     fn fill(&mut self, addr: u64, val: u8, len: u64) -> Result<(), SandboxError> {
         self.check(addr, len)?;
-        let mut a = addr as usize;
-        let mut left = len as usize;
+        let mut a = addr;
+        let mut left = len;
         while left > 0 {
-            let (p, off) = (a / PAGE_USIZE, a % PAGE_USIZE);
-            let n = (PAGE_USIZE - off).min(left);
+            let (p, off) = split(a);
+            let n = (PAGE - off as u64).min(left);
             let untouched = matches!(self.pages.get(p), Some(None));
             if !untouched || val != 0 {
                 let page = self.page_mut(p)?;
-                page.get_mut(off..off + n).ok_or_else(|| fault("fill"))?.fill(val);
+                page.get_mut(off..off + n as usize).ok_or_else(|| fault("fill"))?.fill(val);
             }
             left -= n;
             a += n;
@@ -163,7 +186,7 @@ impl Memory {
     fn copy(&mut self, dst: u64, src: u64, len: u64) -> Result<(), SandboxError> {
         self.check(src, len)?;
         self.check(dst, len)?;
-        let mut buf = vec![0u8; (len as usize).min(PAGE_USIZE)];
+        let mut buf = vec![0u8; len.min(PAGE) as usize];
         let mut done = 0u64;
         while done < len {
             let n = (len - done).min(PAGE);
@@ -179,10 +202,10 @@ impl Memory {
 
     fn load<const N: usize>(&self, addr: u64) -> Result<[u8; N], SandboxError> {
         let mut b = [0u8; N];
-        let a = addr as usize;
-        let off = a % PAGE_USIZE;
-        if off + N <= PAGE_USIZE && addr + N as u64 <= self.size_bytes() {
-            match self.pages.get(a / PAGE_USIZE) {
+        let (p, off) = split(addr);
+        let end = addr.checked_add(N as u64);
+        if off + N <= PAGE_USIZE && end.is_some_and(|e| e <= self.size_bytes()) {
+            match self.pages.get(p) {
                 Some(Some(page)) => b.copy_from_slice(page.get(off..off + N).ok_or_else(|| fault("load"))?),
                 Some(None) => {}
                 None => return Err(oob()),
@@ -218,11 +241,29 @@ pub(crate) enum End {
     Exit(u32),
 }
 
+/// The wall-clock deadline of a run: `clock()` at or past `at` stops it.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Deadline {
+    pub clock: Clock,
+    pub at: Duration,
+}
+
 /// Resource limits of one run.
 pub(crate) struct RunLimits {
     pub max_depth: u32,
     pub max_slots: u64,
-    pub deadline: Option<Instant>,
+    /// `None` when no wall-clock budget is set; the clock is then never read.
+    pub deadline: Option<Deadline>,
+}
+
+impl RunLimits {
+    /// Polls the watchdog: `Err` once the deadline has passed.
+    fn poll(&self) -> Result<(), SandboxError> {
+        match self.deadline {
+            Some(d) if (d.clock)() >= d.at => Err(wall_clock_exhausted()),
+            _ => Ok(()),
+        }
+    }
 }
 
 struct Frame {
@@ -295,18 +336,7 @@ impl<'m> Instance<'m> {
         let mut pc = 0usize;
         let mut cur = self.m.funcs.get(def as usize).ok_or_else(|| fault("entry"))?;
         loop {
-            if self.fuel == 0 {
-                return Err(SandboxError::new(ErrorCode::BudgetExhausted, "fuel budget of the call exhausted"));
-            }
-            self.fuel -= 1;
-            if self.fuel <= self.next_check {
-                self.next_check = self.fuel.saturating_sub(WATCHDOG_INTERVAL);
-                if let Some(d) = lim.deadline {
-                    if Instant::now() >= d {
-                        return Err(SandboxError::new(ErrorCode::BudgetExhausted, "wall-clock budget exhausted"));
-                    }
-                }
-            }
+            self.charge(1, lim)?;
             let op = *cur.code.get(pc).ok_or_else(|| fault("pc out of range"))?;
             pc += 1;
             match op {
@@ -364,7 +394,7 @@ impl<'m> Instance<'m> {
                         f
                     };
                     if callee < n_imports {
-                        if let Some(code) = self.host_call(callee, host)? {
+                        if let Some(code) = self.host_call(callee, host, lim)? {
                             return Ok(End::Exit(code));
                         }
                     } else {
@@ -432,14 +462,14 @@ impl<'m> Instance<'m> {
                     let n = self.pop()? as u32;
                     let s = self.pop()? as u32;
                     let d = self.pop()? as u32;
-                    self.charge(u64::from(n) / BYTES_PER_FUEL)?;
+                    self.charge(u64::from(n) / BYTES_PER_FUEL, lim)?;
                     self.memory.copy(u64::from(d), u64::from(s), u64::from(n))?;
                 }
                 Op::MemoryFill => {
                     let n = self.pop()? as u32;
                     let val = self.pop()? as u8;
                     let d = self.pop()? as u32;
-                    self.charge(u64::from(n) / BYTES_PER_FUEL)?;
+                    self.charge(u64::from(n) / BYTES_PER_FUEL, lim)?;
                     self.memory.fill(u64::from(d), val, u64::from(n))?;
                 }
             }
@@ -456,6 +486,7 @@ impl<'m> Instance<'m> {
         if frames.len() >= lim.max_depth as usize || need > lim.max_slots {
             return Err(trap(TrapKind::CallStackExhausted, "call stack exhausted"));
         }
+        self.charge(u64::from(f.locals) / LOCALS_PER_FUEL, lim)?;
         self.stack.extend(std::iter::repeat_n(0u64, f.locals as usize));
         frames.push(Frame { func: def, ret_pc: 0, base });
         Ok(())
@@ -514,12 +545,18 @@ impl<'m> Instance<'m> {
         self.memory.write(a, bytes.get(..n).ok_or_else(|| fault("store"))?)
     }
 
-    fn charge(&mut self, units: u64) -> Result<(), SandboxError> {
+    /// Spends `units` of fuel and polls the watchdog whenever another
+    /// [`WATCHDOG_INTERVAL`] units are spent.
+    fn charge(&mut self, units: u64, lim: &RunLimits) -> Result<(), SandboxError> {
         if self.fuel < units {
             self.fuel = 0;
-            return Err(SandboxError::new(ErrorCode::BudgetExhausted, "fuel budget of the call exhausted"));
+            return Err(fuel_exhausted());
         }
         self.fuel -= units;
+        if self.fuel <= self.next_check {
+            self.next_check = self.fuel.saturating_sub(WATCHDOG_INTERVAL);
+            lim.poll()?;
+        }
         Ok(())
     }
 
@@ -528,7 +565,7 @@ impl<'m> Instance<'m> {
     }
 
     /// Calls host function `idx`. Returns `Some(code)` when the guest exits.
-    fn host_call(&mut self, idx: u32, host: &mut Host<'_>) -> Result<Option<u32>, SandboxError> {
+    fn host_call(&mut self, idx: u32, host: &mut Host<'_>, lim: &RunLimits) -> Result<Option<u32>, SandboxError> {
         let (h, _) = *self.m.imports.get(idx as usize).ok_or_else(|| fault("import"))?;
         match h {
             HostFn::Trap => Err(trap(TrapKind::HostTrap, "call to a sealed clock import")),
@@ -553,9 +590,9 @@ impl<'m> Instance<'m> {
                 let iovs = self.arg()?;
                 let fd = self.arg()?;
                 let errno = if h == HostFn::FdRead {
-                    self.fd_read(fd, iovs, iovs_len, out_ptr, host)?
+                    self.fd_read(fd, iovs, iovs_len, out_ptr, host, lim)?
                 } else {
-                    self.fd_write(fd, iovs, iovs_len, out_ptr, host)?
+                    self.fd_write(fd, iovs, iovs_len, out_ptr, host, lim)?
                 };
                 self.stack.push(u64::from(errno));
                 Ok(None)
@@ -570,16 +607,34 @@ impl<'m> Instance<'m> {
         Some((u64::from(ptr), u64::from(len)))
     }
 
-    /// `fd_read`: only fd 0, served from the call bytes; any other fd is `EBADF`.
-    fn fd_read(&mut self, fd: u32, iovs: u32, n: u32, out: u32, host: &mut Host<'_>) -> Result<u32, SandboxError> {
+    /// One iovec of a WASI read or write: one unit of fuel and a watchdog poll.
+    fn host_step(&mut self, lim: &RunLimits) -> Result<(), SandboxError> {
+        self.charge(1, lim)?;
+        lim.poll()
+    }
+
+    /// `fd_read`: only fd 0, served from the call bytes; any other fd is `EBADF`, and more
+    /// than [`MAX_IOVS`] iovecs is `EINVAL`.
+    fn fd_read(
+        &mut self,
+        fd: u32,
+        iovs: u32,
+        n: u32,
+        out: u32,
+        host: &mut Host<'_>,
+        lim: &RunLimits,
+    ) -> Result<u32, SandboxError> {
         if fd != 0 {
             return Ok(ERRNO_BADF);
         }
+        if n > MAX_IOVS {
+            return Ok(ERRNO_INVAL);
+        }
         let mut total: u64 = 0;
         for i in 0..n {
-            self.charge(1)?;
+            self.host_step(lim)?;
             let Some((ptr, len)) = self.iovec(iovs, i) else { return Ok(ERRNO_FAULT) };
-            self.charge(len / BYTES_PER_FUEL)?;
+            self.charge(len / BYTES_PER_FUEL, lim)?;
             let rest = host.stdin.get(host.cursor..).unwrap_or_default();
             let k = (len as usize).min(rest.len());
             let chunk = rest.get(..k).unwrap_or_default();
@@ -598,19 +653,31 @@ impl<'m> Instance<'m> {
         Ok(ERRNO_SUCCESS)
     }
 
-    /// `fd_write`: fd 1 is captured, fd 2 is counted and discarded, any other fd is `EBADF`.
-    fn fd_write(&mut self, fd: u32, iovs: u32, n: u32, out: u32, host: &mut Host<'_>) -> Result<u32, SandboxError> {
+    /// `fd_write`: fd 1 is captured, fd 2 is counted and discarded, any other fd is `EBADF`,
+    /// and more than [`MAX_IOVS`] iovecs is `EINVAL`.
+    fn fd_write(
+        &mut self,
+        fd: u32,
+        iovs: u32,
+        n: u32,
+        out: u32,
+        host: &mut Host<'_>,
+        lim: &RunLimits,
+    ) -> Result<u32, SandboxError> {
         if fd != 1 && fd != 2 {
             return Ok(ERRNO_BADF);
         }
+        if n > MAX_IOVS {
+            return Ok(ERRNO_INVAL);
+        }
         let mut total: u64 = 0;
         for i in 0..n {
-            self.charge(1)?;
+            self.host_step(lim)?;
             let Some((ptr, len)) = self.iovec(iovs, i) else { return Ok(ERRNO_FAULT) };
             if self.memory.check(ptr, len).is_err() {
                 return Ok(ERRNO_FAULT);
             }
-            self.charge(len / BYTES_PER_FUEL)?;
+            self.charge(len / BYTES_PER_FUEL, lim)?;
             if fd == 1 {
                 if host.stdout.len() as u64 + len > host.max_output {
                     return Err(mem_limit("kernel output exceeds max_output_bytes"));
