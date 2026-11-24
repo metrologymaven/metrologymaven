@@ -1,0 +1,32 @@
+[package]
+name = "fid-keystore"
+description = "Keystore trait, sidecar metadata, test backend and conformance suite (spec node TRUST.SIGN.KEYSTORE.TRAIT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[features]
+# In-memory test backend (`MemKeyStore`) and test UV release tokens.
+# NEVER enabled in release builds (REQ-TRUST.SIGN.KEYSTORE.TRAIT-005):
+# lib.rs rejects `all(feature = "test-backend", not(debug_assertions))` at compile time.
+test-backend = ["fid-sign-core/test-signer", "dep:getrandom", "dep:zeroize"]
+
+# No network dependencies.
+# fid-sign-core: DSSE v1.0 Alg, Fingerprint, PublicKey, Signer, sign_envelope and verify.
+# fid-canon: RFC 8785 canonical JSON for sidecar metadata (<config>/fid/keys/<fingerprint>.json).
+# getrandom + zeroize (optional, test-backend only): fresh test keys and drop-time zeroization;
+# both are already pinned in Cargo.lock.
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-sign-core = { path = "../fid-sign-core" }
+getrandom = { version = "0.2", optional = true }
+zeroize = { version = "1", default-features = false, optional = true }
+
+[dev-dependencies]
+fid-keystore = { path = ".", features = ["test-backend"] }
+
+[lints]
+workspace = true

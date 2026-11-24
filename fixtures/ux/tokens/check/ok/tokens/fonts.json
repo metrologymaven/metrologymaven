@@ -1,0 +1,54 @@
+{
+  "families": [
+    {
+      "family": "IBM Plex Mono",
+      "files": [
+        "IBMPlexMono-Regular.woff2",
+        "IBMPlexMono-Medium.woff2",
+        "IBMPlexMono-SemiBold.woff2"
+      ],
+      "licence": "OFL-1.1",
+      "scripts": [
+        "Cyrillic",
+        "Greek",
+        "Latin"
+      ],
+      "source": "https://github.com/IBM/plex",
+      "tabular_numerals": true
+    },
+    {
+      "family": "IBM Plex Sans",
+      "files": [
+        "IBMPlexSans-Regular.woff2",
+        "IBMPlexSans-Medium.woff2",
+        "IBMPlexSans-SemiBold.woff2",
+        "IBMPlexSans-Bold.woff2"
+      ],
+      "licence": "OFL-1.1",
+      "scripts": [
+        "Cyrillic",
+        "Greek",
+        "Latin"
+      ],
+      "source": "https://github.com/IBM/plex",
+      "tabular_numerals": true
+    },
+    {
+      "family": "Inter",
+      "files": [
+        "Inter-Medium.woff2",
+        "Inter-SemiBold.woff2",
+        "Inter-Bold.woff2"
+      ],
+      "licence": "OFL-1.1",
+      "scripts": [
+        "Cyrillic",
+        "Greek",
+        "Latin"
+      ],
+      "source": "https://github.com/rsms/inter",
+      "tabular_numerals": true
+    }
+  ],
+  "format": "font-list@1"
+}
