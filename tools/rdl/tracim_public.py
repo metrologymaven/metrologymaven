@@ -163,12 +163,39 @@ def run_public_test(
         return 1, artifact
 
     secret_val = effective_env.get(PUBLIC_KEY_ENV, "")
+    if not secret_val and os.name == "nt":
+        for k, v in effective_env.items():
+            if k.upper() == PUBLIC_KEY_ENV:
+                secret_val = v
+                break
 
     # 2. Build a minimal child environment carrying only non-secret runtime vars + TRACIM_PUBLIC_KEY.
+    keep_vars = (
+        "PATH",
+        "HOME",
+        "TMPDIR",
+        "TEMP",
+        "TMP",
+        "SYSTEMROOT",
+        "SYSTEMDRIVE",
+        "WINDIR",
+        "COMSPEC",
+        "PATHEXT",
+        "USERPROFILE",
+        "LANG",
+        "LC_ALL",
+        "PYTHONPATH",
+    )
     child_env: dict[str, str] = {}
-    for keep in ("PATH", "HOME", "TMPDIR", "TEMP", "TMP", "SYSTEMROOT", "LANG", "LC_ALL", "PYTHONPATH"):
-        if keep in effective_env:
-            child_env[keep] = effective_env[keep]
+    if os.name == "nt":
+        env_by_upper = {k.upper(): v for k, v in effective_env.items()}
+        for keep in keep_vars:
+            if keep in env_by_upper:
+                child_env[keep] = env_by_upper[keep]
+    else:
+        for keep in keep_vars:
+            if keep in effective_env:
+                child_env[keep] = effective_env[keep]
     if secret_val:
         child_env[PUBLIC_KEY_ENV] = secret_val
     if destination:
