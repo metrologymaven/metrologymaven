@@ -18,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-23
 ---
 
 # TRUST.REPLAY.SANDBOX: WASM kernel sandbox with digest check and limits
@@ -46,7 +46,7 @@ Runs the WASM reference kernel inside the verifier with nothing but the kernel c
 - **REQ-TRUST.REPLAY.SANDBOX-001** The sandbox shall compute the SHA-256 of the artifact bytes and shall refuse to instantiate it with `sandbox.artifact_mismatch` if it differs from the kernel manifest entry for target wasm32.
 - **REQ-TRUST.REPLAY.SANDBOX-002** If the module imports anything outside the allowlist published in the kernel manifest, then the sandbox shall refuse it with `sandbox.forbidden_import`.
 - **REQ-TRUST.REPLAY.SANDBOX-003** The sandbox shall provide no WASI or host function that reads files, sockets, clocks, randomness or environment variables.
-- **REQ-TRUST.REPLAY.SANDBOX-004** The sandbox shall cap linear memory at a caller-set limit, default 4 GiB, and return `sandbox.memory_limit` when a call exceeds it [unverified default].
+- **REQ-TRUST.REPLAY.SANDBOX-004** The sandbox shall cap linear memory at a caller-set limit, default 1 GiB (KRN.MAN.WASM's pinned `max_memory_size`), and return `sandbox.memory_limit` when a call exceeds it.
 - **REQ-TRUST.REPLAY.SANDBOX-005** The sandbox shall enforce a fuel budget per call and a caller-set wall-clock budget per package, returning `sandbox.budget_exhausted` without partial results when either runs out.
 - **REQ-TRUST.REPLAY.SANDBOX-006** A trap inside the module shall be returned as `sandbox.trap` with the trap kind, and shall never abort the verifier process.
 - **REQ-TRUST.REPLAY.SANDBOX-007** Running the same call twice in the sandbox shall return byte-identical result envelopes.
@@ -77,12 +77,18 @@ Runs the WASM reference kernel inside the verifier with nothing but the kernel c
 
 ## Build prompt
 
-> In crate `fid-vreplay`, add module `sandbox`: run the WASM reference kernel with an interpreting, fuel-metered runtime (pure Rust, builds for wasm32 too). Before instantiation, check the artifact's SHA-256 against the kernel manifest (`sandbox.artifact_mismatch`) and the import section against the manifest's allowlist (`sandbox.forbidden_import`); provide no host function for files, sockets, clocks, randomness or environment. Limits: memory cap (default 4 GiB), fuel per call, wall-clock per package (`sandbox.memory_limit`, `sandbox.budget_exhausted`); traps become `sandbox.trap` and never abort the process. Call the kernel's single entry point (algorithm ID, params, seed, inputs with digests) and return the result envelope bytes. Tests: the five acceptance criteria with WAT test modules and a KRN.MAN test kernel. Constraints: CONSTITUTION §8 (no panics, no unsafe in this crate), C2/C1 (values only from the reference kernel), D0.
+> In crate `fid-vreplay`, add module `sandbox`: run the WASM reference kernel with an interpreting, fuel-metered runtime (pure Rust, builds for wasm32 too). Before instantiation, check the artifact's SHA-256 against the kernel manifest (`sandbox.artifact_mismatch`) and the import section against the manifest's allowlist (`sandbox.forbidden_import`); provide no host function for files, sockets, clocks, randomness or environment. Limits: memory cap (default 1 GiB, KRN.MAN.WASM `max_memory_size`), fuel per call, wall-clock per package (`sandbox.memory_limit`, `sandbox.budget_exhausted`); traps become `sandbox.trap` and never abort the process. Call the kernel's single entry point (algorithm ID, params, seed, inputs with digests) and return the result envelope bytes. Tests: the five acceptance criteria with WAT test modules and a KRN.MAN test kernel. Constraints: CONSTITUTION §8 (no panics, no unsafe in this crate), C2/C1 (values only from the reference kernel), D0.
 
 ## Open questions
 
 - **Gap from research hypotheses (2026-11-17):** define the contents of the hostile-module set (`fixtures/replay/sandbox/*.wasm`): each module's attack class and expected containment result.
 - The runtime and its version must match KRN.MAN's "pinned runtime configuration"; if KRN pins a different engine, follow KRN.
+- **Partial build (2026-11-23, module `fid_vreplay::sandbox`; not marked `built_in`).** Built: REQ-001..007; AC-2, AC-3, AC-4; AC-5 and the AC-1 path with a protocol test kernel (`fixtures/replay/sandbox/kernel-test.wat`, envelope pinned by an exact Python model); the hostile-module set with labels (`fixtures/replay/sandbox/expect.json`, which answers the gap above) run on each CI host without a syscall audit. Open: **AC-1** as written (no reference kernel registers `fit.circle.lsq@1` until the `fid-kernel` assembly crate lands, and KRN.MAN.VAL has no pinned envelope digest), **AC-5** for that call, **AC-H1** (needs the KRN.MAN.VAL calls), **AC-H2** (needs a syscall audit and the arm64 Linux/Windows targets in CI), and a run of a rustc-built kernel (`fid-kernel-wasm` with `test-algorithms`) through the sandbox against `fixtures/man/wasm/calls-v1.txt` in the CI wasm32 job (a CI change for its own PR).
+- **Runtime choice (2026-11-23).** KRN.MAN.WASM pins the wasmtime 49.0.6 CLI, which cannot be linked here (not an interpreter, no wasm32 host, MSRV, and H-3 keeps third-party code out of the verifier's trust base). The sandbox is a pure-Rust interpreter in `fid-vreplay` that applies the pinned settings (NaN canonicalisation on, no SIMD, no threads, grow failure traps, clock traps, fuel). Its fuel units and stack limits are its own (one unit per operation plus one per KiB of bulk moves; call depth and value-stack slots), so whether a call near a limit is exhausted can differ from wasmtime; values below the limits do not. XART or a decision should state which runtime is the replay reference.
+- **Memory cap (maintainer decision, 2026-11-23).** The default memory cap is 1 GiB, KRN.MAN.WASM's pinned `max_memory_size` in `crates/fid-kernel-wasm/wasm-runtime.toml`, instead of the earlier unverified 4 GiB; a test keeps the two equal. A caller may still set up to 4 GiB.
+- **Load bound (2026-11-23).** Loading charges every parse and validation step (section bytes, type and export deduplication, declared locals, operand-stack work, each `br_table` target) to a work budget of 64 units per artifact byte plus 2^20; beyond it the module is `sandbox.malformed_module`. A legal but pathological module over the budget is refused where wasmtime would accept it. On `wasm32-unknown-unknown` (no clock) a wall-clock budget needs a caller-provided clock or every call is refused.
+- **Open: WebAssembly spec-testsuite conformance.** The interpreter is checked against an independent numeric model (7,413 cases) and hand-labelled modules, not against the official WebAssembly spec testsuite (`.wast` files for the accepted feature set: core 1.0, sign extension, non-trapping conversions, bulk `memory.copy`/`memory.fill`, multi-value). Running that suite through the sandbox, with the refused features (SIMD, threads, reference types, passive segments) expected as `sandbox.malformed_module`, is open.
+- **Open: differential run against KRN's wasmtime.** No run yet compares this interpreter with KRN.MAN.WASM's pinned wasmtime 49.0.6 configuration call by call (envelope bytes, trap kinds, exhaustion near the limits). Its target is the KRN.MAN.WASM golden calls (`fixtures/man/wasm/calls-v1.txt`) plus the hostile set, in the CI wasm32 job.
 
 ## Children
 

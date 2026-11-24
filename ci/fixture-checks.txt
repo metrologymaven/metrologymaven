@@ -228,6 +228,7 @@ python fixtures/rel/runbook/make_fixtures.py --check
 python fixtures/rel/sbom/make_fixtures.py --check
 python fixtures/replay/compare/make_cases.py --check
 python fixtures/replay/kart/make_fixtures.py --check
+python fixtures/replay/sandbox/make_fixtures.py --check
 python fixtures/replay/select/make_cases.py --check
 python fixtures/repo/tpl/promote/make_fixtures.py --check
 python fixtures/repo/tpl/selftest/make_fixtures.py --check
