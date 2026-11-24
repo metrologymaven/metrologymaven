@@ -1,0 +1,49 @@
+# Trade-dress distinctness list (spec node OUTR.BRAND.GUIDE.DRESS).
+# General descriptions written in our own words from public observation, with no copied
+# material, no images and no links to competitor media. Each entry stays [unverified] and
+# excluded from the reviewer summary until a maintainer fills reviewed_by and reviewed_on.
+
+[[product]]
+name = "GOM Inspect"
+colours = "High-chroma warm orange accent on dark charcoal panels with neutral light-grey 3D viewport backgrounds and rainbow-style deviation scales."
+icon_style = "Compact multi-colour shaded icons pairing grey geometry shapes with bright orange highlights and small status badges."
+layout = "Left vertical element explorer, top ribbon-like icon bar with mode tabs, bottom timeline strip and right property panel around a central viewport."
+instead = "Use neutral surface.base and surface.panel tokens with muted accent.primary, monochrome stroke icons on the 0.5 px grid, and locked status.* and perceptually uniform data.* palettes."
+reviewed_by = ""
+reviewed_on = ""
+
+[[product]]
+name = "ZEISS INSPECT"
+colours = "Dominant saturated blue brand headers and selection accents paired with cool slate-grey chrome and vivid multi-hue colour maps."
+icon_style = "Flat monochrome-plus-blue technical icons with thin geometric strokes and coloured highlight dots for inspection elements."
+layout = "Tabbed workspace header over a left tree explorer, central 3D canvas, bottom stage timeline and collapsible right inspection detail dock."
+instead = "Keep chrome on surface.base and surface.raised without saturated blue headers, reserve status.conforms and status.nonconforms for locked status roles, and use {{FAMILY_NAME}} dock layouts."
+reviewed_by = ""
+reviewed_on = ""
+
+[[product]]
+name = "PC-DMIS"
+colours = "Traditional light-grey desktop window chrome with classic primary-blue title accents, white code-edit panes and high-contrast red/green tolerance bars."
+icon_style = "Dense classic toolbar icons with shaded 3D-like outlines, multi-colour probe/feature glyphs and compact status indicators."
+layout = "Multi-dock classic MDI layout combining a central CAD graphic window with a prominent text-based edit window, floating toolbars and status bar."
+instead = "Use surface.base light/dark/high-contrast token themes, monochrome currentColor icons at 16/24 px masters, and structured characteristic tables paired with status.* text+glyph chips."
+reviewed_by = ""
+reviewed_on = ""
+
+[[product]]
+name = "PolyWorks"
+colours = "Cool medium-grey workstation chrome with bright teal-blue selection highlights, dark gradient 3D backdrops and saturated rainbow deviation maps."
+icon_style = "Detailed multi-colour pictograms combining metallic-grey surfaces with vivid blue, green and yellow directional cues."
+layout = "Left tree view above a detail pane, wide top toolbar rows grouped by inspection workflow, central 3D scene and right-hand control views."
+instead = "Use flat surface.base viewport framing, locked status.* roles that never depend on colour alone, and our monochrome icon system with explicit data-role tokens."
+reviewed_by = ""
+reviewed_on = ""
+
+[[product]]
+name = "SpatialAnalyzer"
+colours = "Classic neutral desktop grey panels with crisp dark-blue accents, white tree backgrounds and bright primary-colour vector and target overlays."
+icon_style = "Small utilitarian toolbar bitmaps with primary-colour accents representing instruments, coordinate frames and point groups."
+layout = "Left hierarchical instrument-and-collection tree beside a central 3D graphics pane, menu-driven top toolbars and tabbed report/watch windows."
+instead = "Use {{FAMILY_NAME}} tokenised surfaces (surface.base, surface.panel), semantic accent.primary, clean 16/24 px vector masters, and greyscale-safe status.* indicators."
+reviewed_by = ""
+reviewed_on = ""

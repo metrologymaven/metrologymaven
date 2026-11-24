@@ -9,20 +9,20 @@ phase: P0
 size: L
 owners: []
 claimed_by:
-satisfies: [REQ-OUTR-002, REQ-OUTR-003]
+satisfies: [REQ-OUTR-002, REQ-OUTR-003, REQ-OUTR-010]
 covers: []
 depends_on: [ECO, AUTO, CORE, OUTR.BRAND, VIZ]
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # OUTR.DOCS: Docs portal and book
 
 ## Purpose
 
-The versioned documentation portal: generated CLI, MCP and Python reference pages for every release, the user guide (book), the contributor guide, and the hosting frame for tutorials and migration guides authored in OUTR.CONTENT. It is separate from the website because it is versioned per release and mostly generated from the registry manifest (CONSTITUTION C3), while the website is a single current edition.
+The versioned documentation portal: generated CLI, MCP and Python reference pages for every release, the user guide (book), the contributor guide, the executable WASM-interactive Metrology Field Guide (`OUTR.DOCS.GUIDE`, D-054), and the hosting frame for tutorials and migration guides authored in OUTR.CONTENT. It is separate from the website because it is versioned per release and mostly generated from the registry manifest (CONSTITUTION C3), while the website is a single current edition.
 
 ## Scope
 
@@ -30,6 +30,7 @@ The versioned documentation portal: generated CLI, MCP and Python reference page
 - Reference pages for CLI commands, MCP tools and Python bindings, generated from the registry manifest of each release
 - Per-release versioning, a version switcher, and a "latest" alias
 - User guide (book): concepts, per-app workflows, units, journals, replay, verification
+- Executable Metrology Field Guide: WASM-interactive labs running implemented kernel crates plus the dimensional metrology field map (D-054)
 - Contributor guide: spec-tree workflow, claiming nodes, house rules, building from source
 - Hosting, navigation and search for guides authored by OUTR.CONTENT
 - Static build, offline bundle, no trackers, accessibility conformance
@@ -53,16 +54,17 @@ The versioned documentation portal: generated CLI, MCP and Python reference page
 - **REQ-OUTR.DOCS-008** When a docs page is loaded, it shall make zero requests to origins other than its own, and site search shall run entirely client-side.
 - **REQ-OUTR.DOCS-009** Every docs page shall pass the automated checks of the VIZ accessibility baseline with zero violations at the required level.
 - **REQ-OUTR.DOCS-010** The docs build shall fail on any broken internal link, and shall report external links that fail a check run at least weekly [unverified cadence].
+- **REQ-OUTR.DOCS-011** The portal and public site shall publish an executable, WASM-interactive Metrology Field Guide whose live labs execute implemented kernel crates with zero third-party origins, clear D-045 provisional labels, verified examples and a transparent dimensional metrology field map (D-054).
 
 ## Interfaces
 
-- **Offers:** the docs portal; per-release offline bundles; a page frame and navigation slots for OUTR.CONTENT guides; stable URLs for each command reference page (used by OUTR.SITE and error messages).
-- **Consumes:** registry manifest (CORE), reference generators (AUTO), docs CI and release metadata (ECO), OUTR.BRAND lint rules and assets, VIZ accessibility baseline.
+- **Offers:** the docs portal; per-release offline bundles; the executable Metrology Field Guide; a page frame and navigation slots for OUTR.CONTENT guides; stable URLs for each command reference page (used by OUTR.SITE and error messages).
+- **Consumes:** registry manifest (CORE), reference generators (AUTO), docs CI and release metadata (ECO), OUTR.BRAND lint rules and assets, VIZ accessibility baseline, pure L0 kernel libraries (`KRN`, `GDT`, `UNC`, `CORE.JRN.CANON`) for WASM field-guide labs.
 - No registry commands of its own.
 
 ## Decomposition hints
 
-REF (reference page generation and drift check), VER (versioning and offline bundles), BOOK (user guide), CONTRIB (contributor guide), SEARCH, QA (links, a11y, trackers).
+REF (reference page generation and drift check), VER (versioning and offline bundles), BOOK (user guide), CONTRIB (contributor guide), GUIDE (executable Metrology Field Guide), SEARCH, QA (links, a11y, trackers).
 
 ## Open questions
 
@@ -71,11 +73,12 @@ REF (reference page generation and drift check), VER (versioning and offline bun
 
 ## Split rationale
 
-The split follows the **kind of page and its source of truth**, with the shared frame and the gates pulled out. REF is pure registry output with a drift check; BOOK and CONTRIB are authored text with executable examples; FRAME holds editions, navigation, guide slots and offline bundles for all of them; SEARCH and QA are cross-cutting services. QA reuses the OUTR.SITE.QA gates instead of building a second crawler.
+The split follows the **kind of page and its source of truth**, with the shared frame and the gates pulled out. REF is pure registry output with a drift check; BOOK and CONTRIB are authored text with executable examples; GUIDE (`D-054`) combines clean-room metrology concepts, a transparent dimensional metrology taxonomy map, and live WASM sandboxes over the actual pure-Rust kernel crates; FRAME holds editions, navigation, guide slots and offline bundles for all of them; SEARCH and QA are cross-cutting services. QA reuses the OUTR.SITE.QA gates instead of building a second crawler.
 
 Alternatives considered:
 - **Split by release lifecycle** (build, publish, archive). Rejected: every stage touches every page type, so ownership would blur.
 - **Merge SEARCH into FRAME.** Rejected: search has its own offline and no-third-party constraints and a separate index budget, and is a natural unit for one contributor.
+- **Separate wiki outside OUTR.DOCS.** Rejected by D-054: keeping GUIDE inside OUTR.DOCS binds every topic to implemented kernel crates, offline bundles and zero-third-party QA gates.
 
 ## Children
 
@@ -85,5 +88,6 @@ Alternatives considered:
 | [OUTR.DOCS.FRAME](frame/NODE.md) | Portal frame, release editions and offline bundles | 004 007 | none |
 | [OUTR.DOCS.BOOK](book/NODE.md) | User guide (the book) | 005 | none |
 | [OUTR.DOCS.CONTRIB](contrib/NODE.md) | Contributor guide with checked commands (leaf) | 006 | none |
+| [OUTR.DOCS.GUIDE](guide/NODE.md) | Executable, WASM-interactive Metrology Field Guide | 008 011 | none |
 | [OUTR.DOCS.SEARCH](search/NODE.md) | Client-side docs search | 008 | none |
 | [OUTR.DOCS.QA](qa/NODE.md) | Docs quality gates and link checks | 008 009 010 | none |

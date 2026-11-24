@@ -1,0 +1,61 @@
+{
+  "motion": {
+    "feedback": {
+      "press": {
+        "duration": {
+          "$type": "duration",
+          "$value": "100ms"
+        },
+        "easing": {
+          "$type": "cubicBezier",
+          "$value": [
+            0.2,
+            0,
+            0,
+            1
+          ]
+        },
+        "reduced-duration": {
+          "$type": "duration",
+          "$value": "0ms"
+        }
+      }
+    },
+    "panel": {
+      "close": {
+        "duration": {
+          "$type": "duration",
+          "$value": "250ms"
+        },
+        "easing": {
+          "$type": "cubicBezier",
+          "$value": [
+            0.4,
+            0,
+            1,
+            1
+          ]
+        },
+        "reduced-duration": {
+          "$type": "duration",
+          "$value": "0ms"
+        }
+      },
+      "open": {
+        "duration": {
+          "$type": "duration",
+          "$value": "200ms"
+        },
+        "easing": {
+          "$type": "cubicBezier",
+          "$value": [
+            0,
+            0,
+            0.2,
+            1
+          ]
+        }
+      }
+    }
+  }
+}
