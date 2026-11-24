@@ -208,7 +208,7 @@ fn ac3_seeded_round_trips() {
     let mut rng = Cursor::new(Address { seed: 5, stream: 0 }, 0);
     for _ in 0..10_000 {
         let n = index.instances().len() as u64;
-        let ix = index.find(index.instances()[rng.below(n).unwrap() as usize].path()).unwrap();
+        let ix = index.find(index.instances()[rng.below(n).unwrap() as usize].instance_path()).unwrap();
         let ent = ents[rng.below(ents.len() as u64).unwrap() as usize];
         // Forward then back, and back then forward.
         let id = index.entity_id(ix, ent).unwrap();
@@ -294,7 +294,7 @@ fn unknown_entity_lookups() {
         assert_eq!(index.entity_id(ix, *ent).is_ok(), exposed, "{tid}");
     }
     // Instance indexes are dense in path order; one past the end is unknown.
-    let ixs: Vec<usize> = index.instances().iter().map(|i| index.find(i.path()).unwrap().index()).collect();
+    let ixs: Vec<usize> = index.instances().iter().map(|i| index.find(i.instance_path()).unwrap().index()).collect();
     assert_eq!(ixs, vec![0, 1]);
     let face = body.lookup(body.faces()[0].id()).unwrap();
     let empty = InstanceIndex::build(Vec::new(), &[]).unwrap();
@@ -318,7 +318,7 @@ fn build_errors() {
     let mut dup = insts.clone();
     dup.push(insts[0].clone());
     match InstanceIndex::build(dup, &[&body]).unwrap_err() {
-        AssyModelError::DuplicatePath { path } => assert_eq!(&path, insts[0].path()),
+        AssyModelError::DuplicatePath { instance_path } => assert_eq!(&instance_path, insts[0].instance_path()),
         e => panic!("{e}"),
     }
     // Definition not supplied.

@@ -73,7 +73,7 @@ pub enum AssyModelError {
     /// Two instances with one path (they would share every ID).
     DuplicatePath {
         /// The repeated path.
-        path: InstancePath,
+        instance_path: InstancePath,
     },
     /// The instance's definition body was not supplied, or a view was given another body.
     UnknownDefinition {
@@ -120,7 +120,7 @@ impl fmt::Display for AssyModelError {
             }
             AssyModelError::TooLarge => write!(f, "more than {MAX_INSTANCE_ENTITIES} instances or instance entities"),
             AssyModelError::DuplicateBody { body } => write!(f, "duplicate body {}", format_uuid(body)),
-            AssyModelError::DuplicatePath { path } => write!(f, "duplicate instance path {path}"),
+            AssyModelError::DuplicatePath { instance_path } => write!(f, "duplicate instance path {instance_path}"),
             AssyModelError::UnknownDefinition { body } => write!(f, "unknown definition body {}", format_uuid(body)),
             AssyModelError::DuplicateId { id } => write!(f, "duplicate instance entity id {id}"),
             AssyModelError::UnknownEntity => f.write_str("unknown instance entity"),
@@ -236,15 +236,15 @@ uuid_id!(
 
 impl InstanceId {
     /// The ID of the instance at `path`.
-    pub fn derive(path: &InstancePath) -> InstanceId {
-        InstanceId(uuid_v5(&ASSY_NAMESPACE, &path.to_bytes()))
+    pub fn derive(instance_path: &InstancePath) -> InstanceId {
+        InstanceId(uuid_v5(&ASSY_NAMESPACE, &instance_path.to_bytes()))
     }
 }
 
 impl InstanceEntityId {
     /// The ID of definition entity `entity` in the instance at `path` (REQ-001).
-    pub fn derive(path: &InstancePath, entity: &TopologyId) -> InstanceEntityId {
-        entity_id_from_midstate(&path_midstate(&path.to_bytes()), entity, &mut Vec::new())
+    pub fn derive(instance_path: &InstancePath, entity: &TopologyId) -> InstanceEntityId {
+        entity_id_from_midstate(&path_midstate(&instance_path.to_bytes()), entity, &mut Vec::new())
     }
 }
 
@@ -274,14 +274,14 @@ pub struct Instance {
     id: InstanceId,
     definition: BodyId,
     frame: FrameId,
-    path: InstancePath,
+    instance_path: InstancePath,
 }
 
 impl Instance {
     /// The instance of body `definition` placed in `frame` at `path`; its ID is derived from
     /// the path, so it is stable across re-import.
-    pub fn new(definition: BodyId, frame: FrameId, path: InstancePath) -> Instance {
-        Instance { id: InstanceId::derive(&path), definition, frame, path }
+    pub fn new(definition: BodyId, frame: FrameId, instance_path: InstancePath) -> Instance {
+        Instance { id: InstanceId::derive(&instance_path), definition, frame, instance_path }
     }
 
     /// The instance ID.
@@ -300,13 +300,13 @@ impl Instance {
     }
 
     /// The assembly path.
-    pub fn path(&self) -> &InstancePath {
-        &self.path
+    pub fn instance_path(&self) -> &InstancePath {
+        &self.instance_path
     }
 
     /// The ID of definition entity `entity` in this instance (REQ-001).
     pub fn entity_id(&self, entity: &TopologyId) -> InstanceEntityId {
-        InstanceEntityId::derive(&self.path, entity)
+        InstanceEntityId::derive(&self.instance_path, entity)
     }
 }
 
@@ -362,10 +362,10 @@ impl InstanceIndex {
                 return Err(AssyModelError::DuplicateBody { body: *w[0].id() });
             }
         }
-        instances.sort_unstable_by(|a, b| a.path.cmp(&b.path));
+        instances.sort_unstable_by(|a, b| a.instance_path.cmp(&b.instance_path));
         for w in instances.windows(2) {
-            if w[0].path == w[1].path {
-                return Err(AssyModelError::DuplicatePath { path: w[0].path.clone() });
+            if w[0].instance_path == w[1].instance_path {
+                return Err(AssyModelError::DuplicatePath { instance_path: w[0].instance_path.clone() });
             }
         }
         let mut resolved: Vec<&Body> = Vec::with_capacity(instances.len());
@@ -386,7 +386,7 @@ impl InstanceIndex {
         let mut buf = Vec::new();
         for (i, (inst, body)) in instances.iter().zip(&resolved).enumerate() {
             let ix = InstanceIx(ix32(i));
-            let mid = path_midstate(&inst.path.to_bytes());
+            let mid = path_midstate(&inst.instance_path.to_bytes());
             for (ent, tid) in exposed(body) {
                 let id = entity_id_from_midstate(&mid, tid, &mut buf);
                 forward.push((id, ix, ent));
@@ -414,8 +414,8 @@ impl InstanceIndex {
     }
 
     /// The instance at `path`, by binary search.
-    pub fn find(&self, path: &InstancePath) -> Option<InstanceIx> {
-        self.instances.binary_search_by(|i| i.path.cmp(path)).ok().map(|i| InstanceIx(ix32(i)))
+    pub fn find(&self, instance_path: &InstancePath) -> Option<InstanceIx> {
+        self.instances.binary_search_by(|i| i.instance_path.cmp(instance_path)).ok().map(|i| InstanceIx(ix32(i)))
     }
 
     /// Number of instance entities.
