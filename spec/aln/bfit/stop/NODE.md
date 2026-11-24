@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-align-solve]
 satisfies: [REQ-ALN.BFIT-005, REQ-ALN.BFIT-007]
 covers: []
 depends_on: [KRN.NUM]
