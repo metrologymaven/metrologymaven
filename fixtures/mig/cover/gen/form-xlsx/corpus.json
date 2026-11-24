@@ -1,0 +1,19 @@
+{
+  "schema": "mig-corpus@1",
+  "format_id": "form-xlsx",
+  "name": "Form workbooks demo corpus",
+  "entries": [
+    {
+      "catalogue_id": "mig-form-demo-1",
+      "sha256": "sha256:7f543884c7f2222c11810c77722088e9b910e5c062d5e58966012ad70ba96601",
+      "format_id": "form-xlsx",
+      "visibility": "public"
+    },
+    {
+      "catalogue_id": "mig-form-demo-2",
+      "sha256": "sha256:05ac7b31fc9abe75eacfb9d74220e1e581091ae836ce926542c2d3e0ecc063ba",
+      "format_id": "form-xlsx",
+      "visibility": "public"
+    }
+  ]
+}

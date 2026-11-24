@@ -102,7 +102,26 @@ fn ac1_csv_points_table_equals_expected_bytes() {
     let CValue::Arr(rows) = field(table, "rows") else { panic!("rows") };
     let statuses: Vec<&str> = rows.iter().map(|r| text(field(r, "status"))).collect();
     assert_eq!(statuses, ["SUPPORTED", "SUPPORTED", "PARTIAL", "SUPPORTED", "UNSUPPORTED", "UNTESTED"]);
-    assert!(matches!(out, CValue::Obj(ref o) if !o.contains_key("checked")));
+    assert!(matches!(out, CValue::Obj(ref o) if !o.contains_key("check")));
+    // Admission is not checked by this command, and private_run is self-declared: both say so.
+    assert_eq!(text(field(&out, "admission")), "not_checked");
+    let header = field(table, "header");
+    assert_eq!(text(field(header, "admission")), "not_checked");
+    assert_eq!(text(field(header, "private_run_basis")), "self_declared_unverified");
+    let md = text(field(&out, "markdown"));
+    assert!(
+        md.contains(
+            "
+- Private run: no (self-declared in the corpus manifest, unverified)
+"
+        ),
+        "{md}"
+    );
+    assert!(md.contains(
+        "
+- Corpus and taxonomy admission: not checked by this command; see `cargo xtask mig corpus-check`/`taxonomy-check`
+"
+    ));
 }
 
 #[test]
@@ -160,7 +179,11 @@ fn ac4_hand_edited_count_is_drift_diff_with_the_line() {
 #[test]
 fn ac4_committed_table_that_matches_passes_check() {
     let out = run(&check_params("expected", "0.1.0")).unwrap();
-    assert_eq!(field(&out, "checked"), &CValue::Bool(true));
+    // A match carries the admission status; there is no bare `checked: true`.
+    let c = field(&out, "check");
+    assert_eq!(text(field(c, "result")), "match");
+    assert_eq!(text(field(c, "admission")), "not_checked");
+    assert!(matches!(out, CValue::Obj(ref o) if !o.contains_key("checked")));
 }
 
 #[test]
@@ -263,7 +286,74 @@ fn two_reports_for_one_corpus_file_are_refused() {
     }))
     .unwrap_err();
     assert_eq!(err.code(), "coverage_schema");
-    assert!(err.to_string().contains("both for corpus file"), "{err}");
+    assert!(err.to_string().contains("both item (mapping or fill) reports for corpus file"), "{err}");
+}
+
+/// The corpus digest the first csv-points report was produced from.
+fn first_source() -> String {
+    let v = fid_canon::parse(&read("csv-points/reports.json")).unwrap();
+    let CValue::Arr(r) = field(&v, "reports") else { panic!("reports") };
+    text(field(field(field(&r[0], "report"), "header"), "source_sha256")).to_string()
+}
+
+fn entry(text: &str) -> CValue {
+    fid_canon::parse(text.as_bytes()).unwrap()
+}
+
+#[test]
+fn a_mapping_and_a_fill_report_for_one_file_are_refused() {
+    let src = first_source();
+    let fill = format!(
+        r#"{{"name":"demo-1.fill.json","report":{{"schema":"mig-fillreport@1","source_workbook_sha256":"{src}","items":[{{"construct_id":"column.header","status":"MAPPED"}}]}}}}"#
+    );
+    let err = csv_with_reports(&edited_reports(|r| r.push(entry(&fill)))).unwrap_err();
+    assert_eq!(err.code(), "coverage_schema");
+}
+
+#[test]
+fn one_item_report_plus_one_equivalence_report_per_file() {
+    let src = first_source();
+    // The equivalence report's own items are not counted when an item report exists.
+    let eq = |name: &str, verdict: &str| {
+        entry(&format!(
+            r#"{{"name":"{name}","report":{{"schema":"mig-equivalence@1","header":{{"format_id":"csv-points","source_sha256":"{src}"}},"verdict":"{verdict}","items":[{{"construct_id":"comment.line","status":"MAPPED"}}]}}}}"#
+        ))
+    };
+    let t = csv_with_reports(&edited_reports(|r| r.push(eq("demo-1.eq.json", "EQUIVALENT")))).unwrap();
+    assert!(t.program);
+    let row = |id: &str| t.rows.iter().find(|r| r.construct_id == id).unwrap().clone();
+    // comment.line only appears in the equivalence report's items: still UNTESTED.
+    assert_eq!(row("comment.line").status, RowStatus::Untested);
+    assert_eq!(row("comment.line").mapped, 0);
+    // column.header: 4 MAPPED; file 1 is EQUIVALENT, files 2..4 have no equivalence report.
+    let h = row("column.header");
+    assert_eq!((h.mapped, h.programs_equivalent, h.programs_not_equivalent), (4, Some(1), Some(3)));
+    assert_eq!(h.status, RowStatus::Partial);
+    assert_eq!(t.header.reports.len(), 5);
+    // A second equivalence report for the same file is refused.
+    let err = csv_with_reports(&edited_reports(|r| {
+        r.push(eq("demo-1.eq.json", "EQUIVALENT"));
+        r.push(eq("demo-1.eq2.json", "DIVERGENT"));
+    }))
+    .unwrap_err();
+    assert_eq!(err.code(), "coverage_schema");
+    assert!(err.to_string().contains("both equivalence reports"), "{err}");
+}
+
+#[test]
+fn mixed_program_set_takes_items_from_mapping_and_verdicts_from_equivalence() {
+    let out = run(&base_params("dmis-prog", "corpus.json", "mixed-reports.json")).unwrap();
+    let table = field(&out, "table");
+    assert_eq!(fid_canon::to_canonical_bytes(table).unwrap(), read("dmis-prog/expected-mixed/coverage-dmis-prog.json"));
+    assert_eq!(text(field(&out, "markdown")).as_bytes(), read("dmis-prog/expected-mixed/coverage-dmis-prog.md"));
+}
+
+#[test]
+fn fill_reports_feed_a_form_table() {
+    let out = run(&base_params("form-xlsx", "corpus.json", "reports.json")).unwrap();
+    let table = field(&out, "table");
+    assert_eq!(fid_canon::to_canonical_bytes(table).unwrap(), read("form-xlsx/expected/coverage-form-xlsx.json"));
+    assert_eq!(text(field(&out, "markdown")).as_bytes(), read("form-xlsx/expected/coverage-form-xlsx.md"));
 }
 
 #[test]
@@ -356,6 +446,8 @@ fn command_definition_and_schemas() {
         base_params("csv-points", "corpus.json", "reports.json"),
         base_params("dmis-prog", "corpus.json", "reports.json"),
         check_params("expected", "0.1.0"),
+        base_params("dmis-prog", "corpus.json", "mixed-reports.json"),
+        base_params("form-xlsx", "corpus.json", "reports.json"),
     ] {
         assert_valid(&p, &params(&text), &text);
         let out = run(&text).unwrap();
