@@ -86,6 +86,7 @@ Synthetic editions under `fixtures/outr/docs/qa/` (`ok`, `broken`, `external`, `
 
 - The weekly external-link cadence is a proposal carried from OUTR.DOCS.
 - OUTR.SITE.QA is still open; its gate command name and configuration keys may differ from `docs-gates.toml` above, in which case only the configuration file changes.
+- **Deferred CI wiring (`REQ-OUTR.DOCS.QA-005` & edition build gate):** The weekly scheduled external-link workflow (creating/updating/closing the `docs-external-links` issue, P1 write permissions) and the docs-edition build-gate CI job are deferred until docs portal CI (`OUTR.SITE.QA` / `OUTR.DOCS.FRAME` workflow integration) is wired.
 
 ## Children
 

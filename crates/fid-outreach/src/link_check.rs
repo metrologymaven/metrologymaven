@@ -460,7 +460,7 @@ pub fn check_internal(edition: &Path) -> Result<InternalReport, LinkCheckError> 
             };
 
             // If a directory link ends in `/`, check `<dir>/index.html`.
-            if path_part.ends_with('/') && !scanned.all_files.contains(&target_rel) {
+            if path_part.ends_with('/') {
                 target_rel =
                     if target_rel.is_empty() { "index.html".to_string() } else { format!("{target_rel}/index.html") };
             }
@@ -955,12 +955,29 @@ pub fn glob_matches(pattern: &str, path: &str) -> bool {
 }
 
 fn glob_segs(pat: &[&str], path: &[&str]) -> bool {
-    match (pat.first(), path.first()) {
-        (None, None) => true,
-        (Some(&"**"), _) => glob_segs(&pat[1..], path) || (!path.is_empty() && glob_segs(pat, &path[1..])),
-        (Some(&p), Some(&s)) => seg_matches(p.as_bytes(), s.as_bytes()) && glob_segs(&pat[1..], &path[1..]),
-        _ => false,
+    let (mut pi, mut si) = (0usize, 0usize);
+    let mut star_pi: Option<usize> = None;
+    let mut star_si: usize = 0;
+    while si < path.len() {
+        if pi < pat.len() && pat[pi] == "**" {
+            star_pi = Some(pi);
+            star_si = si;
+            pi += 1;
+        } else if pi < pat.len() && seg_matches(pat[pi].as_bytes(), path[si].as_bytes()) {
+            pi += 1;
+            si += 1;
+        } else if let Some(sp) = star_pi {
+            pi = sp + 1;
+            star_si += 1;
+            si = star_si;
+        } else {
+            return false;
+        }
     }
+    while pi < pat.len() && pat[pi] == "**" {
+        pi += 1;
+    }
+    pi == pat.len()
 }
 
 fn seg_matches(pat: &[u8], text: &[u8]) -> bool {
@@ -1087,6 +1104,17 @@ mod tests {
         assert!(glob_matches("book/**/*.md", "book/concepts/units.md"));
         assert!(!glob_matches("book/**/*.md", "ref/cli/demo.read_item@1.html"));
         assert!(!glob_matches("book/**/*.md", "book/intro.html"));
+    }
+
+    #[test]
+    fn glob_matches_repeated_double_stars_in_linear_time() {
+        let pat = vec!["**"; 20].into_iter().chain(std::iter::once("target.md")).collect::<Vec<_>>().join("/");
+        let deep_miss = vec!["a"; 40].join("/");
+        assert!(!glob_matches(&pat, &deep_miss));
+
+        assert!(glob_matches("a/**/b/**/c", "a/b/c"));
+        assert!(glob_matches("a/**/b/**/c", "a/x/y/b/z/c"));
+        assert!(!glob_matches("a/**/b/**/c/**/d", "a/b/c/e"));
     }
 
     #[test]
