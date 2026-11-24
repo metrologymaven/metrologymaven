@@ -1543,6 +1543,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-guide-wasm"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-fit",
+ "fid-gps",
+ "fid-kdec",
+ "fid-kunc",
+ "fid-num",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-hal-idl"
 version = "0.0.1"
 dependencies = [
@@ -1752,6 +1765,17 @@ name = "fid-kernel-wasm"
 version = "0.0.1"
 dependencies = [
  "fid-kci",
+]
+
+[[package]]
+name = "fid-keystore"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-keystore",
+ "fid-sign-core",
+ "getrandom 0.2.17",
+ "zeroize",
 ]
 
 [[package]]

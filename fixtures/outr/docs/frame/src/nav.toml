@@ -1,0 +1,34 @@
+# Navigation tree for OUTR.DOCS.FRAME.NAV fixture (synthetic).
+version = 1
+
+[[section]]
+title = "User guide"
+
+  [[section.items]]
+  title = "Introduction"
+  source = "book/index.md"
+
+  [[section.items]]
+  title = "Units"
+  source = "book/units.md"
+  children = [
+    { title = "Replay", source = "book/replay.md" },
+  ]
+
+[[section]]
+title = "Contributor guide"
+
+  [[section.items]]
+  title = "Contributor guide"
+  source = "contributor/guide.md"
+
+[[section]]
+title = "Reference"
+
+  [[section.items]]
+  title = "demo.read_item@1 (CLI)"
+  source = "ref/cli/demo.read_item@1.html"
+
+  [[section.items]]
+  title = "demo.read_item@1 (MCP)"
+  source = "ref/mcp/demo.read_item@1.html"
