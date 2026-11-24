@@ -36,38 +36,73 @@ fn compress(state: &mut [u32; 5], block: &[u8]) {
     }
 }
 
-/// SHA-1 of the concatenation of `parts`.
-pub(crate) fn sha1(parts: &[&[u8]]) -> [u8; 20] {
-    let mut msg: Vec<u8> = Vec::new();
-    for p in parts {
-        msg.extend_from_slice(p);
-    }
-    let bit_len = (msg.len() as u64).wrapping_mul(8);
-    msg.push(0x80);
-    while msg.len() % 64 != 56 {
-        msg.push(0);
-    }
-    msg.extend_from_slice(&bit_len.to_be_bytes());
-    let mut state = H0;
-    for block in msg.chunks_exact(64) {
-        compress(&mut state, block);
-    }
-    let mut out = [0u8; 20];
-    for (o, s) in out.chunks_exact_mut(4).zip(state) {
-        o.copy_from_slice(&s.to_be_bytes());
-    }
-    out
+/// Streaming SHA-1. Cloning a context after a common prefix gives a midstate, so callers
+/// that hash many names sharing that prefix hash the prefix once.
+#[derive(Debug, Clone)]
+pub(crate) struct Sha1 {
+    state: [u32; 5],
+    block: [u8; 64],
+    fill: usize,
+    len: u64,
 }
 
-/// UUIDv5 of `name` in `namespace`: the first 16 bytes of SHA-1(namespace | name) with the
-/// version nibble set to 5 and the RFC 9562 variant bits `10`.
-pub(crate) fn uuid_v5(namespace: &[u8; 16], name: &[u8]) -> [u8; 16] {
-    let h = sha1(&[namespace, name]);
+impl Sha1 {
+    pub(crate) fn new() -> Sha1 {
+        Sha1 { state: H0, block: [0; 64], fill: 0, len: 0 }
+    }
+
+    pub(crate) fn update(&mut self, mut data: &[u8]) {
+        self.len = self.len.wrapping_add(data.len() as u64);
+        while !data.is_empty() {
+            let take = (64 - self.fill).min(data.len());
+            self.block[self.fill..self.fill + take].copy_from_slice(&data[..take]);
+            self.fill += take;
+            data = &data[take..];
+            if self.fill == 64 {
+                compress(&mut self.state, &self.block);
+                self.fill = 0;
+            }
+        }
+    }
+
+    pub(crate) fn finish(mut self) -> [u8; 20] {
+        let bit_len = self.len.wrapping_mul(8);
+        self.update(&[0x80]);
+        while self.fill != 56 {
+            self.update(&[0]);
+        }
+        self.update(&bit_len.to_be_bytes());
+        let mut out = [0u8; 20];
+        for (o, s) in out.chunks_exact_mut(4).zip(self.state) {
+            o.copy_from_slice(&s.to_be_bytes());
+        }
+        out
+    }
+}
+
+/// SHA-1 of the concatenation of `parts`.
+pub(crate) fn sha1(parts: &[&[u8]]) -> [u8; 20] {
+    let mut h = Sha1::new();
+    for p in parts {
+        h.update(p);
+    }
+    h.finish()
+}
+
+/// The UUIDv5 bytes from a SHA-1 digest: the first 16 bytes with the version nibble set to
+/// 5 and the RFC 9562 variant bits `10`.
+pub(crate) fn uuid_v5_from_sha1(h: &[u8; 20]) -> [u8; 16] {
     let mut b = [0u8; 16];
     b.copy_from_slice(&h[..16]);
     b[6] = (b[6] & 0x0f) | 0x50;
     b[8] = (b[8] & 0x3f) | 0x80;
     b
+}
+
+/// UUIDv5 of `name` in `namespace`: the first 16 bytes of SHA-1(namespace | name) with the
+/// version nibble set to 5 and the RFC 9562 variant bits `10`.
+pub(crate) fn uuid_v5(namespace: &[u8; 16], name: &[u8]) -> [u8; 16] {
+    uuid_v5_from_sha1(&sha1(&[namespace, name]))
 }
 
 /// Hyphenated lowercase form `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`.
@@ -105,6 +140,16 @@ mod tests {
         assert_eq!(hex(&sha1(&[&million])), "34aa973cd4c4daa4f61eeb2bdbad27316534016f");
         // Split input hashes like the concatenation.
         assert_eq!(sha1(&[b"ab", b"c"]), sha1(&[b"abc"]));
+        // A cloned midstate continues like one pass, across block boundaries.
+        let msg: Vec<u8> = (0..300u32).map(|i| (i * 7 % 251) as u8).collect();
+        for cut in [0, 1, 55, 56, 63, 64, 65, 127, 128, 200, 300] {
+            let mut pre = Sha1::new();
+            pre.update(&msg[..cut]);
+            let mut a = pre.clone();
+            a.update(&msg[cut..]);
+            assert_eq!(a.finish(), sha1(&[&msg]), "cut {cut}");
+            assert_eq!(pre.finish(), sha1(&[&msg[..cut]]), "cut {cut}");
+        }
     }
 
     #[test]

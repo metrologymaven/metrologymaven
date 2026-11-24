@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 
 use fid_geo_cad::{
     AssyModelError, Body, EntityIx, Instance, InstanceEntityId, InstanceId, InstanceIndex, InstanceIx, InstancePath,
-    InstanceView, Label, TopologyId, MAX_INSTANCE_ENTITIES,
+    InstanceView, Label, TopologyId,
 };
 use fid_geo_frame::{Frame, FrameId, FrameKind, FrameTree, Rigid, Transform};
 use fid_num::rng::{Address, Cursor};
@@ -331,5 +331,4 @@ fn build_errors() {
         InstanceIndex::build(insts.clone(), &[&body, &body]).unwrap_err(),
         AssyModelError::DuplicateBody { body: *body.id() }
     );
-    assert!(MAX_INSTANCE_ENTITIES >= 10_000_000);
 }

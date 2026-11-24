@@ -34,7 +34,7 @@ use core::fmt;
 
 use fid_geo_frame::{FrameId, FrameTree};
 
-use crate::topo::uuid::{format_uuid, uuid_v5};
+use crate::topo::uuid::{format_uuid, uuid_v5, uuid_v5_from_sha1, Sha1};
 use crate::topo::{Body, Edge, EdgeIx, EntityIx, Face, FaceIx, TopologyId, Vertex, VertexIx, MAX_ENTITIES};
 
 /// The project namespace of instance and instance entity IDs: UUIDv5 of
@@ -244,17 +244,28 @@ impl InstanceId {
 impl InstanceEntityId {
     /// The ID of definition entity `entity` in the instance at `path` (REQ-001).
     pub fn derive(path: &InstancePath, entity: &TopologyId) -> InstanceEntityId {
-        entity_id_from_path_bytes(&path.to_bytes(), entity, &mut Vec::new())
+        entity_id_from_midstate(&path_midstate(&path.to_bytes()), entity, &mut Vec::new())
     }
 }
 
-/// UUIDv5 over `path_bytes | 0x00 | entity bytes`, reusing `buf` as scratch.
-fn entity_id_from_path_bytes(path_bytes: &[u8], entity: &TopologyId, buf: &mut Vec<u8>) -> InstanceEntityId {
+/// The SHA-1 midstate after `namespace | path bytes | 0x00`, shared by every entity of one
+/// instance so the path is hashed once per instance, not once per entity.
+fn path_midstate(path_bytes: &[u8]) -> Sha1 {
+    let mut h = Sha1::new();
+    h.update(&ASSY_NAMESPACE);
+    h.update(path_bytes);
+    h.update(&[0x00]);
+    h
+}
+
+/// The instance entity ID of `entity` continuing from an instance's [`path_midstate`],
+/// reusing `buf` as scratch for the entity bytes.
+fn entity_id_from_midstate(mid: &Sha1, entity: &TopologyId, buf: &mut Vec<u8>) -> InstanceEntityId {
     buf.clear();
-    buf.extend_from_slice(path_bytes);
-    buf.push(0x00);
     put_topology_id(buf, entity);
-    InstanceEntityId(uuid_v5(&ASSY_NAMESPACE, buf))
+    let mut h = mid.clone();
+    h.update(buf);
+    InstanceEntityId(uuid_v5_from_sha1(&h.finish()))
 }
 
 /// One placed occurrence of a definition body.
@@ -375,9 +386,9 @@ impl InstanceIndex {
         let mut buf = Vec::new();
         for (i, (inst, body)) in instances.iter().zip(&resolved).enumerate() {
             let ix = InstanceIx(ix32(i));
-            let path_bytes = inst.path.to_bytes();
+            let mid = path_midstate(&inst.path.to_bytes());
             for (ent, tid) in exposed(body) {
-                let id = entity_id_from_path_bytes(&path_bytes, tid, &mut buf);
+                let id = entity_id_from_midstate(&mid, tid, &mut buf);
                 forward.push((id, ix, ent));
                 backward.push((ix, ent, id));
             }
@@ -525,6 +536,16 @@ mod tests {
         want.extend_from_slice(&[0xab; 16]);
         assert_eq!(p.to_bytes(), want);
         assert_eq!(p.to_string(), "\"#5\"/abababab-abab-abab-abab-abababababab");
+    }
+
+    #[test]
+    fn midstate_matches_one_shot() {
+        let p = InstancePath::new(vec![TopologyId::Imported(Label::new(&"#".repeat(200)).unwrap())]).unwrap();
+        let e = TopologyId::Derived([7; 16]);
+        let mut name = p.to_bytes();
+        name.push(0x00);
+        put_topology_id(&mut name, &e);
+        assert_eq!(InstanceEntityId::derive(&p, &e).to_bytes(), uuid_v5(&ASSY_NAMESPACE, &name));
     }
 
     #[test]
