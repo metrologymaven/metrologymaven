@@ -19,8 +19,10 @@
 //! - [`icons_prov`]: `icons-prov` and `icons-registry` (`UX.ICONS.PROV`).
 //! - [`page`]: `page-check` (`UX.REPORT.PAGE`).
 //! - [`glyph`]: `glyph-distinct` (`UX.ICONS.CLASS`).
+//! - [`comp`]: `comp-check` (`UX.COMP.SCHEMA`).
 
 pub mod color;
+pub mod comp;
 pub mod finding;
 pub mod fonts;
 pub mod glyph;

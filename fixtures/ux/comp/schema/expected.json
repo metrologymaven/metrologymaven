@@ -1,0 +1,148 @@
+{
+  "cases": [
+    {
+      "findings": [],
+      "package": "v1.0.0",
+      "root": "ok/button.md"
+    },
+    {
+      "findings": [
+        [
+          "COMP-POINTER-ONLY",
+          "reorder"
+        ]
+      ],
+      "package": "v1.0.0",
+      "root": "pointer-only.md"
+    },
+    {
+      "findings": [
+        [
+          "COMP-TOKEN-UNKNOWN",
+          "sem.text.nonexistent"
+        ]
+      ],
+      "package": "v1.0.0",
+      "root": "bad-token.md"
+    },
+    {
+      "findings": [
+        [
+          "COMP-DISABLED-REASON",
+          "no-reason.md"
+        ]
+      ],
+      "package": "v1.0.0",
+      "root": "no-reason.md"
+    },
+    {
+      "findings": [
+        [
+          "COMP-ROLE",
+          "widgetish"
+        ]
+      ],
+      "package": "v1.0.0",
+      "root": "bad-role.md"
+    },
+    {
+      "findings": [
+        [
+          "COMP-STATE-MISSING",
+          "loading"
+        ]
+      ],
+      "package": "v1.0.0",
+      "root": "extra/state-missing.md"
+    },
+    {
+      "findings": [
+        [
+          "COMP-FOCUS",
+          "focus-thin.md"
+        ]
+      ],
+      "package": "v1.0.0",
+      "root": "extra/focus-thin.md"
+    },
+    {
+      "findings": [
+        [
+          "COMP-FOCUS",
+          "sem.focus.ring/sem.status.ok"
+        ]
+      ],
+      "package": "v1.0.0",
+      "root": "extra/focus-undeclared.md"
+    },
+    {
+      "findings": [
+        [
+          "COMP-FOCUS",
+          "sem.text.muted/sem.surface.base"
+        ]
+      ],
+      "package": "v1.0.0",
+      "root": "extra/focus-text-pair.md"
+    },
+    {
+      "findings": [
+        [
+          "COMP-DENSITY",
+          "density-half.md"
+        ]
+      ],
+      "package": "v1.0.0",
+      "root": "extra/density-half.md"
+    },
+    {
+      "findings": [
+        [
+          "COMP-DISABLED-REASON",
+          "reason-hover.md"
+        ]
+      ],
+      "package": "v1.0.0",
+      "root": "extra/reason-hover.md"
+    },
+    {
+      "findings": [
+        [
+          "COMP-SCHEMA",
+          "no-front-block.md"
+        ]
+      ],
+      "package": "v1.0.0",
+      "root": "extra/no-front-block.md"
+    },
+    {
+      "findings": [
+        [
+          "COMP-SCHEMA",
+          "missing-section.md"
+        ]
+      ],
+      "package": "v1.0.0",
+      "root": "extra/missing-section.md"
+    },
+    {
+      "findings": [
+        [
+          "COMP-FOCUS",
+          "sem.focus.ring/sem.surface.base"
+        ],
+        [
+          "COMP-TOKEN-UNKNOWN",
+          "sem.surface.base"
+        ],
+        [
+          "COMP-TOKEN-UNKNOWN",
+          "space.1"
+        ]
+      ],
+      "package": "../../system/pkg/v1.0.0",
+      "root": "ok/button.md"
+    }
+  ],
+  "format": "comp-check-cases@1"
+}
