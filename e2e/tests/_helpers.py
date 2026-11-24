@@ -26,7 +26,20 @@ def set_owner_only_acl(path: Path, *, is_dir: bool) -> None:
         os.chmod(path, 0o700 if is_dir else 0o600)
         return
     username = os.environ.get("USERNAME") or os.getlogin()
-    grant = f"{username}:(OI)(CI)F" if is_dir else f"{username}:F"
+    userdomain = os.environ.get("USERDOMAIN")
+    principal = f"{userdomain}\\{username}" if userdomain else username
+    # On elevated Windows runners (e.g. GitHub Actions runneradmin), new files default to
+    # owner BUILTIN\Administrators; set explicit user ownership before restricting the DACL.
+    p_owner = subprocess.run(
+        ["icacls", str(path), "/setowner", principal],
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+    if p_owner.returncode != 0:
+        raise TestFailure(f"icacls /setowner failed on {path}: {p_owner.stderr or p_owner.stdout}")
+    grant = f"{principal}:(OI)(CI)F" if is_dir else f"{principal}:F"
     proc = subprocess.run(
         ["icacls", str(path), "/inheritance:r", "/grant:r", grant],
         capture_output=True,

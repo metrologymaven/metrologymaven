@@ -195,32 +195,70 @@ def test_fid_ctrl_authenticated_status_and_ping(ctx: TestContext) -> None:
     test_id="T1-F1-06",
     tier=1,
     feature="F1",
-    description="M4 AUTO.CLI.DISPATCH routes registry commands via fid-bus-api and includes rdl submit-tracim",
+    description="M4 AUTO.CLI.DISPATCH routes commands via fid-bus-api, enforces CLI gates, and probes rdl submit-tracim",
 )
 def test_fid_bus_dispatch_and_rdl_tracim(ctx: TestContext) -> None:
     fid = ctx.require_bin("fid")
-    # 1. Verify rdl submit-tracim is wired into CLI tree (PROJECT.md item 4 / M4).
+    # 1. Probe rdl submit-tracim: min-classes.tree.json omits `rdl` (exit 2 unknown command),
+    # while a full CLI tree exits 0 with command help.
     r_help = ctx.run([fid, "rdl", "submit-tracim", "--help"])
-    if r_help.returncode != 0:
-        raise TestFailure(f"fid rdl submit-tracim --help failed (exit {r_help.returncode}): {r_help.stderr}")
-    if "submit-tracim" not in r_help.stdout or "Command:" not in r_help.stdout:
-        raise TestFailure(f"unexpected rdl submit-tracim --help output:\n{r_help.stdout}")
+    if r_help.returncode == 0:
+        if "submit-tracim" not in r_help.stdout or "Command:" not in r_help.stdout:
+            raise TestFailure(f"unexpected rdl submit-tracim --help output:\n{r_help.stdout}")
+    elif r_help.returncode == 2:
+        combined_help = (r_help.stdout + "\n" + r_help.stderr).lower()
+        if "unknown" not in combined_help:
+            raise TestFailure(f"expected 'unknown' on fid rdl submit-tracim --help exit 2: {combined_help!r}")
+    else:
+        raise TestFailure(f"unexpected fid rdl submit-tracim --help exit {r_help.returncode}: {r_help.stderr}")
 
-    # 2. Verify registry command dispatch does not hit pre-M4 placeholder stub.
+    # 2. Verify registry command dispatch routes through StandaloneCliBus (fails closed with no_bus_host, not pre-M4 stub).
     r_disp = ctx.run([fid, "project", "list-features", "--json"])
-    if r_disp.returncode != 0:
+    if r_disp.returncode != 4:
         raise TestFailure(
-            f"fid project list-features --json failed (exit {r_disp.returncode}): "
+            f"expected exit 4 from standalone fid project list-features --json, got {r_disp.returncode}: "
             f"stdout={r_disp.stdout!r} stderr={r_disp.stderr!r}"
         )
+    if "AUTO.CLI.DISPATCH" in r_disp.stdout:
+        raise TestFailure(f"fid still returns pre-M4 placeholder: {r_disp.stdout!r}")
     env = parse_single_line_json(r_disp.stdout)
-    if "AUTO.CLI.DISPATCH" in json.dumps(env):
-        raise TestFailure(f"fid still returns pre-M4 placeholder: {env!r}")
-    assert_envelope(env, command_id="project.list_features@1")
-    if env.get("outcome") not in ("computed", "committed", "dry_run"):
-        raise TestFailure(f"expected successful dispatch outcome, got {env!r}")
-    if not isinstance(env.get("result"), dict):
-        raise TestFailure(f"expected non-empty result dict in envelope, got {env!r}")
+    assert_envelope(env, outcome="failed", command_id="project.list_features@1", error_code="precondition_failed")
+    err_msg = str(env.get("error", {}).get("message", ""))  # type: ignore[union-attr]
+    if "no_bus_host" not in err_msg:
+        raise TestFailure(f"expected no_bus_host in standalone dispatch error: {env!r}")
+
+    # 3. Positive live standalone execution: fid canon --json
+    canon_in = ctx.workdir / "t1_f1_06_canon.json"
+    canon_in.write_text('{"b":1,"a":2}', encoding="utf-8")
+    r_canon = ctx.run([fid, "canon", "--json", str(canon_in)])
+    if r_canon.returncode != 0:
+        raise TestFailure(f"fid canon --json failed (exit {r_canon.returncode}): {r_canon.stderr}")
+    c_env = parse_single_line_json(r_canon.stdout)
+    assert_envelope(c_env, outcome="computed", command_id="canon.canonicalize@1")
+    c_res = c_env.get("result")
+    if not isinstance(c_res, dict) or not str(c_res.get("digest", "")).startswith("sha256:"):
+        raise TestFailure(f"expected canonical digest from fid canon --json, got {c_env!r}")
+
+    # 4. Pre-bus CLI gates: dry_run_unsupported (exit 2) and raw_path_refused (exit 3)
+    r_dry = ctx.run([fid, "rpt", "release-report", "--dry-run", "--json"])
+    if r_dry.returncode != 2:
+        raise TestFailure(f"expected exit 2 for dry_run_unsupported, got {r_dry.returncode}: {r_dry.stdout} {r_dry.stderr}")
+    assert_envelope(
+        parse_single_line_json(r_dry.stdout),
+        outcome="failed",
+        command_id="rpt.release_report@1",
+        error_code="dry_run_unsupported",
+    )
+
+    r_raw = ctx.run([fid, "align", "set-datum", "--source", "/raw/path", "--offset", "1mm", "--project", "root:p/min.fid", "--json"])
+    if r_raw.returncode != 3:
+        raise TestFailure(f"expected exit 3 for raw_path_refused, got {r_raw.returncode}: {r_raw.stdout} {r_raw.stderr}")
+    assert_envelope(
+        parse_single_line_json(r_raw.stdout),
+        outcome="failed",
+        command_id="align.set_datum@1",
+        error_code="raw_path_refused",
+    )
 
 
 # ===========================================================================

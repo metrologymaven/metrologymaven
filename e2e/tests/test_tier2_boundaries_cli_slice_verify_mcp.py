@@ -16,7 +16,12 @@ from e2e.lib.harness import (
     e2e_test,
     parse_single_line_json,
 )
-from e2e.tests._helpers import mcp_init_messages, run_mcp_session, write_disclosure_profiles_index
+from e2e.tests._helpers import (
+    mcp_init_messages,
+    run_mcp_session,
+    set_owner_only_acl,
+    write_disclosure_profiles_index,
+)
 
 
 # ===========================================================================
@@ -108,6 +113,7 @@ def test_fid_ctrl_no_app_and_bounds(ctx: TestContext) -> None:
     fid = ctx.require_bin("fid")
     run_dir = ctx.workdir / "empty_run"
     run_dir.mkdir(parents=True, exist_ok=True)
+    set_owner_only_acl(run_dir, is_dir=True)
     tok_file = ctx.workdir / "missing.token"
 
     res = ctx.run(
@@ -571,6 +577,7 @@ def test_mcp_mode_conflict_exit_2(ctx: TestContext) -> None:
 )
 def test_mcp_raw_path_refused_exit_3(ctx: TestContext) -> None:
     fid = ctx.require_bin("fid")
+    ctx.require_bin("fid-mcp")
     res = ctx.run([fid, "mcp", "--headless", "--project", "/raw/filesystem/path"])
     if res.returncode != 3:
         raise TestFailure(f"expected exit 3 on raw --project path, got {res.returncode}: {res.stderr}")
