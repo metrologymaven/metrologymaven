@@ -328,7 +328,7 @@ fn parse_xrandr_resolution(text: &str) -> Option<(u32, u32)> {
 
 // ------------------------------------------------------------------ macOS probes
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn run_stdout(prog: &str, args: &[&str]) -> Result<String, String> {
     let out = std::process::Command::new(prog).args(args).output().map_err(|e| e.to_string())?;
     if !out.status.success() {
