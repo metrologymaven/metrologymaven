@@ -32,8 +32,29 @@ def test_site_csp_and_no_inline_script_invariant(ctx: TestContext) -> None:
         is_guide = rel_p.startswith("guide/")
         if not is_guide and re.search(r"<script\b", txt, re.I):
             raise TestFailure(f"<script> tag forbidden outside /guide/ found in {rel_p}")
-        if re.search(r"<script\b(?!\s*[^>]*\s+src\s*=)[^>]*>", txt, re.I):
-            raise TestFailure(f"inline script tag found in {rel_p}")
+        for sm in re.finditer(r"<script\b([^>]*)>", txt, re.I):
+            attrs = sm.group(1)
+            has_src = bool(re.search(r"\bsrc\s*=", attrs, re.I))
+            is_json_data = is_guide and bool(
+                re.search(
+                    r'''\btype\s*=\s*(?:"application/json"|'application/json'|application/json\b)''',
+                    attrs,
+                    re.I,
+                )
+            )
+            if not (has_src or (is_json_data and not has_src)):
+                raise TestFailure(f"inline script tag found in {rel_p}")
+            if is_json_data and not has_src:
+                close = re.search(r"</script\s*>", txt[sm.end() :], re.I)
+                if not close:
+                    raise TestFailure(f'unclosed <script type="application/json"> in {rel_p}')
+                body = txt[sm.end() : sm.end() + close.start()]
+                if "<script" in body.lower():
+                    raise TestFailure(f"nested <script in JSON data block in {rel_p}")
+                try:
+                    json.loads(body)
+                except json.JSONDecodeError as exc:
+                    raise TestFailure(f'invalid JSON in <script type="application/json"> in {rel_p}: {exc}') from exc
         if "wasm-unsafe-eval" in txt:
             raise TestFailure(f"HTML page {rel_p} should never embed wasm-unsafe-eval")
         for m in re.finditer(
@@ -59,10 +80,34 @@ def test_site_csp_and_no_inline_script_invariant(ctx: TestContext) -> None:
         for m in re.finditer(r'''(?:url\(\s*|@import\s+)["']?\s*(https?:|//)[^)"'\s;]+''', css_txt, re.I):
             raise TestFailure(f"external CSS reference {m.group(0)!r} in {rel_css}")
 
-    worker = (ctx.repo_root / "site" / "worker.js").read_text(encoding="utf-8")
-    # Default route CSP must remain script-src 'none'
-    if "script-src 'none'" not in worker:
-        raise TestFailure("site/worker.js missing default script-src 'none' CSP")
+    node = ctx.require_node()
+    worker_uri = (ctx.repo_root / "site" / "worker.js").as_uri()
+    js_probe = (
+        f"import worker from {json.dumps(worker_uri)};\n"
+        "const env = { ASSETS: { fetch: async () => new Response('ok', { status: 200, headers: { 'content-type': 'text/html' } }) } };\n"
+        "const out = {};\n"
+        "for (const p of ['/', '/status/', '/apps/', '/guide-fake/', '/guide', '/guide/', '/guide/fits/']) {\n"
+        "  const res = await worker.fetch(new Request('https://metrologymaven.io' + p), env);\n"
+        "  out[p] = res.headers.get('Content-Security-Policy') || '';\n"
+        "}\n"
+        "console.log(JSON.stringify(out));\n"
+    )
+    r_node = ctx.run([node, "--input-type=module", "-e", js_probe])
+    if r_node.returncode != 0:
+        raise TestFailure(f"Node ESM evaluation of site/worker.js failed (exit {r_node.returncode}): {r_node.stderr}")
+    csp_map = parse_single_line_json(r_node.stdout)
+    for route in ("/", "/status/", "/apps/", "/guide-fake/"):
+        csp = str(csp_map.get(route, ""))
+        if "script-src 'none'" not in csp or "wasm-unsafe-eval" in csp or "unsafe-inline" in csp or "unsafe-eval" in csp:
+            raise TestFailure(f"unexpected non-guide CSP for {route}: {csp!r}")
+    for route in ("/guide", "/guide/", "/guide/fits/"):
+        csp = str(csp_map.get(route, ""))
+        if (
+            "script-src 'self' 'wasm-unsafe-eval'" not in csp
+            or "unsafe-inline" in csp
+            or re.search(r"(?<!wasm-)unsafe-eval", csp)
+        ):
+            raise TestFailure(f"unexpected guide CSP for {route}: {csp!r}")
 
 
 @e2e_test(
@@ -334,9 +379,9 @@ def test_xtask_rel_notes_hostile_and_missing(ctx: TestContext) -> None:
             "rel",
             "notes",
             "--tag",
-            "v1.4.0-beta.2",
+            "v1.4.0",
             "--channel",
-            "beta",
+            "stable",
             "--prs",
             str(prs),
             "--reports",
@@ -357,9 +402,9 @@ def test_xtask_rel_notes_hostile_and_missing(ctx: TestContext) -> None:
             "rel",
             "notes",
             "--tag",
-            "v1.4.0-beta.2",
+            "v1.4.0",
             "--channel",
-            "beta",
+            "stable",
             "--prs",
             str(hostile_prs),
             "--reports",
@@ -371,8 +416,22 @@ def test_xtask_rel_notes_hostile_and_missing(ctx: TestContext) -> None:
     if r_hostile.returncode != 0:
         raise TestFailure(f"expected exit 0 neutralizing hostile PR title, got {r_hostile.returncode}: {r_hostile.stderr}")
     md = (out_dir / "release-notes.md").read_text(encoding="utf-8")
-    if "[click](javascript:" in md:
-        raise TestFailure(f"unescaped markdown link in release-notes.md:\n{md}")
+    expected_lines = (
+        "- #301 `Fix [link](javascript:x) and *bold*`",
+        "- #302 `<script>alert(1)</script> ![img](x.png)`",
+        "- #303 `Line one ## Injected heading  | a | b |`",
+        "- #309 ``` Use `fid` and ``x`` ```",
+    )
+    for line in expected_lines:
+        if line not in md:
+            raise TestFailure(f"missing expected inert code-span line {line!r} in release-notes.md:\n{md}")
+    if any(ln.startswith("## Injected") for ln in md.splitlines()):
+        raise TestFailure(f"injected heading survived in release-notes.md:\n{md}")
+    if "THIS-TAIL-IS-CUT" in md or " ... (truncated)" not in md:
+        raise TestFailure(f"expected truncation of hostile PR #304 title in release-notes.md:\n{md}")
+    for ch in ("\u202e", "\r", "\u061c", "\u200b", "\u00ad", "\u2060", "\U000e0041"):
+        if ch in md:
+            raise TestFailure(f"unsafe control/bidi character {ch!r} survived in release-notes.md")
 
 
 @e2e_test(

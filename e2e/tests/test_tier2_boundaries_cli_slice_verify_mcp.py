@@ -394,13 +394,16 @@ def test_fid_verify_signature_failures(ctx: TestContext) -> None:
     if parse_single_line_json(r_untrusted.stdout).get("verdict") != "FAIL":
         raise TestFailure(f"expected FAIL on empty trust root: {r_untrusted.stdout}")
 
-    # 3. Faulty signatures fixture -> bit 1 set + FAIL
+    # 3. Faulty signatures fixture -> bit 1 set + FAIL (--fail-fast since minimal troot fixture lacks journal segment)
     faults_pkg = ctx.repo_root / "fixtures" / "troot" / "packages" / "faults.zip"
-    r_faults = ctx.run([verify, str(faults_pkg), "--trust-root", str(root), "--json"])
+    r_faults = ctx.run([verify, str(faults_pkg), "--trust-root", str(root), "--fail-fast", "--json"])
     if r_faults.returncode == 0 or (r_faults.returncode & 1) == 0:
         raise TestFailure(f"expected signature failure bit 1 on faults.zip, got {r_faults.returncode}: {r_faults.stdout}")
-    if parse_single_line_json(r_faults.stdout).get("verdict") != "FAIL":
-        raise TestFailure(f"expected verdict=FAIL on faults.zip: {r_faults.stdout}")
+    rep_faults = parse_single_line_json(r_faults.stdout)
+    if rep_faults.get("verdict") != "FAIL":
+        raise TestFailure(f"expected verdict=FAIL on faults.zip: {rep_faults!r}")
+    if rep_faults.get("signatures", {}).get("package_status") != "SIGNED":  # type: ignore[union-attr]
+        raise TestFailure(f"expected signatures.package_status=SIGNED on faults.zip: {rep_faults!r}")
 
 
 @e2e_test(
@@ -480,14 +483,18 @@ def test_fid_verify_usage_exit_65(ctx: TestContext) -> None:
 )
 def test_fid_verify_unsigned_and_tampered(ctx: TestContext) -> None:
     verify = ctx.require_bin("fid-verify")
-    unsigned = ctx.repo_root / "fixtures" / "troot" / "packages" / "unsigned.zip"
+    unsigned = ctx.repo_root / "fixtures" / "pkg" / "golden" / "points.zip"
     root = ctx.repo_root / "fixtures" / "troot" / "roots" / "both.json"
     res = ctx.run([verify, str(unsigned), "--trust-root", str(root), "--json"])
     if res.returncode != 1:
-        raise TestFailure(f"expected exit 1 on unsigned.zip, got {res.returncode}: {res.stdout}")
+        raise TestFailure(f"expected exit 1 on golden/points.zip, got {res.returncode}: {res.stdout}")
     rep = parse_single_line_json(res.stdout)
-    if rep.get("verdict") != "FAIL":
-        raise TestFailure(f"expected verdict=FAIL for unsigned package, got {rep!r}")
+    if rep.get("verdict") != "FAIL" or rep.get("exit_code") != 1:
+        raise TestFailure(f"expected verdict=FAIL exit_code=1 for unsigned package, got {rep!r}")
+    if rep.get("signatures", {}).get("package_status") != "UNSIGNED":  # type: ignore[union-attr]
+        raise TestFailure(f"expected signatures.package_status=UNSIGNED on golden/points.zip, got {rep!r}")
+    if rep.get("chain", {}).get("verdict") != "VALID":  # type: ignore[union-attr]
+        raise TestFailure(f"expected chain.verdict=VALID on golden/points.zip, got {rep!r}")
 
     # 1-byte raw tamper of signed golden/two-signatures.zip
     golden_signed = ctx.repo_root / "fixtures" / "pkg" / "golden" / "two-signatures.zip"
@@ -635,7 +642,6 @@ def test_mcp_invoke_readonly_refuses_w2(ctx: TestContext) -> None:
 )
 def test_mcp_oversized_line_stays_alive_and_taint_escapes(ctx: TestContext) -> None:
     mcp = ctx.require_bin("fid-mcp")
-    idx = write_disclosure_profiles_index(ctx.workdir)
     big_str = "A" * (4 * 1024 * 1024 + 1024)
     oversized = json.dumps({"jsonrpc": "2.0", "id": 99, "method": "tools/list", "params": {"pad": big_str}})
     msgs_in: list[dict[str, object] | str] = [
@@ -654,12 +660,12 @@ def test_mcp_oversized_line_stays_alive_and_taint_escapes(ctx: TestContext) -> N
             "method": "tools/call",
             "params": {
                 "name": "tools_invoke_readonly",
-                "arguments": {"command": "project.list_features@1", "args": {"note": "<<<inject>>>"}},
+                "arguments": {"command": "canon.canonicalize@1", "args": {"input": {"note": "<<<inject>>>"}}},
             },
         },
     ]
     rc, msgs, _, stderr = run_mcp_session(
-        mcp, ["--headless", "--profiles-index", str(idx)], msgs_in, cwd=ctx.repo_root, timeout=30.0
+        mcp, ["--headless"], msgs_in, cwd=ctx.repo_root, timeout=30.0
     )
     if rc != 0:
         raise TestFailure(f"fid-mcp exited {rc}: {stderr}")
@@ -677,8 +683,15 @@ def test_mcp_oversized_line_stays_alive_and_taint_escapes(ctx: TestContext) -> N
     r5 = next((m for m in msgs if m.get("id") == 5), None)
     if not r5 or "result" not in r5 or r5["result"].get("isError"):
         raise TestFailure(f"tools_invoke_readonly failed in r5: {r5!r}")
-    r5_dump = json.dumps(r5["result"])
-    if re.search(r"(?<!\\)<<<inject", r5_dump):
-        raise TestFailure(f"unescaped <<<inject>>> found in r5: {r5!r}")
-    if "untrusted" not in r5_dump and "FID-UNTRUSTED-DATA-BEGIN" not in r5_dump:
-        raise TestFailure(f"expected taint wrapping in r5: {r5!r}")
+    r5_content = r5["result"].get("content", [])
+    if not isinstance(r5_content, list) or not r5_content or not isinstance(r5_content[0], dict):
+        raise TestFailure(f"expected content text block in r5: {r5!r}")
+    r5_text = str(r5_content[0].get("text", ""))
+    if "FID-UNTRUSTED-DATA-BEGIN" not in r5_text or "FID-UNTRUSTED-DATA-END" not in r5_text:
+        raise TestFailure(f"expected FID-UNTRUSTED-DATA delimiters in r5 content text: {r5!r}")
+    if re.search(r"(?<!\\)<<<inject", r5_text) or r"\<<<inject\>>>" not in r5_text:
+        raise TestFailure(f"expected escaped \\<<<inject\\>>> in r5 content text: {r5_text!r}")
+    r5_sc = r5["result"].get("structuredContent", {}).get("result", {})
+    note_wrapped = r5_sc.get("canonical", {}).get("note") if isinstance(r5_sc, dict) else None
+    if note_wrapped != {"untrusted": True, "text": "<<<inject>>>"}:
+        raise TestFailure(f"expected structured untrusted wrapper in r5: {r5_sc!r}")
