@@ -1534,6 +1534,8 @@ dependencies = [
  "fid-canon",
  "fid-fit",
  "fid-geo-frame",
+ "fid-geo-index",
+ "fid-geo-types",
  "fid-num",
  "fid-types",
  "fid-uuid",

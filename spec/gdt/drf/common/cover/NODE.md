@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-gps]
 satisfies: [REQ-GDT.DRF.COMMON-003]
 covers: []
 depends_on: [GDT.DRF.DATUM, GEO.FRAME, KRN.NUM]
@@ -64,7 +65,10 @@ Synthetic plates with targets on and off the data (CC0).
 
 ## Open questions
 
-- None.
+- **Built (fid-gps `drf::targets::coverage`).** AC-1 to AC-4 and REQ-001 to REQ-003 are met; oracle `fixtures/gdt/drf/make_targets_plate.py` (exact rational nearest distances of the pinned samples, the exact largest gap along line targets, hand-labelled area suprema).
+- **Target geometry is defined here for now.** `GDT.DRF.DATUM` stores a target only as a geometry reference, so the function takes the resolved geometry: a point, a line segment, a parallelogram area (corner and two edges) or a circular area (centre, normal, radius). When `GDT.DRF.COMMON.TARGET` resolves target references to geometry, it should produce these values.
+- **Pinned sample sets.** Lines and parallelograms are sampled at `ceil(length / spacing)` equal steps including both ends and every corner; a disc by a square grid at the spacing in a pinned in-plane basis plus a rim of `max(4, ceil(2 pi r / spacing))` points. The sampled distance is never above the analytic largest gap and reaches it when the gap lies at a sample (an end, a corner or a grid point).
+- **Errors beyond the Design list (fail closed):** `bad_threshold` (negative), `bad_spacing` (not positive), `no_targets`, `degenerate_target{target}` (a disc with a zero normal or a negative radius), `too_many_samples{target}` (more than 2^20 samples for one target), and `index{code}` for a k-d tree refusal. `nan_input` also covers infinities. The report carries each target's sample count.
 
 ## Children
 
