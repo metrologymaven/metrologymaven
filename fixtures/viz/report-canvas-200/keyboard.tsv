@@ -1,0 +1,112 @@
+# fid-spike-ui canvas keyboard v1: step, key, argument, then after the step: focus, page,
+# x, y, w, h (0.1 mm), editing, undo depth, redo depth, zoom %, focused block text (- for none)
+# start: focus 1, zoom 100, nothing edited
+1	PageDown		41	2	150	100	1800	150	0	0	0	100	Inspection report, page 2
+2	Tab		42	2	150	300	575	150	0	0	0	100	-
+3	Right		42	2	200	300	575	150	0	1	0	100	-
+4	Right		42	2	250	300	575	150	0	2	0	100	-
+5	Right		42	2	300	300	575	150	0	3	0	100	-
+6	Right		42	2	350	300	575	150	0	4	0	100	-
+7	Right		42	2	400	300	575	150	0	5	0	100	-
+8	Right		42	2	450	300	575	150	0	6	0	100	-
+9	Right		42	2	500	300	575	150	0	7	0	100	-
+10	Right		42	2	550	300	575	150	0	8	0	100	-
+11	Right		42	2	600	300	575	150	0	9	0	100	-
+12	Right		42	2	650	300	575	150	0	10	0	100	-
+13	Down		42	2	650	350	575	150	0	11	0	100	-
+14	Down		42	2	650	400	575	150	0	12	0	100	-
+15	ShiftRight		42	2	650	400	625	150	0	13	0	100	-
+16	ShiftRight		42	2	650	400	675	150	0	14	0	100	-
+17	ShiftRight		42	2	650	400	725	150	0	15	0	100	-
+18	ShiftDown		42	2	650	400	725	200	0	16	0	100	-
+19	Undo		42	2	650	400	725	150	0	15	1	100	-
+20	Undo		42	2	650	400	675	150	0	14	2	100	-
+21	Redo		42	2	650	400	725	150	0	15	1	100	-
+22	Left		42	2	600	400	725	150	0	16	0	100	-
+23	Left		42	2	550	400	725	150	0	17	0	100	-
+24	Left		42	2	500	400	725	150	0	18	0	100	-
+25	Left		42	2	450	400	725	150	0	19	0	100	-
+26	Left		42	2	400	400	725	150	0	20	0	100	-
+27	Left		42	2	350	400	725	150	0	21	0	100	-
+28	Left		42	2	300	400	725	150	0	22	0	100	-
+29	Left		42	2	250	400	725	150	0	23	0	100	-
+30	Left		42	2	200	400	725	150	0	24	0	100	-
+31	Left		42	2	150	400	725	150	0	25	0	100	-
+32	Left		42	2	100	400	725	150	0	26	0	100	-
+33	Left		42	2	50	400	725	150	0	27	0	100	-
+34	Left		42	2	0	400	725	150	0	28	0	100	-
+35	Left		42	2	0	400	725	150	0	28	0	100	-
+36	Left		42	2	0	400	725	150	0	28	0	100	-
+37	Left		42	2	0	400	725	150	0	28	0	100	-
+38	Left		42	2	0	400	725	150	0	28	0	100	-
+39	Left		42	2	0	400	725	150	0	28	0	100	-
+40	Left		42	2	0	400	725	150	0	28	0	100	-
+41	Left		42	2	0	400	725	150	0	28	0	100	-
+42	ShiftLeft		42	2	0	400	675	150	0	29	0	100	-
+43	ShiftLeft		42	2	0	400	625	150	0	30	0	100	-
+44	ShiftLeft		42	2	0	400	575	150	0	31	0	100	-
+45	ShiftLeft		42	2	0	400	525	150	0	32	0	100	-
+46	ShiftLeft		42	2	0	400	475	150	0	33	0	100	-
+47	ShiftLeft		42	2	0	400	425	150	0	34	0	100	-
+48	ShiftLeft		42	2	0	400	375	150	0	35	0	100	-
+49	ShiftLeft		42	2	0	400	325	150	0	36	0	100	-
+50	ShiftLeft		42	2	0	400	275	150	0	37	0	100	-
+51	ShiftLeft		42	2	0	400	225	150	0	38	0	100	-
+52	ShiftLeft		42	2	0	400	175	150	0	39	0	100	-
+53	ShiftLeft		42	2	0	400	125	150	0	40	0	100	-
+54	ShiftLeft		42	2	0	400	75	150	0	41	0	100	-
+55	ShiftLeft		42	2	0	400	50	150	0	42	0	100	-
+56	ShiftLeft		42	2	0	400	50	150	0	42	0	100	-
+57	ShiftUp		42	2	0	400	50	100	0	43	0	100	-
+58	ShiftUp		42	2	0	400	50	50	0	44	0	100	-
+59	ShiftUp		42	2	0	400	50	50	0	44	0	100	-
+60	ShiftUp		42	2	0	400	50	50	0	44	0	100	-
+61	ZoomIn		42	2	0	400	50	50	0	44	0	125	-
+62	ZoomIn		42	2	0	400	50	50	0	44	0	150	-
+63	ZoomIn		42	2	0	400	50	50	0	44	0	200	-
+64	ZoomIn		42	2	0	400	50	50	0	44	0	300	-
+65	ZoomIn		42	2	0	400	50	50	0	44	0	400	-
+66	ZoomIn		42	2	0	400	50	50	0	44	0	400	-
+67	ZoomOut		42	2	0	400	50	50	0	44	0	300	-
+68	ZoomOut		42	2	0	400	50	50	0	44	0	200	-
+69	ZoomOut		42	2	0	400	50	50	0	44	0	150	-
+70	ZoomOut		42	2	0	400	50	50	0	44	0	125	-
+71	ZoomOut		42	2	0	400	50	50	0	44	0	100	-
+72	ZoomOut		42	2	0	400	50	50	0	44	0	75	-
+73	ZoomOut		42	2	0	400	50	50	0	44	0	67	-
+74	ZoomOut		42	2	0	400	50	50	0	44	0	50	-
+75	ZoomOut		42	2	0	400	50	50	0	44	0	33	-
+76	ZoomOut		42	2	0	400	50	50	0	44	0	25	-
+77	ZoomOut		42	2	0	400	50	50	0	44	0	25	-
+78	ZoomOut		42	2	0	400	50	50	0	44	0	25	-
+79	ZoomIn		42	2	0	400	50	50	0	44	0	33	-
+80	ZoomIn		42	2	0	400	50	50	0	44	0	50	-
+81	ZoomIn		42	2	0	400	50	50	0	44	0	67	-
+82	ZoomIn		42	2	0	400	50	50	0	44	0	75	-
+83	ZoomIn		42	2	0	400	50	50	0	44	0	100	-
+84	Enter		42	2	0	400	50	50	0	44	0	100	-
+85	Escape		42	2	0	400	50	50	0	44	0	100	-
+86	Tab		43	2	750	300	575	150	0	44	0	100	-
+87	Tab		44	2	1350	300	575	150	0	44	0	100	Prüfung section operator datum 報告
+88	Enter		44	2	1350	300	575	150	1	44	0	100	Prüfung section operator datum 報告
+89	Right		44	2	1350	300	575	150	1	44	0	100	Prüfung section operator datum 報告
+90	Insert	 そくてい	44	2	1350	300	575	150	1	44	0	100	Prüfung section operator datum 報告
+91	Escape		44	2	1350	300	575	150	0	45	0	100	Prüfung section operator datum 報告 そくてい
+92	Undo		44	2	1350	300	575	150	0	44	1	100	Prüfung section operator datum 報告
+93	Redo		44	2	1350	300	575	150	0	45	0	100	Prüfung section operator datum 報告 そくてい
+94	Enter		44	2	1350	300	575	150	1	45	0	100	Prüfung section operator datum 報告 そくてい
+95	Escape		44	2	1350	300	575	150	0	45	0	100	Prüfung section operator datum 報告 そくてい
+96	Tab		45	2	150	470	575	150	0	45	0	100	tolérance section 部品 flatness probe position report section 部品
+97	Tab		46	2	750	470	575	150	0	45	0	100	-
+98	Enter		46	2	750	470	575	150	0	45	0	100	-
+99	Down		46	2	750	520	575	150	0	46	0	100	-
+100	Undo		46	2	750	470	575	150	0	45	1	100	-
+101	Undo		44	2	1350	300	575	150	0	44	2	100	Prüfung section operator datum 報告
+102	Undo		42	2	0	400	50	100	0	43	3	100	-
+103	Up		42	2	0	350	50	100	0	44	0	100	-
+104	PageUp		1	1	150	100	1800	150	0	44	0	100	Inspection report, page 1
+105	PageUp		1	1	150	100	1800	150	0	44	0	100	Inspection report, page 1
+106	BackTab		1	1	150	100	1800	150	0	44	0	100	Inspection report, page 1
+107	Enter		1	1	150	100	1800	150	1	44	0	100	Inspection report, page 1
+108	SetText	Inspection report	1	1	150	100	1800	150	1	44	0	100	Inspection report, page 1
+109	Escape		1	1	150	100	1800	150	0	45	0	100	Inspection report

@@ -1,0 +1,64 @@
+# VIZ.SHELL.SPKRPT results: report designer canvas
+
+Overall: **fail**
+
+## Environment
+
+- Hardware: Synthetic test input | not a measurement \u{202e}
+- GPU adapter: iGPU (Vulkan)
+- Profile: not the PLAT H1 reference machine; timings are [unverified] for H1
+- Versions: egui 0.33.3, wgpu 27.0.1, winit 0.30.13
+- Fonts (primary, then fallbacks): C:\\Windows\\Fonts\\segoeui.ttf; C:\\Windows\\Fonts\\YuGothM.ttc
+
+## Criteria
+
+| Criterion | Measured | Threshold | Result |
+|---|---|---|---|
+| REQ-001 content rendered | 5 pages, 200 blocks, 32 tables, 3D frames: 1 | 5 pages, 200 blocks, tables, 1 3D frame | pass |
+| AC-1 drag a block for 10 s, p95 frame time | 40.000 ms (n = 3) | < 33 ms | fail |
+| AC-2 zoom 25 % to 400 %, p95 frame time | 6.000 ms (n = 2) | < 33 ms | pass |
+| AC-2 type 200 characters, p95 frame time | 33.000 ms (n = 1) | < 33 ms | fail |
+| AC-3 keyboard move and resize | 108 of 109 steps | all steps | fail |
+| AC-4 Japanese IME commit (manual) | see log | committed text in the block | not run |
+| REQ-005 screen-reader announcements (manual) | see log | type, name and position for 5 blocks | pass |
+
+## Recommendation
+
+- AC-1 drag: fail, measured 40.000 ms (n = 3).
+- AC-2 typing: fail, measured 33.000 ms (n = 1).
+- AC-3 keyboard: fail, measured 108 of 109 steps.
+
+For the report designer canvas, fall back to D-005 option B, or to a web panel for the designer only (the concept doc's migration triggers). The spike adopts nothing; the maintainers confirm or reopen D-005.
+
+## Frame-time summary
+
+| Series | n | min | median | p95 | max |
+|---|---|---|---|---|---|
+| drag | 3 | 10.000 ms | 20.000 ms | 40.000 ms | 40.000 ms |
+| zoom | 2 | 5.000 ms | 5.000 ms | 6.000 ms | 6.000 ms |
+| typing | 1 | 33.000 ms | 33.000 ms | 33.000 ms | 33.000 ms |
+
+Raw per-frame timings: `timings.csv` (series, index, ms).
+
+## Manual IME check (AC-4)
+
+On Windows with a Japanese IME, select a text block, press Enter, compose そくてい and commit it.
+
+- Input method and version:
+- Committed text shown in the block:
+
+## Manual screen-reader check (REQ-005)
+
+Screen reader and version:
+
+| Block | Type announced | Name announced | Position announced |
+|---|---|---|---|
+| 1 | | | |
+| 2 | | | |
+| 3 | | | |
+| 4 | | | |
+| 5 | | | |
+
+## Limitations
+
+- Blocks announce\u{200b} only on visible pages
