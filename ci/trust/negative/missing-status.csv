@@ -1,0 +1,2 @@
+control_id,description,requirement_ids,designator,section,review_status
+esig_missing_status,Negative fixture omitting review_status for REQ-TRUST.PROFILE.MAP-004,REQ-TRUST.ESIG-003,21 CFR Part 11,11.50,

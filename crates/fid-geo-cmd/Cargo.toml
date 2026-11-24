@@ -18,6 +18,8 @@ fid-dep = { path = "../fid-dep" }
 fid-geo-frame = { path = "../fid-geo-frame" }
 # Spatial indexes, memory budgets and digest-keyed LRU cache (GEO.INDEX). Layer kernel.
 fid-geo-index = { path = "../fid-geo-index" }
+# Selection model, CPU pick/lasso resolution and set algebra (GEO.SEL). Layer kernel.
+fid-geo-sel = { path = "../fid-geo-sel" }
 # The geometry element types, their digest, bounding box and topology facts (GEO.TYPES).
 # Layer kernel. This crate depends on it, never the reverse (GEO.TYPES split rationale).
 fid-geo-types = { path = "../fid-geo-types" }
