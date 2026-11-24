@@ -1765,6 +1765,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-keystore"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-keystore",
+ "fid-sign-core",
+ "getrandom 0.2.17",
+ "zeroize",
+]
+
+[[package]]
 name = "fid-knp1-lint"
 version = "0.0.1"
 dependencies = [

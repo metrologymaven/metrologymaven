@@ -125,6 +125,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-ctrl" = "services"
 # Windows ACL shim for the control-channel token file (AUTO.CTRL.AUTH): the named `unsafe` exception.
 "fid-ctrl-acl" = "services"
+# Key store contract (TRUST.SIGN.KEYSTORE.TRAIT): KeyStore trait, test backend and conformance suite
+# over fid-sign-core and fid-canon (model).
+"fid-keystore" = "services"
 "fid-gdt" = "services"
 "fid-mig" = "services"
 # RDL record format (UNC.RDL.FORMAT): needs fid-surface (services) and fid-replay (engine).
