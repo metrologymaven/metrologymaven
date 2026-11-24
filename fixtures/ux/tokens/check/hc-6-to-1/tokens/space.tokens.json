@@ -1,0 +1,97 @@
+{
+  "prim": {
+    "space": {
+      "$type": "dimension",
+      "$description": "The 4 px spacing grid (UX.TOKENS.SPACE). Step n is n times 4 logical pixels.",
+      "0": {
+        "$value": "0px"
+      },
+      "1": {
+        "$value": "4px"
+      },
+      "2": {
+        "$value": "8px"
+      },
+      "3": {
+        "$value": "12px"
+      },
+      "4": {
+        "$value": "16px"
+      },
+      "5": {
+        "$value": "20px"
+      },
+      "6": {
+        "$value": "24px"
+      },
+      "8": {
+        "$value": "32px"
+      },
+      "10": {
+        "$value": "40px"
+      },
+      "12": {
+        "$value": "48px"
+      },
+      "16": {
+        "$value": "64px"
+      }
+    }
+  },
+  "sem": {
+    "space": {
+      "$type": "dimension",
+      "$description": "Semantic spacing. The value here is the comfortable binding; both density modes bind every token in tokens/density/.",
+      "gap": {
+        "xs": {
+          "$description": "Gap between an icon and its label.",
+          "$value": "{prim.space.1}"
+        },
+        "sm": {
+          "$description": "Gap between controls in a toolbar.",
+          "$value": "{prim.space.2}"
+        },
+        "md": {
+          "$description": "Gap between fields of a form.",
+          "$value": "{prim.space.4}"
+        },
+        "lg": {
+          "$description": "Gap between panels.",
+          "$value": "{prim.space.6}"
+        }
+      },
+      "inset": {
+        "xs": {
+          "$description": "Padding inside a tag or badge.",
+          "$value": "{prim.space.1}"
+        },
+        "sm": {
+          "$description": "Padding inside a table cell or a small button.",
+          "$value": "{prim.space.2}"
+        },
+        "md": {
+          "$description": "Padding inside a button or an input.",
+          "$value": "{prim.space.3}"
+        },
+        "lg": {
+          "$description": "Padding inside a panel or a dialog.",
+          "$value": "{prim.space.4}"
+        }
+      },
+      "stack": {
+        "sm": {
+          "$description": "Vertical space between lines of a list.",
+          "$value": "{prim.space.2}"
+        },
+        "md": {
+          "$description": "Vertical space between groups of a form.",
+          "$value": "{prim.space.4}"
+        },
+        "lg": {
+          "$description": "Vertical space between sections of a page.",
+          "$value": "{prim.space.8}"
+        }
+      }
+    }
+  }
+}

@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+built_in: [docs/trust, ci/trust]
+built_pr: 480
+updated: 2026-11-22
 ---
 
 # TRUST.PROFILE.MAP: Regulated profile control mapping document

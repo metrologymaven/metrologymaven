@@ -137,8 +137,8 @@ fn circle_obj(s: &CircleSummary, scale_to_m: f64, unit: &str) -> Result<BTreeMap
     Ok(m)
 }
 
-/// `fit.plane_datum`: compares `PlaneLs` (Gaussian) against certified `fit_tan_plane`
-/// (external minimax or constrained L1 tangential datum simulator) plus rocking report.
+/// `fit.plane_datum`: compares `PlaneLs` (Gaussian) against `fit_tan_plane` (external
+/// minimax or constrained L1 tangential datum simulator) plus rocking report.
 pub fn fit_plane_datum(params: &BTreeMap<String, CValue>) -> Result<CValue, LabError> {
     let unit = opt_str(params, "unit")?.unwrap_or("mm");
     let scale_to_m = unit_to_metres(unit)?;
@@ -187,7 +187,8 @@ pub fn fit_plane_datum(params: &BTreeMap<String, CValue>) -> Result<CValue, LabE
         return Err(LabError::new("internal_mismatch", "expected tangential Plane feature"));
     };
 
-    let cos_tilt = red::dot(&ls_n, &tan_n).map_err(|e| LabError::new("num_error", e.to_string()))?.clamp(-1.0, 1.0);
+    let cos_tilt = red::dot(&ls_n, &tan_n).map_err(|e| LabError::new("num_error", e.to_string()))?;
+    let cos_tilt = num_f::total_clamp(cos_tilt, -1.0, 1.0).map_err(|e| LabError::new("num_error", e.to_string()))?;
     let tilt_rad = num_f::acos(cos_tilt).map_err(|e| LabError::new("num_error", e.to_string()))?;
 
     let mut ls_obj = BTreeMap::new();
@@ -226,7 +227,9 @@ pub fn fit_plane_datum(params: &BTreeMap<String, CValue>) -> Result<CValue, LabE
 }
 
 /// `fit.cylinder_mcc`: compares Gaussian least-squares cylinder (`fit_cylinder`) with
-/// Minimum Circumscribed Cylinder mating envelope (`fit_mcc_cylinder`).
+/// Minimum Circumscribed Cylinder mating envelope (`fit_mcc_cylinder`). The mating-envelope
+/// reading is a GD&T interpretation, so the result carries `interpretation_status:
+/// "provisional"` (D-045) and never reads as settled.
 pub fn fit_cylinder_mcc(params: &BTreeMap<String, CValue>) -> Result<CValue, LabError> {
     let unit = opt_str(params, "unit")?.unwrap_or("mm");
     let scale_to_m = unit_to_metres(unit)?;
@@ -279,6 +282,7 @@ pub fn fit_cylinder_mcc(params: &BTreeMap<String, CValue>) -> Result<CValue, Lab
     let mut out = BTreeMap::new();
     out.insert("unit".to_string(), c_str(unit));
     out.insert("diameter_envelope_excess".to_string(), c_f64((2.0 * (mc_r - ls_r)) / scale_to_m)?);
+    out.insert("interpretation_status".to_string(), c_str("provisional"));
     out.insert("least_squares".to_string(), CValue::Obj(ls_obj));
     out.insert("minimum_circumscribed".to_string(), CValue::Obj(mc_obj));
     Ok(CValue::Obj(out))
@@ -410,7 +414,7 @@ pub fn unc_propagate(params: &BTreeMap<String, CValue>) -> Result<CValue, LabErr
     let seed = opt_u64(params, "seed")?.unwrap_or(42);
     let coverage_p = opt_f64(params, "coverage_p")?.unwrap_or(0.95);
     if !(0.5..1.0).contains(&coverage_p) {
-        return Err(LabError::new("invalid_param", "coverage_p must lie in (0.5, 1.0)"));
+        return Err(LabError::new("invalid_param", "coverage_p must lie in [0.5, 1.0)"));
     }
     let k_factor = opt_f64(params, "k")?.unwrap_or(1.959_963_984_540_054);
     if k_factor <= 0.0 {
@@ -559,17 +563,30 @@ pub fn unc_propagate(params: &BTreeMap<String, CValue>) -> Result<CValue, LabErr
     }
     let n_dig = u8::try_from(n_dig_u64).map_err(|_| LabError::new("invalid_param", "n_dig out of range"))?;
 
+    // `lpu_validated` is `Some(_)` only when `validate_lpu` actually ran against this Monte
+    // Carlo run; with a zero LPU interval there is nothing to validate and the flag stays unset.
     let (lpu_validated, val_d_low, val_d_high, val_delta) = if lpu_expanded > 0.0 {
         let vin = ValidateInput::new(fx, lpu_expanded, coverage_p, mcm.sym.low, mcm.sym.high, coverage_p, mcm.u)
             .with_n_dig(n_dig);
         let vout = validate_lpu(&vin).map_err(|e| LabError::new("validate_error", e.to_string()))?;
-        (vout.validated, vout.d_low, vout.d_high, vout.delta)
+        (Some(vout.validated), vout.d_low, vout.d_high, vout.delta)
     } else {
-        (false, (fx - mcm.sym.low).abs(), (mcm.sym.high - fx).abs(), 0.0)
+        (None, (fx - mcm.sym.low).abs(), (mcm.sym.high - fx).abs(), 0.0)
     };
 
-    // Build a real canonical UEC-1 UncertaintyStatement so the digest is kernel-authentic.
-    let stmt = build_uec1_statement(mcm.u, k_factor, coverage_p, mcm.sym.low, mcm.sym.high, lpu_validated)?;
+    // Build a real canonical UEC-1 UncertaintyStatement so the digest is kernel-authentic. An
+    // LPU statement carries the LPU numbers, and `lpu_validated_by_mc` records the validation
+    // that ran above. When LPU yields zero uncertainty (e.g. a zero Jacobian) no valid LPU
+    // statement exists, so the statement records the Monte Carlo result itself (method MCM,
+    // which never carries `lpu_validated_by_mc`).
+    let (stmt, stmt_method) = if lpu_expanded > 0.0 {
+        let expanded = Expanded { value: lpu_expanded, k: k_factor };
+        let low = fx - lpu_expanded;
+        let high = fx + lpu_expanded;
+        (build_uec1_statement(UncMethod::Lpu, lpu_u_std, Some(expanded), coverage_p, low, high, lpu_validated)?, "LPU")
+    } else {
+        (build_uec1_statement(UncMethod::Mcm, mcm.u, None, coverage_p, mcm.sym.low, mcm.sym.high, None)?, "MCM")
+    };
     let hist = build_histogram(&mc_vals, 20)?;
 
     let var_total = lpu_u_std * lpu_u_std;
@@ -601,12 +618,14 @@ pub fn unc_propagate(params: &BTreeMap<String, CValue>) -> Result<CValue, LabErr
     out.insert("mcm_shortest_low".to_string(), c_f64(mcm.shortest.low)?);
     out.insert("mcm_shortest_high".to_string(), c_f64(mcm.shortest.high)?);
     out.insert("mcm_bias".to_string(), c_f64(mcm.mean_minus_fx)?);
-    out.insert("lpu_check_passed".to_string(), c_bool(lpu_validated));
+    out.insert("lpu_check_passed".to_string(), c_bool(lpu_validated == Some(true)));
+    out.insert("mc_validation".to_string(), c_str(if lpu_validated.is_some() { "ran" } else { "not_run" }));
     out.insert("validation_d_low".to_string(), c_f64(val_d_low)?);
     out.insert("validation_d_high".to_string(), c_f64(val_d_high)?);
     out.insert("validation_delta".to_string(), c_f64(val_delta)?);
     out.insert("evidence_class".to_string(), c_str("UEC-1"));
     out.insert("statement_digest".to_string(), c_str(stmt.digest().to_string()));
+    out.insert("statement_method".to_string(), c_str(stmt_method));
     out.insert("contributors".to_string(), CValue::Arr(contrib_rows));
     out.insert("histogram".to_string(), hist);
     out.insert("standards_ref".to_string(), c_str("JCGM 100:2008; JCGM 101:2008"));
@@ -719,6 +738,8 @@ pub fn dec_evaluate(params: &BTreeMap<String, CValue>) -> Result<CValue, LabErro
         out.insert("global_producer_risk".to_string(), c_f64(v)?);
     }
     out.insert("flags".to_string(), CValue::Arr(flags));
+    // No Monte Carlo run backs the lab's statement (see `build_uec1_lpu_for_dec`).
+    out.insert("mc_validation".to_string(), c_str("not_run"));
     out.insert("interpretation_status".to_string(), c_str("provisional"));
     out.insert("standards_ref".to_string(), c_str("ISO 14253-1:2017; JCGM 106:2012"));
     Ok(CValue::Obj(out))
@@ -776,20 +797,21 @@ fn normalize3(v: [f64; 3], label: &str) -> Result<[f64; 3], LabError> {
 }
 
 fn build_uec1_statement(
+    method: UncMethod,
     u_std: f64,
-    k: f64,
+    expanded: Option<Expanded>,
     p: f64,
     low: f64,
     high: f64,
-    lpu_validated: bool,
+    lpu_validated: Option<bool>,
 ) -> Result<UncertaintyStatement, LabError> {
     let zero_digest = Digest::parse("sha256:0000000000000000000000000000000000000000000000000000000000000000")
         .map_err(|e| LabError::new("digest_error", e.to_string()))?;
     let mut sp = StatementParts::new(EvidenceClass::Uec1);
-    sp.method = Some(UncMethod::Lpu);
+    sp.method = Some(method);
     sp.unit = Some("si:m".to_string());
     sp.u_std = Some(u_std);
-    sp.expanded = Some(Expanded { value: k * u_std, k });
+    sp.expanded = expanded;
     sp.interval = Some(fid_kunc::CoverageInterval { low, high, p, kind: IntervalKind::ProbSymmetric });
     sp.model = Some(ModelRef { id: "um:guide.lab".to_string(), semver: "1.0.0".to_string(), digest: zero_digest });
     sp.sources = vec![SourceRef {
@@ -798,11 +820,16 @@ fn build_uec1_statement(
         digest: zero_digest,
         unverified: true,
     }];
-    sp.lpu_validated_by_mc = Some(lpu_validated);
+    sp.lpu_validated_by_mc = lpu_validated;
     sp.provenance = Provenance::default();
     UncertaintyStatement::new(sp).map_err(|e| LabError::new("stmt_error", e.to_string()))
 }
 
+/// The decision lab's UEC-1 LPU statement. The lab takes only `u_std` and `k`: there is no
+/// measurement model or input distribution to run a Monte Carlo check against, so no
+/// validation happens and `lpu_validated_by_mc` stays `None`. Under a conformance-probability
+/// rule `fid_kdec::evaluate` then has no admissible PDF and returns the honest
+/// `NOT_DECIDABLE(pdf_unavailable)`.
 fn build_uec1_lpu_for_dec(u_std: f64, k: f64) -> Result<UncertaintyStatement, LabError> {
     let zero_digest = Digest::parse("sha256:0000000000000000000000000000000000000000000000000000000000000000")
         .map_err(|e| LabError::new("digest_error", e.to_string()))?;
@@ -818,7 +845,7 @@ fn build_uec1_lpu_for_dec(u_std: f64, k: f64) -> Result<UncertaintyStatement, La
         digest: zero_digest,
         unverified: true,
     }];
-    sp.lpu_validated_by_mc = Some(true);
+    sp.lpu_validated_by_mc = None;
     sp.provenance = Provenance::default();
     UncertaintyStatement::new(sp).map_err(|e| LabError::new("stmt_error", e.to_string()))
 }

@@ -1,0 +1,11 @@
+{
+  "artefact": "tokens/motion.tokens.json",
+  "author": "Claude Code (Claude Opus 5.5), agent author of UX.TOKENS.SPACE; the durations (100, 150 and 200 ms, panels at most 250 ms) and the 0 ms reduced-motion durations were chosen for this project. The easing curves are not original: their numbers match Material Design's published standard (0.2, 0, 0, 1), decelerate (0, 0, 0.2, 1) and accelerate (0.4, 0, 1, 1) cubic Bezier curves, which were consulted as a reference for those numbers only",
+  "date": "2026-11-21",
+  "references": [
+    "The UX.TOKENS and UX.TOKENS.SPACE spec nodes in this repository",
+    "The Design Tokens Community Group format draft pinned by UX.SYSTEM.PKG (token syntax only)",
+    "Google's Material Design motion guidelines (easing curves), consulted for the three cubic Bezier control-point sets only; no text, image or code copied"
+  ],
+  "statement_version": "originality-statement@1"
+}

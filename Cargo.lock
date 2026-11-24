@@ -1431,6 +1431,7 @@ dependencies = [
  "fid-dep",
  "fid-geo-frame",
  "fid-geo-index",
+ "fid-geo-sel",
  "fid-geo-types",
  "fid-project",
  "fid-registry",
@@ -1866,7 +1867,12 @@ dependencies = [
  "fid-canon",
  "fid-gdt",
  "fid-kdec",
+ "fid-project",
+ "fid-registry",
  "fid-render",
+ "fid-replay",
+ "fid-types",
+ "fid-uuid",
 ]
 
 [[package]]
