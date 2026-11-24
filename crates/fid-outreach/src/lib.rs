@@ -19,6 +19,8 @@
 //! - [`qa::a11y`]: static accessibility gate for built pages (spec node `OUTR.SITE.QA.A11Y`).
 //! - [`doc_run`]: runs the `sh run` blocks of the contributor guide against a temporary copy of
 //!   the revision it documents (spec node `OUTR.DOCS.CONTRIB`).
+//! - [`dress`]: trade-dress distinctness list check and Markdown renderer (spec node
+//!   `OUTR.BRAND.GUIDE.DRESS`).
 //! - [`guide_check`]: brand-guideline family-name token check and publish guard (spec node
 //!   `OUTR.BRAND.GUIDE.NAME`).
 //! - [`moderation`]: private moderation log check and quarterly counts (spec node
@@ -34,6 +36,7 @@ pub mod asset_check;
 pub mod bench;
 pub mod copy_guard;
 pub mod doc_run;
+pub mod dress;
 pub mod guide_check;
 pub mod launch_gate;
 pub mod launch_plan;

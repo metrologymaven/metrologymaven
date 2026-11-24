@@ -17,6 +17,7 @@ determinism: D0
 cli: [fid report extract-drawing-text]
 mcp: [report_extract_drawing_text]
 journal: [report.extract_drawing_text@1]
+built_in: [fid-report]
 updated: 2026-11-22
 ---
 

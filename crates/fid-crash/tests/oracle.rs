@@ -56,6 +56,13 @@ fn kill_plan_matches_the_oracle() {
     let edge = KillPlan { seed: 7, max_delay_us: u64::MAX };
     let _ = edge.instant(u64::MAX);
     assert_eq!(KillPlan { seed: 7, max_delay_us: 0 }.instant(5).delay_us, 0);
+    for k in 0..64 {
+        let inst = KillInstant { kill: k, delay_us: 0 };
+        assert!(!(inst.from_spawn() && inst.from_first_ack()), "kill {k} matched both spawn and first_ack");
+    }
+    assert!(KillInstant { kill: 0, delay_us: 0 }.from_first_ack());
+    assert!(KillInstant { kill: 8, delay_us: 0 }.from_first_ack());
+    assert!(KillInstant { kill: 3, delay_us: 0 }.from_spawn());
 }
 
 /// Stored rows are accepted only in their exact canonical form; anything else is refused
