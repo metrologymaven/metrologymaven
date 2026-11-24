@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-hal-idl]
+built_pr: 580
 satisfies: [REQ-HAL.IDL.BASE-001, REQ-HAL.IDL.BASE-004, REQ-HAL.IDL.BASE-006]
 covers: []
 depends_on: [HAL.IDL.BASE.ERR, HAL.IDL.BASE.HEALTH, HAL.IDL.BASE.CFG, HAL.IDL.GEN.FMT]
