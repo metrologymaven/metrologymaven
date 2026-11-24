@@ -134,6 +134,10 @@ def clean_env(
 
     if extra:
         for k, v in extra.items():
+            if sys.platform == "win32":
+                for existing in list(out):
+                    if existing.upper() == k.upper():
+                        del out[existing]
             out[k] = v
     return out
 

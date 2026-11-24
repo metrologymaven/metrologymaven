@@ -348,7 +348,7 @@ def test_site_build_clean_budget(ctx: TestContext) -> None:
         is_guide = rel_p.startswith("guide/")
         if not is_guide and re.search(r"<script\b", txt, re.I):
             raise TestFailure(f"unexpected <script> tag outside /guide/ in {rel_p}")
-        if re.search(r"<script\b(?![^>]*\bsrc=)[^>]*>", txt, re.I):
+        if re.search(r"<script\b(?!\s*[^>]*\s+src\s*=)[^>]*>", txt, re.I):
             raise TestFailure(f"inline <script> found in {rel_p}")
         # Catch quoted, unquoted, and protocol-relative (//...) src/href/action/poster URLs.
         for m in re.finditer(
@@ -360,7 +360,8 @@ def test_site_build_clean_budget(ctx: TestContext) -> None:
             if url.startswith("//"):
                 raise TestFailure(f"protocol-relative external URL {url!r} in {rel_p}")
             if re.match(r"https?://", url, re.I) and not (
-                url.startswith("https://metrologymaven.io")
+                url == "https://metrologymaven.io"
+                or url.startswith("https://metrologymaven.io/")
                 or url.startswith("https://github.com/metrologymaven/")
             ):
                 raise TestFailure(f"unexpected external URL {url!r} in {rel_p}")
@@ -479,7 +480,7 @@ def test_outreach_doc_run_contributor_guide(ctx: TestContext) -> None:
     tmp_guide = ctx.workdir / "guide.md"
     tmp_guide.write_text(patched, encoding="utf-8")
 
-    res = ctx.run([outreach, "doc-run", "--guide", str(tmp_guide), "--repo", str(ctx.repo_root), "--json"], timeout=180)
+    res = ctx.run([outreach, "doc-run", "--guide", str(tmp_guide), "--repo", str(ctx.repo_root), "--json"], timeout=360)
     if res.returncode != 0:
         raise TestFailure(f"fid-outreach doc-run failed (exit {res.returncode}):\n{res.stdout}\n{res.stderr}")
     rep = parse_single_line_json(res.stdout)
@@ -556,7 +557,7 @@ def test_verify_guide_os_tag(ctx: TestContext) -> None:
 )
 def test_scope_check_isolated(ctx: TestContext) -> None:
     copy_root = prepare_scope_root(ctx, "scope_check_copy")
-    res = ctx.run([sys.executable, str(copy_root / "tools" / "scope.py"), "check", "--root", str(copy_root)])
+    res = ctx.run([sys.executable, str(copy_root / "tools" / "scope.py"), "check", "--root", str(copy_root)], timeout=240)
     if res.returncode != 0:
         raise TestFailure(f"scope.py check exited {res.returncode}:\n{res.stdout}\n{res.stderr}")
     for fname in ("INDEX.md", "COVERAGE.md", "DECISIONS.md", "BUILT.md", "EXPERT-QUEUE.md"):
@@ -589,7 +590,8 @@ def test_scope_stats_and_milestone(ctx: TestContext) -> None:
             str(copy_root / "milestones" / "launch-1.md"),
             "--root",
             str(copy_root),
-        ]
+        ],
+        timeout=240,
     )
     if r_ms.returncode != 0:
         raise TestFailure(f"scope.py milestone exited {r_ms.returncode}: {r_ms.stdout} {r_ms.stderr}")

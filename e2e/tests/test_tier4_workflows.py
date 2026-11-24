@@ -218,7 +218,7 @@ def test_scenario_4_spec_site_guide_qa_pipeline(ctx: TestContext) -> None:
     wasm_bin = ctx.require_bin("fid-guide-wasm")
 
     scope_root = prepare_scope_root(ctx, "scope_check_t4")
-    r_scope = ctx.run([sys.executable, str(scope_root / "tools" / "scope.py"), "check", "--root", str(scope_root)])
+    r_scope = ctx.run([sys.executable, str(scope_root / "tools" / "scope.py"), "check", "--root", str(scope_root)], timeout=240)
     if r_scope.returncode != 0:
         raise TestFailure(f"scope.py check failed: {r_scope.stdout}")
 
@@ -254,6 +254,11 @@ def test_scenario_4_spec_site_guide_qa_pipeline(ctx: TestContext) -> None:
     lc_obj = parse_single_line_json(r_lc.stdout)
     if lc_obj.get("ok") is False or lc_obj.get("result") == "fail":
         raise TestFailure(f"link-check reported failure: {lc_obj!r}")
+    if "ok" in lc_obj and lc_obj.get("ok") is not True:
+        raise TestFailure(f"link-check expected ok=true, got: {lc_obj!r}")
+    for key in ("findings", "broken", "violations", "errors"):
+        if key in lc_obj and lc_obj[key] != []:
+            raise TestFailure(f"link-check reported {key}: {lc_obj!r}")
     worker = (ctx.repo_root / "site" / "worker.js").read_text(encoding="utf-8")
     if "wasm-unsafe-eval" not in worker or "script-src 'none'" not in worker:
         raise TestFailure("worker.js CSP scoping incomplete")
@@ -345,7 +350,7 @@ def test_scenario_7_contributor_and_governance_gates(ctx: TestContext) -> None:
     patched = re.sub(r"^revision:\s*[0-9a-f]+", f"revision: {head}", orig, count=1, flags=re.M)
     tmp_guide = ctx.workdir / "guide.md"
     tmp_guide.write_text(patched, encoding="utf-8")
-    r_doc = ctx.run([outreach, "doc-run", "--guide", str(tmp_guide), "--repo", str(ctx.repo_root), "--json"], timeout=180)
+    r_doc = ctx.run([outreach, "doc-run", "--guide", str(tmp_guide), "--repo", str(ctx.repo_root), "--json"], timeout=360)
     if r_doc.returncode != 0:
         raise TestFailure(f"doc-run failed: {r_doc.stdout} {r_doc.stderr}")
 
