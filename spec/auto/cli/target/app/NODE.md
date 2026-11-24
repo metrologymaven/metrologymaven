@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-cli]
 satisfies: [REQ-AUTO.CLI.TARGET-002, REQ-AUTO.CLI.TARGET-004]
 covers: []
 depends_on: [AUTO.CLI.TARGET.SELECT, AUTO.CTRL.CLIENT, AUTO.SURF.JOBS]

@@ -1,6 +1,7 @@
 //! The command bus of Metrology Maven: every surface invokes commands through it
 //! (CONSTITUTION C3). Modules land one spec leaf at a time; see `spec/core/bus/`.
 
+pub mod api;
 pub mod error;
 pub mod handler;
 pub mod pipeline;

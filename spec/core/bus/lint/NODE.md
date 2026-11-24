@@ -9,7 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
-built_in: [fid-xtask]
+built_in: [fid-xtask, fid-bus-api]
 built_pr: 62
 satisfies: [REQ-CORE.BUS-016]
 covers: []

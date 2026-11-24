@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-cli]
 satisfies: [REQ-AUTO.CLI-006]
 covers: []
 depends_on: [AUTO.SURF.JOBS, AUTO.CLI.OUT]

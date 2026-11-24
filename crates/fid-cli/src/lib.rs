@@ -7,9 +7,14 @@
 //! acceptance tests drive until the generated command tree (AUTO.CLI.TREE) and the bus
 //! API crate land.
 
+pub mod args;
 pub mod ctrl;
+pub mod dispatch;
 pub mod exit;
+pub mod gate;
+pub mod job;
 pub mod output;
+pub mod target;
 pub mod tree;
 
 pub use exit::{exit_codes_markdown, ExitCode, EXIT_CODES_DOC};
@@ -19,8 +24,9 @@ pub use tree::{
     CliParam, CliTree, CliTreeError, ResolveOutcome, RESERVED_HOST_SUBCOMMANDS, SURFACE, TREE_FILE, TREE_SCHEMA,
 };
 
+use fid_bus_api::CommandBus;
 use fid_surface::{Envelope, ErrorCode};
-use std::io::Write;
+use std::io::{Read, Write};
 
 /// What the CLI needs from the command bus. Diagnostics go through the [`Output`], which
 /// only lets them reach stderr.
@@ -119,6 +125,89 @@ pub fn invoke_with_tree(
         ResolveOutcome::Invoke { command_id, json, .. } => {
             let out = Output::new(json, stdout, stderr);
             call_bus(bus, command_id.as_str(), out)
+        }
+        ResolveOutcome::UsageError { message, json, .. } => {
+            if json {
+                let out = Output::new(true, stdout, stderr);
+                out.finish(&usage(&message))
+            } else {
+                let _ = writeln!(stderr, "error: {message}");
+                ExitCode::Usage
+            }
+        }
+    }
+}
+
+/// Resolves `args` against `tree` and dispatches commands through `fid_bus_api::CommandBus`
+/// (`AUTO.CLI.DISPATCH`), running `AUTO.CLI.ARGS`, `AUTO.CLI.GATE`, and `AUTO.CLI.TARGET`.
+#[allow(clippy::too_many_arguments)]
+pub fn invoke_with_bus_api(
+    tree: &CliTree,
+    version: &str,
+    args: &[String],
+    bus: &mut dyn CommandBus,
+    env: &dyn Fn(&str) -> Option<String>,
+    stdin: &mut dyn Read,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> ExitCode {
+    match resolve_args(tree, args) {
+        ResolveOutcome::Version => {
+            if writeln!(stdout, "{}", tree.render_version(version)).is_err() {
+                return ExitCode::Internal;
+            }
+            ExitCode::Success
+        }
+        ResolveOutcome::RootHelp { json: true } => match tree.help_json(version) {
+            Ok(bytes) => {
+                if stdout.write_all(&bytes).is_err() {
+                    return ExitCode::Internal;
+                }
+                ExitCode::Success
+            }
+            Err(e) => {
+                let _ = writeln!(stderr, "error: {e}");
+                ExitCode::Internal
+            }
+        },
+        ResolveOutcome::RootHelp { json: false } => {
+            if stdout.write_all(tree.render_root_help(version).as_bytes()).is_err() {
+                return ExitCode::Internal;
+            }
+            ExitCode::Success
+        }
+        ResolveOutcome::DomainHelp { domain } => {
+            if let Some(text) = tree.render_domain_help(&domain) {
+                if stdout.write_all(text.as_bytes()).is_err() {
+                    return ExitCode::Internal;
+                }
+                ExitCode::Success
+            } else {
+                let _ = writeln!(stderr, "error: unknown domain `{domain}`");
+                ExitCode::Usage
+            }
+        }
+        ResolveOutcome::CommandHelp { domain, verb, major } => {
+            if let Some(cmd) = tree.find(&domain, &verb) {
+                if let Some(maj) = cmd.major(major) {
+                    if stdout.write_all(tree.render_command_help(cmd, maj).as_bytes()).is_err() {
+                        return ExitCode::Internal;
+                    }
+                    return ExitCode::Success;
+                }
+            }
+            let _ = writeln!(stderr, "error: unknown command `{domain} {verb}`");
+            ExitCode::Usage
+        }
+        ResolveOutcome::HostSubcommand { name, rest } => match name.as_str() {
+            "ctrl" => ctrl::run(&rest, env, stdout, stderr),
+            _ => {
+                let _ = writeln!(stderr, "error: host subcommand `{name}` is handled by the binary");
+                ExitCode::Usage
+            }
+        },
+        ResolveOutcome::Invoke { command_id, major, json, rest } => {
+            dispatch::dispatch_resolved(tree, &command_id, major, json, &rest, bus, env, stdin, stdout, stderr, None)
         }
         ResolveOutcome::UsageError { message, json, .. } => {
             if json {

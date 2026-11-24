@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+fid-bus-api = { path = "../fid-bus-api" }
 fid-canon = { path = "../fid-canon" }
 # CORE.BUS.PRIN builds the `principal_upgrade` entry draft from the journal's entry model.
 # CORE.BUS.PIPE.STAGE commits through `Journal::append` and hands reads to the Activity Log

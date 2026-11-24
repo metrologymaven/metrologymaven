@@ -12,11 +12,13 @@ name = "fid"
 path = "src/main.rs"
 
 [dependencies]
+fid-bus-api = { path = "../fid-bus-api" }
 fid-canon = { path = "../fid-canon" }
 # AUTO.CTRL.CLIENT: the control-channel client behind `fid ctrl status` and `fid ctrl ping`.
 fid-ctrl = { path = "../fid-ctrl" }
 fid-surface = { path = "../fid-surface" }
 fid-types = { path = "../fid-types" }
+fid-uuid = { path = "../fid-uuid" }
 
 [lints]
 workspace = true

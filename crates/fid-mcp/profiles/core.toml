@@ -16,6 +16,8 @@ commands = []
 front_door = [
   "tools.search_tools@1",
   "tools.describe_tool@1",
+  "tools.invoke_readonly@1",
+  "tools.enable_tools@1",
   "tools.list_domains@1",
   "tools.get_workflow@1",
 ]

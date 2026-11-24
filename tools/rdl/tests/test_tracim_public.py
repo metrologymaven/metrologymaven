@@ -240,6 +240,64 @@ class TestTracimPublicJob(unittest.TestCase):
         finally:
             server.stop()
 
+    def test_unwraps_auto_surf_envelope_success_and_error(self) -> None:
+        digest = "sha256:" + "ab" * 32
+        with tempfile.TemporaryDirectory() as tmp:
+            # 1. AUTO.SURF.ENV Envelope computed success
+            ok_cli = Path(tmp) / "ok_envelope_cli.py"
+            ok_cli.write_text(
+                "import json\n"
+                "print(json.dumps({"
+                "'envelope_version': 1,"
+                "'command_id': 'rdl.submit_tracim@1',"
+                "'outcome': 'computed',"
+                "'result': {"
+                "'verdict': 'passed',"
+                "'kernel_semver': '0.1.0-rc.1',"
+                f"'manifest_digest': '{digest}',"
+                "'raw_cases': ['must-not-leak'],"
+                "},"
+                "}))\n",
+                encoding="utf-8",
+            )
+            out_ok = Path(tmp) / "ok.json"
+            code, art = tracim_public.run_public_test(
+                fid_argv=[sys.executable, str(ok_cli)],
+                out_path=out_ok,
+                workflow_path=WORKFLOW_PATH,
+                env=_clean_test_env(TRACIM_PUBLIC_KEY=SENTINEL_KEY),
+            )
+            self.assertEqual(code, 0, f"artifact={art}")
+            self.assertEqual(art["verdict"], "passed")
+            self.assertEqual(art["kernel_semver"], "0.1.0-rc.1")
+            self.assertEqual(art["manifest_digest"], digest)
+            self.assertIsNone(art["reason"])
+            self.assertNotIn("must-not-leak", out_ok.read_text(encoding="utf-8"))
+
+            # 2. AUTO.SURF.ENV Envelope failed with tracim_error: service_unreachable
+            err_cli = Path(tmp) / "err_envelope_cli.py"
+            err_cli.write_text(
+                "import json, sys\n"
+                "print(json.dumps({"
+                "'envelope_version': 1,"
+                "'command_id': 'rdl.submit_tracim@1',"
+                "'outcome': 'failed',"
+                "'error': {'code': 'precondition_failed', 'message': 'unreachable', 'details': {'tracim_error': 'service_unreachable'}},"
+                "}))\n"
+                "sys.exit(4)\n",
+                encoding="utf-8",
+            )
+            out_err = Path(tmp) / "err.json"
+            ecode, eart = tracim_public.run_public_test(
+                fid_argv=[sys.executable, str(err_cli)],
+                out_path=out_err,
+                workflow_path=WORKFLOW_PATH,
+                env=_clean_test_env(TRACIM_PUBLIC_KEY=SENTINEL_KEY),
+            )
+            self.assertEqual(ecode, 1)
+            self.assertEqual(eart["verdict"], "error")
+            self.assertEqual(eart["reason"], "service_unreachable")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,16 @@
+[package]
+name = "fid-bus-api"
+description = "Pure-Rust command bus boundary for Metrology Maven surfaces (spec node CORE.BUS.LINT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-types = { path = "../fid-types" }
+fid-uuid = { path = "../fid-uuid" }
+
+[lints]
+workspace = true

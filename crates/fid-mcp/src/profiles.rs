@@ -643,8 +643,8 @@ fn parse_cvalue_cmd_array(value: Option<&CValue>, field: &str, profile: &str) ->
 
 // ------------------------------------------------------------------ `--server` CLI argument helper
 
-/// Parsed CLI options for `fid mcp` profile selection.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Parsed CLI options for `fid mcp` profile selection and mode startup.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ServerSelectionArgs {
     /// `--server <profile>` if passed; `None` selects [`DEFAULT_PROFILE`] (`"core"`).
     pub server: Option<String>,
@@ -652,26 +652,39 @@ pub struct ServerSelectionArgs {
     pub profiles_index: Option<String>,
     /// Optional `--print-profile` flag to print the selected profile summary and exit 0.
     pub print_profile: bool,
+    /// `--headless` mode flag (`AUTO.MCP.MODES.HEADLESS`).
+    pub headless: bool,
+    /// `--bridge` mode flag (`AUTO.MCP.MODES.BRIDGE`).
+    pub bridge: bool,
+    /// Optional `--project <root handle>` path (`AUTO.MCP.MODES.HEADLESS`).
+    pub project: Option<String>,
+    /// Optional `--manifest <path>` override for standalone manifest loading.
+    pub manifest: Option<String>,
+    /// Optional `--agent <name>` prefix for session principal binding (`AUTO.MCP.SESS`).
+    pub agent: Option<String>,
+    /// `--help` / `-h` flag.
+    pub help: bool,
 }
 
-/// Parses `--server <profile>` (and optional `--profiles-index <path>`, `--print-profile`)
-/// from command-line arguments (excluding argv[0]).
+/// Parses `--server <profile>` and `AUTO.MCP` runtime flags from command-line arguments
+/// (excluding argv[0]).
 pub fn parse_server_args(args: &[String]) -> Result<ServerSelectionArgs, ProfileError> {
-    let mut server: Option<String> = None;
-    let mut profiles_index: Option<String> = None;
-    let mut print_profile = false;
+    let mut parsed = ServerSelectionArgs::default();
 
     let mut i = 0;
     while i < args.len() {
         let arg = args[i].as_str();
-        if arg == "--server" {
+        if arg == "--help" || arg == "-h" {
+            parsed.help = true;
+            i += 1;
+        } else if arg == "--server" {
             let Some(val) = args.get(i + 1) else {
                 return Err(ProfileError::ProfileParse {
                     source: "cli".to_string(),
                     detail: "--server requires a profile name".to_string(),
                 });
             };
-            server = Some(val.clone());
+            parsed.server = Some(val.clone());
             i += 2;
         } else if let Some(val) = arg.strip_prefix("--server=") {
             if val.is_empty() {
@@ -680,7 +693,7 @@ pub fn parse_server_args(args: &[String]) -> Result<ServerSelectionArgs, Profile
                     detail: "--server requires a non-empty profile name".to_string(),
                 });
             }
-            server = Some(val.to_string());
+            parsed.server = Some(val.to_string());
             i += 1;
         } else if arg == "--profiles-index" {
             let Some(val) = args.get(i + 1) else {
@@ -689,7 +702,7 @@ pub fn parse_server_args(args: &[String]) -> Result<ServerSelectionArgs, Profile
                     detail: "--profiles-index requires a path".to_string(),
                 });
             };
-            profiles_index = Some(val.clone());
+            parsed.profiles_index = Some(val.clone());
             i += 2;
         } else if let Some(val) = arg.strip_prefix("--profiles-index=") {
             if val.is_empty() {
@@ -698,10 +711,70 @@ pub fn parse_server_args(args: &[String]) -> Result<ServerSelectionArgs, Profile
                     detail: "--profiles-index requires a non-empty path".to_string(),
                 });
             }
-            profiles_index = Some(val.to_string());
+            parsed.profiles_index = Some(val.to_string());
             i += 1;
         } else if arg == "--print-profile" {
-            print_profile = true;
+            parsed.print_profile = true;
+            i += 1;
+        } else if arg == "--headless" {
+            parsed.headless = true;
+            i += 1;
+        } else if arg == "--bridge" {
+            parsed.bridge = true;
+            i += 1;
+        } else if arg == "--project" {
+            let Some(val) = args.get(i + 1) else {
+                return Err(ProfileError::ProfileParse {
+                    source: "cli".to_string(),
+                    detail: "--project requires a root handle".to_string(),
+                });
+            };
+            parsed.project = Some(val.clone());
+            i += 2;
+        } else if let Some(val) = arg.strip_prefix("--project=") {
+            if val.is_empty() {
+                return Err(ProfileError::ProfileParse {
+                    source: "cli".to_string(),
+                    detail: "--project requires a non-empty root handle".to_string(),
+                });
+            }
+            parsed.project = Some(val.to_string());
+            i += 1;
+        } else if arg == "--manifest" {
+            let Some(val) = args.get(i + 1) else {
+                return Err(ProfileError::ProfileParse {
+                    source: "cli".to_string(),
+                    detail: "--manifest requires a path".to_string(),
+                });
+            };
+            parsed.manifest = Some(val.clone());
+            i += 2;
+        } else if let Some(val) = arg.strip_prefix("--manifest=") {
+            if val.is_empty() {
+                return Err(ProfileError::ProfileParse {
+                    source: "cli".to_string(),
+                    detail: "--manifest requires a non-empty path".to_string(),
+                });
+            }
+            parsed.manifest = Some(val.to_string());
+            i += 1;
+        } else if arg == "--agent" {
+            let Some(val) = args.get(i + 1) else {
+                return Err(ProfileError::ProfileParse {
+                    source: "cli".to_string(),
+                    detail: "--agent requires a name".to_string(),
+                });
+            };
+            parsed.agent = Some(val.clone());
+            i += 2;
+        } else if let Some(val) = arg.strip_prefix("--agent=") {
+            if val.is_empty() {
+                return Err(ProfileError::ProfileParse {
+                    source: "cli".to_string(),
+                    detail: "--agent requires a non-empty name".to_string(),
+                });
+            }
+            parsed.agent = Some(val.to_string());
             i += 1;
         } else {
             return Err(ProfileError::ProfileParse {
@@ -711,7 +784,14 @@ pub fn parse_server_args(args: &[String]) -> Result<ServerSelectionArgs, Profile
         }
     }
 
-    Ok(ServerSelectionArgs { server, profiles_index, print_profile })
+    if parsed.headless && parsed.bridge {
+        return Err(ProfileError::ProfileParse {
+            source: "cli".to_string(),
+            detail: "mode_conflict: `--bridge` and `--headless` cannot be used together".to_string(),
+        });
+    }
+
+    Ok(parsed)
 }
 
 #[cfg(test)]

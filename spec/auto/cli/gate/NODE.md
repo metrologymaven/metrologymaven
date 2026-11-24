@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-cli]
 satisfies: [REQ-AUTO.CLI-003, REQ-AUTO.CLI-004, REQ-AUTO.CLI-008]
 covers: []
 depends_on: [AUTO.CLI.TREE, AUTO.SURF.ROOTS]

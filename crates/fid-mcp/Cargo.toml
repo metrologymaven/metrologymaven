@@ -15,6 +15,8 @@ path = "src/main.rs"
 # crate. The tool-call adapter reaches the bus through the `McpBus` trait, which the session
 # layer (AUTO.MCP.SESS) implements.
 [dependencies]
+# Surface-facing command bus API boundary (CORE.BUS.LINT).
+fid-bus-api = { path = "../fid-bus-api" }
 # RFC 8785 values and bytes of `mcp-tools.json` and `mcp-profiles.json`. Layer model.
 fid-canon = { path = "../fid-canon" }
 # The command-surface projection (AUTO.SURF.PROJ) and the result envelope (AUTO.SURF.ENV).
@@ -22,6 +24,8 @@ fid-canon = { path = "../fid-canon" }
 fid-surface = { path = "../fid-surface" }
 # Shared command ID and side-effect class types. Layer num.
 fid-types = { path = "../fid-types" }
+# Typed UUIDv7 session identifiers (AUTO.MCP.SESS). Layer model.
+fid-uuid = { path = "../fid-uuid" }
 # Bounded TOML profile parser (AUTO.MCP.SRV).
 toml = { version = "0.8", default-features = false, features = ["parse"] }
 

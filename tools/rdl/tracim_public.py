@@ -224,7 +224,7 @@ def run_public_test(
         write_artifact(out_path, artifact, secret_value=secret_val)
         return 1, artifact
 
-    # 3. Parse JSON output and classify verdict/reason (REQ-002, REQ-003).
+    # 3. Parse JSON output (supporting both flat mock JSON and AUTO.SURF.ENV Envelope) and classify verdict/reason (REQ-002, REQ-003).
     parsed: dict[str, Any] | None = None
     raw_out = proc.stdout.strip()
     if raw_out:
@@ -251,10 +251,34 @@ def run_public_test(
         write_artifact(out_path, artifact, secret_value=secret_val)
         return 1, artifact
 
-    error_code = _extract_str(parsed, "error") or _extract_str(parsed, "code")
-    verdict = _extract_str(parsed, "verdict") or "error"
-    kernel_semver = _extract_str(parsed, "kernel_semver")
-    manifest_digest = _extract_str(parsed, "manifest_digest")
+    envelope_outcome: str | None = None
+    payload_obj: Mapping[str, Any] = parsed
+    if "envelope_version" in parsed and "outcome" in parsed:
+        envelope_outcome = _extract_str(parsed, "outcome")
+        res_obj = parsed.get("result")
+        if isinstance(res_obj, Mapping):
+            payload_obj = res_obj
+
+    raw_err = parsed.get("error")
+    error_code: str | None = None
+    if isinstance(raw_err, Mapping):
+        details = raw_err.get("details")
+        if isinstance(details, Mapping):
+            error_code = _extract_str(details, "tracim_error") or _extract_str(details, "code")
+        if not error_code:
+            error_code = _extract_str(raw_err, "code")
+        err_msg = _extract_str(raw_err, "message") or ""
+        if not error_code or error_code in ("precondition_failed", "internal_error", "timeout"):
+            if any(tok in err_msg.lower() for tok in ("service_unreachable", "tracim_service_error", "unreachable")):
+                error_code = "service_unreachable"
+    else:
+        error_code = _extract_str(parsed, "error") or _extract_str(parsed, "code")
+    if envelope_outcome in ("not_run", "no_reply"):
+        error_code = error_code or "service_unreachable"
+
+    verdict = _extract_str(payload_obj, "verdict") or "error"
+    kernel_semver = _extract_str(payload_obj, "kernel_semver")
+    manifest_digest = _extract_str(payload_obj, "manifest_digest")
     if manifest_digest is not None and not SHA256_RE.match(manifest_digest):
         manifest_digest = None
 

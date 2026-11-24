@@ -64,6 +64,7 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # Normalised QIF 3.0 Schema IR types and canonical JSON codec (IO.QIF.GEN.FLAT); model so both fid-qif and fid-qif-gen can load it.
 "fid-qif-ir" = "model"
 "fid-replay" = "engine"
+"fid-bus-api" = "engine"
 "fid-bus" = "engine"
 # Network facade (CORE.BUS.POL.EGRESS): socket functions that take fid-bus's NetPermit, which only
 # the bus can issue; engine because it depends on fid-bus.

@@ -19,7 +19,9 @@ const MCP_HELP: &str = "\
 fid mcp: Model Context Protocol host subcommand (AUTO.MCP)
 
 USAGE:
-    fid mcp --help    Print this help
+    fid mcp [--headless | --bridge] [--server <profile>] [--project <root_handle>]
+            [--profiles-index <path>] [--manifest <path>] [--agent <name>]
+            [--print-profile] [--help]
 ";
 
 fn main() -> ExitCode {
@@ -84,37 +86,29 @@ fn main() -> ExitCode {
                 let mut stderr = std::io::stderr().lock();
                 fid_cli::ctrl::run(&rest, &env, &mut stdout, &mut stderr).into()
             }
-            "mcp" => {
-                if rest.is_empty() || matches!(rest.first().map(String::as_str), Some("--help" | "-h")) {
-                    print!("{MCP_HELP}");
-                    ExitCode::SUCCESS
-                } else {
-                    let msg = format!("unknown mcp option `{}`", rest[0]);
-                    if rest.iter().any(|a| a == "--json") {
-                        emit(true, &Envelope::failed(CLI_COMMAND_ID, ErrorCode::UsageError, &msg, None))
-                    } else {
-                        eprintln!("error: {msg}");
-                        Fx::Usage.into()
-                    }
-                }
-            }
+            "mcp" => run_mcp_host(&rest),
             other => {
                 eprintln!("error: unknown host subcommand `{other}`");
                 Fx::Usage.into()
             }
         },
-        ResolveOutcome::Invoke { command_id, json, .. } => {
-            let msg = format!(
-                "command `{}` resolved from embedded CLI tree; runtime bus dispatch is provided by AUTO.CLI.DISPATCH",
-                command_id.as_str()
-            );
-            let env = Envelope::failed(command_id.as_str(), ErrorCode::PreconditionFailed, &msg, None);
-            if json {
-                emit(true, &env)
-            } else {
-                eprintln!("error: {msg}");
-                Fx::from_envelope(&env).into()
-            }
+        ResolveOutcome::Invoke { command_id, major, json, rest } => {
+            let env = |k: &str| std::env::var(k).ok();
+            let mut stdin = std::io::stdin().lock();
+            let mut stdout = std::io::stdout().lock();
+            let mut stderr = std::io::stderr().lock();
+            fid_cli::dispatch::run_binary_dispatch(
+                &tree,
+                &command_id,
+                major,
+                json,
+                &rest,
+                &env,
+                &mut stdin,
+                &mut stdout,
+                &mut stderr,
+            )
+            .into()
         }
         ResolveOutcome::UsageError { message, json, .. } => {
             if json {
@@ -123,6 +117,43 @@ fn main() -> ExitCode {
                 eprintln!("error: {message}");
                 Fx::Usage.into()
             }
+        }
+    }
+}
+
+/// Routes `fid mcp` subcommand options (`AUTO.MCP.MODES`) to the sibling `fid-mcp` binary.
+fn run_mcp_host(rest: &[String]) -> ExitCode {
+    if matches!(rest.first().map(String::as_str), Some("--help" | "-h")) {
+        print!("{MCP_HELP}");
+        return ExitCode::SUCCESS;
+    }
+    let has_headless = rest.iter().any(|a| a == "--headless");
+    let has_bridge = rest.iter().any(|a| a == "--bridge");
+    if has_headless && has_bridge {
+        eprintln!("mode_conflict: `--bridge` and `--headless` cannot be used together");
+        return Fx::Usage.into();
+    }
+    let mcp_bin_name = if cfg!(windows) { "fid-mcp.exe" } else { "fid-mcp" };
+    let sibling = std::env::current_exe().ok().and_then(|p| {
+        let cand = p.with_file_name(mcp_bin_name);
+        cand.is_file().then_some(cand)
+    });
+    let mut cmd = match sibling {
+        Some(path) => std::process::Command::new(path),
+        None => std::process::Command::new("fid-mcp"),
+    };
+    cmd.args(rest)
+        .stdin(std::process::Stdio::inherit())
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit());
+    match cmd.status() {
+        Ok(status) => match status.code().and_then(|c| u8::try_from(c).ok()) {
+            Some(code) => ExitCode::from(code),
+            None => Fx::Internal.into(),
+        },
+        Err(e) => {
+            eprintln!("error: unable to launch `fid-mcp`: {e}");
+            Fx::NotRun.into()
         }
     }
 }

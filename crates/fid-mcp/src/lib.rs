@@ -23,7 +23,11 @@
 //! command of the workspace registry and every class.
 
 pub mod adapter;
+pub mod disclosure;
+pub mod embedded;
+pub mod framing;
 pub mod profiles;
+pub mod session;
 pub mod taint;
 pub mod text;
 pub mod tools;
@@ -32,12 +36,19 @@ pub use adapter::{
     call_tool, call_tool_tainted, AgentSession, AuditSink, BusCall, McpBus, Refusal, Severity, ToolTable, Violation,
     CHANNEL,
 };
+pub use disclosure::{
+    sanitize_tool_args, tool_to_mcp_wire, DisclosureState, MAX_ENABLED_EXTRA, MAX_ENABLE_BATCH,
+    NOT_FOUND_IDENTICAL_MSG, PAGE_LIMIT,
+};
+pub use embedded::{embedded_manifest_bytes, embedded_profile_index, embedded_projection, InProcessMcpBus};
+pub use framing::{write_canonical_line, FrameLine, LineReader, MAX_MESSAGE_BYTES};
 pub use profiles::{
     check_all_served, emit_profiles, parse_profile_bytes, parse_server_args, read_profile_file, resolve_profiles,
     EmittedProfiles, ProfileError, ProfileIndex, ProfileSpec, ResolvedProfile, ServerSelectionArgs, CORE_PROFILE_TOML,
     DEFAULT_PROFILE, DISCLOSURE_DOMAIN, EXIT_USAGE, MAX_FRONT_DOOR, MAX_PROFILE_BYTES, PROFILES_FILE, PROFILE_FORMAT,
     PROFILE_VERSION,
 };
+pub use session::{MemoryAuditSink, Session, SessionConfig, MCP_PROTOCOL_VERSION};
 pub use taint::{
     delimiters_balanced, escape_delimiters, render_text, render_text_with_schema, render_untrusted_text,
     taint_and_render, taint_envelope, taint_value, unescape_delimiters, TaintedEnvelope, TaintedResult, Untrusted,

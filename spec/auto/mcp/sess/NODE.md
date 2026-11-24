@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-mcp]
 satisfies: [REQ-AUTO.MCP-009, REQ-AUTO.MCP-011]
 covers: []
 depends_on: [AUTO.MCP.PROJ, AUTO.SURF.JOBS, CORE.BUS]

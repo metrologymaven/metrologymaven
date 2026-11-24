@@ -608,6 +608,11 @@ impl Bus {
         self.branch_locks.queued(branch)
     }
 
+    /// The command table of the Registry Manifest this bus serves.
+    pub fn table(&self) -> &CommandTable {
+        &self.table
+    }
+
     fn poison(&self) {
         self.poisoned.store(true, Ordering::SeqCst);
     }
