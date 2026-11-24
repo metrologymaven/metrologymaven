@@ -1441,6 +1441,7 @@ dependencies = [
 name = "fid-geo-cad"
 version = "0.0.1"
 dependencies = [
+ "fid-geo-frame",
  "fid-geo-nurbs",
  "fid-kci",
  "fid-num",

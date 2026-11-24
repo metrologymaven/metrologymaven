@@ -30,8 +30,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # Mesh quality report (SCAN.POLY.QUAL) and mesh-operation contract (SCAN.MESHOP.PROV): KNP-1,
 # only fid-geo-types, fid-kci, fid-num and fid-types.
 "fid-scan-mesh" = "kernel"
-# B-rep model (GEO.CAD.TOPO.MODEL, ADJ, PCURVE): L0 library code, KNP-1; only fid-geo-nurbs, fid-num,
-# fid-kci, fid-types.
+# B-rep model (GEO.CAD.TOPO.MODEL, ADJ, PCURVE) and assembly instances (GEO.CAD.ASSY.MODEL): L0
+# library code, KNP-1; only fid-geo-frame, fid-geo-nurbs, fid-num, fid-kci, fid-types.
 "fid-geo-cad" = "kernel"
 # Alignment kernel (ALN.QA.REPORT first): residual report, fixed-order statistics, digest;
 # ALN.BFIT.CONSTR locks and weights (adds fid-geo-frame, kernel).

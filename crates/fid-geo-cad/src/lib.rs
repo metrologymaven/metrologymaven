@@ -18,11 +18,22 @@
 //! [`classify_uv`], whether a parameter lies inside, outside or on the boundary of a trimmed
 //! face, with exact crossing decisions and a boundary band stated in metres.
 //!
+//! Implemented leaf: `GEO.CAD.ASSY.MODEL` (see [`assy::model`]): [`Instance`], one placed
+//! occurrence of a definition body with its frame and [`InstancePath`]; per-instance
+//! [`InstanceEntityId`]s for faces, edges and vertices (UUIDv5 over the path and the
+//! definition entity's ID); the sorted two-way [`InstanceIndex`]; and [`InstanceView`], the
+//! definition geometry plus the instance frame, never a transformed copy.
+//!
 //! Geometric validation (`GEO.CAD.TOPO.VALID`) and the commands (`GEO.CAD.TOPO.CMD`) are
 //! other leaves.
 
+pub mod assy;
 pub mod topo;
 
+pub use assy::{
+    AssyModelError, BodyId, Instance, InstanceEntityId, InstanceId, InstanceIndex, InstanceIx, InstancePath,
+    InstanceView, ASSY_NAMESPACE, MAX_INSTANCE_ENTITIES, MAX_PATH_DEPTH,
+};
 pub use topo::{
     body_digest, classify_uv, decode, derive_coedge, derive_pcurves, encode, pcurve_disagreement, AdjError, Adjacency,
     Body, BodyBuilder, Coedge, CoedgeIx, Curve2, CurveDef, CurveParams, DecodeError, DisagreementError, Edge, EdgeIx,
