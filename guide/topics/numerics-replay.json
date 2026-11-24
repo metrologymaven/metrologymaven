@@ -37,13 +37,13 @@
       "heading": "Why ordinary floating-point code fails audit replay",
       "paragraphs": [
         "Two machines running the same metrology algorithm can produce different last-bit numbers if one uses fused multiply-add (FMA), different SIMD reduction order, platform `libm` transcendentals, or randomized hash-map iteration order. Near a tolerance limit, a single ULP drift can flip a conformance verdict.",
-        "Metrology Maven enforces the KNP-1 numeric profile (CONSTITUTION §4): pure-Rust `f64` on the CPU, no FMA, fixed-order reductions, total-order min/max, deterministic counter-based RNG, no `std::collections::HashMap`, and `fid-num` wrappers for every transcendental. That is why the WebAssembly kernel running inside your browser right now produces the exact same SHA-256 digests as the native x86-64 and ARM64 binaries."
+        "Metrology Maven enforces the KNP-1 numeric profile (CONSTITUTION §4): pure-Rust `f64` on the CPU, no FMA, fixed-order reductions, total-order min/max, deterministic counter-based RNG, no `std::collections::HashMap`, and `fid-num` wrappers for every transcendental. That is why the WebAssembly kernel running inside your browser produces the same SHA-256 digests as the native x86-64 Linux build, which CI checks for every preset here. Bit identity of native ARM64 builds is planned (roadmap) and not yet checked."
       ]
     },
     {
       "heading": "RFC 8785 Canonical JSON & hash-chained journals",
       "paragraphs": [
-        "Every command committed to a Metrology Maven journal is serialized under RFC 8785 (keys sorted lexicographically, minimal whitespace, normalized numbers) and hashed with SHA-256 (`fid-canon`). Reordering keys or formatting whitespace preserves an `IDENTICAL` digest, while altering even one tolerance digit produces a `DIVERGENT` digest immediately caught by `fid-verify`."
+        "Every command committed to a Metrology Maven journal is serialized under RFC 8785 (keys sorted lexicographically, minimal whitespace, normalized numbers) and hashed with SHA-256 (`fid-canon`). Reordering keys or formatting whitespace preserves an `IDENTICAL` digest, while altering even one tolerance digit produces a `DIVERGENT` digest. The independent verifier that is to catch such edits (`fid-verify`) is planned (roadmap, not yet built)."
       ]
     }
   ],

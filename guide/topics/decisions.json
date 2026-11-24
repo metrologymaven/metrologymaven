@@ -32,7 +32,7 @@
       "heading": "Why measured values near a tolerance limit are ambiguous",
       "paragraphs": [
         "When a shaft diameter measures 10.045 mm against an upper specification limit of 10.050 mm, and expanded measurement uncertainty is U = 0.010 mm (u_std = 0.005 mm, k = 2), a substantial tail of the true-value probability distribution lies outside specification. A decision rule defines explicitly how that uncertainty governs the pass/fail verdict.",
-        "Simple acceptance (`dr:simple-acceptance@1`, shared risk) accepts whenever y lies inside [LSL, USL], exposing the customer to up to 50% specific consumer risk right at the limit. Guard-banded acceptance (`dr:guard-band(r=1)@1`) shrinks the acceptance zone inward by w = r * U, bounding consumer risk while increasing producer false-rejection risk. ISO 14253-1:2017 default (`dr:iso14253-1:2017/default@1`) requires at least 95% conformance probability to declare CONFORMS, marking the boundary band INDETERMINATE."
+        "Simple acceptance (`dr:simple-acceptance@1`, shared risk) accepts whenever y lies inside [LSL, USL], exposing the customer to up to 50% specific consumer risk right at the limit. Guard-banded acceptance (`dr:guard-band(r=1)@1`) shrinks the acceptance zone inward by w = r * U, bounding consumer risk while increasing producer false-rejection risk. ISO 14253-1:2017 default (`dr:iso14253-1:2017/default@1`) requires at least 95% conformance probability to declare CONFORMS, marking the boundary band INDETERMINATE. That probability needs a probability distribution backed by a Monte Carlo check (JCGM 101:2008); the uncertainty in this lab is a bare u_std and k with no such check, so `fid-kdec` refuses with `NOT_DECIDABLE(pdf_unavailable)` rather than assume a normal distribution."
       ]
     },
     {
@@ -46,13 +46,13 @@
     "widget_kind": "decision-lab",
     "op": "dec.evaluate",
     "secondary_ops": [],
-    "instructions": "Slide the measured value y across the tolerance band [9.950 mm, 10.050 mm], adjust standard uncertainty u_std, or switch decision rules (Simple Acceptance, ISO 14253-1 Default, Guard Band r=1, UEC-0) to watch fid-kdec compute outcomes, acceptance zones, and specific/global risk live in WebAssembly.",
+    "instructions": "Slide the measured value y across the tolerance band [9.950 mm, 10.050 mm], adjust standard uncertainty u_std, or switch decision rules (Simple Acceptance, ISO 14253-1 Default, Guard Band r=1, UEC-0) to watch fid-kdec compute outcomes, acceptance zones and global risk live in WebAssembly. Conformance probability and specific risk stay blank here: no Monte Carlo check backs the lab's uncertainty, and fid-kdec never assumes one.",
     "presets": [
       {
         "id": "dec-boundary-simple",
         "label": "Near USL: Simple Acceptance (Shared Risk)",
         "op": "dec.evaluate",
-        "description": "Measured y = 10.045 mm vs. [9.950, 10.050] mm with u_std = 0.005 mm (U = 0.010 mm). Simple acceptance passes the part even though ~15.9% specific consumer risk remains.",
+        "description": "Measured y = 10.045 mm vs. [9.950, 10.050] mm with u_std = 0.005 mm (U = 0.010 mm). Simple acceptance passes the part on the measured value alone, although U = 0.010 mm reaches past the upper limit; it does not weigh that uncertainty.",
         "request": {
           "op": "dec.evaluate",
           "params": {
@@ -66,7 +66,7 @@
             "prior_sigma": 1.8e-05
           }
         },
-        "expected_digest": "sha256:6c5feb52d02d71e0e8a860f515c9d0e14af18b01349d71bc2482f03094036efe",
+        "expected_digest": "sha256:133e6e23dd005c107df3d1b31861fd01514c8a9c12bc4832981ac64b51484829",
         "expected_result": {
           "acceptance_high": 0.01005,
           "acceptance_low": 0.00995,
@@ -81,12 +81,9 @@
           "global_producer_risk": 0.003183986516693128,
           "interpretation_status": "provisional",
           "lsl": "0.009950",
+          "mc_validation": "not_run",
           "outcome": "CONFORMS",
-          "p_conformance": 0.8413447460685377,
-          "p_high": 0.8413447460685467,
-          "p_low": 0.8413447460685285,
           "rule_ref": "dr:simple-acceptance@1",
-          "specific_consumer_risk": 0.1586552539314623,
           "standards_ref": "ISO 14253-1:2017; JCGM 106:2012",
           "usl": "0.010050",
           "value": 0.010045
@@ -94,9 +91,9 @@
       },
       {
         "id": "dec-boundary-iso14253",
-        "label": "Near USL: ISO 14253-1 Default (95% Conformance)",
+        "label": "Near USL: ISO 14253-1 Default (95% Conformance, Refused)",
         "op": "dec.evaluate",
-        "description": "The exact same measurement evaluated under ISO 14253-1:2017 default (p_min = 0.95): conformance probability is ~84.1%, so the verdict becomes INDETERMINATE.",
+        "description": "The exact same measurement evaluated under ISO 14253-1:2017 default (p_min = 0.95). This rule needs a conformance probability, and no Monte Carlo check backs the lab's uncertainty, so fid-kdec refuses: NOT_DECIDABLE(pdf_unavailable). It never guesses p.",
         "request": {
           "op": "dec.evaluate",
           "params": {
@@ -110,7 +107,7 @@
             "prior_sigma": 1.8e-05
           }
         },
-        "expected_digest": "sha256:07625d46a8dd0dce635efe82bd1f88cda1c70a91927b7758995be248dabeea8b",
+        "expected_digest": "sha256:e6b4224b4f9848eecee20dc5be11808e24714d382a664d3027de15df12d83641",
         "expected_result": {
           "acceptance_high": 0.010041775731865241,
           "acceptance_low": 0.009958224268134759,
@@ -125,13 +122,9 @@
           "global_producer_risk": 0.019940249763742104,
           "interpretation_status": "provisional",
           "lsl": "0.009950",
-          "outcome": "INDETERMINATE",
-          "p_conformance": 0.8413447460685377,
-          "p_high": 0.8413447460685467,
-          "p_low": 0.8413447460685285,
+          "mc_validation": "not_run",
+          "outcome": "NOT_DECIDABLE(pdf_unavailable)",
           "rule_ref": "dr:iso14253-1:2017/default@1",
-          "specific_consumer_risk": 0.1586552539314623,
-          "specific_producer_risk": 0.8413447460685377,
           "standards_ref": "ISO 14253-1:2017; JCGM 106:2012",
           "usl": "0.010050",
           "value": 0.010045
@@ -155,7 +148,7 @@
             "prior_sigma": 1.8e-05
           }
         },
-        "expected_digest": "sha256:64a10355c4d48a61790fa0cf3d8b00536633a92cb2f8aff535deb566b279e93e",
+        "expected_digest": "sha256:dfe24e6fb95ca2cd7428632a5fafa15e7559d612706fbd8cf58e825a768bac7d",
         "expected_result": {
           "acceptance_high": 0.01004,
           "acceptance_low": 0.00996,
@@ -170,12 +163,9 @@
           "global_producer_risk": 0.026819861268219457,
           "interpretation_status": "provisional",
           "lsl": "0.009950",
+          "mc_validation": "not_run",
           "outcome": "NONCONFORMS",
-          "p_conformance": 0.8413447460685377,
-          "p_high": 0.8413447460685467,
-          "p_low": 0.8413447460685285,
           "rule_ref": "dr:guard-band(r=1)@1",
-          "specific_producer_risk": 0.8413447460685377,
           "standards_ref": "ISO 14253-1:2017; JCGM 106:2012",
           "usl": "0.010050",
           "value": 0.010045
@@ -196,12 +186,13 @@
             "rule_ref": "dr:iso14253-1:2017/default@1"
           }
         },
-        "expected_digest": "sha256:d0c3232aa666eec203910e34eb1663d9530deb889ebd1e12f41dbf66cae2f249",
+        "expected_digest": "sha256:7491c25be70a0b1fdd37b481d402e3858adc61f219e255d25f86eb00bc36d9f6",
         "expected_result": {
           "evidence_class": "UEC-0",
           "flags": [],
           "interpretation_status": "provisional",
           "lsl": "0.009950",
+          "mc_validation": "not_run",
           "outcome": "NOT_DECIDABLE(u_missing)",
           "rule_ref": "dr:iso14253-1:2017/default@1",
           "standards_ref": "ISO 14253-1:2017; JCGM 106:2012",

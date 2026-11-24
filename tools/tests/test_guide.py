@@ -20,6 +20,7 @@ The WASM parts (4 and 6) skip with a visible reason when the binary is not built
 from __future__ import annotations
 
 import hashlib
+import html
 import json
 import os
 import re
@@ -35,7 +36,7 @@ import scope  # noqa: E402
 FIELD_MAP = ROOT / "guide" / "map" / "field-map.json"
 TOPICS_DIR = ROOT / "guide" / "topics"
 INCUMBENTS = ROOT / "house-rules" / "vocab" / "incumbents.txt"
-NATIVE_BIN = ROOT / "target" / "debug" / "fid-guide-wasm"
+NATIVE_BIN = ROOT / "target" / "debug" / ("fid-guide-wasm.exe" if os.name == "nt" else "fid-guide-wasm")
 WASM_BIN = ROOT / "target" / "wasm32-wasip1" / "release" / "fid-guide-wasm.wasm"
 DIST = ROOT / "site" / "dist"
 STAGED_WASM = DIST / "guide" / "fid-guide-wasm.wasm"
@@ -183,6 +184,13 @@ class FieldGuideTest(unittest.TestCase):
                     pr["expected_digest"],
                     f"digest mismatch for {t['slug']}/{pr['id']}",
                 )
+                # The no-JS fallback tables render expected_result, so it must be the kernel's
+                # own result, not only carry the right digest next to it.
+                self.assertEqual(
+                    resp["result"],
+                    pr["expected_result"],
+                    f"expected_result differs from the kernel result for {t['slug']}/{pr['id']}",
+                )
                 checked += 1
         self.assertGreaterEqual(checked, 15)
 
@@ -216,6 +224,33 @@ class FieldGuideTest(unittest.TestCase):
             # No-JS fallback preset tables must render real kernel values, never a generic placeholder.
             self.assertNotIn('<td class="mono">verified</td>', html_text, f"placeholder fallback in {gp}")
 
+        # Only core-1.0 branches link to "their" lab; others may link a related chapter only.
+        own_labs = sum(1 for p in self.fmap["pillars"] if p.get("guide_slug") and p["tier"] == "core-1.0")
+        index_html = (DIST / "guide" / "index.html").read_text(encoding="utf-8")
+        self.assertEqual(index_html.count("Open interactive lab"), own_labs)
+
+        # Every no-JS fallback row shows values from the preset's expected_result (which
+        # test_ac3 ties to the kernel) and the preset's digest.
+        for t in self.topics:
+            presets = t.get("lab", {}).get("presets", [])
+            if not presets:
+                continue
+            page_html = (DIST / "guide" / t["slug"] / "index.html").read_text(encoding="utf-8")
+            for pr in presets:
+                row_start = page_html.find(f"<tr><td><b>{html.escape(pr['label'])}</b>")
+                self.assertGreaterEqual(row_start, 0, f"{t['slug']}/{pr['id']}: no fallback row")
+                row = page_html[row_start : page_html.index("</tr>", row_start)]
+                cells = re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)
+                self.assertEqual(len(cells), 4, f"{t['slug']}/{pr['id']}: fallback row {row!r}")
+                self.assertIn(html.escape(pr["expected_digest"][:24]), cells[3])
+                shown = html.unescape(cells[2]).split(", ")
+                self.assertTrue(shown and shown != [""], f"{t['slug']}/{pr['id']}: empty kernel output cell")
+                res = pr["expected_result"]
+                for pair in shown:
+                    key, sep, val = pair.partition("=")
+                    self.assertTrue(sep and key in res, f"{t['slug']}/{pr['id']}: `{pair}` not in expected_result")
+                    self.assertEqual(val, str(res[key]), f"{t['slug']}/{pr['id']}: fallback shows {pair}")
+
         worker = (ROOT / "site" / "worker.js").read_text(encoding="utf-8")
         self.assertIn('"/guide/"', worker)
         self.assertIn("'self' 'wasm-unsafe-eval'", worker)
@@ -234,8 +269,12 @@ class FieldGuideTest(unittest.TestCase):
         js_check = r"""
 const fs = require("fs");
 const path = require("path");
-const { runKernelWasm } = require(path.resolve("site/src/guide-lab.js"));
-const wasmMod = new WebAssembly.Module(fs.readFileSync(path.resolve("site/dist/guide/fid-guide-wasm.wasm")));
+const { runKernelWasm, verifyWasmDigest } = require(path.resolve("site/src/guide-lab.js"));
+const canon = (v) => Array.isArray(v) ? "[" + v.map(canon).join(",") + "]"
+  : v && typeof v === "object" ? "{" + Object.keys(v).sort().map((k) => JSON.stringify(k) + ":" + canon(v[k])).join(",") + "}"
+  : JSON.stringify(v);
+const wasmBytes = fs.readFileSync(path.resolve("site/dist/guide/fid-guide-wasm.wasm"));
+const wasmMod = new WebAssembly.Module(wasmBytes);
 const topicsDir = path.resolve("guide/topics");
 let count = 0;
 for (const file of fs.readdirSync(topicsDir).sort()) {
@@ -248,6 +287,9 @@ for (const file of fs.readdirSync(topicsDir).sort()) {
     }
     if (out.response.result_digest !== pr.expected_digest) {
       throw new Error(`WASM digest mismatch on ${file}/${pr.id}: got ${out.response.result_digest} != ${pr.expected_digest}`);
+    }
+    if (canon(out.response.result) !== canon(pr.expected_result)) {
+      throw new Error(`WASM result differs from expected_result on ${file}/${pr.id}`);
     }
     // Verify Uncertainty Lab UI um-to-m slider round-trip preserves exact preset digests.
     if (pr.op === "unc.propagate") {
@@ -270,7 +312,18 @@ const single = runKernelWasm(wasmMod, { op: "canon.digest", params: { json_a: '{
 if (single.exitCode !== 0 || !single.response.ok || single.response.result.canonical_a !== '{"a":2,"b":1}') {
   throw new Error("Single-doc canon.digest failed: " + single.raw);
 }
-console.log(`WASM bit-exact verified ${count} presets + UI round-trip + single-doc canon`);
+// guide-lab.js accepts the staged module only under the digest the page carries, and refuses
+// any other digest before compiling.
+(async () => {
+  const page = fs.readFileSync(path.resolve("site/dist/guide/fits/index.html"), "utf8");
+  const m = page.match(/data-wasm-sha256="(sha256:[0-9a-f]{64})"/);
+  if (!m) throw new Error("fits page carries no data-wasm-sha256");
+  await verifyWasmDigest(wasmBytes, m[1]);
+  let refused = false;
+  try { await verifyWasmDigest(wasmBytes, "sha256:" + "0".repeat(64)); } catch (e) { refused = true; }
+  if (!refused) throw new Error("verifyWasmDigest accepted a wrong digest");
+  console.log(`WASM bit-exact verified ${count} presets + UI round-trip + single-doc canon + digest gate`);
+})().catch((e) => { console.error(e.message); process.exit(1); });
 """
         nproc = subprocess.run(["node", "-e", js_check], cwd=ROOT, capture_output=True, text=True, check=False)
         self.assertEqual(nproc.returncode, 0, nproc.stdout + nproc.stderr)

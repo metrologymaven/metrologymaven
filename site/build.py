@@ -476,6 +476,7 @@ def _scale_bar(lo_m: float, hi_m: float, tier: str) -> str:
 
 def render_field_map_section(fmap: dict, d) -> str:
     tier_meta = {t["id"]: t for t in fmap["tiers"]}
+    topic_titles = {t["slug"]: t["title"] for t in d["topics"]}
     tier_pills = {"core-1.0": ("ok", "Core 1.0"), "core-post-1.0": ("spec", "Post-1.0 Core (D-054)"),
                   "plugin-companion": ("p", "ECO.SDK Plugin / Companion")}
     buttons = [f'<button type="button" class="lab-btn" data-tier="all" aria-pressed="true">All {len(fmap["pillars"])} branches</button>']
@@ -493,7 +494,14 @@ def render_field_map_section(fmap: dict, d) -> str:
         pcls, plabel = tier_pills.get(p["tier"], ("p", p["tier"]))
         stds = ", ".join(p["standards"])
         doms = ", ".join(p["spec_domains"])
-        link = f' · <a href="/guide/{e(p["guide_slug"])}/">Open interactive lab →</a>' if p.get("guide_slug") else ""
+        # Only a core-1.0 branch has its own lab; a post-1.0 or plugin branch may point at a
+        # related chapter, but must not read as having a lab of its own.
+        link = ""
+        if p.get("guide_slug"):
+            slug = p["guide_slug"]
+            label = ("Open interactive lab" if p["tier"] == "core-1.0"
+                     else f"Related chapter: {topic_titles.get(slug, slug)} (no lab for this branch yet)")
+            link = f' · <a href="/guide/{e(slug)}/">{e(label)} →</a>'
         cards.append(
             f'<article class="card" data-pillar-tier="{e(p["tier"])}">'
             f'<span class="tag">{p["order"]:02d} · {e(p["scale_label"])} · {e(p["phase"])}</span>'
@@ -524,7 +532,8 @@ def _static_preset_rows(presets: list[dict]) -> str:
     for pr in presets:
         res = pr.get("expected_result", {})
         highlights = []
-        for k in ("outcome", "diameter", "usage_size", "lpu_check_passed", "replay_verdict", "tilt_mrad", "diameter_envelope_excess"):
+        for k in ("outcome", "diameter", "usage_size", "lpu_check_passed", "mc_validation", "replay_verdict", "tilt_mrad",
+                  "diameter_envelope_excess"):
             if k in res:
                 highlights.append(f"{k}={res[k]}")
         summary = ", ".join(highlights) if highlights else "verified"

@@ -43,7 +43,7 @@
     {
       "heading": "Outlier leverage and impact disclosure",
       "paragraphs": [
-        "Because least-squares squares every residual, a single burr, dust speck or bad scan hit pulls both the fitted centre and diameter aggressively. In Metrology Maven, silent point deletion is prohibited: removing any point records the excluded index set, its digest, and an explicit before-and-after impact disclosure (`KRN.OUT`)."
+        "Because least-squares squares every residual, a single burr, dust speck or bad scan hit pulls both the fitted centre and diameter aggressively. Metrology Maven's specification prohibits silent point deletion: the planned outlier subsystem (`KRN.OUT`, roadmap, not yet built) is to record the excluded index set, its digest, and an explicit before-and-after impact disclosure. This lab shows the before-and-after comparison only."
       ]
     },
     {
@@ -502,9 +502,10 @@
             ]
           }
         },
-        "expected_digest": "sha256:31f3752b6c5a4e473283eeb0bf4356c322480b9ee7acd3224318f74dd23e4e4b",
+        "expected_digest": "sha256:c2874643bb518ee75664c7ea0c19104719da217c52730389d8bca54a034b8904",
         "expected_result": {
           "diameter_envelope_excess": 0.030000000075927624,
+          "interpretation_status": "provisional",
           "least_squares": {
             "algorithm_id": "fit.cylinder.ls@1.0.0",
             "axis_dir": [
