@@ -213,5 +213,5 @@ fn ac6_unsupported_version_and_bounds() {
     assert_eq!(ALGORITHM_ID, "unc.uec.qif_map@1.0.0");
     assert_eq!(EXTENSION_VERSION, "unc-qif-stmt@1");
     assert_eq!(MAP_ID, "qif-unc-map@1");
-    assert_eq!(QIF_UNC_MAP.len(), 19);
+    assert_eq!(QIF_UNC_MAP.len(), 20);
 }

@@ -115,6 +115,8 @@ def stmt_to_fx_xml(stmt: dict, version: str = EXT_VERSION) -> str:
         if "reason" in nl:
             nl_xml += elem("fx:Reason", nl["reason"])
         parts.append(f"<fx:Nonlinearity>{nl_xml}</fx:Nonlinearity>")
+    if "samples_digest" in stmt:
+        parts.append(elem("fx:SamplesDigest", stmt["samples_digest"]))
     if "selection_rule" in stmt:
         parts.append(elem("fx:SelectionRule", stmt["selection_rule"]))
     if "estimate_convention" in stmt:
@@ -240,7 +242,7 @@ def validate_xsd_and_docs(files: dict[Path, bytes]) -> bool:
     expected_order = [
         "Class", "Uec0Reason", "Method", "Unit", "UStd", "Expanded", "Interval",
         "Model", "Sources", "Contributors", "LpuValidatedByMc", "Nonlinearity",
-        "SelectionRule", "EstimateConvention", "Provenance",
+        "SamplesDigest", "SelectionRule", "EstimateConvention", "Provenance",
     ]
     xs_ns = "{http://www.w3.org/2001/XMLSchema}"
     seq_elems = xsd_root.findall(

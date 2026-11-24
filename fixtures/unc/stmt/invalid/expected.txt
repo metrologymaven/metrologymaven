@@ -25,11 +25,16 @@ number_literal.json malformed unsupported_value
 p_0.json invalid_number interval.p
 p_1.json invalid_number interval.p
 pretty_printed.json non_canonical -
+samples_digest_bad.json invalid_field samples_digest
+samples_digest_declared.json class_mismatch samples_digest
+samples_digest_lpu.json class_mismatch samples_digest
+samples_digest_spec_derived.json class_mismatch samples_digest
 share_above_1.json invalid_number contributors.variance_share
 spec_derived_no_source.json class_mismatch sources
 spec_derived_with_nonlinearity.json class_mismatch nonlinearity
 uec0_with_U.json uec0_has_value expanded
 uec0_with_method.json uec0_has_value method
+uec0_with_samples_digest.json uec0_has_value samples_digest
 uec1_with_reason.json class_mismatch uec0_reason
 uec2_declared_source.json class_mismatch sources
 uec2_no_source.json class_mismatch sources

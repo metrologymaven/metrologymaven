@@ -146,26 +146,38 @@ fn sample_set(name: &str) -> SampleSet {
     decode(&read(&format!("samples/{name}.bin")), DEFAULT_CAP).unwrap()
 }
 
+/// The statement with its `samples_digest` set (UNC.UEC.STMT; MCM statements only). The
+/// digest is binding data the statement carries, not an expected result.
+fn with_samples_digest(stmt: &UncertaintyStatement, digest: fid_types::Digest) -> UncertaintyStatement {
+    let mut p = stmt.to_parts();
+    p.samples_digest = Some(digest);
+    UncertaintyStatement::new(p).unwrap()
+}
+
 fn run(r: &Row) -> Result<DecisionRecord, EvalError> {
-    let stmt = statement(r);
     let rule = rule(r.get("rule"));
     let tol = Tolerance { lsl: r.dec("lsl"), usl: r.dec("usl"), unit: r.get("unit").to_owned() };
     let bytes =
         if r.get("samples").is_empty() { None } else { Some(read(&format!("samples/{}.bin", r.get("samples")))) };
     let warn = Decimal::parse(if r.get("warn").is_empty() { DEFAULT_WARN_RATIO } else { r.get("warn") }).unwrap();
-    let input =
-        EvalInput { value: r.f64("value").unwrap(), statement: &stmt, tolerance: &tol, rule: &rule, warn_ratio: warn };
-    match &bytes {
-        None => evaluate(&input),
-        Some(b) => {
+    let mut stmt = statement(r);
+    // Column `samples_digest`: what the MCM statement carries. Empty means the sample file's
+    // own SHA-256, `wrong` another digest; a non-MCM statement carries none.
+    if let Some(b) = &bytes {
+        if stmt.method() == Some(Method::Mcm) {
             let digest = match r.get("samples_digest") {
                 "" => fid_kci::kci::sha256_digest(b),
                 "wrong" => fid_kci::kci::sha256_digest(b"not the sample set"),
                 other => panic!("{other}"),
             };
-            let s = SampleBytes { encoded: b, expected_digest: &digest, output: r.get("output") };
-            fid_kdec::evaluate_with_samples(&input, &s)
+            stmt = with_samples_digest(&stmt, digest);
         }
+    }
+    let input =
+        EvalInput { value: r.f64("value").unwrap(), statement: &stmt, tolerance: &tol, rule: &rule, warn_ratio: warn };
+    match &bytes {
+        None => evaluate(&input),
+        Some(b) => fid_kdec::evaluate_with_samples(&input, &SampleBytes { encoded: b, output: r.get("output") }),
     }
 }
 
@@ -358,7 +370,8 @@ fn million_samples_count() {
     set.header.failed = 0;
     set.failed.clear();
     set.outputs = vec![col];
-    let stmt = statement(&row("cp_mc_center"));
+    let enc = set.encode(DEFAULT_CAP).unwrap();
+    let stmt = with_samples_digest(&statement(&row("cp_mc_center")), enc.digest);
     let rule = rule("dr:iso14253-1:2017/default@1");
     let tol = Tolerance {
         lsl: Some(Decimal::parse("0.00999").unwrap()),
@@ -372,12 +385,47 @@ fn million_samples_count() {
         rule: &rule,
         warn_ratio: Decimal::parse(DEFAULT_WARN_RATIO).unwrap(),
     };
-    let enc = set.encode(DEFAULT_CAP).unwrap();
-    let s = SampleBytes { encoded: &enc.bytes, expected_digest: &enc.digest, output: "y" };
+    let s = SampleBytes { encoded: &enc.bytes, output: "y" };
     let rec = fid_kdec::evaluate_with_samples(&input, &s).unwrap();
     assert!(rec.p_conformance().unwrap() > 0.99);
     // Without the digest-checked path the samples are unavailable (maintainer decision).
     assert_eq!(evaluate(&input).unwrap().outcome().to_string(), "NOT_DECIDABLE(pdf_unavailable)");
+}
+
+/// UNC.UEC.STMT `samples_digest` (maintainer decision 2026-11-21): samples bind only through
+/// the statement's own digest. Expected outcomes are hand-labelled from the module's order:
+/// no digest or other bytes give `samples_unbound`; bound bytes give `cp_mc_center`'s result.
+#[test]
+fn samples_bind_only_through_the_statement_digest() {
+    let r = row("cp_mc_center");
+    let rule = rule(r.get("rule"));
+    let tol = Tolerance { lsl: r.dec("lsl"), usl: r.dec("usl"), unit: r.get("unit").to_owned() };
+    let warn = Decimal::parse(DEFAULT_WARN_RATIO).unwrap();
+    let center = read("samples/center.bin");
+    let edge = read("samples/edge.bin");
+    let eval = |stmt: &UncertaintyStatement, bytes: &[u8]| {
+        let input = EvalInput {
+            value: r.f64("value").unwrap(),
+            statement: stmt,
+            tolerance: &tol,
+            rule: &rule,
+            warn_ratio: warn,
+        };
+        fid_kdec::evaluate_with_samples(&input, &SampleBytes { encoded: bytes, output: "y" })
+    };
+    // A statement without samples_digest has no bindable samples, even for the right bytes.
+    let plain = statement(&r);
+    assert_eq!(plain.samples_digest(), None);
+    assert_eq!(eval(&plain, &center).unwrap_err().code(), "samples_unbound");
+    // Bound to center.bin: those bytes decide, any other valid set is refused.
+    let bound = with_samples_digest(&plain, fid_kci::kci::sha256_digest(&center));
+    assert_eq!(eval(&bound, &center).unwrap().outcome().wire(), r.get("outcome"));
+    assert_eq!(eval(&bound, &edge).unwrap_err().code(), "samples_unbound");
+    // An LPU statement cannot carry a samples_digest at all (UNC.UEC.STMT class_mismatch).
+    let mut p = plain.to_parts();
+    p.method = Some(Method::Lpu);
+    p.samples_digest = Some(fid_kci::kci::sha256_digest(&center));
+    assert_eq!(UncertaintyStatement::new(p).unwrap_err().code(), "class_mismatch");
 }
 
 /// erfc against the 100-digit reference values of `erfc.csv`: absolute error <= 2e-15,
