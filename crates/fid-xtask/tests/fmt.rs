@@ -2,7 +2,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_xtask::fmt::{
-    collect_rs_files, estimate_file_arg_bytes, parse_workspace_metadata, plan_batches, FmtBatch, PackageFmtInfo,
+    collect_rs_files, estimate_cargo_pkg_bytes, estimate_file_arg_bytes, find_rustfmt_config_for_dir,
+    parse_workspace_metadata, plan_batches, FmtBatch, PackageFmtInfo,
 };
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -10,7 +11,8 @@ use std::process::Command;
 fn pkg(name: &str, files: &[&str]) -> PackageFmtInfo {
     let paths: Vec<PathBuf> = files.iter().map(PathBuf::from).collect();
     let estimated_bytes = paths.iter().map(|p| estimate_file_arg_bytes(p)).sum();
-    PackageFmtInfo { name: name.to_string(), edition: "2021".to_string(), files: paths, estimated_bytes }
+    let pkg_dir = PathBuf::from(format!("crates/{name}"));
+    PackageFmtInfo { name: name.to_string(), edition: "2021".to_string(), pkg_dir, files: paths, estimated_bytes }
 }
 
 struct TempDirGuard(PathBuf);
@@ -47,7 +49,7 @@ fn run_cli(args: &[&str]) -> std::process::Output {
 #[test]
 fn plan_batches_packs_small_crates_together() {
     let packages = vec![pkg("crate-a", &["crates/a/src/lib.rs"]), pkg("crate-b", &["crates/b/src/lib.rs"])];
-    let total = packages[0].estimated_bytes + packages[1].estimated_bytes;
+    let total = estimate_cargo_pkg_bytes(&packages[0]) + estimate_cargo_pkg_bytes(&packages[1]);
     let batches = plan_batches(&packages, total + 10);
     assert_eq!(
         batches,
@@ -63,8 +65,8 @@ fn plan_batches_splits_multi_crate_workspace_under_budget() {
     let p1 = pkg("crate-a", &["crates/crate-a/src/lib.rs", "crates/crate-a/src/one.rs"]);
     let p2 = pkg("crate-b", &["crates/crate-b/src/lib.rs", "crates/crate-b/src/two.rs"]);
     let p3 = pkg("crate-c", &["crates/crate-c/src/lib.rs", "crates/crate-c/src/three.rs"]);
-    // Budget fits one package per batch, forcing 3 CargoFmt batches.
-    let budget = p1.estimated_bytes.max(p2.estimated_bytes).max(p3.estimated_bytes);
+    // Budget fits one package (including its `-p <pkg>` flag) per batch, forcing 3 CargoFmt batches.
+    let budget = estimate_cargo_pkg_bytes(&p1).max(estimate_cargo_pkg_bytes(&p2)).max(estimate_cargo_pkg_bytes(&p3));
     let batches = plan_batches(&[p1.clone(), p2.clone(), p3.clone()], budget);
     assert_eq!(batches.len(), 3, "expected 3 batches, got {batches:?}");
     for b in &batches {
@@ -76,6 +78,23 @@ fn plan_batches_splits_multi_crate_workspace_under_budget() {
             other => panic!("expected CargoFmt batch, got {other:?}"),
         }
     }
+}
+
+#[test]
+fn plan_batches_accounts_for_cargo_pkg_flags() {
+    let packages = vec![pkg("crate-one", &[]), pkg("crate-two", &[]), pkg("crate-three", &[])];
+    // Each zero-file crate contributes `name.len() + 4` bytes (13..15 bytes), so budget 28 fits 2 then 1.
+    let batches = plan_batches(&packages, 28);
+    assert_eq!(
+        batches,
+        vec![
+            FmtBatch::CargoFmt {
+                packages: vec!["crate-one".to_string(), "crate-two".to_string()],
+                estimated_bytes: 26,
+            },
+            FmtBatch::CargoFmt { packages: vec!["crate-three".to_string()], estimated_bytes: 15 },
+        ]
+    );
 }
 
 #[test]
@@ -184,6 +203,88 @@ fn cli_oversized_crate_direct_rustfmt_chunking_check_and_format() {
 
     let out = run_cli(&["--workspace", ws, "--max-batch-bytes", "90"]);
     assert_eq!(out.status.code(), Some(0), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+
+    let out = run_cli(&["--check", "--workspace", ws, "--max-batch-bytes", "90"]);
+    assert_eq!(out.status.code(), Some(0), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+}
+
+#[test]
+fn find_rustfmt_config_for_dir_respects_nearest_crate_config_and_workspace_boundary() {
+    let tmp = TempDirGuard::new("cfg-lookup");
+    tmp.write("rustfmt.toml", "max_width = 90\n");
+    let ws = tmp.path().join("ws");
+    std::fs::create_dir_all(&ws).unwrap();
+    tmp.write("ws/crates/plain/src/lib.rs", "");
+    tmp.write("ws/crates/override/.rustfmt.toml", "max_width = 100\n");
+    tmp.write("ws/crates/override/src/lib.rs", "");
+    tmp.write("ws/vendor/group/rustfmt.toml", "max_width = 80\n");
+    tmp.write("ws/vendor/group/sub/src/lib.rs", "");
+
+    // Must stop at `ws` and NOT pick up the parent directory's `rustfmt.toml` outside the workspace.
+    assert_eq!(find_rustfmt_config_for_dir(&ws.join("crates/plain"), &ws), None);
+
+    // Once workspace root has `rustfmt.toml`, plain crate resolves to it while overrides win locally.
+    tmp.write("ws/rustfmt.toml", "max_width = 120\n");
+    assert_eq!(find_rustfmt_config_for_dir(&ws.join("crates/plain"), &ws), Some(ws.join("rustfmt.toml")));
+    assert_eq!(
+        find_rustfmt_config_for_dir(&ws.join("crates/override"), &ws),
+        Some(ws.join("crates/override/.rustfmt.toml"))
+    );
+    assert_eq!(
+        find_rustfmt_config_for_dir(&ws.join("vendor/group/sub"), &ws),
+        Some(ws.join("vendor/group/rustfmt.toml"))
+    );
+}
+
+#[test]
+fn cli_direct_rustfmt_respects_crate_local_rustfmt_config() {
+    let tmp = TempDirGuard::new("cli-local-cfg");
+    tmp.write("rustfmt.toml", "max_width = 120\nuse_small_heuristics = \"Max\"\n");
+    tmp.write("Cargo.toml", "[workspace]\nresolver = \"2\"\nmembers = [\"crates/*\"]\n");
+
+    // Crate inheriting workspace `rustfmt.toml` (`max_width = 120`, `use_small_heuristics = "Max"`).
+    tmp.write(
+        "crates/root_cfg/Cargo.toml",
+        "[package]\nname = \"root_cfg\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    );
+    tmp.write(
+        "crates/root_cfg/src/lib.rs",
+        "pub struct Point {\n    pub x_coord: i32,\n    pub y_coord: i32,\n}\n\npub fn make_point() -> Point {\n    Point { x_coord: 1, y_coord: 2 }\n}\n",
+    );
+    tmp.write("crates/root_cfg/src/extra.rs", "pub fn extra_root_helper() -> i32 {\n    42\n}\n");
+
+    // Crate with its own `rustfmt.toml` (`max_width = 100`, `use_small_heuristics = "Default"`).
+    // Under `"Default"`, `Point { x_coord: 1, y_coord: 2 }` wraps across lines (exceeding default struct_lit_width=18),
+    // whereas workspace `"Max"` would collapse it onto one line.
+    tmp.write(
+        "crates/local_cfg/Cargo.toml",
+        "[package]\nname = \"local_cfg\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    );
+    tmp.write("crates/local_cfg/rustfmt.toml", "max_width = 100\nuse_small_heuristics = \"Default\"\n");
+    tmp.write(
+        "crates/local_cfg/src/lib.rs",
+        "pub struct Point {\n    pub x_coord: i32,\n    pub y_coord: i32,\n}\n\npub fn make_point() -> Point {\n    Point {\n        x_coord: 1,\n        y_coord: 2,\n    }\n}\n",
+    );
+    tmp.write("crates/local_cfg/src/extra.rs", "pub fn extra_local_helper() -> i32 {\n    7\n}\n");
+
+    let ws = tmp.path().to_str().unwrap();
+    // Force `DirectRustfmt` by setting budget smaller than two file paths.
+    let out = run_cli(&["--check", "--workspace", ws, "--max-batch-bytes", "90"]);
+    assert_eq!(out.status.code(), Some(0), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+
+    // Reformat `local_cfg` to match workspace `"Max"` style instead of its local `"Default"` rule -> must fail `--check`.
+    tmp.write(
+        "crates/local_cfg/src/lib.rs",
+        "pub struct Point {\n    pub x_coord: i32,\n    pub y_coord: i32,\n}\n\npub fn make_point() -> Point {\n    Point { x_coord: 1, y_coord: 2 }\n}\n",
+    );
+    let out = run_cli(&["--check", "--workspace", ws, "--max-batch-bytes", "90"]);
+    assert_eq!(out.status.code(), Some(1));
+
+    // Write-mode `fmt` under `DirectRustfmt` restores `local_cfg` using its local `rustfmt.toml`.
+    let out = run_cli(&["--workspace", ws, "--max-batch-bytes", "90"]);
+    assert_eq!(out.status.code(), Some(0), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    let local_src = std::fs::read_to_string(tmp.path().join("crates/local_cfg/src/lib.rs")).unwrap();
+    assert!(local_src.contains("x_coord: 1,\n"), "expected crate-local multiline formatting, got:\n{local_src}");
 
     let out = run_cli(&["--check", "--workspace", ws, "--max-batch-bytes", "90"]);
     assert_eq!(out.status.code(), Some(0), "stderr: {}", String::from_utf8_lossy(&out.stderr));
