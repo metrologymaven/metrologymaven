@@ -379,10 +379,8 @@ fn apply_paint(p: &mut Paint, attrs: &[(String, String)]) -> Result<(), String> 
                     _ => return Err(format!("`fill-rule` {v:?} is not supported")),
                 }
             }
-            "opacity" | "fill-opacity" | "stroke-opacity" => {
-                if number(v) != Some(1.0) {
-                    return Err(format!("`{k}` {v:?}: a meaning-carrying glyph is drawn at full opacity"));
-                }
+            "opacity" | "fill-opacity" | "stroke-opacity" if number(v) != Some(1.0) => {
+                return Err(format!("`{k}` {v:?}: a meaning-carrying glyph is drawn at full opacity"));
             }
             _ => {}
         }
