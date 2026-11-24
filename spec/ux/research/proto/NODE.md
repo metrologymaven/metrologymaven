@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-design]
+built_pr: 451
 satisfies: [REQ-UX.RESEARCH-007, REQ-UX.RESEARCH-008, REQ-UX.RESEARCH-009, REQ-UX.RESEARCH-010]
 covers: []
 depends_on: []
@@ -63,6 +65,16 @@ The rules every research activity follows: the published research plan and proto
 > Write `design/research/plan.md`, `protocol.md` (versioned; recruitment per FLOW persona; scripts; tasks by acceptance-job ID; metrics; severity scale reference), `consent.md` (purpose, recordings, storage period, access, withdrawal, separate opt-in to publish recordings) and `data-handling.md` (participant codes `P-<study>-<NN>`, raw data outside the public repository, deletion schedule, no telemetry-based research without opt-in, incumbent workflows described in own words only). In the Rust tooling crate `fid-design`, add `fid-design research-check --root <dir> [--key <csv>] [--json]` failing on e-mail addresses, phone numbers, names from the private key, images without a capture sidecar naming the project's capture command, and files flagged as incumbent artefacts; never print matched names. Exit 0, 1, 2. Tests AC-1..AC-4 of spec node UX.RESEARCH.PROTO.
 >
 > Constraints: no panic, no `unsafe`; deny `unwrap`, `expect`, `panic`, `todo`, `unimplemented`, `unreachable`; no network; the key is never logged.
+
+## Build notes (2026-11-23)
+
+Built in `fid-design` module `research` (PR #451). Decisions beyond the Design:
+
+- **Phone formats.** Besides `+<cc>` and `(NNN)` forms: 3-3-4 groups with `-`, space or `.` (`555.019.2834`), 3-4 local numbers with `-` or space (`555-0192`), and trunk-prefixed national numbers in other groupings (`07700 900123`, `030 12345678`). A 3-4 pair with `.` (`125.4500`) is a measurement, not a phone; a numeric range written `100-1000` is flagged, so write ranges as "100 to 1000" in research notes.
+- **Name parts.** Each word of a key name with 3 or more characters is matched on its own as a whole word, as well as the full name.
+- **Without `--key`** the command prints a notice that names were not checked, and the JSON has `names_checked: false`.
+- **SUS citation.** Maintainer decision: an academic citation of a published method's author (`(Brooke, 1996)` for the System Usability Scale) is kept; the lay-low rule is about the project's founders.
+- The severity scale is referenced by its owning node `UX.RESEARCH.USAB`; its file is not published yet.
 
 ## Open questions
 

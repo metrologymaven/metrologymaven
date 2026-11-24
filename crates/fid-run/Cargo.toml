@@ -1,6 +1,6 @@
 [package]
 name = "fid-run"
-description = "Metrology Maven runs of Command Programs: run binding validation, run records and the origin-bound run ledger (AUTO.RUN.BIND)"
+description = "Metrology Maven runs of Command Programs: run binding validation, run records and the origin-bound run ledger (AUTO.RUN.BIND); the run branch and Run entity (AUTO.RUN.EXEC.BRANCH)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

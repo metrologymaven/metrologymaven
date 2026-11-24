@@ -10,7 +10,8 @@
 //!   `UNSUPPORTED`, and the exact row lookup of `gdt.get_dmt_row@1`.
 //! - [`zone`] (`GDT.ZONE.ZTYPE`): the tolerance-zone shapes and their fixed-pose usage and
 //!   driving point, in closed form.
-//! - [`drf`] (`GDT.DRF.BUILD`): DRF construction from simulated datums and DoF bookkeeping.
+//! - [`drf`] (`GDT.DRF.BUILD`): DRF construction from simulated datums and DoF bookkeeping,
+//!   and the datum target coverage check (`GDT.DRF.COMMON.COVER`).
 //! - [`dim`] (`GDT.DIM.RADIAL`): diameter and radius of a feature fitted by `fid-fit`'s
 //!   least-squares circle, cylinder or sphere, checked against the chain's association.
 //!

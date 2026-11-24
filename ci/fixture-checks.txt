@@ -8,6 +8,7 @@ bash crates/fid-catalog/tests/offline.sh
 bash crates/fid-store/tests/offline.sh
 cargo run -q -p fid-design -- color-check --root design --baseline fixtures/ux/tokens/check/palette-baseline.json
 cargo run -q -p fid-design -- space-check --root design
+cargo xtask convergence-check --manifest fixtures/aln/bfit/stop-manifest.json
 cargo xtask convergence-doc --manifest fixtures/aln/qa/hist-manifest/fixed.json --check fixtures/aln/qa/hist-manifest/expected-fragment.md
 python -m unittest discover -s tools/house_rules/tests -v
 python -m unittest discover -s tools/repo_template/tests -v
@@ -19,8 +20,10 @@ python crates/fid-io-plugin/abi/gen_abi.py --check
 python crates/fid-report-pdf/fontgen/make_fonts.py --check
 python fixtures/agent/harness/runs/make_record_fixtures.py --check
 python fixtures/agent/harness/runs/make_runs.py --check
+python fixtures/agent/local/make_fixtures.py --check
 python fixtures/agent/propose/make_fixtures.py --check
 python fixtures/aln/bfit/make_constr_fixtures.py --check
+python fixtures/aln/bfit/make_stop_traces.py --check
 python fixtures/aln/datum/sys/make_gate_fixtures.py --check
 python fixtures/aln/model/hier/make_fixtures.py --check
 python fixtures/aln/qa/cond-cases/make_cond_cases.py --check
@@ -96,6 +99,7 @@ python fixtures/flow/journey/make_fixtures.py --check
 python fixtures/flow/pkg/make_fixtures.py --check
 python fixtures/flow/study/tasks/make_fixtures.py --check
 python fixtures/flow/unassist/make_fixtures.py --check
+python fixtures/flow/verdict/make_fixtures.py --check
 python fixtures/gdt/dim/make_radial.py --check
 python fixtures/gdt/dmt/check_schema.py
 python fixtures/gdt/dmt/make_fixtures.py --check
@@ -103,6 +107,7 @@ python fixtures/gdt/dmt/make_inventory_fixtures.py --check
 python fixtures/gdt/dprof/make_cases.py --check
 python fixtures/gdt/drf/build/make_cases.py --check
 python fixtures/gdt/drf/cyl/make_cases.py --check
+python fixtures/gdt/drf/make_targets_plate.py --check
 python fixtures/gdt/drf/measured/make_cases.py --check
 python fixtures/gdt/ident/make_fixtures.py --check
 python fixtures/gdt/interp/make_cases.py --check
@@ -131,6 +136,7 @@ python fixtures/hal/idl/base/cfg/make_fixtures.py --check
 python fixtures/hal/idl/base/err/make_fixtures.py --check
 python fixtures/hal/idl/base/health/make_fixtures.py --check
 python fixtures/hal/idl/gen/fmt/make_fixtures.py --check
+python fixtures/hal/idl/profile/make_fixtures.py --check
 python fixtures/hal/idl/stamp/make_fixtures.py --check
 python fixtures/io/cad/step/hdr/make_cases.py --check
 python fixtures/io/cad/worker/proto/make_digests.py --check
@@ -188,10 +194,12 @@ python fixtures/num/la/make_svd_fixtures.py --check
 python fixtures/num/make_red_fixtures.py --check
 python fixtures/operator/make_fixtures.py --check
 python fixtures/ors/trace/make_fixtures.py --check
+python fixtures/out/make_pol_fixtures.py --check
 python fixtures/outr/bench/recipe/make_fixtures.py --check
 python fixtures/outr/brand/dress/make_fixtures.py --check
 python fixtures/outr/comm/metric/snap/make_fixtures.py --check
 python fixtures/outr/docs/frame/make_fixtures.py --check
+python fixtures/outr/docs/qa/make_fixtures.py --check
 python fixtures/outr/site/import/make_fixtures.py --check
 python fixtures/pkg/check_package.py --strict
 python fixtures/pkg/check_spec_drift.py
@@ -203,6 +211,7 @@ python fixtures/pkg/make_golden.py --check
 python fixtures/pkg/make_reader_fixtures.py --check
 python fixtures/plat/bench/make_expected.py --check
 python fixtures/plat/deploy/make_expected.py --check
+python fixtures/plat/doctor/make_fixtures.py --check
 python fixtures/plat/gpu/make_notice_fixtures.py --check
 python fixtures/plat/matrix/make_eol_fixtures.py --check
 python fixtures/plat/matrix/make_page.py --check
@@ -227,6 +236,7 @@ python fixtures/rel/runbook/make_fixtures.py --check
 python fixtures/rel/sbom/make_fixtures.py --check
 python fixtures/replay/compare/make_cases.py --check
 python fixtures/replay/kart/make_fixtures.py --check
+python fixtures/replay/sandbox/make_fixtures.py --check
 python fixtures/replay/select/make_cases.py --check
 python fixtures/repo/tpl/promote/make_fixtures.py --check
 python fixtures/repo/tpl/selftest/make_fixtures.py --check
@@ -281,7 +291,11 @@ python fixtures/unc/model/subst/make_fixtures.py --check
 python fixtures/unc/qif/make_fixtures.py --check
 python fixtures/unc/stmt/make_fixtures.py --check
 python fixtures/unc/valid/make_fixtures.py --check
+python fixtures/ux/icons/grid/make_fixtures.py --check
+python fixtures/ux/report/page/make_fixtures.py --check
+python fixtures/ux/research/plan/make_fixtures.py --check
 python fixtures/ux/screens/inv/make_fixtures.py --check
+python fixtures/ux/system/lint/make_fixtures.py --check
 python fixtures/ux/system/princ/make_fixtures.py --check
 python fixtures/ux/system/review/make_fixtures.py --check
 python fixtures/ux/system/tool/make_fixtures.py --check

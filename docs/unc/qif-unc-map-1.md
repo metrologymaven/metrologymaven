@@ -24,6 +24,7 @@ Clause references cite ISO 23952:2020 designators and clause numbers only; no st
 | `contributors` | — | `fx:UncertaintyStatement/fx:Contributors/fx:Contributor` | ISO 23952:2020 cl. 6.3 (`Attributes/UserDataXML`) |
 | `lpu_validated_by_mc` | — | `fx:UncertaintyStatement/fx:LpuValidatedByMc` | ISO 23952:2020 cl. 6.3 (`Attributes/UserDataXML`) |
 | `nonlinearity` | — | `fx:UncertaintyStatement/fx:Nonlinearity` | ISO 23952:2020 cl. 6.3 (`Attributes/UserDataXML`) |
+| `samples_digest` | — | `fx:UncertaintyStatement/fx:SamplesDigest` | ISO 23952:2020 cl. 6.3 (`Attributes/UserDataXML`) |
 | `selection_rule` | — | `fx:UncertaintyStatement/fx:SelectionRule` | ISO 23952:2020 cl. 6.3 (`Attributes/UserDataXML`) |
 | `estimate_convention` | — | `fx:UncertaintyStatement/fx:EstimateConvention` | ISO 23952:2020 cl. 6.3 (`Attributes/UserDataXML`) |
 | `provenance` | — | `fx:UncertaintyStatement/fx:Provenance` | ISO 23952:2020 cl. 6.3 (`Attributes/UserDataXML`) |

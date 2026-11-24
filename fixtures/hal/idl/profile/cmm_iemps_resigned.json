@@ -1,0 +1,93 @@
+{
+  "schema": "instrument-profile/v1",
+  "profile_id": "cmm-demo-02@2.1.0",
+  "device_class": [
+    "CncMotion",
+    "Rotary",
+    "TactileProbe"
+  ],
+  "make": "Example Bridge Co. (invented)",
+  "model": "DemoBridge 1000",
+  "mpe_terms": [
+    {
+      "standard": {
+        "designator": "ISO 10360-2",
+        "edition": "2009",
+        "clause": "6"
+      },
+      "symbol": "E0",
+      "value": {
+        "unit": "m",
+        "value": "0x3eb92a737110e454"
+      },
+      "contributor": "uc:cmm-length-error@1.0.0"
+    },
+    {
+      "standard": {
+        "designator": "ISO 10360-2",
+        "edition": "2009",
+        "clause": "6"
+      },
+      "symbol": "E0.L",
+      "value": {
+        "unit": "1",
+        "value": "0x3ec4f8b588e368f1"
+      },
+      "contributor": "uc:cmm-length-error-slope@1.0.0"
+    }
+  ],
+  "frame_chain": [
+    {
+      "name": "stylus-tip",
+      "kind": "sensor"
+    },
+    {
+      "name": "probe-head",
+      "kind": "mount"
+    },
+    {
+      "name": "ram",
+      "kind": "device"
+    },
+    {
+      "name": "table",
+      "kind": "machine"
+    }
+  ],
+  "validity": {
+    "range": {
+      "lower": {
+        "unit": "m",
+        "value": "0x0000000000000000"
+      },
+      "upper": {
+        "unit": "m",
+        "value": "0x3ff0000000000000"
+      }
+    },
+    "temperature": {
+      "lower": {
+        "unit": "K",
+        "value": "0x4072326666666666"
+      },
+      "upper": {
+        "unit": "K",
+        "value": "0x4072726666666666"
+      }
+    }
+  },
+  "source": {
+    "kind": "iemps",
+    "digest": "sha256:56f0d901cc2ee891c8ffa7c6e7e0096f50a0fc21c994c2ef5a8bbd61c90781bd",
+    "citation": "Invented IEMPS parameter set for a fictitious CMM (project fixture, CC-BY-4.0)"
+  },
+  "um_model": {
+    "id": "im:cmm-demo-02@2.1.0",
+    "digest": "sha256:88ee3c6418061eb0f4d46ab8aa7fa0c4a2a4e6a1a815c1f4f7e88108362900b3"
+  },
+  "uec_max": 2,
+  "signature": {
+    "keyid": "key:fixture-profile-signer-2027",
+    "sig": "YSBkaWZmZXJlbnQgZml4dHVyZSBzaWduYXR1cmU="
+  }
+}

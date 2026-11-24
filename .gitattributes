@@ -9,6 +9,8 @@ fixtures/knp1/flags/**/*.wasm binary
 fixtures/hal/idl/base/cfg/** -text
 # HAL.IDL.BASE.ERR fixtures: records are compared byte for byte after a round trip.
 fixtures/hal/idl/base/err/** -text
+# HAL.IDL.PROFILE fixtures: digested and compared byte for byte by make_fixtures.py --check.
+fixtures/hal/idl/profile/** -text
 schemas/hal/** -text
 # CORE.JOB.CMD fixtures: hand-labelled status documents compared byte for byte.
 fixtures/core/job/cmd/** -text
