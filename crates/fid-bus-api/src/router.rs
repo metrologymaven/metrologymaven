@@ -62,8 +62,13 @@ impl CommandBus for InProcessBus {
     }
 
     fn supports(&self, command_id: &str, major: u32) -> bool {
-        let base = command_id.split('@').next().unwrap_or(command_id);
-        self.handlers.contains_key(&(base.to_string(), major))
+        if let Some((base, suffix)) = command_id.split_once('@') {
+            if suffix.parse::<u32>() != Ok(major) {
+                return false;
+            }
+            return self.handlers.contains_key(&(base.to_string(), major));
+        }
+        self.handlers.contains_key(&(command_id.to_string(), major))
     }
 
     fn list_commands(&self) -> Vec<(String, u32)> {

@@ -5,6 +5,7 @@ name = "core"
 title = "Metrology Maven Core"
 domains = [
   "tools",
+  "canon",
   "project",
   "program",
   "journal",

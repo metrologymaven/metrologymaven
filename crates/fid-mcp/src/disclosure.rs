@@ -349,16 +349,21 @@ impl DisclosureState {
         table: &ToolTable,
         bus: &mut dyn McpBus,
         audit: &mut dyn AuditSink,
-    ) -> (Envelope, Vec<String>) {
+    ) -> (Envelope, Option<String>, Vec<String>) {
         const CMD: &str = "tools.invoke_readonly@1";
         let CValue::Obj(map) = args else {
             return (
                 Envelope::failed(CMD, ErrorCode::ValidationError, "arguments must be an object", None),
+                None,
                 Vec::new(),
             );
         };
         let Some(CValue::Str(cmd_ref)) = map.get("command") else {
-            return (Envelope::failed(CMD, ErrorCode::ValidationError, "`command` must be a string", None), Vec::new());
+            return (
+                Envelope::failed(CMD, ErrorCode::ValidationError, "`command` must be a string", None),
+                None,
+                Vec::new(),
+            );
         };
         let inner_args = map.get("args").cloned().unwrap_or_else(|| CValue::Obj(BTreeMap::new()));
 
@@ -368,10 +373,10 @@ impl DisclosureState {
             self.by_mcp_name.get(cmd_ref.as_str()).map(String::as_str)
         };
         let Some(sp) = resolved_cid.and_then(|cid| self.served_projections.get(cid)) else {
-            return (Envelope::failed(CMD, ErrorCode::NotFound, NOT_FOUND_IDENTICAL_MSG, None), Vec::new());
+            return (Envelope::failed(CMD, ErrorCode::NotFound, NOT_FOUND_IDENTICAL_MSG, None), None, Vec::new());
         };
         let Some(tool) = self.served_tools.get(sp.command_id.as_str()) else {
-            return (Envelope::failed(CMD, ErrorCode::NotFound, NOT_FOUND_IDENTICAL_MSG, None), Vec::new());
+            return (Envelope::failed(CMD, ErrorCode::NotFound, NOT_FOUND_IDENTICAL_MSG, None), None, Vec::new());
         };
 
         if !matches!(sp.side_effect, SideEffect::R0 | SideEffect::R1) {
@@ -387,17 +392,18 @@ impl DisclosureState {
                     ),
                     None,
                 ),
+                None,
                 Vec::new(),
             );
         }
 
         let (clean_inner, warnings) = sanitize_tool_args(&inner_args);
         if let Err(root_err) = admit(PrincipalKind::Agent, sp, &clean_inner) {
-            return (root_err.to_envelope(sp.command_id.as_str()), warnings);
+            return (root_err.to_envelope(sp.command_id.as_str()), None, warnings);
         }
 
         match call_tool_tainted(table, session, bus, audit, &tool.name, &clean_inner) {
-            Ok(tainted) => (tainted.envelope, warnings),
+            Ok(tainted) => (tainted.envelope, tainted.text, warnings),
             Err(refusal) => (
                 Envelope::failed(
                     sp.command_id.as_str(),
@@ -405,6 +411,7 @@ impl DisclosureState {
                     &refusal.to_string(),
                     Some(refusal.to_value()),
                 ),
+                None,
                 warnings,
             ),
         }

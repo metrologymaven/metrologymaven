@@ -7,7 +7,7 @@
 
 use fid_canon::parse_with_limits;
 use fid_mcp::disclosure::DisclosureState;
-use fid_mcp::embedded::{embedded_manifest_bytes, embedded_profile_index, InProcessMcpBus};
+use fid_mcp::embedded::{embedded_manifest_bytes, embedded_profile_index, StandaloneMcpBus};
 use fid_mcp::profiles::{parse_server_args, ProfileIndex, EXIT_USAGE, MAX_INDEX_BYTES};
 use fid_mcp::session::{MemoryAuditSink, Session, SessionConfig};
 use fid_mcp::ToolTable;
@@ -157,7 +157,7 @@ fn run(args: &[String]) -> ExitCode {
         read_only_holder: None,
     };
 
-    let bus = InProcessMcpBus::new_default(parsed.project);
+    let bus = StandaloneMcpBus::new(parsed.project);
     let mut session = Session::new(cfg, disclosure, table, bus, MemoryAuditSink::default());
 
     let stdin = std::io::stdin();

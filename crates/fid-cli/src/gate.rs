@@ -9,7 +9,7 @@
 use crate::args::ParsedArgs;
 use crate::tree::CliMajor;
 use fid_canon::CValue;
-use fid_surface::roots::{gate_raw_paths, may_pass_raw_path, PrincipalKind, RootError};
+use fid_surface::roots::{admit, may_pass_raw_path, PrincipalKind, RootError};
 use fid_surface::{Envelope, ErrorCode, SurfaceProjection};
 use fid_types::SideEffect;
 use std::collections::BTreeMap;
@@ -89,9 +89,9 @@ pub fn evaluate_gate(
         ));
     }
 
-    // 3. Raw-path gate via `fid_surface::roots`.
+    // 3. Root-config & raw-path gate via `fid_surface::roots::admit`.
     if let Some(sp) = surface_proj {
-        if let Err(err) = gate_raw_paths(principal_kind, sp, &parsed.params) {
+        if let Err(err) = admit(principal_kind, sp, &parsed.params) {
             return GateDecision::Refuse(err.to_envelope(cmd_id));
         }
     } else if !parsed.raw_paths.is_empty() && !may_pass_raw_path(principal_kind) {

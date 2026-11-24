@@ -14,7 +14,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use fid_canon::{parse_with_limits, to_canonical_bytes, CValue};
-use fid_surface::{ParamSpec, Projection};
+use fid_surface::{ParamSpec, Projection, SurfaceProjection};
 use fid_types::{CommandId, CommandName, Determinism, Digest, SideEffect};
 
 /// Surface name owned by the CLI emitter.
@@ -33,6 +33,7 @@ pub const RESERVED_HOST_SUBCOMMANDS: [&str; 2] = ["ctrl", "mcp"];
 pub const MAX_SUGGEST_DISTANCE: usize = 2;
 
 const EMBEDDED_TREE_BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/cli-tree.json"));
+const EMBEDDED_MANIFEST_BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/cli-manifest.json"));
 
 /// One parameter entry in a [`CliMajor`].
 #[derive(Debug, Clone, PartialEq)]
@@ -492,6 +493,33 @@ pub fn embedded_tree() -> Result<CliTree, CliTreeError> {
     parse_tree(EMBEDDED_TREE_BYTES)
 }
 
+/// Loads the [`Projection`] embedded at build time (if a matching manifest was supplied).
+pub fn embedded_projection() -> Option<&'static Projection> {
+    static PROJ: std::sync::OnceLock<Option<Projection>> = std::sync::OnceLock::new();
+    PROJ.get_or_init(|| {
+        if EMBEDDED_MANIFEST_BYTES.is_empty() {
+            None
+        } else {
+            fid_surface::project(EMBEDDED_MANIFEST_BYTES).ok()
+        }
+    })
+    .as_ref()
+}
+
+/// Looks up the [`SurfaceProjection`] matching `(command_id, major)` when `proj` matches
+/// `tree.manifest_digest`.
+pub fn find_surface_projection<'a>(
+    proj: &'a Projection,
+    tree: &CliTree,
+    command_id: &CommandId,
+    major: u32,
+) -> Option<&'a SurfaceProjection> {
+    if proj.manifest_digest != tree.manifest_digest {
+        return None;
+    }
+    proj.commands.iter().find(|c| c.command_id.name() == command_id.name() && c.major == major)
+}
+
 /// Result of resolving CLI arguments against a [`CliTree`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ResolveOutcome {
@@ -594,7 +622,7 @@ pub fn resolve_args(tree: &CliTree, args: &[String]) -> ResolveOutcome {
                 }
             }
             s if s.starts_with("--major=") => {
-                let val = s.trim_start_matches("--major=");
+                let val = s.strip_prefix("--major=").unwrap_or_default();
                 match val.parse::<u32>() {
                     Ok(n) => {
                         requested_major = Some(n);

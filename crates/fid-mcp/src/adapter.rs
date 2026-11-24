@@ -268,7 +268,7 @@ impl fmt::Display for Refusal {
 impl std::error::Error for Refusal {}
 
 /// The tool name, echoed only when it has the shape of a generated name (it is caller input).
-fn echo_name(name: &str) -> String {
+pub(crate) fn echo_name(name: &str) -> String {
     let ok = !name.is_empty()
         && name.len() <= fid_surface::MCP_NAME_MAX
         && name.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_');

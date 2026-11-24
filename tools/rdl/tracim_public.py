@@ -269,7 +269,10 @@ def run_public_test(
             error_code = _extract_str(raw_err, "code")
         err_msg = _extract_str(raw_err, "message") or ""
         if not error_code or error_code in ("precondition_failed", "internal_error", "timeout"):
-            if any(tok in err_msg.lower() for tok in ("service_unreachable", "tracim_service_error", "unreachable")):
+            if any(
+                tok in err_msg.lower()
+                for tok in ("service_unreachable", "tracim_service_error", "unreachable", "timed out")
+            ):
                 error_code = "service_unreachable"
     else:
         error_code = _extract_str(parsed, "error") or _extract_str(parsed, "code")
@@ -282,7 +285,7 @@ def run_public_test(
     if manifest_digest is not None and not SHA256_RE.match(manifest_digest):
         manifest_digest = None
 
-    if error_code in ("service_unreachable", "tracim_service_error"):
+    if error_code in ("service_unreachable", "tracim_service_error", "timeout"):
         artifact = build_artifact(
             verdict="error",
             kernel_semver=kernel_semver,
@@ -292,7 +295,13 @@ def run_public_test(
         write_artifact(out_path, artifact, secret_value=secret_val)
         return 1, artifact
 
-    if proc.returncode == 0 and verdict == "passed" and kernel_semver and manifest_digest:
+    if (
+        proc.returncode == 0
+        and envelope_outcome in (None, "computed", "committed")
+        and verdict == "passed"
+        and kernel_semver
+        and manifest_digest
+    ):
         artifact = build_artifact(
             verdict="passed",
             kernel_semver=kernel_semver,
@@ -302,8 +311,9 @@ def run_public_test(
         write_artifact(out_path, artifact, secret_value=secret_val)
         return 0, artifact
 
+    out_verdict = "failed" if (verdict == "failed" and envelope_outcome in (None, "computed", "committed")) else "error"
     artifact = build_artifact(
-        verdict="failed" if verdict == "failed" else "error",
+        verdict=out_verdict,
         kernel_semver=kernel_semver,
         manifest_digest=manifest_digest,
         reason="verdict_failed",

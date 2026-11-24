@@ -298,6 +298,60 @@ class TestTracimPublicJob(unittest.TestCase):
             self.assertEqual(eart["verdict"], "error")
             self.assertEqual(eart["reason"], "service_unreachable")
 
+    def test_timeout_error_code_and_timed_out_message_report_service_unreachable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cli = Path(tmp) / "timeout_envelope_cli.py"
+            cli.write_text(
+                "import json, sys\n"
+                "print(json.dumps({"
+                "'envelope_version': 1,"
+                "'command_id': 'rdl.submit_tracim@1',"
+                "'outcome': 'failed',"
+                "'error': {'code': 'timeout', 'message': 'request timed out after 5000ms'},"
+                "}))\n"
+                "sys.exit(4)\n",
+                encoding="utf-8",
+            )
+            out_path = Path(tmp) / "timeout.json"
+            code, art = tracim_public.run_public_test(
+                fid_argv=[sys.executable, str(cli)],
+                out_path=out_path,
+                workflow_path=WORKFLOW_PATH,
+                env=_clean_test_env(TRACIM_PUBLIC_KEY=SENTINEL_KEY),
+            )
+            self.assertEqual(code, 1)
+            self.assertEqual(art["verdict"], "error")
+            self.assertEqual(art["reason"], "service_unreachable")
+
+    def test_dry_run_outcome_with_passed_verdict_is_rejected(self) -> None:
+        digest = "sha256:" + "cd" * 32
+        with tempfile.TemporaryDirectory() as tmp:
+            cli = Path(tmp) / "dry_run_envelope_cli.py"
+            cli.write_text(
+                "import json\n"
+                "print(json.dumps({"
+                "'envelope_version': 1,"
+                "'command_id': 'rdl.submit_tracim@1',"
+                "'outcome': 'dry_run',"
+                "'result': {"
+                "'verdict': 'passed',"
+                "'kernel_semver': '0.1.0-rc.1',"
+                f"'manifest_digest': '{digest}',"
+                "},"
+                "}))\n",
+                encoding="utf-8",
+            )
+            out_path = Path(tmp) / "dry_run.json"
+            code, art = tracim_public.run_public_test(
+                fid_argv=[sys.executable, str(cli)],
+                out_path=out_path,
+                workflow_path=WORKFLOW_PATH,
+                env=_clean_test_env(TRACIM_PUBLIC_KEY=SENTINEL_KEY),
+            )
+            self.assertEqual(code, 1)
+            self.assertEqual(art["verdict"], "error")
+            self.assertEqual(art["reason"], "verdict_failed")
+
 
 if __name__ == "__main__":
     unittest.main()

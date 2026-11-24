@@ -87,9 +87,7 @@ impl TargetError {
             TargetError::HumanConfirmationFailed(_) => {
                 Envelope::failed(command_id, ErrorCode::PolicyRefused, &self.to_string(), None)
             }
-            TargetError::Conflict { .. } => {
-                Envelope::failed(command_id, ErrorCode::PolicyRefused, &self.to_string(), None)
-            }
+            TargetError::Conflict { .. } => Envelope::failed(command_id, ErrorCode::Conflict, &self.to_string(), None),
         }
     }
 }

@@ -180,15 +180,41 @@ impl BusApiError {
 
     /// Converts this error into a failed [`BusEnvelope`] for `command`.
     pub fn to_envelope(&self, command: impl Into<String>) -> BusEnvelope {
-        let details = match (&self.details, &self.bus_code, &self.bus_reason) {
-            (Some(d), _, _) => Some(d.clone()),
-            (None, Some(bc), Some(br)) => {
+        let has_bus_meta = self.bus_code.is_some() || self.bus_reason.is_some();
+        let details = match (&self.details, has_bus_meta) {
+            (None, false) => None,
+            (Some(d), false) => Some(d.clone()),
+            (None, true) => {
                 let mut m = BTreeMap::new();
-                m.insert("bus_code".to_string(), CValue::Str(bc.clone()));
-                m.insert("bus_reason".to_string(), CValue::Str(br.clone()));
+                if let Some(bc) = &self.bus_code {
+                    m.insert("bus_code".to_string(), CValue::Str(bc.clone()));
+                }
+                if let Some(br) = &self.bus_reason {
+                    m.insert("bus_reason".to_string(), CValue::Str(br.clone()));
+                }
                 Some(CValue::Obj(m))
             }
-            _ => None,
+            (Some(CValue::Obj(orig)), true) => {
+                let mut m = orig.clone();
+                if let Some(bc) = &self.bus_code {
+                    m.entry("bus_code".to_string()).or_insert_with(|| CValue::Str(bc.clone()));
+                }
+                if let Some(br) = &self.bus_reason {
+                    m.entry("bus_reason".to_string()).or_insert_with(|| CValue::Str(br.clone()));
+                }
+                Some(CValue::Obj(m))
+            }
+            (Some(other), true) => {
+                let mut m = BTreeMap::new();
+                m.insert("detail".to_string(), other.clone());
+                if let Some(bc) = &self.bus_code {
+                    m.insert("bus_code".to_string(), CValue::Str(bc.clone()));
+                }
+                if let Some(br) = &self.bus_reason {
+                    m.insert("bus_reason".to_string(), CValue::Str(br.clone()));
+                }
+                Some(CValue::Obj(m))
+            }
         };
         let outcome = match self.code {
             BusApiErrorCode::Cancelled => BusOutcome::Cancelled,

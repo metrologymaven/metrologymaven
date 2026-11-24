@@ -145,8 +145,14 @@ impl ParamsReader for StdParamsReader {
                 .read_to_end(&mut buf)
                 .map_err(|e| ArgError::ParamsParse(format!("reading stdin `--params`: {e}")))?;
         } else {
-            let file =
-                File::open(source).map_err(|e| ArgError::ParamsParse(format!("opening `--params {source}`: {e}")))?;
+            let handle_cand = source.strip_prefix('@').unwrap_or(source);
+            if is_handle(handle_cand) {
+                return Err(ArgError::ParamsParse(format!(
+                    "`--params {source}` uses a `root:` handle which requires a bus-backed root resolver; use `--params -` for stdin or a local file path"
+                )));
+            }
+            let file = File::open(handle_cand)
+                .map_err(|e| ArgError::ParamsParse(format!("opening `--params {source}`: {e}")))?;
             file.take(limit)
                 .read_to_end(&mut buf)
                 .map_err(|e| ArgError::ParamsParse(format!("reading `--params {source}`: {e}")))?;
@@ -232,6 +238,18 @@ fn type_allows(ty: &str, candidate: &str) -> bool {
     ty == candidate || ty.split('|').any(|part| part == candidate)
 }
 
+fn type_is(ty: &str, prim: &str) -> bool {
+    let mut has_prim = false;
+    for part in ty.split('|') {
+        if part == prim {
+            has_prim = true;
+        } else if part != "null" {
+            return false;
+        }
+    }
+    has_prim
+}
+
 fn parse_param_value(param: &CliParam, raw: &str, is_path_like: bool) -> Result<ParamValue, ArgError> {
     if type_allows(&param.ty, "null") && raw == "null" {
         return Ok(ParamValue::Null);
@@ -240,7 +258,7 @@ fn parse_param_value(param: &CliParam, raw: &str, is_path_like: bool) -> Result<
         let (value, unit) = parse_quantity(raw, &param.name, param.unit.as_deref())?;
         return Ok(ParamValue::Quantity { value, unit });
     }
-    if type_allows(&param.ty, "boolean") && (param.ty == "boolean" || param.ty == "null|boolean") {
+    if type_is(&param.ty, "boolean") {
         return match raw {
             "true" => Ok(ParamValue::Bool(true)),
             "false" => Ok(ParamValue::Bool(false)),
@@ -250,13 +268,13 @@ fn parse_param_value(param: &CliParam, raw: &str, is_path_like: bool) -> Result<
             )),
         };
     }
-    if type_allows(&param.ty, "integer") && (param.ty == "integer" || param.ty == "null|integer") {
+    if type_is(&param.ty, "integer") {
         if raw.parse::<i64>().is_ok() {
             return Ok(ParamValue::Int(raw.to_string()));
         }
         return Err(usage("usage_error", format!("parameter `{}` expects an integer, got `{raw}`", param.name)));
     }
-    if type_allows(&param.ty, "number") && (param.ty == "number" || param.ty == "null|number") {
+    if type_is(&param.ty, "number") {
         if scan_decimal_prefix(raw.trim()) == Some(raw.trim().len())
             && raw.trim().parse::<f64>().is_ok_and(f64::is_finite)
         {
@@ -264,7 +282,7 @@ fn parse_param_value(param: &CliParam, raw: &str, is_path_like: bool) -> Result<
         }
         return Err(usage("usage_error", format!("parameter `{}` expects a finite number, got `{raw}`", param.name)));
     }
-    if type_allows(&param.ty, "array") && (param.ty == "array" || param.ty == "null|array") {
+    if type_is(&param.ty, "array") {
         let trimmed = raw.trim();
         if trimmed.starts_with('[') {
             let parsed = parse_with_limits(trimmed.as_bytes(), MAX_PARAMS_BYTES, MAX_PARAMS_DEPTH)
@@ -277,7 +295,7 @@ fn parse_param_value(param: &CliParam, raw: &str, is_path_like: bool) -> Result<
             if raw.is_empty() { Vec::new() } else { raw.split(',').map(|s| ParamValue::Str(s.to_string())).collect() };
         return Ok(ParamValue::List(parts));
     }
-    if (param.ty == "object" || param.ty == "any" || param.ty.starts_with('#'))
+    if (type_is(&param.ty, "object") || type_allows(&param.ty, "any") || param.ty.starts_with('#'))
         && (raw.trim_start().starts_with('{') || raw.trim_start().starts_with('['))
     {
         let parsed = parse_with_limits(raw.as_bytes(), MAX_PARAMS_BYTES, MAX_PARAMS_DEPTH)
@@ -349,14 +367,14 @@ pub fn parse_command_args(
                 flags.project = Some(flag_value(rest, &mut i, "--project")?.to_string());
             }
             s if s.starts_with("--project=") => {
-                flags.project = Some(s.trim_start_matches("--project=").to_string());
+                flags.project = Some(s.strip_prefix("--project=").unwrap_or_default().to_string());
                 i += 1;
             }
             "--branch" => {
                 flags.branch = Some(flag_value(rest, &mut i, "--branch")?.to_string());
             }
             s if s.starts_with("--branch=") => {
-                flags.branch = Some(s.trim_start_matches("--branch=").to_string());
+                flags.branch = Some(s.strip_prefix("--branch=").unwrap_or_default().to_string());
                 i += 1;
             }
             "--wait-timeout" => {
@@ -364,7 +382,7 @@ pub fn parse_command_args(
                 flags.wait_timeout_secs = Some(parse_u64_flag(v, "--wait-timeout")?);
             }
             s if s.starts_with("--wait-timeout=") => {
-                let v = s.trim_start_matches("--wait-timeout=");
+                let v = s.strip_prefix("--wait-timeout=").unwrap_or_default();
                 flags.wait_timeout_secs = Some(parse_u64_flag(v, "--wait-timeout")?);
                 i += 1;
             }
@@ -373,7 +391,7 @@ pub fn parse_command_args(
                 flags.timeout_ms = Some(parse_u64_flag(v, "--timeout")?);
             }
             s if s.starts_with("--timeout=") => {
-                let v = s.trim_start_matches("--timeout=");
+                let v = s.strip_prefix("--timeout=").unwrap_or_default();
                 flags.timeout_ms = Some(parse_u64_flag(v, "--timeout")?);
                 i += 1;
             }
@@ -381,14 +399,14 @@ pub fn parse_command_args(
                 flags.reason = Some(flag_value(rest, &mut i, "--reason")?.to_string());
             }
             s if s.starts_with("--reason=") => {
-                flags.reason = Some(s.trim_start_matches("--reason=").to_string());
+                flags.reason = Some(s.strip_prefix("--reason=").unwrap_or_default().to_string());
                 i += 1;
             }
             "--params" => {
                 flags.params_source = Some(flag_value(rest, &mut i, "--params")?.to_string());
             }
             s if s.starts_with("--params=") => {
-                flags.params_source = Some(s.trim_start_matches("--params=").to_string());
+                flags.params_source = Some(s.strip_prefix("--params=").unwrap_or_default().to_string());
                 i += 1;
             }
             "--expected-head" => {
@@ -398,7 +416,7 @@ pub fn parse_command_args(
                 flags.expected_head = Some(d);
             }
             s if s.starts_with("--expected-head=") => {
-                let v = s.trim_start_matches("--expected-head=");
+                let v = s.strip_prefix("--expected-head=").unwrap_or_default();
                 let d = Digest::parse(v)
                     .map_err(|_| usage("usage_error", format!("invalid `--expected-head` digest `{v}`")))?;
                 flags.expected_head = Some(d);
@@ -408,14 +426,14 @@ pub fn parse_command_args(
                 flags.runtime_dir = Some(flag_value(rest, &mut i, "--runtime-dir")?.to_string());
             }
             s if s.starts_with("--runtime-dir=") => {
-                flags.runtime_dir = Some(s.trim_start_matches("--runtime-dir=").to_string());
+                flags.runtime_dir = Some(s.strip_prefix("--runtime-dir=").unwrap_or_default().to_string());
                 i += 1;
             }
             "--token-file" => {
                 flags.token_file = Some(flag_value(rest, &mut i, "--token-file")?.to_string());
             }
             s if s.starts_with("--token-file=") => {
-                flags.token_file = Some(s.trim_start_matches("--token-file=").to_string());
+                flags.token_file = Some(s.strip_prefix("--token-file=").unwrap_or_default().to_string());
                 i += 1;
             }
             s if s.starts_with("--") => {
@@ -432,7 +450,7 @@ pub fn parse_command_args(
                         v.to_string()
                     }
                     None => {
-                        if param.ty == "boolean" && rest.get(i + 1).is_none_or(|nxt| nxt.starts_with('-')) {
+                        if type_is(&param.ty, "boolean") && rest.get(i + 1).is_none_or(|nxt| nxt.starts_with('-')) {
                             i += 1;
                             "true".to_string()
                         } else {
@@ -502,4 +520,150 @@ pub fn parse_command_args(
     }
 
     Ok(ParsedArgs { flags, params: CValue::Obj(merged), typed, raw_paths })
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use fid_types::{CommandId, Determinism, SideEffect};
+    use std::io::Cursor;
+
+    fn sample_major(params: Vec<CliParam>) -> CliMajor {
+        CliMajor {
+            major: 1,
+            command_id: CommandId::parse("demo.test_cmd@1").unwrap(),
+            params,
+            summary: "Test command".to_string(),
+            help: "Test command help".to_string(),
+            side_effect: SideEffect::R0,
+            determinism: Determinism::D0,
+            dry_run: false,
+            human_only: false,
+        }
+    }
+
+    fn param(name: &str, ty: &str) -> CliParam {
+        CliParam {
+            name: name.to_string(),
+            ty: ty.to_string(),
+            quantity_kind: None,
+            unit: None,
+            default: None,
+            required: false,
+        }
+    }
+
+    #[test]
+    fn union_types_parse_order_independently() {
+        let major = sample_major(vec![
+            param("flag", "boolean|null"),
+            param("count", "integer|null"),
+            param("ratio", "number|null"),
+            param("items", "array|null"),
+            param("meta_a", "object|null"),
+            param("meta_b", "null|object"),
+        ]);
+        let reader = StdParamsReader;
+
+        let args_t: Vec<String> = [
+            "--flag",
+            "true",
+            "--count",
+            "42",
+            "--ratio",
+            "3.5",
+            "--items",
+            "[1,2]",
+            "--meta-a",
+            "{\"k\":1}",
+            "--meta-b",
+            "{\"m\":2}",
+        ]
+        .iter()
+        .map(|s| (*s).to_string())
+        .collect();
+        let mut empty = Cursor::new(b"" as &[u8]);
+        let p = parse_command_args(&major, &args_t, true, &mut empty, None, &reader).unwrap();
+        let CValue::Obj(obj) = &p.params else { panic!("expected obj") };
+        assert_eq!(obj.get("flag"), Some(&CValue::Bool(true)));
+        assert_eq!(obj.get("count"), Some(&CValue::Num(42.0)));
+        assert_eq!(obj.get("ratio"), Some(&CValue::Num(3.5)));
+        assert_eq!(obj.get("items"), Some(&CValue::Arr(vec![CValue::Num(1.0), CValue::Num(2.0)])));
+        assert_eq!(obj.get("meta_a"), Some(&CValue::Obj(BTreeMap::from([("k".to_string(), CValue::Num(1.0))]))));
+        assert_eq!(obj.get("meta_b"), Some(&CValue::Obj(BTreeMap::from([("m".to_string(), CValue::Num(2.0))]))));
+
+        // Bare `--flag` + `false` + `null` + comma-separated array.
+        let args_bare: Vec<String> =
+            ["--flag", "--count", "null", "--items", "a,b"].iter().map(|s| (*s).to_string()).collect();
+        let p2 = parse_command_args(&major, &args_bare, true, &mut Cursor::new(b"" as &[u8]), None, &reader).unwrap();
+        let CValue::Obj(obj2) = &p2.params else { panic!("expected obj") };
+        assert_eq!(obj2.get("flag"), Some(&CValue::Bool(true)));
+        assert_eq!(obj2.get("count"), Some(&CValue::Null));
+        assert_eq!(
+            obj2.get("items"),
+            Some(&CValue::Arr(vec![CValue::Str("a".to_string()), CValue::Str("b".to_string())]))
+        );
+
+        let args_false: Vec<String> = ["--flag", "false"].iter().map(|s| (*s).to_string()).collect();
+        let p3 = parse_command_args(&major, &args_false, true, &mut Cursor::new(b"" as &[u8]), None, &reader).unwrap();
+        assert_eq!(p3.typed.get("flag"), Some(&ParamValue::Bool(false)));
+
+        let args_null_bool: Vec<String> = ["--flag", "null"].iter().map(|s| (*s).to_string()).collect();
+        let p4 =
+            parse_command_args(&major, &args_null_bool, true, &mut Cursor::new(b"" as &[u8]), None, &reader).unwrap();
+        assert_eq!(p4.typed.get("flag"), Some(&ParamValue::Null));
+
+        // Invalid boolean and invalid integer rejected.
+        let bad_bool: Vec<String> = ["--flag", "yes"].iter().map(|s| (*s).to_string()).collect();
+        assert!(parse_command_args(&major, &bad_bool, true, &mut Cursor::new(b"" as &[u8]), None, &reader).is_err());
+        let bad_int: Vec<String> = ["--count", "1.5"].iter().map(|s| (*s).to_string()).collect();
+        assert!(parse_command_args(&major, &bad_int, true, &mut Cursor::new(b"" as &[u8]), None, &reader).is_err());
+    }
+
+    #[test]
+    fn params_root_handle_refuses_file_open_and_custom_reader_works() {
+        let major = sample_major(vec![param("mode", "string")]);
+        let reader = StdParamsReader;
+        let err = reader.read_params("@root:in/params.json", &mut Cursor::new(b"" as &[u8])).unwrap_err();
+        assert_eq!(err.code(), "params_parse");
+        assert!(err.to_string().contains("@root:in/params.json"));
+
+        let err2 = reader.read_params("root:in/params.json", &mut Cursor::new(b"" as &[u8])).unwrap_err();
+        assert_eq!(err2.code(), "params_parse");
+        assert!(err2.to_string().contains("root:in/params.json"));
+
+        struct MockHandleReader;
+        impl ParamsReader for MockHandleReader {
+            fn read_params(&self, source: &str, _stdin: &mut dyn Read) -> Result<Vec<u8>, ArgError> {
+                assert_eq!(source, "@root:in/params.json");
+                Ok(br#"{"mode":"from-handle"}"#.to_vec())
+            }
+        }
+        let args: Vec<String> = ["--params", "@root:in/params.json"].iter().map(|s| (*s).to_string()).collect();
+        let parsed =
+            parse_command_args(&major, &args, true, &mut Cursor::new(b"" as &[u8]), None, &MockHandleReader).unwrap();
+        let CValue::Obj(obj) = &parsed.params else { panic!("expected obj") };
+        assert_eq!(obj.get("mode"), Some(&CValue::Str("from-handle".to_string())));
+    }
+
+    #[test]
+    fn strip_prefix_preserves_leading_flag_chars_and_reason_does_not_eat_token_file() {
+        let major = sample_major(vec![]);
+        let reader = StdParamsReader;
+        let args: Vec<String> = ["--reason=--hello", "--project=project-a"].iter().map(|s| (*s).to_string()).collect();
+        let p = parse_command_args(&major, &args, true, &mut Cursor::new(b"" as &[u8]), None, &reader).unwrap();
+        assert_eq!(p.flags.reason.as_deref(), Some("--hello"));
+        assert_eq!(p.flags.project.as_deref(), Some("project-a"));
+
+        let args2: Vec<String> = ["--reason", "--token-file", "--app", "--runtime-dir", "/tmp/rt"]
+            .iter()
+            .map(|s| (*s).to_string())
+            .collect();
+        let p2 = parse_command_args(&major, &args2, true, &mut Cursor::new(b"" as &[u8]), None, &reader).unwrap();
+        assert_eq!(p2.flags.reason.as_deref(), Some("--token-file"));
+        assert_eq!(p2.flags.token_file, None);
+        assert!(p2.flags.app);
+        assert_eq!(p2.flags.runtime_dir.as_deref(), Some("/tmp/rt"));
+    }
 }

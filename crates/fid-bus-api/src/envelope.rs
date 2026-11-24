@@ -114,6 +114,19 @@ impl CommandCall {
 
     /// Parses and validates the full `CommandId`.
     pub fn parsed_command_id(&self) -> Result<CommandId, BusApiError> {
+        if self.command_id.contains('@') {
+            let id = CommandId::parse(&self.command_id)
+                .map_err(|e| BusApiError::validation(format!("invalid command ID `{}`: {e}", self.command_id)))?;
+            if id.major() != self.major {
+                return Err(BusApiError::validation(format!(
+                    "command ID `{}` major {} does not match call major {}",
+                    self.command_id,
+                    id.major(),
+                    self.major
+                )));
+            }
+            return Ok(id);
+        }
         let full = self.full_command_id();
         CommandId::parse(&full).map_err(|e| BusApiError::validation(format!("invalid command ID `{full}`: {e}")))
     }

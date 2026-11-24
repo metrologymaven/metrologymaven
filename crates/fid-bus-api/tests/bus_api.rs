@@ -129,3 +129,47 @@ fn error_truncation_and_code_round_trip() {
     }
     assert_eq!(PrincipalKind::ALL.len(), 6);
 }
+
+#[test]
+fn parsed_command_id_and_supports_reject_mismatched_or_malformed_major() {
+    let mut bus = InProcessBus::new();
+    bus.register(Box::new(EchoHandler));
+
+    assert!(bus.supports("demo.echo", 1));
+    assert!(bus.supports("demo.echo@1", 1));
+    assert!(!bus.supports("demo.echo@99", 1));
+    assert!(!bus.supports("demo.echo@notanumber", 1));
+    assert!(!bus.supports("demo.echo@1@2", 1));
+
+    for bad_id in ["demo.echo@99", "demo.echo@notanumber", "demo.echo@1@2"] {
+        let call = CommandCall::new(bad_id, 1, CValue::Obj(BTreeMap::new()), PrincipalInfo::script("cli-test"));
+        let err = call.parsed_command_id().unwrap_err();
+        assert_eq!(err.code, BusApiErrorCode::ValidationError, "bad_id={bad_id}");
+        let env = bus.dispatch(&call);
+        assert_eq!(env.outcome, BusOutcome::Failed);
+        assert_eq!(env.error_code, Some(BusApiErrorCode::ValidationError), "bad_id={bad_id}");
+    }
+}
+
+#[test]
+fn bus_api_error_preserves_bus_reason_with_details() {
+    let mut custom = BTreeMap::new();
+    custom.insert("field".to_string(), CValue::Str("source".to_string()));
+    let err = BusApiError::policy_refused("forbidden")
+        .with_bus_reason("policy", "class_forbidden")
+        .with_details(CValue::Obj(custom));
+    let env = err.to_envelope("motion.move_axis@1");
+    let CValue::Obj(details) = env.error_details.unwrap() else { panic!("expected obj details") };
+    assert_eq!(details.get("bus_code"), Some(&CValue::Str("policy".to_string())));
+    assert_eq!(details.get("bus_reason"), Some(&CValue::Str("class_forbidden".to_string())));
+    assert_eq!(details.get("field"), Some(&CValue::Str("source".to_string())));
+
+    let err_non_obj = BusApiError::validation("bad")
+        .with_bus_reason("validation", "schema")
+        .with_details(CValue::Str("raw detail".to_string()));
+    let env2 = err_non_obj.to_envelope("demo.echo@1");
+    let CValue::Obj(details2) = env2.error_details.unwrap() else { panic!("expected obj details") };
+    assert_eq!(details2.get("detail"), Some(&CValue::Str("raw detail".to_string())));
+    assert_eq!(details2.get("bus_code"), Some(&CValue::Str("validation".to_string())));
+    assert_eq!(details2.get("bus_reason"), Some(&CValue::Str("schema".to_string())));
+}

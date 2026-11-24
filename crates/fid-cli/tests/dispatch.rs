@@ -155,6 +155,129 @@ fn gate_blocks_m1_s1_a0_unsupported_dry_run_and_raw_paths_before_bus() {
 }
 
 #[test]
+fn gate_blocks_raw_path_through_invoke_with_bus_api_and_binary_dispatch() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    let calls = Arc::new(AtomicUsize::new(0));
+    let calls_cb = Arc::clone(&calls);
+    let mut bus = InProcessBus::new();
+    bus.register_envelope_fn("align.set_datum", 1, move |call| {
+        calls_cb.fetch_add(1, Ordering::SeqCst);
+        BusEnvelope::committed(call.full_command_id(), format!("sha256:{}", "aa".repeat(32)), Some(call.params.clone()))
+    });
+
+    // 1. `invoke_with_bus_api` (`run_args`) with `--source C:\raw\pts.txt` -> exit 3, 0 bus calls.
+    let (rc1, o1, _) = run_args(
+        &mut bus,
+        &[
+            "align",
+            "set-datum",
+            "--source",
+            "C:\\raw\\pts.txt",
+            "--offset",
+            "1mm",
+            "--project",
+            "root:p/min.fid",
+            "--json",
+        ],
+        &no_env,
+        b"",
+    );
+    assert_eq!(rc1, ExitCode::PolicyRefused);
+    assert_eq!(rc1.code(), 3);
+    let e1 = Envelope::decode(o1.trim_end().as_bytes()).unwrap();
+    assert_eq!(e1.error.unwrap().code, ErrorCode::RawPathRefused);
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
+
+    // 2. `invoke_with_bus_api` (`run_args`) with `--params -` raw path -> exit 3, 0 bus calls.
+    let (rc2, o2, _) = run_args(
+        &mut bus,
+        &["align", "set-datum", "--params", "-", "--project", "root:p/min.fid", "--json"],
+        &no_env,
+        br#"{"source":"C:\\raw\\pts.txt","offset":{"value":"1","unit":"mm"}}"#,
+    );
+    assert_eq!(rc2, ExitCode::PolicyRefused);
+    assert_eq!(rc2.code(), 3);
+    let e2 = Envelope::decode(o2.trim_end().as_bytes()).unwrap();
+    assert_eq!(e2.error.unwrap().code, ErrorCode::RawPathRefused);
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
+
+    // 3. `run_binary_dispatch` with `--source C:\raw\pts.txt` -> exit 3, raw_path_refused.
+    let tree = embedded_tree().unwrap();
+    let rest: Vec<String> = ["--source", "C:\\raw\\pts.txt", "--offset", "1mm", "--project", "root:p/min.fid"]
+        .iter()
+        .map(|s| (*s).to_string())
+        .collect();
+    let mut stdin = Cursor::new(b"" as &[u8]);
+    let mut out3 = Vec::new();
+    let mut err3 = Vec::new();
+    let rc3 = fid_cli::dispatch::run_binary_dispatch(
+        &tree,
+        &CommandId::parse("align.set_datum@1").unwrap(),
+        1,
+        true,
+        &rest,
+        &no_env,
+        &mut stdin,
+        &mut out3,
+        &mut err3,
+    );
+    assert_eq!(rc3, ExitCode::PolicyRefused);
+    assert_eq!(rc3.code(), 3);
+    let e3 = Envelope::decode(String::from_utf8(out3).unwrap().trim_end().as_bytes()).unwrap();
+    assert_eq!(e3.error.unwrap().code, ErrorCode::RawPathRefused);
+
+    // 4. Valid `root:in/pts.txt` handle reaches the bus and exits 0.
+    let (rc4, o4, se4) = run_args(
+        &mut bus,
+        &[
+            "align",
+            "set-datum",
+            "--source",
+            "root:in/pts.txt",
+            "--offset",
+            "1mm",
+            "--project",
+            "root:p/min.fid",
+            "--json",
+        ],
+        &no_env,
+        b"",
+    );
+    assert_eq!(rc4, ExitCode::Success, "stderr: {se4}");
+    assert_eq!(rc4.code(), 0);
+    let e4 = Envelope::decode(o4.trim_end().as_bytes()).unwrap();
+    assert_eq!(e4.outcome, Outcome::Committed);
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn target_error_conflict_maps_to_conflict_and_prepare_dispatch_avoids_prescan() {
+    let env = TargetError::Conflict { holder: "inspect (pid 4242)".into() }.to_envelope("align.set_datum@1");
+    assert_eq!(env.outcome, Outcome::Failed);
+    assert_eq!(env.error.unwrap().code, ErrorCode::Conflict);
+
+    let tree = embedded_tree().unwrap();
+    let rest: Vec<String> =
+        ["--reason", "--token-file", "--app", "--runtime-dir", "/tmp/rt"].iter().map(|s| (*s).to_string()).collect();
+    let mut empty = Cursor::new(b"" as &[u8]);
+    let prepared = fid_cli::dispatch::prepare_dispatch(
+        &tree,
+        &CommandId::parse("project.list_features@1").unwrap(),
+        1,
+        true,
+        &rest,
+        &no_env,
+        &mut empty,
+        None,
+    )
+    .unwrap();
+    assert_eq!(prepared.call.options.reason.as_deref(), Some("--token-file"));
+    assert_eq!(prepared.token_file, None);
+    assert_eq!(prepared.runtime_dir.as_deref(), Some("/tmp/rt"));
+}
+
+#[test]
 fn target_selection_rules_and_request_filed_exit_8() {
     assert_eq!(resolve_target(Some("root:p/a.fid"), true, None, true), Err(TargetError::TargetConflict));
     assert_eq!(

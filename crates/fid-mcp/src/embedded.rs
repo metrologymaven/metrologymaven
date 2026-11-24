@@ -1,9 +1,10 @@
-//! Embedded default manifest, profile index, and pure-Rust [`fid_bus_api::InProcessBus`]
-//! backend for standalone `fid-mcp --headless` sessions.
+//! Embedded default manifest, profile index, fail-closed standalone bus, and
+//! [`fid_bus_api::InProcessBus`] adapter for `fid-mcp`.
 
 use crate::adapter::{BusCall, McpBus};
-use fid_bus_api::{BusEnvelope, ChannelKind, CommandBus, CommandCall, InProcessBus, PrincipalInfo};
-use fid_canon::{digest, to_canonical_bytes, CValue};
+use crate::framing::MAX_MESSAGE_BYTES;
+use fid_bus_api::{BusApiError, BusEnvelope, ChannelKind, CommandBus, CommandCall, InProcessBus, PrincipalInfo};
+use fid_canon::{digest, parse_with_limits, to_canonical_bytes, CValue};
 use fid_surface::{project, Envelope, ErrorCode, Outcome, Projection};
 
 use crate::profiles::{parse_profile_bytes, resolve_profiles, ProfileError, ProfileIndex, CORE_PROFILE_TOML};
@@ -112,6 +113,20 @@ pub fn embedded_manifest_bytes() -> Vec<u8> {
                     ]),
                 ),
                 ("required", arr(vec![s("source"), s("offset")])),
+                ("type", s("object")),
+            ]),
+        ),
+        make_def(
+            "canon.canonicalize",
+            1,
+            "R0",
+            "exposed",
+            false,
+            "Canonicalize JSON",
+            "Parse JSON and return RFC 8785 canonical JSON and its SHA-256 digest.",
+            obj(vec![
+                ("properties", obj(vec![("input", obj(vec![]))])),
+                ("required", arr(vec![s("input")])),
                 ("type", s("object")),
             ]),
         ),
@@ -324,66 +339,97 @@ pub fn embedded_profile_index(projection: &Projection) -> Result<ProfileIndex, P
     resolve_profiles(projection, &[core])
 }
 
-/// Pure-Rust [`McpBus`] backed by [`fid_bus_api::InProcessBus`] with default handlers for the
-/// embedded standalone `--headless` manifest.
+/// Fail-closed pure-Rust [`McpBus`] for standalone `fid-mcp` when no attached bus host or
+/// `--bridge` desktop app is present.
+///
+/// Executes stateless pure-Rust `canon.canonicalize@1` (R0) via `fid_canon` and fails closed with
+/// `precondition_failed` (`no_bus_host`) on all project/engine commands.
+#[derive(Debug, Default, Clone)]
+pub struct StandaloneMcpBus {
+    project_ref: Option<String>,
+}
+
+impl StandaloneMcpBus {
+    pub fn new(project_ref: Option<String>) -> Self {
+        Self { project_ref }
+    }
+
+    pub fn project_ref(&self) -> Option<&str> {
+        self.project_ref.as_deref()
+    }
+}
+
+fn invoke_canon_canonicalize(full: &str, params: &CValue) -> Envelope {
+    let CValue::Obj(map) = params else {
+        return Envelope::failed(full, ErrorCode::ValidationError, "arguments must be an object", None);
+    };
+    let Some(raw_input) = map.get("input") else {
+        return Envelope::failed(full, ErrorCode::ValidationError, "missing required parameter `input`", None);
+    };
+    let parsed_val;
+    let target_val = match raw_input {
+        CValue::Str(raw) => match parse_with_limits(raw.as_bytes(), MAX_MESSAGE_BYTES, fid_canon::MAX_DEPTH) {
+            Ok(v) => {
+                parsed_val = v;
+                &parsed_val
+            }
+            Err(e) => {
+                return Envelope::failed(full, ErrorCode::ValidationError, &format!("canon_parse: {e}"), None);
+            }
+        },
+        other => other,
+    };
+    let bytes = match to_canonical_bytes(target_val) {
+        Ok(b) => b,
+        Err(e) => {
+            return Envelope::failed(full, ErrorCode::ValidationError, &format!("canon_error: {e}"), None);
+        }
+    };
+    let dig = match digest(target_val) {
+        Ok(d) => d,
+        Err(e) => {
+            return Envelope::failed(full, ErrorCode::ValidationError, &format!("canon_error: {e}"), None);
+        }
+    };
+    let canonical_text = match String::from_utf8(bytes) {
+        Ok(t) => t,
+        Err(e) => {
+            return Envelope::failed(full, ErrorCode::InternalError, &format!("canon_utf8: {e}"), None);
+        }
+    };
+    Envelope::computed(
+        full,
+        obj(vec![
+            ("canonical", target_val.clone()),
+            ("canonical_text", s(&canonical_text)),
+            ("digest", s(&dig.to_string())),
+        ]),
+    )
+}
+
+impl McpBus for StandaloneMcpBus {
+    fn invoke(&mut self, call: &BusCall<'_>) -> Envelope {
+        let full = call.command.as_str();
+        if call.command.name() == "canon.canonicalize" && call.command.major() == 1 {
+            return invoke_canon_canonicalize(full, call.params);
+        }
+        let err = BusApiError::precondition_failed(format!(
+            "no_bus_host: standalone `fid-mcp` cannot execute `{full}` without an attached bus host or `--bridge` desktop app"
+        ));
+        bus_to_surface_envelope(&err.to_envelope(full))
+    }
+}
+
+/// Pure-Rust [`McpBus`] adapter backed by a caller-supplied [`fid_bus_api::InProcessBus`] with no
+/// pre-registered dummy handlers.
 pub struct InProcessMcpBus {
     bus: InProcessBus,
     project_ref: Option<String>,
 }
 
 impl InProcessMcpBus {
-    pub fn new_default(project_ref: Option<String>) -> Self {
-        let mut bus = InProcessBus::new();
-        let proj_label = project_ref.clone().unwrap_or_else(|| "headless:none".to_string());
-
-        let p_label = proj_label.clone();
-        bus.register_envelope_fn("project.list_features", 1, move |call| {
-            BusEnvelope::computed(
-                call.full_command_id(),
-                obj(vec![("features", arr(vec![])), ("project", s(&p_label))]),
-            )
-        });
-
-        bus.register_envelope_fn("units.list_units", 1, |call| {
-            BusEnvelope::computed(
-                call.full_command_id(),
-                obj(vec![
-                    ("angle", arr(vec![s("rad"), s("deg")])),
-                    ("length", arr(vec![s("m"), s("mm"), s("um"), s("in")])),
-                ]),
-            )
-        });
-
-        let v_label = proj_label.clone();
-        bus.register_envelope_fn("view.get_status", 1, move |call| {
-            BusEnvelope::computed(call.full_command_id(), obj(vec![("mode", s("headless")), ("project", s(&v_label))]))
-        });
-
-        bus.register_envelope_fn("journal.list_entries", 1, |call| {
-            BusEnvelope::computed(call.full_command_id(), obj(vec![("entries", arr(vec![]))]))
-        });
-
-        bus.register_envelope_fn("align.run_bestfit", 1, |call| {
-            BusEnvelope::computed(
-                call.full_command_id(),
-                obj(vec![("converged", CValue::Bool(true)), ("rms_residual_mm", CValue::Num(0.0))]),
-            )
-        });
-
-        bus.register_envelope_fn("align.set_datum", 1, |call| {
-            let hash = format!("sha256:{}", "11".repeat(32));
-            BusEnvelope::committed(call.full_command_id(), hash, Some(call.params.clone()))
-        });
-
-        bus.register_envelope_fn("program.save_draft", 1, |call| {
-            let hash = format!("sha256:{}", "22".repeat(32));
-            BusEnvelope::committed(call.full_command_id(), hash, Some(call.params.clone()))
-        });
-
-        bus.register_envelope_fn("align.adopt_alignment", 1, |call| {
-            BusEnvelope::request_filed(call.full_command_id(), "0193a5b0-1c2d-7e3f-8a4b-000000000001")
-        });
-
+    /// Wraps an [`InProcessBus`] for embedded or test-hosted sessions.
+    pub fn new(bus: InProcessBus, project_ref: Option<String>) -> Self {
         Self { bus, project_ref }
     }
 

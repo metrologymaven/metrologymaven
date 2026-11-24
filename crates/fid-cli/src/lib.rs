@@ -20,8 +20,9 @@ pub mod tree;
 pub use exit::{exit_codes_markdown, ExitCode, EXIT_CODES_DOC};
 pub use output::{render_human, Output, CLI_COMMAND_ID};
 pub use tree::{
-    embedded_tree, emit, levenshtein, nearest_match, parse_tree, resolve_args, CliCommand, CliEmitOutput, CliMajor,
-    CliParam, CliTree, CliTreeError, ResolveOutcome, RESERVED_HOST_SUBCOMMANDS, SURFACE, TREE_FILE, TREE_SCHEMA,
+    embedded_projection, embedded_tree, emit, find_surface_projection, levenshtein, nearest_match, parse_tree,
+    resolve_args, CliCommand, CliEmitOutput, CliMajor, CliParam, CliTree, CliTreeError, ResolveOutcome,
+    RESERVED_HOST_SUBCOMMANDS, SURFACE, TREE_FILE, TREE_SCHEMA,
 };
 
 use fid_bus_api::CommandBus;
@@ -139,13 +140,31 @@ pub fn invoke_with_tree(
 }
 
 /// Resolves `args` against `tree` and dispatches commands through `fid_bus_api::CommandBus`
-/// (`AUTO.CLI.DISPATCH`), running `AUTO.CLI.ARGS`, `AUTO.CLI.GATE`, and `AUTO.CLI.TARGET`.
+/// (`AUTO.CLI.DISPATCH`), running `AUTO.CLI.ARGS`, `AUTO.CLI.GATE`, and `AUTO.CLI.TARGET` using
+/// the build-time embedded [`fid_surface::Projection`] when available.
 #[allow(clippy::too_many_arguments)]
 pub fn invoke_with_bus_api(
     tree: &CliTree,
     version: &str,
     args: &[String],
     bus: &mut dyn CommandBus,
+    env: &dyn Fn(&str) -> Option<String>,
+    stdin: &mut dyn Read,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> ExitCode {
+    invoke_with_projection(tree, version, args, bus, embedded_projection(), env, stdin, stdout, stderr)
+}
+
+/// Resolves `args` against `tree` and an explicit optional [`fid_surface::Projection`] and
+/// dispatches commands through `fid_bus_api::CommandBus` (`AUTO.CLI.DISPATCH`).
+#[allow(clippy::too_many_arguments)]
+pub fn invoke_with_projection(
+    tree: &CliTree,
+    version: &str,
+    args: &[String],
+    bus: &mut dyn CommandBus,
+    projection: Option<&fid_surface::Projection>,
     env: &dyn Fn(&str) -> Option<String>,
     stdin: &mut dyn Read,
     stdout: &mut dyn Write,
@@ -207,7 +226,8 @@ pub fn invoke_with_bus_api(
             }
         },
         ResolveOutcome::Invoke { command_id, major, json, rest } => {
-            dispatch::dispatch_resolved(tree, &command_id, major, json, &rest, bus, env, stdin, stdout, stderr, None)
+            let sp = projection.and_then(|p| tree::find_surface_projection(p, tree, &command_id, major));
+            dispatch::dispatch_resolved(tree, &command_id, major, json, &rest, bus, env, stdin, stdout, stderr, sp)
         }
         ResolveOutcome::UsageError { message, json, .. } => {
             if json {

@@ -40,7 +40,10 @@ pub use disclosure::{
     sanitize_tool_args, tool_to_mcp_wire, DisclosureState, MAX_ENABLED_EXTRA, MAX_ENABLE_BATCH,
     NOT_FOUND_IDENTICAL_MSG, PAGE_LIMIT,
 };
-pub use embedded::{embedded_manifest_bytes, embedded_profile_index, embedded_projection, InProcessMcpBus};
+pub use embedded::{
+    bus_to_surface_envelope, embedded_manifest_bytes, embedded_profile_index, embedded_projection, InProcessMcpBus,
+    StandaloneMcpBus,
+};
 pub use framing::{write_canonical_line, FrameLine, LineReader, MAX_MESSAGE_BYTES};
 pub use profiles::{
     check_all_served, emit_profiles, parse_profile_bytes, parse_server_args, read_profile_file, resolve_profiles,
