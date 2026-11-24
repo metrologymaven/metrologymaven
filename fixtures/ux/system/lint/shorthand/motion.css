@@ -1,0 +1,8 @@
+/* Synthetic fixture (CC-BY-4.0): durations inside shorthand values. */
+.fade {
+  transition: opacity 120ms ease, transform 0.2s ease-out 50ms;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}

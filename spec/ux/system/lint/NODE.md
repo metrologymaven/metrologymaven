@@ -69,6 +69,15 @@ The machine-checkable half of the consumption contract: consumers refer to token
 >
 > Constraints: no panic, no `unsafe`; deny `unwrap`, `expect`, `panic`, `todo`, `unimplemented`, `unreachable`; linear-time regex engine; files at most 4 MiB each; sorted walk; no network.
 
+## Build notes (2026-11-23)
+
+Built in `fid-design` module `lint` (PR #448). Deviations and decisions:
+
+- **AC-2 runs against `fixtures/ux/system/lint/pkg-accent/`, not `pkg/v1.0.0/` (deviation).** The shared package fixture `fixtures/ux/system/pkg/v1.0.0/` has no token whose value is `#1f6feb`, so AC-2's suggestion could not be shown with it. `pkg-accent/` is a minimal valid package holding `sem.brand.accent` = `#1f6feb`; AC-1 still runs against `pkg/v1.0.0/`.
+- **Every literal in a value.** Spacing and duration rules capture the whole declaration value, and each number with a unit of the rule's kind inside it is its own finding: `margin: 4px 8px` gives two, `padding: 0 8px` gives `8px` (a unitless `0` is not a literal), and shorthand such as `transition: opacity 120ms ease` or `animation: spin 1s linear` gives `120ms` and `1s`. A value group that is itself one literal (`from_millis(120)`, `12em`) is reported whole, so custom rules keep working.
+- **Adjacent colours.** The hex rule ends in `\b` instead of consuming the next character, so every colour in a run (`#1f5fbf #2e8540 #fff`) is found.
+- **No silent pass.** A root where no file matches any rule's globs is `LINT-NO-FILES` with exit 2 (not in the Design's code list). Files that match but are all allowlisted are not this case.
+
 ## Open questions
 
 - Whether consuming domains adopt the lint in CI is their decision; VIZ.SHELL.THEME, RPT.DESIGN.STYLE and OUTR site builds should declare `uses_artifacts: [UX.SYSTEM.LINT]` when they do.

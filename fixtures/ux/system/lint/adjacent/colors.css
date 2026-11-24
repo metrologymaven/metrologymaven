@@ -1,0 +1,5 @@
+/* Synthetic fixture (CC-BY-4.0): several hex colours in one run. */
+.frame {
+  border-color: #1f5fbf #2e8540 #fff;
+  background: linear-gradient(#1f5fbf,#2e8540);
+}
