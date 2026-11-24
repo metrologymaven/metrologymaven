@@ -68,6 +68,7 @@ The second D-005 spike: a dense characteristic and results table in egui (the sc
 ## Open questions
 
 - None blocking; H1 caveat as in VIZ.SHELL.SPKTREE.
+- Build status (not marked `built_in`): the prototype, harness and report renderer are in `fid-spike-ui` (module `table`, example `chartable`). The fixture `fixtures/viz/char-table-100k` holds the generator `make_table.py` (stdlib, SplitMix64 seed 9) and what the Rust generator is checked against (digest of the whole 10^5-row TSV, sample rows, sort and filter results, the keyboard sequence with the expected state after each step); the 9.4 MB table itself is generated, not committed. AC-3 (exact decimal storage) and AC-4 (keyboard sequence on the model, 95 steps) are tested in CI. Open: AC-1 and AC-2 need a timed run on the PLAT H1 machine with a GPU (`chartable --bench`); AC-5 and REQ-VIZ.SHELL.SPKTABLE-004 need the manual NVDA or Narrator check on Windows, recorded in the report. No timings exist yet. Copy builds the TSV but does not reach the OS clipboard while egui-winit's `clipboard` feature stays off (licence gate).
 
 ## Children
 

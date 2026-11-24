@@ -1,0 +1,60 @@
+# VIZ.SHELL.SPKTABLE results: characteristic table
+
+Overall: **fail**
+
+## Environment
+
+- Hardware: Synthetic test input | not a measurement \u{202e}
+- GPU adapter: iGPU (Vulkan)
+- Profile: not the PLAT H1 reference machine; timings are [unverified] for H1
+- Versions: egui 0.33.3, wgpu 27.0.1, winit 0.30.13
+
+## Criteria
+
+| Criterion | Measured | Threshold | Result |
+|---|---|---|---|
+| REQ-001 content loaded | 100000 rows, 14 columns, 2 frozen, status chips: icon and text | 100000 rows, 14 columns, 2 frozen, chips with icon and text | pass |
+| AC-1 scroll end to end for 30 s, p95 frame time | 40.000 ms (n = 3) over 30.250 s | < 33 ms | fail |
+| AC-2 sort by deviation, p95 frame time | 6.000 ms (n = 2) | < 33 ms | pass |
+| AC-2 type a 6-character filter, p95 frame time | 33.000 ms (n = 1) | < 33 ms | fail |
+| AC-3 exact decimal storage | stored "0.05" | stored "0.0500" | fail |
+| AC-4 keyboard sequence | 107 of 108 steps | all steps | fail |
+| AC-5 screen-reader announcements (manual) | see log | table, headers, value and status for 5 cells | fail |
+
+## Recommendation
+
+- AC-1 scroll: fail, measured 40.000 ms (n = 3) over 30.250 s.
+- AC-2 filter: fail, measured 33.000 ms (n = 1).
+- AC-3 exact decimal: fail, measured stored "0.05".
+- AC-4 keyboard: fail, measured 107 of 108 steps.
+- AC-5 screen reader: fail (manual check; see the log below).
+
+Fall back to D-005 option B for the characteristic table screen. The spike adopts nothing; the maintainers confirm or reopen D-005.
+
+## Frame-time summary
+
+| Series | n | min | median | p95 | max |
+|---|---|---|---|---|---|
+| scroll | 3 | 10.000 ms | 20.000 ms | 40.000 ms | 40.000 ms |
+| sort | 2 | 5.000 ms | 5.000 ms | 6.000 ms | 6.000 ms |
+| filter | 1 | 33.000 ms | 33.000 ms | 33.000 ms | 33.000 ms |
+
+Raw per-frame timings: `timings.csv` (series, index, ms).
+
+## Manual screen-reader check (AC-5)
+
+On Windows with NVDA or Narrator, focus a cell and move focus across one row with the arrow keys. Record what is announced for 5 cells; a missing table, header, value or status is a fail.
+
+Screen reader and version:
+
+| Cell | Table announced | Row header | Column header | Value | Status text |
+|---|---|---|---|---|---|
+| 1 | | | | | |
+| 2 | | | | | |
+| 3 | | | | | |
+| 4 | | | | | |
+| 5 | | | | | |
+
+## Limitations
+
+- Cells announce\u{200b} only on screen
