@@ -687,8 +687,9 @@ mod tests {
         assert_eq!(split_versioned("im:x@1.2.3", "uc:"), None);
         assert_eq!(split_versioned("x@1.2", ""), None);
         assert_eq!(split_versioned("x@1.2.3@4.5.6", ""), None);
-        let id = ProfileId::parse("arm-demo-01@1.0.0-rc.1").unwrap();
-        assert_eq!((id.name(), id.version()), ("arm-demo-01", "1.0.0-rc.1"));
+        let parts =
+            ProfileId::parse("arm-demo-01@1.0.0-rc.1").map(|id| (id.name().to_owned(), id.version().to_owned()));
+        assert_eq!(parts, Ok(("arm-demo-01".to_owned(), "1.0.0-rc.1".to_owned())));
     }
 
     #[test]
