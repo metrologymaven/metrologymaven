@@ -32,7 +32,7 @@ def test_site_csp_and_no_inline_script_invariant(ctx: TestContext) -> None:
         is_guide = rel_p.startswith("guide/")
         if not is_guide and re.search(r"<script\b", txt, re.I):
             raise TestFailure(f"<script> tag forbidden outside /guide/ found in {rel_p}")
-        if re.search(r"<script\b(?![^>]*\bsrc=)[^>]*>", txt, re.I):
+        if re.search(r"<script\b(?!\s*[^>]*\s+src\s*=)[^>]*>", txt, re.I):
             raise TestFailure(f"inline script tag found in {rel_p}")
         if "wasm-unsafe-eval" in txt:
             raise TestFailure(f"HTML page {rel_p} should never embed wasm-unsafe-eval")
@@ -45,13 +45,19 @@ def test_site_csp_and_no_inline_script_invariant(ctx: TestContext) -> None:
             if url.startswith("//") or (
                 re.match(r"https?://", url, re.I)
                 and not (
-                    url.startswith("https://metrologymaven.io")
+                    url == "https://metrologymaven.io"
+                    or url.startswith("https://metrologymaven.io/")
                     or url.startswith("https://github.com/metrologymaven/")
                 )
             ):
                 raise TestFailure(f"disallowed external/protocol-relative URL {url!r} in {rel_p}")
         for m in re.finditer(r'''url\(\s*["']?\s*(https?:|//)[^)"'\s]+''', txt, re.I):
             raise TestFailure(f"external CSS url() {m.group(0)!r} in {rel_p}")
+    for css_p in dist.rglob("*.css"):
+        css_txt = css_p.read_text(encoding="utf-8")
+        rel_css = css_p.relative_to(dist).as_posix()
+        for m in re.finditer(r'''(?:url\(\s*|@import\s+)["']?\s*(https?:|//)[^)"'\s;]+''', css_txt, re.I):
+            raise TestFailure(f"external CSS reference {m.group(0)!r} in {rel_css}")
 
     worker = (ctx.repo_root / "site" / "worker.js").read_text(encoding="utf-8")
     # Default route CSP must remain script-src 'none'
@@ -211,7 +217,7 @@ def test_scope_py_negative_invariants(ctx: TestContext) -> None:
         "status: open\nphase: P0\nsize: M\nsatisfies: []\ncovers: []\n---\n# CORE.CON\n",
         encoding="utf-8",
     )
-    r1 = ctx.run([sys.executable, str(scope_py), "check", "--root", str(c1)])
+    r1 = ctx.run([sys.executable, str(scope_py), "check", "--root", str(c1)], timeout=240)
     if r1.returncode != 1 or "reserved Windows device name" not in r1.stdout:
         raise TestFailure(f"expected exit 1 + reserved Windows device name, got {r1.returncode}: {r1.stdout}")
 
@@ -229,7 +235,7 @@ def test_scope_py_negative_invariants(ctx: TestContext) -> None:
     if "depends_on:" not in txt_b:
         txt_b = txt_b.replace("\n---\n", "\ndepends_on: [CORE.JRN.CANON]\n---\n", 1)
     n_b.write_text(txt_b, encoding="utf-8")
-    r2 = ctx.run([sys.executable, str(scope_py), "check", "--root", str(c2)])
+    r2 = ctx.run([sys.executable, str(scope_py), "check", "--root", str(c2)], timeout=240)
     if r2.returncode != 1 or "cycle:" not in r2.stdout:
         raise TestFailure(f"expected exit 1 + cycle: error, got {r2.returncode}: {r2.stdout}")
 
@@ -241,7 +247,7 @@ def test_scope_py_negative_invariants(ctx: TestContext) -> None:
             t = t.replace("status: leaf", "status: leaf\ncommercial_repo: metrologymaven-enterprise\nbuilt_in: [fid-canon]", 1)
             candidate.write_text(t, encoding="utf-8")
             break
-    r3 = ctx.run([sys.executable, str(scope_py), "check", "--root", str(c3)])
+    r3 = ctx.run([sys.executable, str(scope_py), "check", "--root", str(c3)], timeout=240)
     if r3.returncode != 1 or "D-053" not in r3.stdout:
         raise TestFailure(f"expected exit 1 + D-053 error on built_in + commercial_repo, got {r3.returncode}: {r3.stdout}")
 

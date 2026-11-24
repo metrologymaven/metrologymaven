@@ -41,11 +41,16 @@ _C_TOOLCHAIN_ERROR_HINTS = (
     "cannot execute 'cc1'",
     "kernel32.lib",
     "error occurred in cc-rs",
-    "c compiler",
-    "msvc",
+    "c compiler not found",
+    "failed to find c compiler",
+    "msvcrt",
+    "msvc toolchain",
+    "cl.exe",
+    "link.exe",
     "sqlite3.c",
     "error calling dlltool",
     "dlltool.exe",
+    "as.exe",
 )
 
 

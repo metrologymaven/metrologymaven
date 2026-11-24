@@ -245,7 +245,7 @@ def test_t3_mcp_vs_cli_tree_and_principal_strip(ctx: TestContext) -> None:
 def test_t3_scope_site_a11y_link_check(ctx: TestContext) -> None:
     outreach = ctx.require_bin("fid-outreach")
     scope_root = prepare_scope_root(ctx, "scope_check_t3")
-    r_scope = ctx.run([sys.executable, str(scope_root / "tools" / "scope.py"), "check", "--root", str(scope_root)])
+    r_scope = ctx.run([sys.executable, str(scope_root / "tools" / "scope.py"), "check", "--root", str(scope_root)], timeout=240)
     if r_scope.returncode != 0:
         raise TestFailure(f"scope.py check failed: {r_scope.stdout} {r_scope.stderr}")
     copy_root = build_isolated_site(ctx)
@@ -473,10 +473,32 @@ def test_t3_accept_and_eval_harness(ctx: TestContext) -> None:
     test_id="T3-12",
     tier=3,
     feature="F6",
-    description="[F3+F6] fid-val and fid-crash CLI harnesses pass on C/SQLite-capable hosts",
+    description="[F3+F6] fid-pkg-conformance + fid-verify alongside fid-xtask rel, fid-val, and fid-crash harnesses",
     capabilities_required=("c_toolchain",),
 )
 def test_t3_val_and_crash_harnesses(ctx: TestContext) -> None:
+    # Genuine F3 exercise (fails cleanly if fid-verify is missing on pre-M4 origin/main)
+    conf = ctx.require_bin("fid-pkg-conformance")
+    golden = ctx.repo_root / "fixtures" / "pkg" / "golden" / "two-signatures.zip"
+    r_conf = ctx.run([conf, str(golden)])
+    if r_conf.returncode != 0 or parse_single_line_json(r_conf.stdout).get("result") != "accepted":
+        raise TestFailure(f"fid-pkg-conformance rejected golden package: {r_conf.stdout} {r_conf.stderr}")
+
+    verify = ctx.require_bin("fid-verify")
+    root = ctx.repo_root / "fixtures" / "troot" / "roots" / "both.json"
+    r_ver = ctx.run([verify, str(golden), "--trust-root", str(root), "--json"])
+    if r_ver.returncode != 0:
+        raise TestFailure(f"fid-verify failed (exit {r_ver.returncode}): {r_ver.stdout} {r_ver.stderr}")
+    ver_rep = parse_single_line_json(r_ver.stdout)
+    if ver_rep.get("verdict") != "PASS" or ver_rep.get("exit_code") != 0:
+        raise TestFailure(f"expected verdict=PASS exit_code=0 from fid-verify, got {ver_rep!r}")
+
+    # Genuine F6 exercise (C/SQLite-capable hosts via c_toolchain capability)
+    xtask = ctx.require_bin("fid-xtask")
+    r_rb = ctx.run([xtask, "rel", "runbook-check", "--dir", str(ctx.repo_root / "release"), "--json"])
+    if r_rb.returncode != 0:
+        raise TestFailure(f"fid-xtask rel runbook-check failed: {r_rb.stdout} {r_rb.stderr}")
+
     fid_val = ctx.require_bin("fid-val")
     toy_art = ctx.require_bin("val-toy-artifact")
     fid_crash = ctx.require_bin("fid-crash")
@@ -691,7 +713,7 @@ def test_t3_slice_and_guide_wasm(ctx: TestContext) -> None:
 def test_t3_slice_and_scope_vs0(ctx: TestContext) -> None:
     fid_slice = ctx.require_bin("fid-slice")
     scope_root = prepare_scope_root(ctx, "scope_vs0")
-    r_chk = ctx.run([sys.executable, str(scope_root / "tools" / "scope.py"), "check", "--root", str(scope_root)])
+    r_chk = ctx.run([sys.executable, str(scope_root / "tools" / "scope.py"), "check", "--root", str(scope_root)], timeout=240)
     if r_chk.returncode != 0:
         raise TestFailure(f"scope.py check failed: {r_chk.stdout} {r_chk.stderr}")
     r_ms = ctx.run(
@@ -702,7 +724,8 @@ def test_t3_slice_and_scope_vs0(ctx: TestContext) -> None:
             str(scope_root / "milestones" / "vertical-slice-0.md"),
             "--root",
             str(scope_root),
-        ]
+        ],
+        timeout=240,
     )
     if r_ms.returncode != 0:
         raise TestFailure(f"scope.py milestone vertical-slice-0.md failed: {r_ms.stdout} {r_ms.stderr}")
