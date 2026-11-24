@@ -107,7 +107,8 @@ Every icon SVG must conform to this minimal, deterministic profile (enforced by
 - **File size:** at most **256 KiB**, valid UTF-8, well-formed XML with **no DTD**
   (`<!DOCTYPE`), **no entity declarations** (`<!ENTITY`) and no custom entity references.
 - **Allowed elements only:** `svg`, `g`, `path`, `circle`, `rect`, `line`, `polyline`,
-  `polygon`.
+  `polygon`. `svg` appears once, as the root element; a nested `svg` opens a second viewport
+  and is refused.
 - **Forbidden elements:** `text`, `tspan`, `textPath`, `image`, `script`, `style`, `defs`,
   `use`, `filter`, `linearGradient`, `radialGradient`, `pattern`, `mask`, `clipPath`,
   `foreignObject`, `a`, animations and any non-SVG namespace element.
@@ -122,8 +123,10 @@ Every icon SVG must conform to this minimal, deterministic profile (enforced by
 
 The two masters below show an original **measurement target** icon (concentric reticle with
 four cardinal ticks). Notice how the 16 px master is redrawn rather than scaled down: the
-outer ticks shorten cleanly to 2 px on half-pixel centres and the inner dot stays a crisp
-1 px radius circle on the 0.5 px grid.
+outer ticks shorten to 2 px, and the whole drawing is centred on `7.5, 7.5` instead of `8, 8`
+so that every 1 px stroke (the ring's extremes and all four ticks) runs on a `.5` centreline
+and fills whole device pixels. The half-pixel shift is invisible at 16 px; blurred 1 px
+strokes are not. The inner dot stays a 1 px radius circle on the 0.5 px grid.
 
 ### Example 1: 24 px master (`measure.target.24.svg`, monochrome `currentColor`)
 
@@ -142,9 +145,9 @@ outer ticks shorten cleanly to 2 px on half-pixel centres and the inner dot stay
 
 ```svg
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-  <circle cx="8" cy="8" r="5" data-role="sem.icon.primary"/>
-  <circle cx="8" cy="8" r="1" fill="currentColor" stroke="none" data-role="sem.icon.accent"/>
-  <path d="M8 1.5V4M8 12V14.5M1.5 8H4M12 8H14.5" data-role="sem.icon.primary"/>
+  <circle cx="7.5" cy="7.5" r="5" data-role="sem.icon.primary"/>
+  <circle cx="7.5" cy="7.5" r="1" fill="currentColor" stroke="none" data-role="sem.icon.accent"/>
+  <path d="M7.5 1.5V3.5M7.5 11.5V13.5M1.5 7.5H3.5M11.5 7.5H13.5" data-role="sem.icon.primary"/>
 </svg>
 ```
 
@@ -158,10 +161,12 @@ cargo run -q -p fid-design -- icons-lint --root design/icons --json
 
 Error codes reported by `fid-design icons-lint`:
 
-- `ICON-ELEMENT` — forbidden element (e.g. `text`, `image`, `script`, `style`, `filter`).
+- `ICON-ELEMENT` — forbidden element (e.g. `text`, `image`, `script`, `style`, `filter`) or a
+  nested `svg`.
 - `ICON-ATTR` — disallowed or malformed attribute, invalid `stroke-width` or malformed path.
 - `ICON-COLOR-LITERAL` — literal colour in `fill` or `stroke` instead of `currentColor`/`none`.
 - `ICON-OFF-GRID` — coordinate not on the 0.5 px grid (within `1e-6`).
 - `ICON-VIEWBOX` — missing or invalid `viewBox` (or mismatched `width`/`height`).
 - `ICON-MASTER-MISSING` — missing `16` or `24` px master for an icon in the directory.
 - `ICON-EXTERNAL-REF` — external reference (`href`, `xlink:href`, `url(...)`, `<?xml-stylesheet?>`).
+- `ICON-NO-SVG` — the root holds no `.svg` file at all, so nothing was checked (exit 2).

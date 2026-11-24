@@ -11,12 +11,11 @@
 //! [--deny-names <file>] [--json]` or `review-check --all --root <design dir> [--base <repo>] ..`,
 //! `fid-design icons-prov --root <design dir> --attribution <file> [--json]`,
 //! `fid-design icons-registry --manifest <file> --root <design dir> [--json]`,
-//! `fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]` and
-//! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]`.
-//! `fid-design icons-lint --root <icons dir> [--json]`,
-//! `fid-design icons-prov --root <design dir> --attribution <file> [--json]` and
-//! `fid-design icons-registry --manifest <file> --root <design dir> [--json]`.
-//! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage.
+//! `fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]`,
+//! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]` and
+//! `fid-design icons-lint --root <icons dir> [--json]`.
+//! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage (`icons-lint` also
+//! exits 2 for a root holding no SVG).
 
 use std::io::Write;
 use std::path::PathBuf;

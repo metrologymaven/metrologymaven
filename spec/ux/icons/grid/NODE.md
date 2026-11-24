@@ -67,6 +67,14 @@ The rules every icon follows: the 16 and 24 logical-pixel grids, keyline shapes,
 >
 > Constraints: no panic, no `unsafe`; deny `unwrap`, `expect`, `panic`, `todo`, `unimplemented`, `unreachable`; SVG at most 256 KiB, no entity expansion, no network.
 
+## Build notes (2026-11-23)
+
+Built in `fid-design` module `icons_lint` (PR #443). Beyond the Design above:
+
+- `<svg>` is allowed only as the root element; a nested `<svg>` is `ICON-ELEMENT svg`.
+- A root holding no `.svg` file is the finding `ICON-NO-SVG` with exit 2 (nothing was checked), not a pass. The shipped `design/icons/` holds no icon yet, so linting it exits 2 until `UX.ICONS.CORESET` adds icons.
+- Master suffixes `.16.svg` / `.24.svg` are matched without regard to ASCII case, like the `.svg` selection itself.
+
 ## Open questions
 
 - None.
