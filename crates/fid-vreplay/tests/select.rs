@@ -1,8 +1,10 @@
-//! TRUST.REPLAY.SELECT AC-1 .. AC-5 and REQ-001 .. REQ-005 over `fixtures/replay/select/`.
+//! TRUST.REPLAY.SELECT AC-1 .. AC-5 and REQ-001 .. REQ-005 over `fixtures/replay/select/` and
+//! the TRUST.PKG.FIXTURE golden packages `fixtures/pkg/golden/points.zip` and `results.zip`.
 //!
-//! Every package, expected plan and expected error comes from the independent reference
+//! Every expected plan and expected error comes from the independent reference
 //! `fixtures/replay/select/make_cases.py` (its own statement of the rules plus hand labels),
-//! never from this crate. The packages are opened with the real package reader
+//! never from this crate; that script also runs its rules on the two golden packages and fails
+//! unless they give exactly `points.plan.json` and `results.plan.json`. The packages are opened with the real package reader
 //! (`fid_pkg::reader::PackageReader`), adapted to `select::PackageView`.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -18,6 +20,7 @@ use fid_vreplay::select::{
 };
 
 const FIX: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/replay/select");
+const GOLDEN: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/pkg/golden");
 
 struct Reader(PackageReader<Cursor<Vec<u8>>>);
 
@@ -52,7 +55,10 @@ impl ArtifactSource for Available {
 }
 
 fn open(rel: &str) -> Reader {
-    let path = format!("{FIX}/{rel}");
+    open_at(&format!("{FIX}/{rel}"))
+}
+
+fn open_at(path: &str) -> Reader {
     let bytes = std::fs::read(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
     Reader(PackageReader::open(Cursor::new(bytes)).unwrap_or_else(|e| panic!("{path}: {e}")))
 }
@@ -64,6 +70,12 @@ fn expected(rel: &str) -> Vec<u8> {
 
 fn select(case: &str) -> Selection {
     plan(&mut open(&format!("{case}.zip")), &Available(true)).unwrap_or_else(|e| panic!("{case}: {e}"))
+}
+
+/// A TRUST.PKG.FIXTURE golden package, as AC-1 and AC-2 name it.
+fn select_golden(name: &str) -> Selection {
+    let path = format!("{GOLDEN}/{name}.zip");
+    plan(&mut open_at(&path), &Available(true)).unwrap_or_else(|e| panic!("{path}: {e}"))
 }
 
 /// The selection must equal the reference's expected plan, byte for byte.
@@ -89,10 +101,7 @@ fn entry_indices(sel: &Selection, id: &str) -> Vec<usize> {
     calls.iter().map(|&k| sel.plan.calls[k].entry_index).collect()
 }
 
-#[test]
-fn ac1_points_all_replayable_with_the_expected_plan() {
-    let sel = select("points");
-    check("points", None, &sel);
+fn assert_points_plan(sel: &Selection) {
     assert_eq!(sel.plan.results.len(), 3);
     assert_eq!(sel.not_replayable().count(), 0);
     assert_eq!(sel.plan.calls.len(), 3);
@@ -106,14 +115,44 @@ fn ac1_points_all_replayable_with_the_expected_plan() {
 }
 
 #[test]
-fn ac2_results_only_package() {
-    let sel = select("results");
-    check("results", None, &sel);
+fn ac1_golden_points_all_replayable_with_the_expected_plan() {
+    let sel = select_golden("points");
+    check("points", None, &sel);
+    assert_points_plan(&sel);
+    let ids: Vec<&str> = sel.results.iter().map(Selected::record_id).collect();
+    assert_eq!(ids, ["hole-1", "hole-2", "hole-3"]);
+}
+
+#[test]
+fn ac1_stand_in_points_package_gives_the_same_plan() {
+    let sel = select("points");
+    check("points", None, &sel);
+    assert_points_plan(&sel);
+}
+
+fn assert_results_only(sel: &Selection) {
     assert!(sel.plan.calls.is_empty());
     assert_eq!(sel.results.len(), 3);
     for r in &sel.results {
-        assert_eq!(reason_of(&sel, r.record_id()), Some(Reason::BasisResultsOnly));
+        assert_eq!(reason_of(sel, r.record_id()), Some(Reason::BasisResultsOnly));
     }
+}
+
+#[test]
+fn ac2_golden_results_package() {
+    // r-1 and r-2 are RESULTS_ONLY imports; r-3 claims POINTS in a results-tier package.
+    let sel = select_golden("results");
+    check("results", None, &sel);
+    assert_results_only(&sel);
+    let ids: Vec<&str> = sel.results.iter().map(Selected::record_id).collect();
+    assert_eq!(ids, ["r-1", "r-2", "r-3"]);
+}
+
+#[test]
+fn ac2_stand_in_results_package() {
+    let sel = select("results");
+    check("results", None, &sel);
+    assert_results_only(&sel);
 }
 
 #[test]

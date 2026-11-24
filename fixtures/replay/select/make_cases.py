@@ -10,8 +10,8 @@ result. The expected selection is computed by `select()` below, a second stateme
 leaf's rules written from spec/trust/replay/select/NODE.md, and every case also carries hand
 labels (`LABELS`) that the computed selection must match before anything is written.
 
-Package content model assumed here (TRUST.PKG.CONTENT and TRUST.PKG.FIXTURE are not built yet;
-see the open questions in the leaf):
+Package content model assumed here (TRUST.PKG.CONTENT.SELECT and .JSEG are not built yet; see
+the open questions in the leaf). The TRUST.PKG.FIXTURE golden packages follow it:
 
 - `results/records.json`: a JSON array of ResultRecord objects; SELECT reads `id`,
   `evaluation_basis`, `algorithm` and `journal_entry` and ignores every other field;
@@ -745,6 +745,82 @@ def malformed_cases():
 
 # --------------------------------------------------------------- output
 
+# --------------------------------------------------------------- golden packages (AC-1, AC-2)
+# AC-1 and AC-2 name the TRUST.PKG.FIXTURE golden packages `fixtures/pkg/golden/points.zip` and
+# `results.zip`. They are read here with the stdlib `zipfile`, never through fid-pkg or any Rust
+# code, and `select()` runs on their contents. The hand labels must hold, and the selection must
+# equal the plan AC-1 names (`points.plan.json`) and the results plan (`results.plan.json`), so
+# the Rust tests check both golden packages against those two files.
+
+GOLDEN = ROOT / "fixtures" / "pkg" / "golden"
+GOLDEN_CASES = {"points": "points.plan.json", "results": "results.plan.json"}
+GOLDEN_LABELS = {
+    # Three hole diameters, each fitted from its own packaged point set.
+    "points": {"hole-1": ("ok", [4]), "hole-2": ("ok", [5]), "hole-3": ("ok", [6])},
+    # Two RESULTS_ONLY imports and one POINTS record in a results-tier package.
+    "results": {"r-1": "BASIS_RESULTS_ONLY", "r-2": "BASIS_RESULTS_ONLY", "r-3": "BASIS_RESULTS_ONLY"},
+}
+
+
+class Parsed:
+    """A journal read back from a package: just the parsed entries select() walks."""
+
+    def __init__(self, entries):
+        self.entries = entries
+
+
+def golden_case(name):
+    import zipfile
+
+    with zipfile.ZipFile(GOLDEN / f"{name}.zip") as z:
+        names = set(z.namelist())
+        manifest = json.loads(z.read("manifest.json"))
+        for m in manifest["members"]:
+            assert m["path"] in names, (name, m["path"])
+            assert sha(z.read(m["path"])) == "sha256:" + m["sha256"], (name, m["path"])
+        paths = [m["path"] for m in manifest["members"]]
+        records = json.loads(z.read("results/records.json"))
+        entries = []
+        if "journal/segment.jsonl" in paths:
+            text = z.read("journal/segment.jsonl").decode("utf-8")
+            assert text.endswith("\n"), name
+            for line in text.split("\n")[:-1]:
+                v = json.loads(line)
+                assert canon(v) == line, (name, "non-canonical line")
+                h = dict(v["header"])
+                stated = h.pop("hash")
+                assert sha(cbytes(h)) == stated, (name, "entry hash")
+                entries.append({"header": v["header"], "payload": v.get("payload")})
+        kbody = z.read("kernel/manifest.json")
+        assert sha(kbody) == manifest["kernel_manifest_digest"], (name, "kernel manifest digest")
+        algs = {a["id"] for a in json.loads(kbody)["core"]["algorithms"]}
+    points = {}
+    for path in paths:
+        if path.startswith("points/"):
+            hexd = path[len("points/"):].split(".")[0]
+            points["sha256:" + hexd] = path
+    return {"tier": manifest["evidence_tier"], "journal": Parsed(entries) if entries else None,
+            "points": points, "records": records, "algorithms": algs,
+            "kernel_digest": manifest["kernel_manifest_digest"]}
+
+
+def check_golden(files):
+    for name, plan in GOLDEN_CASES.items():
+        sel = select(golden_case(name))
+        want = GOLDEN_LABELS[name]
+        got = {r["record_id"]: r for r in sel["results"]}
+        assert set(want) == set(got), (name, set(want) ^ set(got))
+        for rid, label in want.items():
+            r = got[rid]
+            if isinstance(label, tuple):
+                assert r["replayable"], (name, rid, r)
+                entries = [int(sel["calls"][int(k)]["entry_index"]) for k in r["calls"]]
+                assert entries == label[1], (name, rid, entries, label)
+            else:
+                assert not r["replayable"] and r["reason"] == label, (name, rid, r, label)
+        assert cbytes(sel) == files[plan], f"golden {name}.zip: selection differs from {plan}"
+
+
 def write_all():
     files = {}
     built = {}
@@ -764,6 +840,7 @@ def write_all():
         files[f"malformed/{name}.zip"] = z
         listing.append({"name": name, "code": code, "reason": reason})
     files["malformed.json"] = (json.dumps(listing, indent=2) + "\n").encode("utf-8")
+    check_golden(files)
     return files
 
 
