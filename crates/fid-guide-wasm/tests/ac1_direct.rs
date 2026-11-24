@@ -299,7 +299,7 @@ fn ac1_unc_propagate_matches_kunc() {
     sp.lpu_validated_by_mc = Some(v.validated);
     sp.provenance = Provenance::default();
     let stmt = UncertaintyStatement::new(sp).unwrap();
-    same_str(&m, "statement_digest", &stmt.digest().to_string());
+    same_str(&m, "statement_digest", stmt.digest().as_ref());
     same_str(&m, "statement_method", "LPU");
 }
 
