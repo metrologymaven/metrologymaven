@@ -18,6 +18,7 @@ mod error;
 pub mod frame_cmds;
 pub mod index_cmds;
 pub mod register;
+pub mod sel_cmds;
 
 use fid_registry::{CommandDef, DefError};
 
@@ -49,13 +50,25 @@ pub use register::{
     EntityId, GeoEntry, GeoTx, IdOrigin, OriginKind, Registered, Replaced, TreeEntry, DERIVED_TAG, IMPORTED_SOURCE_TAG,
     MAX_COUNT, MAX_OUTPUT_BYTES, MAX_SOURCE_ID_BYTES,
 };
+pub use sel_cmds::{
+    combine_selection, create_selection, describe_selection, grow_or_shrink_selection, invoke_sel_cli, invoke_sel_mcp,
+    parse_index_spec, replay_sel_journal, resolve_selection, CombineOp, CombineSelectionParams, CreateSelectionParams,
+    DescribeSelectionResult, GrowParam, GrowSelectionParams, ResolveInput, ResolveSelectionParams, SelJournalEntry,
+    SelectionRegistry, SelectionResult, StoredSelection, CLI_COMBINE_SELECTION, CLI_CREATE_SELECTION,
+    CLI_DESCRIBE_SELECTION, CLI_GROW_SELECTION, CLI_RESOLVE_SELECTION, COMBINE_SELECTION, CREATE_SELECTION,
+    DESCRIBE_SELECTION, GROW_SELECTION, MAX_INLINE_INDICES, MAX_SEL_PARAMS_BYTES, MAX_SEL_PARAMS_DEPTH,
+    MCP_COMBINE_SELECTION, MCP_CREATE_SELECTION, MCP_DESCRIBE_SELECTION, MCP_GROW_SELECTION, MCP_RESOLVE_SELECTION,
+    RESOLVE_SELECTION,
+};
 
 /// All registry command definitions owned by `fid-geo-cmd`: `geo.describe_element@1` (R0),
-/// the four `GEO.INDEX.CMD` commands (R1, D0, MCP exposed), and the six `GEO.FRAME.CMD`
-/// commands (four W2 + two R1, all D0, MCP exposed).
+/// the four `GEO.INDEX.CMD` commands (R1, D0, MCP exposed), the six `GEO.FRAME.CMD`
+/// commands (four W2 + two R1, all D0, MCP exposed), and the five `GEO.SEL.CMD` commands
+/// (four W2 + one R0, all D0, MCP exposed).
 pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
     let mut defs = describe::command_defs()?;
     defs.extend(index_cmds::command_defs()?);
     defs.extend(frame_cmds::command_defs()?);
+    defs.extend(sel_cmds::command_defs()?);
     Ok(defs)
 }

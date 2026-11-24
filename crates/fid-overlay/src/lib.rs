@@ -3,5 +3,8 @@
 //!
 //! - [`status`]: status markers, the locked status-palette guard, provenance badges and the
 //!   out-of-tolerance pattern definitions (`VIZ.OVERLAY.STATUS`).
+//! - [`label`]: the `LabelSet` document entity, templates, placements and label commands
+//!   (`VIZ.OVERLAY.LABEL.MODEL`).
 
+pub mod label;
 pub mod status;

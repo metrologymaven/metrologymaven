@@ -35,6 +35,7 @@
 pub mod command;
 pub mod error;
 pub mod expand;
+pub mod gen;
 pub mod journal;
 pub mod model;
 pub mod resolve;
@@ -49,6 +50,17 @@ pub use error::BindError;
 pub use expand::{
     expand, CharacteristicItem, ExpandError, ExpandItem, ExpandedBlock, ItemKind, MemoryModel, ProjectModel,
     QueryProvider, ResultItem, Role, RunItem, StageItem, EXPANSION_SCHEMA, MAX_CELLS, MAX_COLUMNS, MAX_PAGES, MAX_ROWS,
+};
+pub use gen::{
+    default_locale_rules, gen_command_defs, generate, generate_report, invoke_generate_cli, invoke_save_cli,
+    reject_embedded_bytes, replay_save_report_exact, save_report, view_block_payload, BlockFrame, FormatterVersion,
+    GenContext, GenError, GenMetadata, GenSource, GenWarning, GenerateCmdEnv, GenerateReportOutput,
+    GenerateReportParams, GeneratedBlock, MemoryGenMetadata, MemoryResolvedStore, MemoryScratch, Provenance,
+    ResolvedPage, ResolvedReport, ResolvedStore, SaveCmdEnv, SaveReceipt, SaveReplayRun, SaveReportEvent,
+    SaveReportOutput, SaveReportParams, ScratchStore, UnitOverrideMode, ViewBlockKind, ViewBlockResolver,
+    CLI_GENERATE_REPORT, CLI_SAVE_REPORT, DEFAULT_KERNEL_VERSION, DEFAULT_LOCALE_RELEASE, GENERATE_REPORT,
+    RESOLVED_REPORT_SCHEMA, RESOLVED_REPORT_SCHEMA_VERSION, RESOLVED_VIEW_SCHEMA, SAVE_REPORT, VIEW_KIND_ID,
+    VIEW_SCHEMA, WARN_VIEW_MISSING,
 };
 pub use journal::{
     AtHead, EntityKind, EntityView, Evidence, EvidenceClass, HeadLookup, JournalReads, Journaled, Lookup, LookupFault,

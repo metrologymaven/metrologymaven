@@ -1,0 +1,79 @@
+{
+  "format": "fid-ppap-fixture@1",
+  "license": "CC-BY-4.0",
+  "header": {
+    "part_number": "MM-FLG-200",
+    "part_name": "Synthetic Automotive Flange",
+    "part_revision": "B",
+    "drawing_number": "DWG-PPAP-200",
+    "submission_id": "PPAP-2026-006",
+    "organisation_name": "Metrology Maven Synthetic Works",
+    "inspection_facility": "Metrology Lab 1",
+    "submission_level": "Level 3"
+  },
+  "parts": [
+    "part_1",
+    "part_2",
+    "part_3",
+    "part_4",
+    "part_5",
+    "part_6"
+  ],
+  "ppap_rows": [
+    {
+      "balloon": "1",
+      "spec": "16.000 +/- 0.040 mm",
+      "outcome": "CONFORMS",
+      "part_1": "16.002 mm",
+      "part_2": "16.003 mm",
+      "part_3": "16.004 mm",
+      "part_4": "16.005 mm",
+      "part_5": "16.006 mm",
+      "part_6": "16.007 mm"
+    },
+    {
+      "balloon": "2",
+      "spec": "17.000 +/- 0.040 mm",
+      "outcome": "CONFORMS",
+      "part_1": "17.003 mm",
+      "part_2": "17.004 mm",
+      "part_3": "17.005 mm",
+      "part_4": "17.006 mm",
+      "part_5": "17.007 mm",
+      "part_6": "17.008 mm"
+    },
+    {
+      "balloon": "3",
+      "spec": "18.000 +/- 0.040 mm",
+      "outcome": "CONFORMS",
+      "part_1": "18.004 mm",
+      "part_2": "18.005 mm",
+      "part_3": "18.006 mm",
+      "part_4": "18.007 mm",
+      "part_5": "18.008 mm",
+      "part_6": "18.009 mm"
+    },
+    {
+      "balloon": "4",
+      "spec": "19.000 +/- 0.040 mm",
+      "outcome": "CONFORMS",
+      "part_1": "19.005 mm",
+      "part_2": "19.006 mm",
+      "part_3": "19.007 mm",
+      "part_4": "19.008 mm",
+      "part_5": "19.009 mm",
+      "part_6": "19.010 mm"
+    },
+    {
+      "balloon": "5",
+      "spec": "20.000 +/- 0.040 mm",
+      "outcome": "CONFORMS",
+      "part_1": "20.006 mm",
+      "part_2": "20.007 mm",
+      "part_3": "20.008 mm",
+      "part_4": "20.009 mm",
+      "part_5": "20.010 mm",
+      "part_6": "20.011 mm"
+    }
+  ]
+}
