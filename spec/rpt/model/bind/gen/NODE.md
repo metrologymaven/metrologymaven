@@ -18,7 +18,8 @@ determinism: D0
 cli: [fid report generate-report, fid report save-report]
 mcp: [report_generate_report, report_save_report]
 journal: [report.generate_report@1, report.save_report@1]
-updated: 2026-11-17
+built_in: [fid-report]
+updated: 2026-11-22
 ---
 
 # RPT.MODEL.BIND.GEN: Report generation, resolved document, provenance and digest

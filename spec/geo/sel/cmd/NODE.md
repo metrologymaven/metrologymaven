@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid geo create-selection, fid geo resolve-selection, fid geo combine-selection, fid geo grow-selection, fid geo describe-selection]
 mcp: [geo_create_selection, geo_resolve_selection, geo_combine_selection, geo_grow_selection, geo_describe_selection]
 journal: [geo.create_selection@1, geo.resolve_selection@1, geo.combine_selection@1, geo.grow_selection@1, geo.describe_selection@1]
-updated: 2026-11-16
+built_in: [fid-geo-cmd]
+updated: 2026-11-23
 ---
 
 # GEO.SEL.CMD: Selection commands
