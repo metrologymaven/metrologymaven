@@ -14,7 +14,8 @@
 //! `fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]` and
 //! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]`.
 //! `fid-design icons-registry --manifest <file> --root <design dir> [--json]` and
-//! `fid-design fonts-check --root <design dir> --allowlist <file> [--json]`.
+//! `fid-design fonts-check --root <design dir> --allowlist <file> [--json]` and
+//! `fid-design page-check (--root <design dir> | --file <pages.json>) [--json]`.
 //! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage.
 
 use std::io::Write;
@@ -37,7 +38,8 @@ const USAGE: &str =
        fid-design icons-registry --manifest <file> --root <design dir> [--json]
        fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]
        fid-design screens-gate --spec <spec dir> --root <design dir> [--json]
-       fid-design fonts-check --root <design dir> --allowlist <file> [--json]";
+       fid-design fonts-check --root <design dir> --allowlist <file> [--json]
+       fid-design page-check (--root <design dir> | --file <pages.json>) [--json]";
 
 #[derive(Default)]
 struct Args {
@@ -278,6 +280,19 @@ fn main() -> ExitCode {
         return usage();
     }
     match cmd.as_str() {
+        "page-check" if args.from.is_none() && args.to.is_none() && args.copy.is_none() && args.words.is_none() => {
+            return match (&args.root, &args.file) {
+                (Some(root), None) => match fid_design::page::check(root) {
+                    Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+                    Err(e) => fail(e),
+                },
+                (None, Some(file)) => match fid_design::page::check_file(file) {
+                    Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+                    Err(e) => fail(e),
+                },
+                _ => usage(),
+            };
+        }
         "princ-check" if !pkg_flags && args.copy.is_none() && args.words.is_none() => {
             let file = args.file.clone().unwrap_or_else(|| PathBuf::from(fid_design::princ::DEFAULT_FILE));
             return match fid_design::princ::check(&file) {

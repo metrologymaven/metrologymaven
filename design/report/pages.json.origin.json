@@ -1,0 +1,10 @@
+{
+  "artefact": "report/pages.json",
+  "author": "Antigravity (Google DeepMind), agent author of UX.REPORT.PAGE",
+  "date": "2026-11-22",
+  "references": [
+    "The UX.REPORT.PAGE and UX.REPORT spec nodes in this repository",
+    "Standard ISO A4 and ANSI US Letter paper dimensions"
+  ],
+  "statement_version": "originality-statement@1"
+}
