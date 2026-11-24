@@ -563,8 +563,10 @@ fn canonical_bytes() {
 /// constrained-L1 report and the certified minimax result), then the error paths in
 /// the stable encoding of `encode_err`), recorded from a local x86-64 run and checked by CI on
 /// every target. One value serves all targets because they agree bit for bit; a target that
-/// diverged would get its own `#[cfg(target_arch)]` value here.
-const OUTPUT_PIN: &str = "sha256:9131e34ab01ab7a76503a891459f21df4da7118a347f384dceb02d0c4403c8e6";
+/// diverged would get its own `#[cfg(target_arch)]` value here. Re-recorded in #575 (previous
+/// value `sha256:9131e34ab01ab7a76503a891459f21df4da7118a347f384dceb02d0c4403c8e6`): the
+/// least-squares start normal from `ls_lin::PlaneLs` now comes from `fid_num::la::sym_eig`.
+const OUTPUT_PIN: &str = "sha256:f79fa4893b35c08bdf96539f9293f9a634164daaa45ca7e09a94e86968d5a353";
 
 #[test]
 fn ac5_output_bits_pinned() {

@@ -27,8 +27,11 @@ const CARDS: [&str; 3] = [
 /// times the worst difference on the fixture (printed by `ac3_matches_reference`). Relative to
 /// the reference radius: centre distance and radius difference (worst 7.8e-11 and 7.6e-11).
 const TOL_LEN_REL: f64 = 1e-9;
-/// Normal angle of the 3D circle, radians (worst 1.7e-12).
-const TOL_NORMAL: f64 = 2e-11;
+/// Normal angle of the 3D circle, radians (worst 8.1e-11, case `c3-fixed-r`: its fixed-radius
+/// solve stops on the cost rule with gradient norm 2.1e-9, so a last-bit change of the
+/// `ls_lin::PlaneLs` start normal moves it; 1.7e-12 before `ls_lin` switched to
+/// `fid_num::la::sym_eig` in #575).
+const TOL_NORMAL: f64 = 1e-9;
 /// Residual RMS, relative (worst 5.3e-13).
 const TOL_RMS_REL: f64 = 1e-11;
 /// AC-3's literal bound on the relative radius error of converged cases [unverified].
@@ -350,7 +353,10 @@ fn put(h: &mut Sha256Hasher, xs: &[f64]) {
 /// ARM64 macOS and wasm32 under wasmtime. Re-recorded for the review of #417 (first value
 /// `sha256:214dded4e3be8427ac46c38a4ac1ae4597a9e61a23b19de3c5628c19e0ac99fd`): sphere coverage
 /// about the fitted centre, the planarity and condition checks, and the new error cases.
-const OUTPUT_PIN: &str = "sha256:5721864dd9314081515f6459c4a0e20dbc7bd7977bec103c2fe06250b564a62e";
+/// Re-recorded in #575 (previous value
+/// `sha256:5721864dd9314081515f6459c4a0e20dbc7bd7977bec103c2fe06250b564a62e`): the circle3
+/// start normal from `ls_lin::PlaneLs` now comes from `fid_num::la::sym_eig`.
+const OUTPUT_PIN: &str = "sha256:3f541c1db79bb02a08fd6bb208624d53882f86d6eb287b6af4b86e2229f2ff6e";
 
 #[test]
 fn ac4_output_bits_pinned() {
