@@ -1693,6 +1693,24 @@ pub fn run_cli(args: &[String]) -> (i32, String, String) {
     }
 }
 
+const CLI_HELP: &str = "\
+fid-accept: acceptance verdict report and trend query CLI (FLOW.RUNNER.VERDICT)
+
+usage:
+    fid-accept show-report (--digest <sha256:...> | --trend <job> [--last N]) [--json]
+    fid-accept [--help | -h | help]
+
+subcommands:
+    show-report    Query a stored acceptance report by SHA-256 digest or job trend
+
+options:
+    --digest <sha256:...>  Show a single stored report by SHA-256 digest
+    --trend <job>          Show newest-first trend records for a job ID
+    --last <N>             Limit trend records to N (1..=365)
+    --json                 Emit canonical JSON output
+    -h, --help             Print this help message
+";
+
 /// [`run_cli`] with the project search starting at `start`.
 fn run_cli_in(start: &Path, args: &[String]) -> (i32, String, String) {
     let mut iter = args.iter();
@@ -1703,6 +1721,9 @@ fn run_cli_in(start: &Path, args: &[String]) -> (i32, String, String) {
             "usage: fid-accept show-report (--digest <sha256:...> | --trend <job> [--last N]) [--json]\n".to_string(),
         );
     };
+    if matches!(sub.as_str(), "--help" | "-h" | "help") {
+        return (0, CLI_HELP.to_string(), String::new());
+    }
     if sub != "show-report" {
         return (2, String::new(), format!("unknown subcommand `{sub}`; expected `show-report`\n"));
     }
@@ -1714,6 +1735,9 @@ fn run_cli_in(start: &Path, args: &[String]) -> (i32, String, String) {
 
     while let Some(arg) = iter.next() {
         match arg.as_str() {
+            "--help" | "-h" => {
+                return (0, CLI_HELP.to_string(), String::new());
+            }
             "--store" => {
                 return (
                     2,

@@ -549,3 +549,36 @@ fn non_gating_consistency_and_tamper_detection() {
 
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn cli_help_exits_zero_and_preserves_usage_errors() {
+    let (dir, _) = temp_project("cli-help");
+
+    for help_args in
+        [&["--help"][..], &["-h"][..], &["help"][..], &["show-report", "--help"][..], &["show-report", "-h"][..]]
+    {
+        let out = run_in(&dir, help_args);
+        assert_eq!(out.status.code(), Some(0), "args={help_args:?} stderr={}", String::from_utf8_lossy(&out.stderr));
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        assert!(!stdout.trim().is_empty(), "expected non-empty stdout for {help_args:?}");
+        assert!(stdout.contains("show-report"), "expected show-report in help for {help_args:?}: {stdout}");
+        assert!(out.stderr.is_empty(), "expected empty stderr for {help_args:?}");
+    }
+
+    let no_args = run_in(&dir, &[]);
+    assert_eq!(no_args.status.code(), Some(2));
+    assert!(no_args.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&no_args.stderr).contains("usage:"));
+
+    let bad_sub = run_in(&dir, &["bogus"]);
+    assert_eq!(bad_sub.status.code(), Some(2));
+    assert!(bad_sub.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&bad_sub.stderr).contains("unknown subcommand"));
+
+    let bad_flag = run_in(&dir, &["show-report", "--bogus"]);
+    assert_eq!(bad_flag.status.code(), Some(2));
+    assert!(bad_flag.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&bad_flag.stderr).contains("unknown argument"));
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
