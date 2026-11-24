@@ -19,7 +19,8 @@ Nothing here runs the Rust code (stdlib only). Three independent parts:
    eigenvalue-gap condition exceeds the limit.
 3. A bit-exact model of the pinned rules of `fid_fit::ls_lin` (module documentation): the
    `fid_num::red` reductions, the contract's centring and direction normalisation, the
-   cyclic Jacobi of `ls_lin::eig`, residuals, statistics, diagnostics and the canonical
+   cyclic Jacobi of `fid_num::la::sym_eig` (the model of
+   `fixtures/num/la/make_eig_fixtures.py`, imported), residuals, statistics, diagnostics and the canonical
    result encoding of `contract::encode`, with its SHA-256. CPython floats are binary64,
    round-to-nearest-even, never fused; `math.sqrt` is correctly rounded. The Rust test
    requires identical bytes on every CI target (x86-64, ARM64, wasm32), which is AC-3.
@@ -38,11 +39,11 @@ from fractions import Fraction
 from pathlib import Path
 
 HERE = Path(__file__).parent
+sys.path.insert(0, str(HERE.parent / "num" / "la"))
+import make_eig_fixtures as eigm  # noqa: E402  (the reviewed KRN.NUM.LA.EIG model)
 OUT = HERE / "lin-synth-v1" / "cases.txt"
 BLOCK = 256
 U = 2.0 ** -53
-BIG = 2.0 ** 256
-MAX_SWEEPS = 50
 EIG_RATIO_MAX = 0.9  # contract DEFAULT_EIG_RATIO_MAX
 RANK_TOL = 1e-9  # contract DEFAULT_RANK_TOL
 MIN_NORMAL = 2.2250738585072014e-308
@@ -407,49 +408,14 @@ def ud(d):
 
 
 def sym_eig(a):
-    """ls_lin::eig::sym_eig, rules 1-5."""
+    """ls_lin rule 3: fid_num::la::sym_eig with rel_tol = 0, through the reviewed bit-exact
+    model of KRN.NUM.LA.EIG in fixtures/num/la/make_eig_fixtures.py. Returns the eigenvalues
+    ascending and, for each, its eigenvector (the matching column)."""
     n = len(a)
-    m = [[a[min(i, j)][max(i, j)] for j in range(n)] for i in range(n)]
-    fro = red_norm2([m[i][j] for i in range(n) for j in range(n)])
-    tol = (float(n) * U) * fro
-    v = [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
-    sweeps = 0
-    while True:
-        off = red_norm2([m[p][q] for p in range(n) for q in range(p + 1, n)])
-        if off <= tol:
-            break
-        assert sweeps < MAX_SWEEPS, "model Jacobi did not converge"
-        for p in range(n):
-            for q in range(p + 1, n):
-                a_ = m[p][q]
-                if a_ == 0.0:
-                    continue
-                theta = (m[q][q] - m[p][p]) / (2.0 * a_)
-                if abs(theta) >= BIG:
-                    t = 0.5 / theta
-                else:
-                    mag = 1.0 / (abs(theta) + math.sqrt(theta * theta + 1.0))
-                    t = -mag if theta < 0.0 else mag
-                c = 1.0 / math.sqrt(t * t + 1.0)
-                s = t * c
-                for r in range(n):
-                    if r in (p, q):
-                        continue
-                    arp, arq = m[r][p], m[r][q]
-                    nrp = c * arp - s * arq
-                    nrq = s * arp + c * arq
-                    m[r][p] = m[p][r] = nrp
-                    m[r][q] = m[q][r] = nrq
-                m[p][p] = m[p][p] - t * a_
-                m[q][q] = m[q][q] + t * a_
-                m[p][q] = m[q][p] = 0.0
-                for row in v:
-                    vp, vq = row[p], row[q]
-                    row[p] = c * vp - s * vq
-                    row[q] = s * vp + c * vq
-        sweeps += 1
-    order = sorted(range(n), key=lambda i: tkey(m[i][i]))
-    return [m[i][i] for i in order], [[v[r][i] for r in range(n)] for i in order]
+    flat = [a[i][j] for i in range(n) for j in range(n)]
+    e = eigm.sym_eig(n, n, flat, 0.0)
+    vecs = [[e.vectors[r * n + k] for r in range(n)] for k in range(n)]
+    return list(e.values), vecs
 
 
 def scatter(q, k):

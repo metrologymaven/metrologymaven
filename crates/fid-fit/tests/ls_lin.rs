@@ -15,7 +15,7 @@ use fid_fit::contract::{
     encode, Constraint, Fit, FitError, FitParams, FitResult, FittedFeature, Method, PointsView, StopReason, ValueType,
     Weights,
 };
-use fid_fit::ls_lin::{command_rows, projection_frame, sym_eig, Line2Ls, Line3Ls, PlaneLs, PointLs, PRIMITIVES};
+use fid_fit::ls_lin::{command_rows, projection_frame, Line2Ls, Line3Ls, PlaneLs, PointLs, PRIMITIVES};
 use fid_kci::kci::{sha256, to_hex};
 use fid_kci::{check, parse_card, CardRegistry, InputArity};
 use fid_types::{Determinism, SideEffect};
@@ -364,26 +364,6 @@ fn error_paths() {
     let mut p = ls();
     p.thresholds.rank_tol = 2.0;
     assert_eq!(Line3Ls.fit(&tri, &p, None), bad("thresholds.rank_tol"));
-}
-
-/// The interim Jacobi (`KRN.NUM.LA.EIG` rules): identity (all eigenvalues tied) gives the unit
-/// basis in order with no sweep; a 2 x 2 case; size and finiteness refusals.
-#[test]
-fn sym_eig_cases() {
-    let e = sym_eig(&[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]).unwrap();
-    assert_eq!(e.values, [1.0; 3]);
-    assert_eq!(e.vectors, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]);
-    assert_eq!(e.sweeps, 0);
-    // [[2, 1], [1, 2]]: theta = 0, t = 1, c = s = 1/sqrt(2); eigenvalues 1 and 3.
-    let e = sym_eig(&[[2.0, 1.0], [1.0, 2.0]]).unwrap();
-    assert_eq!(e.values, [1.0, 3.0]);
-    let h = core::f64::consts::FRAC_1_SQRT_2;
-    assert!(max_diff(&e.vectors[0], &[h, -h]) < 1e-15 && max_diff(&e.vectors[1], &[h, h]) < 1e-15);
-    // Only the upper triangle is read.
-    let e = sym_eig(&[[2.0, 1.0], [99.0, 2.0]]).unwrap();
-    assert_eq!(e.values, [1.0, 3.0]);
-    assert_eq!(sym_eig(&[[1.0; 4]; 4]), Err(FitError::InvalidParams { field: "eig.size" }));
-    assert!(matches!(sym_eig(&[[1.0, f64::NAN], [0.0, 1.0]]), Err(FitError::Num(_))));
 }
 
 /// AC-6 and REQ-KRN.LSQ-009: each algorithm ID has a spec card that parses, and the card
