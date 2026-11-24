@@ -83,6 +83,7 @@ fn ac1_fit_cylinder_mcc_envelope_exceeds_lsq() {
     let req = format!(r#"{{"op":"fit.cylinder_mcc","params":{{"unit":"mm","points":[{}]}}}}"#, pts.join(","));
     let (res, _) = run_ok(&req);
     let CValue::Obj(m) = res else { panic!("obj") };
+    assert_eq!(m.get("interpretation_status"), Some(&CValue::Str("provisional".to_string())));
     let CValue::Num(excess) = m.get("diameter_envelope_excess").expect("excess") else { panic!("num") };
     assert!(*excess > 0.0, "MCC mating envelope diameter exceeds LSQ diameter (excess={excess})");
 }
@@ -164,6 +165,9 @@ fn ac1_unc_propagate_linear_passes_and_nonlinear_fails_lpu() {
     let (nl_res, _) = run_ok(nonlin_req);
     let CValue::Obj(nm) = nl_res else { panic!("obj") };
     assert_eq!(nm.get("lpu_check_passed"), Some(&CValue::Bool(false)));
+    // LPU gives zero uncertainty here, so nothing is validated and the statement is the MCM one.
+    assert_eq!(nm.get("mc_validation"), Some(&CValue::Str("not_run".to_string())));
+    assert_eq!(nm.get("statement_method"), Some(&CValue::Str("MCM".to_string())));
 }
 
 #[test]
