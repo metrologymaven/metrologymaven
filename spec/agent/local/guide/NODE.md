@@ -18,7 +18,9 @@ determinism: D0
 cli: [fid-eval local guide]
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-eval-board]
+built_pr: 525
+updated: 2026-11-22
 ---
 
 # AGENT.LOCAL.GUIDE: Generated open-weight model guidance page

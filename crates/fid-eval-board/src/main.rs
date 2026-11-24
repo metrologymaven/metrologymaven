@@ -3,13 +3,13 @@
 //! First slice: `board check-claims` (spec node AGENT.BOARD.CLAIMS).
 
 use fid_canon::CValue;
-use fid_eval_board::{check_claims, Finding, Inputs, Report};
+use fid_eval_board::{check_claims, write_guide, Finding, GuideInputs, Inputs, Report};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 const USAGE: &str = "\
-fid-eval-board: Metrology Maven scoreboard tooling (pre-alpha); the `fid-eval board` words
+fid-eval-board: Metrology Maven scoreboard tooling (pre-alpha); the `fid-eval board` and `fid-eval local` words
 
 USAGE:
     fid-eval-board board check-claims --register <FILE> --board <BUNDLE> --sources <PATH>...
@@ -24,6 +24,10 @@ USAGE:
                                   entry_missing; this is intended. The phrase list
                                   defaults to claim-phrases.txt next to the register. With
                                   --json print {\"claims\",\"files\",\"findings\",\"ok\",\"tags\"}.
+    fid-eval-board local guide --board <BUNDLE> --catalog <CATALOG_INDEX> --hosts <DIR> --out <DIR>
+                                  Generate static Markdown and HTML open-weight model guidance
+                                  (local-model-guide.md and local-model-guide.html) from board.json,
+                                  the curated catalog index, and host.json/model.json metadata.
     fid-eval-board --version      Print the version
     fid-eval-board --help         Print this help
 
@@ -42,6 +46,7 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         ["board", "check-claims", rest @ ..] | ["check-claims", rest @ ..] => check(rest),
+        ["local", "guide", rest @ ..] | ["guide", rest @ ..] => run_guide(rest),
         _ => usage_error("unknown command"),
     }
 }
@@ -49,6 +54,52 @@ fn main() -> ExitCode {
 fn usage_error(msg: &str) -> ExitCode {
     eprintln!("error: {msg}\n\n{USAGE}");
     ExitCode::from(2)
+}
+
+fn run_guide(args: &[&str]) -> ExitCode {
+    let mut board: Option<&str> = None;
+    let mut catalog: Option<&str> = None;
+    let mut hosts: Option<&str> = None;
+    let mut out: Option<&str> = None;
+    let mut i = 0;
+    while i < args.len() {
+        let a = args[i];
+        i += 1;
+        let slot = match a {
+            "--board" => &mut board,
+            "--catalog" => &mut catalog,
+            "--hosts" => &mut hosts,
+            "--out" => &mut out,
+            other => return usage_error(&format!("unknown argument `{other}`")),
+        };
+        match args.get(i) {
+            Some(v) if !v.starts_with("--") && slot.is_none() => {
+                *slot = Some(*v);
+                i += 1;
+            }
+            Some(v) if !v.starts_with("--") => return usage_error(&format!("{a} given twice")),
+            _ => return usage_error(&format!("{a} needs a value")),
+        }
+    }
+    let (Some(board), Some(catalog), Some(hosts), Some(out)) = (board, catalog, hosts, out) else {
+        return usage_error("--board <BUNDLE>, --catalog <FILE>, --hosts <DIR> and --out <DIR> are required");
+    };
+    let inputs = GuideInputs { board: Path::new(board), catalog: Path::new(catalog), hosts: Path::new(hosts) };
+    match write_guide(&inputs, Path::new(out)) {
+        Ok(guide) => {
+            println!(
+                "ok: generated guide for {} ({} open-weight model(s), {} workflow(s))",
+                guide.release,
+                guide.models.len(),
+                guide.workflows.len()
+            );
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("error: {e}");
+            ExitCode::from(1)
+        }
+    }
 }
 
 fn check(args: &[&str]) -> ExitCode {

@@ -20,6 +20,7 @@ python crates/fid-io-plugin/abi/gen_abi.py --check
 python crates/fid-report-pdf/fontgen/make_fonts.py --check
 python fixtures/agent/harness/runs/make_record_fixtures.py --check
 python fixtures/agent/harness/runs/make_runs.py --check
+python fixtures/agent/local/make_fixtures.py --check
 python fixtures/agent/propose/make_fixtures.py --check
 python fixtures/aln/bfit/make_constr_fixtures.py --check
 python fixtures/aln/bfit/make_stop_traces.py --check

@@ -1,0 +1,7 @@
+{
+  "cpu_model": "AMD EPYC 7543P 32-Core",
+  "gpu_memory_gib": 48,
+  "gpu_model": "NVIDIA RTX 6000 Ada",
+  "os": "Ubuntu 24.04",
+  "ram_gib": 128
+}
