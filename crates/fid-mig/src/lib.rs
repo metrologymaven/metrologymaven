@@ -13,6 +13,10 @@
 //! closure, attestation and breaking-change checks run by `cargo xtask mig taxonomy-check`
 //! (spec node `MIG.COVER.TAXO`).
 //!
+//! [`cover::corpus`]: migration corpus manifests (`mig-corpus@1`), their dataset-catalogue,
+//! visibility and source-register admission checks and the corpus digest, run by
+//! `cargo xtask mig corpus-check` (spec node `MIG.COVER.CORPUS`).
+//!
 //! [`explain::cat`]: closed factor catalogue (`mig-factors@1`) and typed probe candidates
 //! (spec node `MIG.EXPLAIN.CAT`).
 

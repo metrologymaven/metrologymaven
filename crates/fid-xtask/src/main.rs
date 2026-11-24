@@ -60,6 +60,7 @@ const MIG_LADDER_USAGE: &str =
     "usage: cargo xtask mig ladder-check --ladder <json> --manifest <registry manifest json>";
 const MIG_SOURCES_USAGE: &str =
     "usage: cargo xtask mig sources-check --register <json> --manifest <registry manifest json> [--vocab-rules <toml>]";
+const MIG_CORPUS_USAGE: &str = "usage: cargo xtask mig corpus-check --manifest <json> --catalogue <toml> --sources <json> \n                                [--registry-manifest <registry manifest json>]";
 const MIG_TAXONOMY_USAGE: &str =
     "usage: cargo xtask mig taxonomy-check --dir <dir> [--dmis-conf <json>] [--reports <dir>] [--previous <dir>]";
 const GEN_SURFACES_USAGE: &str =
@@ -96,6 +97,7 @@ fn main() -> ExitCode {
         Some("mig") if args.get(1).map(String::as_str) == Some("ladder-check") => mig_ladder_check(&args[2..]),
         Some("mig") if args.get(1).map(String::as_str) == Some("sources-check") => mig_sources_check(&args[2..]),
         Some("mig") if args.get(1).map(String::as_str) == Some("taxonomy-check") => mig_taxonomy_check(&args[2..]),
+        Some("mig") if args.get(1).map(String::as_str) == Some("corpus-check") => mig_corpus_check(&args[2..]),
         Some("conic-audit") => fid_xtask::conic_audit::cli(&args[1..]),
         Some("registry-gate") => fid_xtask::registry_gate::cli(&args[1..]),
         Some("convergence-check") => fid_xtask::convergence::check_cli(&args[1..]),
@@ -122,6 +124,7 @@ fn main() -> ExitCode {
             eprintln!("{MIG_LADDER_USAGE}");
             eprintln!("{MIG_SOURCES_USAGE}");
             eprintln!("{MIG_TAXONOMY_USAGE}");
+            eprintln!("{MIG_CORPUS_USAGE}");
             eprintln!("{}", fid_xtask::conic_audit::USAGE);
             eprintln!("{}", fid_xtask::licence_check::USAGE);
             eprintln!("{}", fid_xtask::registry_gate::USAGE);
@@ -324,6 +327,58 @@ fn mig_taxonomy_check(args: &[String]) -> ExitCode {
     } else {
         println!("taxonomy-check: {} findings", report.findings.len());
         ExitCode::from(1)
+    }
+}
+
+/// MIG.COVER.CORPUS: `mig corpus-check`. Checks a `mig-corpus@1` manifest against the dataset
+/// catalogue and the source register. Prints one line per finding (`CORPUS-SCHEMA`,
+/// `CORPUS-DUP`, `CORPUS-UNCATALOGUED`, `CORPUS-DIGEST`, `CORPUS-VISIBILITY`, `CORPUS-SOURCE`)
+/// sorted by subject and code, or, when it passes, the corpus digest and the `private_run`
+/// label. Exit 0: pass; 1: findings; 2: usage error or an unreadable file. Offline; reads only.
+fn mig_corpus_check(args: &[String]) -> ExitCode {
+    use fid_mig::cover::corpus;
+    let (mut manifest, mut catalogue, mut sources, mut registry) = (None, None, None, None);
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--manifest", Some(v)) if manifest.is_none() => manifest = Some(PathBuf::from(v)),
+            ("--catalogue", Some(v)) if catalogue.is_none() => catalogue = Some(PathBuf::from(v)),
+            ("--sources", Some(v)) if sources.is_none() => sources = Some(PathBuf::from(v)),
+            ("--registry-manifest", Some(v)) if registry.is_none() => registry = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{MIG_CORPUS_USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(manifest), Some(catalogue), Some(sources)) = (manifest, catalogue, sources) else {
+        eprintln!(
+            "mig corpus-check: --manifest, --catalogue and --sources are required
+{MIG_CORPUS_USAGE}"
+        );
+        return ExitCode::from(2);
+    };
+    let report = match corpus::check_paths(&manifest, &catalogue, &sources, registry.as_deref()) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("mig corpus-check: cannot read {e}");
+            return ExitCode::from(2);
+        }
+    };
+    for f in &report.findings {
+        println!("{f}");
+    }
+    match (&report.manifest, report.digest()) {
+        (Some(m), Some(digest)) => {
+            println!("corpus-check: ok {} format={} entries={}", corpus::SCHEMA, m.format_id.as_str(), m.entries.len());
+            println!("corpus_digest: {}", digest.as_str());
+            println!("private_run: {}", m.private_run());
+            ExitCode::SUCCESS
+        }
+        _ => {
+            println!("corpus-check: {} findings", report.findings.len());
+            ExitCode::from(1)
+        }
     }
 }
 

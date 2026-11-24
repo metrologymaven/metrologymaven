@@ -406,7 +406,7 @@ fn is_product(s: &str) -> bool {
 /// nothing that could carry a link or an address ([`has_link`]), no surrounding whitespace, at
 /// most `max` characters. Empty is allowed
 /// only when `may_be_empty`.
-fn is_text(s: &str, max: usize, may_be_empty: bool) -> bool {
+pub(crate) fn is_text(s: &str, max: usize, may_be_empty: bool) -> bool {
     if s.is_empty() {
         return may_be_empty;
     }

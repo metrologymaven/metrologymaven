@@ -1,0 +1,10 @@
+{
+  "formats": [
+    {
+      "id": "points-csv"
+    },
+    {
+      "id": "qif"
+    }
+  ]
+}
