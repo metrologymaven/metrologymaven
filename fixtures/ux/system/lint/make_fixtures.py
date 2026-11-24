@@ -14,6 +14,10 @@ Produces:
 - `allowed/legacy.css` (AC-3: `/* design-allow: third-party widget */`)
 - `allowed/empty-reason.css` (AC-4: `/* design-allow: */` -> `LIT-ALLOW-NOREASON`)
 - `allowlist.txt` (path allowlist fixture)
+- `shorthand/motion.css` (durations inside `transition` / `animation` shorthand values)
+- `adjacent/colors.css` (several hex colours in one run, space- and comma-separated)
+- `spacing/box.css` (`padding: 0 8px`, `margin: 4px 8px`: every spacing value)
+- `no-match/notes.md` (a root where no file matches any rule: `LINT-NO-FILES`, exit 2)
 - `expected.json` (hand-labelled expectations, cross-checked by an independent Python oracle)
 """
 
@@ -102,6 +106,37 @@ use std::time::Duration;
 pub fn anim() -> Duration {
     Duration::from_millis(120)
 }
+"""
+
+SHORTHAND_CSS = """\
+/* Synthetic fixture (CC-BY-4.0): durations inside shorthand values. */
+.fade {
+  transition: opacity 120ms ease, transform 0.2s ease-out 50ms;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+"""
+
+ADJACENT_CSS = """\
+/* Synthetic fixture (CC-BY-4.0): several hex colours in one run. */
+.frame {
+  border-color: #1f5fbf #2e8540 #fff;
+  background: linear-gradient(#1f5fbf,#2e8540);
+}
+"""
+
+SPACING_CSS = """\
+/* Synthetic fixture (CC-BY-4.0): every spacing value in a multi-value declaration. */
+.card {
+  padding: 0 8px;
+  margin: 4px 8px;
+}
+"""
+
+NO_MATCH_MD = """\
+Synthetic fixture (CC-BY-4.0): no file here matches a lint rule, although #1f5fbf and 8px appear in prose.
 """
 
 ALLOWLIST_TXT = """\
@@ -251,6 +286,125 @@ LABELS = {
             },
         ],
     },
+    "shorthand": {
+        "root": "shorthand",
+        "package": "../pkg/v1.0.0",
+        "exit": 1,
+        "findings": [
+            {
+                "code": "LIT-DURATION-STYLE",
+                "file": "motion.css",
+                "line": 3,
+                "literal": "120ms",
+                "suggestions": ["motion.fast"],
+            },
+            {
+                "code": "LIT-DURATION-STYLE",
+                "file": "motion.css",
+                "line": 3,
+                "literal": "0.2s",
+                "suggestions": [],
+            },
+            {
+                "code": "LIT-DURATION-STYLE",
+                "file": "motion.css",
+                "line": 3,
+                "literal": "50ms",
+                "suggestions": [],
+            },
+            {
+                "code": "LIT-DURATION-STYLE",
+                "file": "motion.css",
+                "line": 7,
+                "literal": "1s",
+                "suggestions": [],
+            },
+        ],
+    },
+    "adjacent": {
+        "root": "adjacent",
+        "package": "../pkg/v1.0.0",
+        "exit": 1,
+        "findings": [
+            {
+                "code": "LIT-COLOR-HEX",
+                "file": "colors.css",
+                "line": 3,
+                "literal": "#1f5fbf",
+                "suggestions": ["prim.color.blue.500", "sem.focus.ring"],
+            },
+            {
+                "code": "LIT-COLOR-HEX",
+                "file": "colors.css",
+                "line": 3,
+                "literal": "#2e8540",
+                "suggestions": ["prim.color.green.500", "sem.status.ok"],
+            },
+            {
+                "code": "LIT-COLOR-HEX",
+                "file": "colors.css",
+                "line": 3,
+                "literal": "#fff",
+                "suggestions": [],
+            },
+            {
+                "code": "LIT-COLOR-HEX",
+                "file": "colors.css",
+                "line": 4,
+                "literal": "#1f5fbf",
+                "suggestions": ["prim.color.blue.500", "sem.focus.ring"],
+            },
+            {
+                "code": "LIT-COLOR-HEX",
+                "file": "colors.css",
+                "line": 4,
+                "literal": "#2e8540",
+                "suggestions": ["prim.color.green.500", "sem.status.ok"],
+            },
+        ],
+    },
+    "spacing": {
+        "root": "spacing",
+        "package": "../pkg/v1.0.0",
+        "exit": 1,
+        "findings": [
+            {
+                "code": "LIT-SPACE-STYLE",
+                "file": "box.css",
+                "line": 3,
+                "literal": "8px",
+                "suggestions": ["space.2"],
+            },
+            {
+                "code": "LIT-SPACE-STYLE",
+                "file": "box.css",
+                "line": 4,
+                "literal": "4px",
+                "suggestions": [],
+            },
+            {
+                "code": "LIT-SPACE-STYLE",
+                "file": "box.css",
+                "line": 4,
+                "literal": "8px",
+                "suggestions": ["space.2"],
+            },
+        ],
+    },
+    "no_match": {
+        "root": "no-match",
+        "package": "../pkg/v1.0.0",
+        "exit": 2,
+        "findings": [
+            {
+                "code": "LINT-NO-FILES",
+                "file": ".",
+                "line": None,
+                "literal": None,
+                "suggestions": [],
+            },
+        ],
+    },
 }
 
 
@@ -264,6 +418,10 @@ def expected_files():
         "dirty-multi/panel.css": DIRTY_MULTI_CSS.encode("utf-8"),
         "dirty-multi/anim.rs": DIRTY_MULTI_RS.encode("utf-8"),
         "allowlist.txt": ALLOWLIST_TXT.encode("utf-8"),
+        "shorthand/motion.css": SHORTHAND_CSS.encode("utf-8"),
+        "adjacent/colors.css": ADJACENT_CSS.encode("utf-8"),
+        "spacing/box.css": SPACING_CSS.encode("utf-8"),
+        "no-match/notes.md": NO_MATCH_MD.encode("utf-8"),
         "pkg-accent/package.toml": PKG_ACCENT_TOML.encode("utf-8"),
         "pkg-accent/CHANGELOG.md": PKG_ACCENT_CHANGELOG.encode("utf-8"),
         "pkg-accent/deprecations.json": js([]),
@@ -279,6 +437,21 @@ def verify_oracle():
     lines = (HERE / "dirty/theme.rs").read_text(encoding="utf-8").splitlines()
     if len(lines) < 12 or "Color32::from_rgb(0x1f, 0x6f, 0xeb)" not in lines[11]:
         return ["dirty/theme.rs line 12 does not contain Color32::from_rgb(0x1f, 0x6f, 0xeb)"]
+    # Independent cross-check of the hand labels for every-value cases: each label's literals,
+    # line by line, equal what a plain Python scan of the declaration values finds.
+    scans = {
+        "shorthand": ("shorthand/motion.css", r"(?:transition|animation)\s*:\s*([^;]+)", r"(?<![\w.])(\d+(?:\.\d+)?|\.\d+)(ms|s)\b"),
+        "spacing": ("spacing/box.css", r"(?:padding|margin)\s*:\s*([^;]+)", r"(?<![\w.])(\d+(?:\.\d+)?|\.\d+)(px|pt)\b"),
+        "adjacent": ("adjacent/colors.css", r"(?:color|background)\s*:\s*([^;]+)", r"(#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3}))\b"),
+    }
+    for case, (rel, decl, lit) in scans.items():
+        got = []
+        for n, line in enumerate((HERE / rel).read_text(encoding="utf-8").splitlines(), start=1):
+            for d in re.finditer(decl, line):
+                got.extend((n, "".join(m.groups())) for m in re.finditer(lit, d.group(1)))
+        want = [(x["line"], x["literal"]) for x in LABELS[case]["findings"]]
+        if got != want:
+            return [f"{case}: labels {want} disagree with the oracle scan {got}"]
     # Confirm clean/ files contain no hex colours, rgb/hsl, px/pt, or ms/s literals.
     for rel in ("clean/theme.rs", "clean/style.toml"):
         txt = (HERE / rel).read_text(encoding="utf-8")

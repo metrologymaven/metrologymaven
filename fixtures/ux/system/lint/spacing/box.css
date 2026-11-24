@@ -1,0 +1,5 @@
+/* Synthetic fixture (CC-BY-4.0): every spacing value in a multi-value declaration. */
+.card {
+  padding: 0 8px;
+  margin: 4px 8px;
+}

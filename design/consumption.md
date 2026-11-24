@@ -30,7 +30,8 @@ Exit codes:
 
 - `0` — no unallowed literal findings.
 - `1` — one or more literal, allow-marker or rule-schema findings (fail CI).
-- `2` — unreadable input, file over 4 MiB, bad package, or invalid CLI usage.
+- `2` — unreadable input, file over 4 MiB, bad package, invalid CLI usage, or a root where no
+  file matches any rule (`LINT-NO-FILES`: nothing was checked, so it is not a pass).
 
 ## 2. Default rule sets (`lint-rules@1`)
 
@@ -49,6 +50,12 @@ default `lint-rules@1` rules covering **Rust** (`.rs`), **TOML** (`.toml`), **JS
 | `LIT-DURATION-STYLE` | `duration` | CSS, TOML, JSON, SVG | `transition*`, `animation*`, `duration` with `ms` or `s` |
 | `LIT-DURATION-RUST` | `duration` | Rust | `Duration::from_millis(...)`, `from_secs*(...)` |
 
+Spacing and duration rules read the whole declaration value, and every value in it is its own
+finding: `margin: 4px 8px` reports both, `padding: 0 8px` reports `8px` (a unitless `0` is not
+a literal), and shorthand such as `transition: opacity 120ms ease` or
+`animation: spin 1s linear` reports `120ms` and `1s`. Hex colours are found one by one in a
+run such as `border-color: #1f5fbf #2e8540 #fff`.
+
 ### Custom rule files (`lint-rules@1`)
 
 Supply `--rules <file.toml>` to run a custom rule set:
@@ -60,9 +67,12 @@ format = "lint-rules@1"
 id = "LIT-COLOR-HEX"
 kind = "color"            # color | font_size | spacing | duration
 globs = ["**/*.css"]      # /-separated globs, no character classes or braces
-regex = '(?:^|[^0-9A-Za-z_])(#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3}))(?:[^0-9A-Za-z_]|$)'
+regex = '(?:^|[^0-9A-Za-z_])(#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3}))\b'
 value_group = 1           # capture group holding the literal text (0 = whole match)
 ```
+
+For `font_size`, `spacing` and `duration` rules the value group may hold a whole value; each
+number with a unit of that kind inside it is reported separately.
 
 All regular expressions run in a linear-time finite-automaton engine (no backtracking) with
 bounded memory, so hostile inputs cannot stall CI. Invalid rule tables report

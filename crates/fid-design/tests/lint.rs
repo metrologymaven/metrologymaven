@@ -114,6 +114,43 @@ fn ac5_deterministic_json_output() {
     assert_eq!(a.stdout, b.stdout);
 }
 
+/// Durations anywhere in a value, including `transition` / `animation` shorthand, are each
+/// reported (`shorthand/motion.css`).
+#[test]
+fn durations_inside_shorthand_values() {
+    run_case("shorthand");
+}
+
+/// Every hex colour in a run is caught, space- or comma-separated (`adjacent/colors.css`).
+#[test]
+fn adjacent_hex_colours() {
+    run_case("adjacent");
+}
+
+/// Every spacing value is caught: `padding: 0 8px` reports `8px`, `margin: 4px 8px` both
+/// (`spacing/box.css`).
+#[test]
+fn every_spacing_value() {
+    run_case("spacing");
+}
+
+/// A root where no file matches any rule is `LINT-NO-FILES` with exit 2, not a silent pass
+/// (`no-match/`); an empty directory too, in JSON and text output.
+#[test]
+fn no_matched_files_is_a_finding_with_exit_2() {
+    run_case("no_match");
+    let tmp = temp("empty-root");
+    let o = run(&["lint-literals", "--root", tmp.to_str().unwrap()]);
+    assert_eq!(o.status.code(), Some(2), "{}", stdout(&o));
+    assert!(stdout(&o).contains(lint::NO_FILES), "{}", stdout(&o));
+    // A single file no rule applies to.
+    let o = run(&["lint-literals", "--root", &fix("no-match/notes.md"), "--json"]);
+    assert_eq!(o.status.code(), Some(2), "{}", stdout(&o));
+    // Matched files that are all allowlisted are not this case (the allowlist is explicit).
+    let o = run(&["lint-literals", "--root", &fix("dirty"), "--allowlist", &fix("allowlist.txt"), "--json"]);
+    assert_eq!(o.status.code(), Some(0), "{}", stdout(&o));
+}
+
 /// Allowlist file exempts listed paths when a non-empty reason is provided, and fails on empty reason.
 #[test]
 fn allowlist_file_rules() {

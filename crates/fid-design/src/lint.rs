@@ -12,11 +12,25 @@
 //! id = "LIT-COLOR-HEX"
 //! kind = "color"
 //! globs = ["**/*.css", "**/*.svg"]
-//! regex = '(?:^|[^0-9A-Za-z_])(#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3}))(?:[^0-9A-Za-z_]|$)'
+//! regex = '(?:^|[^0-9A-Za-z_])(#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3}))\b'
 //! value_group = 1
 //! ```
 //!
 //! Default rules ship for Rust, TOML, JSON, CSS and SVG.
+//!
+//! # Every literal in a value
+//!
+//! For `font_size`, `spacing` and `duration` rules the value group may hold a whole declaration
+//! value (`margin: 4px 8px`, `transition: opacity 120ms ease, transform 0.2s 50ms`): every
+//! number with a unit of the rule's kind in it (`px`/`pt`, or `ms`/`s`) is its own finding, at its
+//! own column. A unitless number (`padding: 0 8px` reports only `8px`) and a token name
+//! (`duration = "motion.fast"`) are not literals. A value group with no such unit is reported
+//! whole when it is one literal by itself (`from_millis(120)`, or `12em` from a custom rule).
+//!
+//! # No silent pass
+//!
+//! A root in which no file matches any rule's globs is the finding `LINT-NO-FILES` and exits 2:
+//! nothing was checked.
 //!
 //! # Escape hatches (REQ-002)
 //!
@@ -31,7 +45,8 @@
 //! deprecations, normalises colours to lowercase `#rrggbb[aa]`, dimensions to `px` and durations
 //! to `ms`, and attaches every matching token name in sorted order.
 //!
-//! Exit codes: 0 clean, 1 findings, 2 unreadable input or bad usage.
+//! Exit codes: 0 clean, 1 findings, 2 unreadable input, bad usage, or no file matched any rule
+//! (`LINT-NO-FILES`).
 
 use crate::finding::read_text;
 use crate::review::guard::{defects, glob_defect, glob_match, path_defect};
@@ -52,6 +67,8 @@ pub const RULES_FORMAT: &str = "lint-rules@1";
 pub const ALLOW_NOREASON: &str = "LIT-ALLOW-NOREASON";
 pub const RULES_SCHEMA: &str = "LINT-RULES-SCHEMA";
 pub const REGEX_ERR: &str = "LINT-REGEX";
+/// No file under the root matches any rule's globs, so nothing was checked (exit 2).
+pub const NO_FILES: &str = "LINT-NO-FILES";
 
 /// Largest source file scanned (4 MiB, UX.SYSTEM.LINT Build prompt).
 pub const MAX_SOURCE_BYTES: u64 = 4 * 1024 * 1024;
@@ -78,7 +95,7 @@ value_group = 1
 id = "LIT-COLOR-HEX"
 kind = "color"
 globs = ["**/*.rs", "**/*.toml", "**/*.json", "**/*.css", "**/*.svg"]
-regex = '(?:^|[^0-9A-Za-z_])(#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3}))(?:[^0-9A-Za-z_]|$)'
+regex = '(?:^|[^0-9A-Za-z_])(#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3}))\b'
 value_group = 1
 
 [[rule]]
@@ -106,14 +123,14 @@ value_group = 1
 id = "LIT-SPACE-STYLE"
 kind = "spacing"
 globs = ["**/*.css", "**/*.toml", "**/*.json"]
-regex = '(?i)\b(?:padding(?:-(?:top|right|bottom|left))?|margin(?:-(?:top|right|bottom|left))?|(?:row-|column-)?gap|spacing)\s*[:=]\s*"?([0-9]+(?:\.[0-9]+)?(?:px|pt))"?'
+regex = '(?i)\b(?:padding(?:-(?:top|right|bottom|left))?|margin(?:-(?:top|right|bottom|left))?|(?:row-|column-)?gap|spacing)"?\s*[:=]\s*"?([^;{}"\x27\n]+)'
 value_group = 1
 
 [[rule]]
 id = "LIT-DURATION-STYLE"
 kind = "duration"
 globs = ["**/*.css", "**/*.toml", "**/*.json", "**/*.svg"]
-regex = '(?i)\b(?:transition(?:-duration|-delay)?|animation(?:-duration|-delay)?|duration)\s*[:=]\s*"?([0-9]+(?:\.[0-9]+)?(?:ms|s))"?'
+regex = '(?i)\b(?:transition(?:-duration|-delay)?|animation(?:-duration|-delay)?|duration)"?\s*[:=]\s*"?([^;{}"\x27\n]+)'
 value_group = 1
 
 [[rule]]
@@ -729,6 +746,86 @@ fn check_allow_marker(line: &str) -> AllowMarker {
     }
 }
 
+/// Units that make a number a literal of `kind` (longest first), or none for colours.
+fn kind_units(kind: RuleKind) -> &'static [&'static str] {
+    match kind {
+        RuleKind::Color => &[],
+        RuleKind::FontSize | RuleKind::Spacing => &["px", "pt"],
+        RuleKind::Duration => &["ms", "s"],
+    }
+}
+
+fn is_word_byte(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || b == b'_'
+}
+
+/// Byte ranges of every `<number><unit>` word in `value` whose unit belongs to `kind`
+/// (`12px`, `.5s`, `0.12s`, `120ms`; ASCII case-insensitive units). A number glued to a word or
+/// a dot before it (`fade2s`, `space.2`) or a word after it (`8pxx`) is not one.
+fn unit_literals(kind: RuleKind, value: &str) -> Vec<(usize, usize)> {
+    let units = kind_units(kind);
+    let b = value.as_bytes();
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < b.len() {
+        let starts_number = b[i].is_ascii_digit() || (b[i] == b'.' && b.get(i + 1).is_some_and(u8::is_ascii_digit));
+        let glued = i > 0 && (is_word_byte(b[i - 1]) || b[i - 1] == b'.');
+        if !starts_number || glued {
+            i += 1;
+            continue;
+        }
+        let mut j = i;
+        while j < b.len() && b[j].is_ascii_digit() {
+            j += 1;
+        }
+        if j < b.len() && b[j] == b'.' && b.get(j + 1).is_some_and(u8::is_ascii_digit) {
+            j += 1;
+            while j < b.len() && b[j].is_ascii_digit() {
+                j += 1;
+            }
+        }
+        let unit = units.iter().find(|u| {
+            b.get(j..j + u.len()).is_some_and(|w| w.eq_ignore_ascii_case(u.as_bytes()))
+                && !b.get(j + u.len()).copied().is_some_and(is_word_byte)
+        });
+        if let Some(u) = unit {
+            out.push((i, j + u.len()));
+            i = j + u.len();
+        } else {
+            i = j.max(i + 1);
+        }
+    }
+    out
+}
+
+/// The literals a rule match reports: for colours the value group itself; for the other kinds
+/// every unit literal inside it ([`unit_literals`]), or the whole group when it is one literal
+/// by itself (a Rust `Duration::from_millis(120)` argument list, or a single number-and-unit word
+/// of another unit). Returns `(byte offset in line, literal)`.
+fn literals_in<'a>(kind: RuleKind, m: &regex::Match<'a>) -> Vec<(usize, &'a str)> {
+    let text = m.as_str();
+    if kind == RuleKind::Color {
+        return vec![(m.start(), text)];
+    }
+    let found: Vec<(usize, &'a str)> =
+        unit_literals(kind, text).into_iter().filter_map(|(a, z)| text.get(a..z).map(|l| (m.start() + a, l))).collect();
+    if !found.is_empty() {
+        return found;
+    }
+    let t = text.trim();
+    let single_word = !t.is_empty() && !t.contains(|c: char| c.is_whitespace() || c == ',');
+    let number_first = t.starts_with(|c: char| c.is_ascii_digit() || c == '.');
+    let unit_last = t.ends_with(|c: char| c.is_ascii_alphabetic());
+    // The group is itself one recognised literal (`from_millis(120)`), or one number-and-unit
+    // word of a unit the kind does not list (`12em`, from a custom rule).
+    if normalise_literal(kind, t).is_some() || (single_word && number_first && unit_last) {
+        let lead = text.len() - text.trim_start().len();
+        vec![(m.start() + lead, t)]
+    } else {
+        Vec::new()
+    }
+}
+
 fn scan_text(rel: &str, text: &str, rules: &[&Rule], suggestions: &Suggestions, f: &mut Vec<LintFinding>) {
     for (idx, raw) in text.split('\n').enumerate() {
         let line_no = idx + 1;
@@ -753,21 +850,22 @@ fn scan_text(rel: &str, text: &str, rules: &[&Rule], suggestions: &Suggestions, 
                 let Some(m) = caps.get(rule.value_group) else {
                     continue;
                 };
-                let lit = m.as_str();
-                let col = line.get(..m.start()).map_or(1, |pre| pre.chars().count() + 1);
-                let suggs = normalise_literal(rule.kind, lit)
-                    .and_then(|norm| suggestions.get(&(rule.kind.bucket(), norm)))
-                    .map(|set| set.iter().cloned().collect::<Vec<_>>())
-                    .unwrap_or_default();
-                f.push(LintFinding {
-                    file: rel.to_string(),
-                    line: Some(line_no),
-                    column: Some(col),
-                    code: rule.id.clone(),
-                    literal: Some(lit.to_string()),
-                    suggestions: suggs,
-                    detail: format!("literal {lit:?} does not resolve to a design token"),
-                });
+                for (start, lit) in literals_in(rule.kind, &m) {
+                    let col = line.get(..start).map_or(1, |pre| pre.chars().count() + 1);
+                    let suggs = normalise_literal(rule.kind, lit)
+                        .and_then(|norm| suggestions.get(&(rule.kind.bucket(), norm)))
+                        .map(|set| set.iter().cloned().collect::<Vec<_>>())
+                        .unwrap_or_default();
+                    f.push(LintFinding {
+                        file: rel.to_string(),
+                        line: Some(line_no),
+                        column: Some(col),
+                        code: rule.id.clone(),
+                        literal: Some(lit.to_string()),
+                        suggestions: suggs,
+                        detail: format!("literal {lit:?} does not resolve to a design token"),
+                    });
+                }
             }
         }
     }
@@ -810,6 +908,9 @@ pub fn check(o: &Options<'_>) -> Result<Report, String> {
     };
 
     let mut files_scanned = 0usize;
+    // Files whose path matches some rule's globs, allowlisted or not: zero means the root holds
+    // nothing the rules apply to (`LINT-NO-FILES`).
+    let mut files_matched = 0usize;
     if root_md.is_file() {
         let name = o
             .root
@@ -817,6 +918,9 @@ pub fn check(o: &Options<'_>) -> Result<Report, String> {
             .and_then(|s| s.to_str())
             .ok_or_else(|| format!("--root {} has a non-UTF-8 file name", o.root.display()))?
             .to_string();
+        if rules.iter().any(|r| r.matches_path(&name)) {
+            files_matched += 1;
+        }
         if !allow_globs.iter().any(|g| glob_match(g, &name)) {
             let active: Vec<&Rule> = rules.iter().filter(|r| r.matches_path(&name)).collect();
             if !active.is_empty() {
@@ -839,6 +943,9 @@ pub fn check(o: &Options<'_>) -> Result<Report, String> {
                 f.push(LintFinding::schema(RULES_SCHEMA, &e.rel, format!("path refused: {d}")));
                 continue;
             }
+            if rules.iter().any(|r| r.matches_path(&e.rel)) {
+                files_matched += 1;
+            }
             if allow_globs.iter().any(|g| glob_match(g, &e.rel)) {
                 continue;
             }
@@ -852,14 +959,30 @@ pub fn check(o: &Options<'_>) -> Result<Report, String> {
         }
     }
 
+    // A broken rule set is already reported (and is why nothing matched); otherwise an empty
+    // match is a finding rather than a silent pass.
+    let rules_broken = f.iter().any(|x| x.code == RULES_SCHEMA || x.code == REGEX_ERR);
+    if files_matched == 0 && !rules_broken {
+        f.push(LintFinding::schema(
+            NO_FILES,
+            ".",
+            format!("no file under --root matches any of the {} rule(s); nothing was checked", rules.len()),
+        ));
+    }
+
     f.sort();
     f.dedup();
     Ok(Report { files_scanned, rules: rules.len(), findings: f })
 }
 
 impl Report {
+    /// 0 clean, 1 findings, 2 when no file matched any rule (`LINT-NO-FILES`).
     pub fn exit_code(&self) -> u8 {
-        u8::from(!self.findings.is_empty())
+        if self.findings.iter().any(|x| x.code == NO_FILES) {
+            2
+        } else {
+            u8::from(!self.findings.is_empty())
+        }
     }
 
     pub fn to_cvalue(&self) -> CValue {
@@ -923,5 +1046,44 @@ mod tests {
         assert_eq!(normalise_duration("0.12s"), Some("120ms".to_string()));
         assert_eq!(normalise_duration("from_millis(120)"), Some("120ms".to_string()));
         assert_eq!(normalise_duration("from_secs_f32(0.12)"), Some("120ms".to_string()));
+    }
+
+    fn lits(kind: RuleKind, v: &str) -> Vec<String> {
+        unit_literals(kind, v).into_iter().map(|(a, z)| v[a..z].to_string()).collect()
+    }
+
+    #[test]
+    fn unit_literals_find_every_value() {
+        assert_eq!(lits(RuleKind::Spacing, "0 8px"), ["8px"]);
+        assert_eq!(lits(RuleKind::Spacing, "4px 8px"), ["4px", "8px"]);
+        assert_eq!(lits(RuleKind::Spacing, "4px 8PX 2.5pt .5px"), ["4px", "8PX", "2.5pt", ".5px"]);
+        assert_eq!(lits(RuleKind::Duration, "opacity 120ms ease"), ["120ms"]);
+        assert_eq!(lits(RuleKind::Duration, "spin 1s linear infinite"), ["1s"]);
+        assert_eq!(
+            lits(RuleKind::Duration, "opacity 120ms ease, transform 0.2s ease-out 50ms"),
+            ["120ms", "0.2s", "50ms"]
+        );
+        assert_eq!(lits(RuleKind::Duration, ".5s"), [".5s"]);
+        // Not literals: unitless, glued to a word or a dot, followed by a word, other units.
+        assert!(lits(RuleKind::Duration, "fade2s 3 motion.fast").is_empty());
+        assert!(lits(RuleKind::Spacing, "space.2 8pxx 2em").is_empty());
+        assert!(lits(RuleKind::Duration, "8px").is_empty());
+        assert!(lits(RuleKind::Spacing, "120ms").is_empty());
+    }
+
+    #[test]
+    fn adjacent_hex_colours_are_all_found() {
+        let mut f = Vec::new();
+        let rules = parse_rules(DEFAULT_RULES_TOML, "default", &mut f);
+        let hex = rules.iter().find(|r| r.id == "LIT-COLOR-HEX").map(|r| r.regex.clone());
+        let found: Vec<String> = hex
+            .map(|re| {
+                re.captures_iter("border-color: #1f5fbf #2e8540 #fff,#000;")
+                    .filter_map(|c| c.get(1))
+                    .map(|m| m.as_str().to_string())
+                    .collect()
+            })
+            .unwrap_or_default();
+        assert_eq!(found, ["#1f5fbf", "#2e8540", "#fff", "#000"]);
     }
 }

@@ -1,4 +1,58 @@
 {
+  "adjacent": {
+    "exit": 1,
+    "findings": [
+      {
+        "code": "LIT-COLOR-HEX",
+        "file": "colors.css",
+        "line": 3,
+        "literal": "#1f5fbf",
+        "suggestions": [
+          "prim.color.blue.500",
+          "sem.focus.ring"
+        ]
+      },
+      {
+        "code": "LIT-COLOR-HEX",
+        "file": "colors.css",
+        "line": 3,
+        "literal": "#2e8540",
+        "suggestions": [
+          "prim.color.green.500",
+          "sem.status.ok"
+        ]
+      },
+      {
+        "code": "LIT-COLOR-HEX",
+        "file": "colors.css",
+        "line": 3,
+        "literal": "#fff",
+        "suggestions": []
+      },
+      {
+        "code": "LIT-COLOR-HEX",
+        "file": "colors.css",
+        "line": 4,
+        "literal": "#1f5fbf",
+        "suggestions": [
+          "prim.color.blue.500",
+          "sem.focus.ring"
+        ]
+      },
+      {
+        "code": "LIT-COLOR-HEX",
+        "file": "colors.css",
+        "line": 4,
+        "literal": "#2e8540",
+        "suggestions": [
+          "prim.color.green.500",
+          "sem.status.ok"
+        ]
+      }
+    ],
+    "package": "../pkg/v1.0.0",
+    "root": "adjacent"
+  },
   "allowed_empty": {
     "exit": 1,
     "findings": [
@@ -110,5 +164,88 @@
     ],
     "package": "../pkg/v1.0.0",
     "root": "dirty-multi"
+  },
+  "no_match": {
+    "exit": 2,
+    "findings": [
+      {
+        "code": "LINT-NO-FILES",
+        "file": ".",
+        "line": null,
+        "literal": null,
+        "suggestions": []
+      }
+    ],
+    "package": "../pkg/v1.0.0",
+    "root": "no-match"
+  },
+  "shorthand": {
+    "exit": 1,
+    "findings": [
+      {
+        "code": "LIT-DURATION-STYLE",
+        "file": "motion.css",
+        "line": 3,
+        "literal": "120ms",
+        "suggestions": [
+          "motion.fast"
+        ]
+      },
+      {
+        "code": "LIT-DURATION-STYLE",
+        "file": "motion.css",
+        "line": 3,
+        "literal": "0.2s",
+        "suggestions": []
+      },
+      {
+        "code": "LIT-DURATION-STYLE",
+        "file": "motion.css",
+        "line": 3,
+        "literal": "50ms",
+        "suggestions": []
+      },
+      {
+        "code": "LIT-DURATION-STYLE",
+        "file": "motion.css",
+        "line": 7,
+        "literal": "1s",
+        "suggestions": []
+      }
+    ],
+    "package": "../pkg/v1.0.0",
+    "root": "shorthand"
+  },
+  "spacing": {
+    "exit": 1,
+    "findings": [
+      {
+        "code": "LIT-SPACE-STYLE",
+        "file": "box.css",
+        "line": 3,
+        "literal": "8px",
+        "suggestions": [
+          "space.2"
+        ]
+      },
+      {
+        "code": "LIT-SPACE-STYLE",
+        "file": "box.css",
+        "line": 4,
+        "literal": "4px",
+        "suggestions": []
+      },
+      {
+        "code": "LIT-SPACE-STYLE",
+        "file": "box.css",
+        "line": 4,
+        "literal": "8px",
+        "suggestions": [
+          "space.2"
+        ]
+      }
+    ],
+    "package": "../pkg/v1.0.0",
+    "root": "spacing"
   }
 }
