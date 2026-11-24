@@ -12,9 +12,12 @@
 //! - [`package`]: the `capability-package/v1` language-neutral capability-package description
 //!   format, [`CapabilityPackage`] trait, validator and RFC 8785 canonical digest
 //!   (`HAL.IDL.GEN.FMT`).
+//! - [`profile`]: the `instrument-profile/v1` descriptor, its validator, the spec-sheet UEC
+//!   cap and the canonical digest that excludes the signature block (`HAL.IDL.PROFILE`).
 
 pub mod base;
 pub mod package;
+pub mod profile;
 pub mod stamp;
 pub mod units;
 
@@ -48,3 +51,5 @@ pub use package::{
     SemanticsNote, ALLOWED_SCHEMA_KEYWORDS, ALLOWED_SCHEMA_TYPES, MAX_PACKAGE_BYTES, MAX_PACKAGE_DEPTH,
     MAX_SEMANTICS_BYTES, PACKAGE_SCHEMA_TAG,
 };
+
+pub use profile::{InstrumentProfile, ProfileError, ProfileErrorKind, SourceKind as ProfileSourceKind};
