@@ -18,10 +18,12 @@
 //! - [`space`]: `space-check` (`UX.TOKENS.SPACE`).
 //! - [`icons_prov`]: `icons-prov` and `icons-registry` (`UX.ICONS.PROV`).
 //! - [`page`]: `page-check` (`UX.REPORT.PAGE`).
+//! - [`glyph`]: `glyph-distinct` (`UX.ICONS.CLASS`).
 
 pub mod color;
 pub mod finding;
 pub mod fonts;
+pub mod glyph;
 pub mod icons_lint;
 pub mod icons_prov;
 pub mod lint;

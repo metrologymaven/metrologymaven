@@ -1,0 +1,148 @@
+{
+  "format": "glyph-distinct-expected@1",
+  "roots": {
+    "design/icons": {
+      "findings": [],
+      "groups": {
+        "class": {
+          "glyphs": 11,
+          "min": {
+            "a": "class.w3",
+            "b": "class.m1",
+            "shift": [
+              0,
+              0
+            ],
+            "symdiff": 25,
+            "union": 88
+          }
+        },
+        "prov": {
+          "glyphs": 5,
+          "min": {
+            "a": "prov.computed",
+            "b": "prov.measured",
+            "shift": [
+              0,
+              0
+            ],
+            "symdiff": 36,
+            "union": 65
+          }
+        },
+        "state": {
+          "glyphs": 6,
+          "min": {
+            "a": "state.conforms",
+            "b": "state.not-decidable",
+            "shift": [
+              0,
+              0
+            ],
+            "symdiff": 14,
+            "union": 54
+          }
+        }
+      }
+    },
+    "fixtures/ux/icons/class/missing-class": {
+      "findings": [
+        [
+          "GLYPH-MISSING",
+          "class.i1"
+        ]
+      ],
+      "groups": {
+        "class": {
+          "glyphs": 10,
+          "min": {
+            "a": "class.w3",
+            "b": "class.m1",
+            "shift": [
+              0,
+              0
+            ],
+            "symdiff": 25,
+            "union": 88
+          }
+        },
+        "prov": {
+          "glyphs": 5,
+          "min": {
+            "a": "prov.computed",
+            "b": "prov.measured",
+            "shift": [
+              0,
+              0
+            ],
+            "symdiff": 36,
+            "union": 65
+          }
+        },
+        "state": {
+          "glyphs": 6,
+          "min": {
+            "a": "state.conforms",
+            "b": "state.not-decidable",
+            "shift": [
+              0,
+              0
+            ],
+            "symdiff": 14,
+            "union": 54
+          }
+        }
+      }
+    },
+    "fixtures/ux/icons/class/twins": {
+      "findings": [
+        [
+          "GLYPH-SIMILAR",
+          "state.indeterminate state.not-decidable"
+        ]
+      ],
+      "groups": {
+        "class": {
+          "glyphs": 11,
+          "min": {
+            "a": "class.w3",
+            "b": "class.m1",
+            "shift": [
+              0,
+              0
+            ],
+            "symdiff": 25,
+            "union": 88
+          }
+        },
+        "prov": {
+          "glyphs": 5,
+          "min": {
+            "a": "prov.computed",
+            "b": "prov.measured",
+            "shift": [
+              0,
+              0
+            ],
+            "symdiff": 36,
+            "union": 65
+          }
+        },
+        "state": {
+          "glyphs": 6,
+          "min": {
+            "a": "state.indeterminate",
+            "b": "state.not-decidable",
+            "shift": [
+              0,
+              0
+            ],
+            "symdiff": 1,
+            "union": 30
+          }
+        }
+      }
+    }
+  },
+  "threshold": "0.20"
+}

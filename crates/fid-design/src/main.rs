@@ -14,6 +14,7 @@
 //! `fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]`,
 //! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]`,
 //! `fid-design icons-lint --root <icons dir> [--json]`,
+//! `fid-design glyph-distinct --root <icons dir> [--threshold <0..1>] [--json]`,
 //! `fid-design fonts-check --root <design dir> --allowlist <file> [--json]`,
 //! `fid-design page-check (--root <design dir> | --file <pages.json>) [--json]`,
 //! `fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]`,
@@ -43,6 +44,7 @@ const USAGE: &str =
        fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]
        fid-design screens-gate --spec <spec dir> --root <design dir> [--json]
        fid-design icons-lint --root <icons dir> [--json]
+       fid-design glyph-distinct --root <icons dir> [--threshold <0..1>] [--json]
        fid-design fonts-check --root <design dir> --allowlist <file> [--json]
        fid-design page-check (--root <design dir> | --file <pages.json>) [--json]
        fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]
@@ -72,6 +74,7 @@ struct Args {
     ga: Option<String>,
     spec: Option<PathBuf>,
     pr: Option<u64>,
+    threshold: Option<String>,
     all: bool,
     json: bool,
 }
@@ -109,6 +112,7 @@ fn parse_args(args: &[String]) -> Option<Args> {
                 }
                 out.pr = Some(n);
             }
+            "--threshold" => out.threshold = Some(it.next()?.clone()),
             "--all" => out.all = true,
             _ => return None,
         }
@@ -157,6 +161,49 @@ fn main() -> ExitCode {
     let Some(args) = parse_args(&all[1..]) else {
         return usage();
     };
+    if cmd == "glyph-distinct" {
+        let others = args.key.is_some()
+            || args.rules.is_some()
+            || args.package.is_some()
+            || args.allowlist.is_some()
+            || args.from.is_some()
+            || args.to.is_some()
+            || args.file.is_some()
+            || args.copy.is_some()
+            || args.words.is_some()
+            || args.changed.is_some()
+            || args.deny_names.is_some()
+            || args.base.is_some()
+            || args.baseline.is_some()
+            || args.out.is_some()
+            || args.attribution.is_some()
+            || args.manifest.is_some()
+            || args.journeys.is_some()
+            || args.ga.is_some()
+            || args.spec.is_some()
+            || args.pr.is_some()
+            || args.all;
+        let Some(root) = &args.root else {
+            return usage();
+        };
+        if others {
+            return usage();
+        }
+        let threshold = match &args.threshold {
+            None => fid_design::glyph::Threshold::default_value(),
+            Some(t) => match fid_design::glyph::Threshold::parse(t) {
+                Ok(t) => t,
+                Err(e) => return fail(e),
+            },
+        };
+        return match fid_design::glyph::check(root, &threshold) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        };
+    }
+    if args.threshold.is_some() {
+        return usage();
+    }
     let pkg_flags = args.root.is_some() || args.from.is_some() || args.to.is_some();
     let princ_flags = args.file.is_some() || args.copy.is_some() || args.words.is_some();
     let screen_flags = args.journeys.is_some() || args.ga.is_some() || args.spec.is_some();

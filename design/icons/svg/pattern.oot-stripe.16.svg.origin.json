@@ -1,0 +1,11 @@
+{
+  "artefact": "icons/svg/pattern.oot-stripe.16.svg",
+  "author": "Claude Code (Claude Opus 5.5), agent author of UX.ICONS.CLASS",
+  "date": "2026-11-24",
+  "references": [
+    "The UX.ICONS.CLASS and UX.ICONS spec nodes in this repository",
+    "The icon style guide (icons/STYLE.md) in this repository",
+    "The side-effect classes of the project constitution (spec/CONSTITUTION.md); drawn from plain geometric shapes on the project grid, no other source"
+  ],
+  "statement_version": "originality-statement@1"
+}
