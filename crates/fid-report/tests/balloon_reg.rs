@@ -352,8 +352,15 @@ fn oracle_extras_relink_remove_renumber_zone() {
     assert_eq!(run_replay(&reg, &world), ReplayOutcome::Identical);
 }
 
+/// Round-trips the journal through canonical bytes (as stored), then replays it exactly.
 fn run_replay(reg: &BalloonRegister, world: &World) -> ReplayOutcome {
-    let run = replay_exact(reg.journal(), &world.env());
+    let events: Vec<BalloonEvent> = reg
+        .journal()
+        .iter()
+        .map(|e| BalloonEvent::from_value(&parse(&to_canonical_bytes(&e.to_value()).unwrap()).unwrap()).unwrap())
+        .collect();
+    assert_eq!(events, reg.journal());
+    let run = replay_exact(&events, &world.env());
     if run.outcome == ReplayOutcome::Identical {
         assert_eq!(list_bytes(&run.register, world.rev), list_bytes(reg, world.rev));
     }
