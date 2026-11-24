@@ -24,6 +24,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-fit" = "kernel"
 # Construction contract (KRN.CONS.DECL): KNP-1, only fid-fit, fid-kci, fid-num, fid-types.
 "fid-construct" = "kernel"
+# Outlier policies and point selection (KRN.OUT.POL first): KNP-1, only fid-fit, fid-kci, fid-num, fid-types.
+"fid-filter" = "kernel"
 "fid-scan-cmp" = "kernel"
 # Mesh quality report (SCAN.POLY.QUAL) and mesh-operation contract (SCAN.MESHOP.PROV): KNP-1,
 # only fid-geo-types, fid-kci, fid-num and fid-types.
@@ -125,6 +127,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-ctrl" = "services"
 # Windows ACL shim for the control-channel token file (AUTO.CTRL.AUTH): the named `unsafe` exception.
 "fid-ctrl-acl" = "services"
+# Key store contract (TRUST.SIGN.KEYSTORE.TRAIT): KeyStore trait, test backend and conformance suite
+# over fid-sign-core and fid-canon (model).
+"fid-keystore" = "services"
 "fid-gdt" = "services"
 "fid-mig" = "services"
 # RDL record format (UNC.RDL.FORMAT): needs fid-surface (services) and fid-replay (engine).
@@ -186,3 +191,5 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-testkit" = "test-support"
 # VIZ.SHELL.SPKTREE throwaway toolkit spike; never a dependency of product crates.
 "fid-spike-ui" = "viewer"
+# OUTR.DOCS.GUIDE.WASM: safe-Rust WASM/CLI Field Guide runner linking pure L0/model crates only.
+"fid-guide-wasm" = "tool"

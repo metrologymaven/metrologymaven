@@ -34,7 +34,9 @@
 //! `convergence` block. Until that manifest block is reachable from here (CORE.REG.DEF, see
 //! the leaf's Open questions), the name is validated syntactically only (`[a-z0-9_]`, 1 to 64
 //! bytes, else `history_bad_criterion`), not against the declared criteria. Its text form is
-//! `outcome(name)`, for example `converged(increment)`.
+//! `outcome(name)`, for example `converged(translation_tol)` (the names ALN.BFIT.STOP
+//! records: `converged(translation_tol)`, `converged(objective_rel_tol)`,
+//! `limit(max_iterations)`, `diverged(divergence_window)`).
 //!
 //! # Digest (D0)
 //!
@@ -410,7 +412,10 @@ mod tests {
 
     #[test]
     fn criterion_names() {
-        assert_eq!(StoppedBy::new(Outcome::Converged, "increment").unwrap().to_string(), "converged(increment)");
+        assert_eq!(
+            StoppedBy::new(Outcome::Converged, "translation_tol").unwrap().to_string(),
+            "converged(translation_tol)"
+        );
         assert_eq!(StoppedBy::new(Outcome::Limit, "max_iterations").unwrap().to_string(), "limit(max_iterations)");
         for bad in ["", "Increment", "a-b", "a b", &"x".repeat(65)] {
             assert_eq!(StoppedBy::new(Outcome::Diverged, bad).unwrap_err().code(), "history_bad_criterion", "{bad:?}");

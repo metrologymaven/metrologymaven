@@ -86,6 +86,10 @@ Maps an `UncertaintyStatement` to and from QIF 3.0 results so that class, method
 - **Layering:** `IO.QIF` was removed from `depends_on`. This mapping is L0 and must not depend on L2 IO crates; it reads the XSD and the extension schema as artifacts.
 - The import downgrade (REQ-004) may need review by IO owners.
 
+## Change log
+
+- 2026-11-23 (maintainer waiver: cross-leaf, edited with UNC.UEC.STMT in #569): the statement field `samples_digest` (`UNC.UEC.STMT`, `MCM` only) maps to the extension element `fx:SamplesDigest` (`Sha256DigestType`, optional, between `fx:Nonlinearity` and `fx:SelectionRule`), as map row 20 of `qif-unc-map@1`, in the XSD and in `docs/unc/qif-unc-map-1.md`. The change is additive within `qif-unc-map@1` / `unc-qif-stmt@1`: documents without the field are byte-identical, and an older reader fails closed (unknown element) on one that carries it. New AC-3 document `fixtures/unc/qif/docs/uec1_mcm_samples.qif` puts the element under the XSD check. No REQ ID was renumbered.
+
 ## Children
 
 _Leaf: none._

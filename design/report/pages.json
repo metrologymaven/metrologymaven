@@ -1,0 +1,89 @@
+{
+  "format": "page-grids@1",
+  "grids": [
+    {
+      "id": "a4-portrait",
+      "page": {
+        "width_mm": "210.0",
+        "height_mm": "297.0"
+      },
+      "margins": {
+        "top_mm": "15.0",
+        "right_mm": "15.0",
+        "bottom_mm": "15.0",
+        "left_mm": "18.0"
+      },
+      "safe_margin_mm": "10.0",
+      "columns": 12,
+      "column_width_mm": "12.0",
+      "gutter_mm": "3.0",
+      "content_width_mm": "177.0",
+      "header_band_mm": "12.0",
+      "footer_band_mm": "10.0",
+      "content_height_mm": "245.0"
+    },
+    {
+      "id": "a4-landscape",
+      "page": {
+        "width_mm": "297.0",
+        "height_mm": "210.0"
+      },
+      "margins": {
+        "top_mm": "15.0",
+        "right_mm": "15.0",
+        "bottom_mm": "15.0",
+        "left_mm": "18.0"
+      },
+      "safe_margin_mm": "10.0",
+      "columns": 12,
+      "column_width_mm": "19.25",
+      "gutter_mm": "3.0",
+      "content_width_mm": "264.0",
+      "header_band_mm": "12.0",
+      "footer_band_mm": "10.0",
+      "content_height_mm": "158.0"
+    },
+    {
+      "id": "letter-portrait",
+      "page": {
+        "width_mm": "215.9",
+        "height_mm": "279.4"
+      },
+      "margins": {
+        "top_mm": "15.0",
+        "right_mm": "14.95",
+        "bottom_mm": "15.0",
+        "left_mm": "17.95"
+      },
+      "safe_margin_mm": "10.0",
+      "columns": 12,
+      "column_width_mm": "12.5",
+      "gutter_mm": "3.0",
+      "content_width_mm": "183.0",
+      "header_band_mm": "12.0",
+      "footer_band_mm": "10.0",
+      "content_height_mm": "227.4"
+    },
+    {
+      "id": "letter-landscape",
+      "page": {
+        "width_mm": "279.4",
+        "height_mm": "215.9"
+      },
+      "margins": {
+        "top_mm": "15.0",
+        "right_mm": "15.2",
+        "bottom_mm": "15.0",
+        "left_mm": "18.2"
+      },
+      "safe_margin_mm": "10.0",
+      "columns": 12,
+      "column_width_mm": "17.75",
+      "gutter_mm": "3.0",
+      "content_width_mm": "246.0",
+      "header_band_mm": "12.0",
+      "footer_band_mm": "10.0",
+      "content_height_mm": "163.9"
+    }
+  ]
+}

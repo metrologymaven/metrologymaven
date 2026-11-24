@@ -1,0 +1,10 @@
+{
+  "artefact": "tokens/type.tokens.json",
+  "author": "Antigravity (Google DeepMind), agent author of UX.TOKENS.TYPE",
+  "date": "2026-11-22",
+  "references": [
+    "The UX.TOKENS.TYPE, UX.TOKENS and UX.SYSTEM.PKG spec nodes in this repository",
+    "The design principles (design/principles.md) in this repository"
+  ],
+  "statement_version": "originality-statement@1"
+}

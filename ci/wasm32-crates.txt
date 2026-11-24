@@ -5,6 +5,7 @@ fid-align-solve
 fid-canon
 fid-clarabel
 fid-construct
+fid-filter
 fid-fit
 fid-geo-cad
 fid-geo-cmd

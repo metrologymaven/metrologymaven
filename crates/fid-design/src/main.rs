@@ -11,21 +11,38 @@
 //! [--deny-names <file>] [--json]` or `review-check --all --root <design dir> [--base <repo>] ..`,
 //! `fid-design icons-prov --root <design dir> --attribution <file> [--json]`,
 //! `fid-design icons-registry --manifest <file> --root <design dir> [--json]`,
-//! `fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]` and
+//! `fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]`,
 //! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]`,
+//! `fid-design icons-lint --root <icons dir> [--json]`,
+//! `fid-design fonts-check --root <design dir> --allowlist <file> [--json]`,
+//! `fid-design page-check (--root <design dir> | --file <pages.json>) [--json]` and
 //! `fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]`.
-//! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage.
+//! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage (`icons-lint` also
+//! exits 2 for a root holding no SVG).
 
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 const USAGE: &str =
-    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design tokens-check --root <design dir> [--json]\n       fid-design status-check --root <design dir> [--json]\n       fid-design space-check --root <design dir> [--json]\n       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]\n       fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]\n       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]
+    "usage: fid-design pkg-check --root <dir> [--json]
+       fid-design pkg-diff --from <dir> --to <dir> [--json]
+       fid-design tokens-check --root <design dir> [--json]
+       fid-design status-check --root <design dir> [--json]
+       fid-design space-check --root <design dir> [--json]
+       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]
+       fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]
+       fid-design princ-check [--file <md>] [--json]
+       fid-design words-check --copy <jsonl> [--words <json>] [--json]
+       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]
+       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]
        fid-design icons-prov --root <design dir> --attribution <file> [--json]
        fid-design icons-registry --manifest <file> --root <design dir> [--json]
        fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]
        fid-design screens-gate --spec <spec dir> --root <design dir> [--json]
+       fid-design icons-lint --root <icons dir> [--json]
+       fid-design fonts-check --root <design dir> --allowlist <file> [--json]
+       fid-design page-check (--root <design dir> | --file <pages.json>) [--json]
        fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]";
 
 #[derive(Default)]
@@ -137,6 +154,33 @@ fn main() -> ExitCode {
     let pkg_flags = args.root.is_some() || args.from.is_some() || args.to.is_some();
     let princ_flags = args.file.is_some() || args.copy.is_some() || args.words.is_some();
     let screen_flags = args.journeys.is_some() || args.ga.is_some() || args.spec.is_some();
+    if cmd == "fonts-check" {
+        let others = princ_flags
+            || screen_flags
+            || args.from.is_some()
+            || args.to.is_some()
+            || args.baseline.is_some()
+            || args.out.is_some()
+            || args.changed.is_some()
+            || args.deny_names.is_some()
+            || args.base.is_some()
+            || args.pr.is_some()
+            || args.all
+            || args.attribution.is_some()
+            || args.manifest.is_some()
+            || args.rules.is_some()
+            || args.package.is_some();
+        let (Some(root), Some(allowlist)) = (&args.root, &args.allowlist) else {
+            return usage();
+        };
+        if others {
+            return usage();
+        }
+        return match fid_design::fonts::check(root, allowlist) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        };
+    }
     if cmd == "lint-literals" {
         let others = princ_flags
             || screen_flags
@@ -277,6 +321,19 @@ fn main() -> ExitCode {
         return usage();
     }
     match cmd.as_str() {
+        "page-check" if args.from.is_none() && args.to.is_none() && args.copy.is_none() && args.words.is_none() => {
+            return match (&args.root, &args.file) {
+                (Some(root), None) => match fid_design::page::check(root) {
+                    Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+                    Err(e) => fail(e),
+                },
+                (None, Some(file)) => match fid_design::page::check_file(file) {
+                    Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+                    Err(e) => fail(e),
+                },
+                _ => usage(),
+            };
+        }
         "princ-check" if !pkg_flags && args.copy.is_none() && args.words.is_none() => {
             let file = args.file.clone().unwrap_or_else(|| PathBuf::from(fid_design::princ::DEFAULT_FILE));
             return match fid_design::princ::check(&file) {
@@ -336,6 +393,10 @@ fn main() -> ExitCode {
         },
         ("palettes-check", Some(root), None, None) => match fid_design::palettes::check(root, args.baseline.as_deref())
         {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        },
+        ("icons-lint", Some(root), None, None) => match fid_design::icons_lint::check(root) {
             Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
             Err(e) => fail(e),
         },

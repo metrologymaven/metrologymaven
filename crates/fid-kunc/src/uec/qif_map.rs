@@ -162,6 +162,12 @@ pub const QIF_UNC_MAP: &[QifMapRow] = &[
         iso_23952_clause: "ISO 23952:2020 cl. 6.3 (Attributes/UserDataXML)",
     },
     QifMapRow {
+        statement_field: "samples_digest",
+        qif_native_element: None,
+        extension_element: "fx:UncertaintyStatement/fx:SamplesDigest",
+        iso_23952_clause: "ISO 23952:2020 cl. 6.3 (Attributes/UserDataXML)",
+    },
+    QifMapRow {
         statement_field: "selection_rule",
         qif_native_element: None,
         extension_element: "fx:UncertaintyStatement/fx:SelectionRule",
@@ -464,6 +470,9 @@ pub fn to_qif(statement: &UncertaintyStatement) -> UncQifFragment {
             push_elem(&mut xml, "fx:Reason", reason);
         }
         xml.push_str("</fx:Nonlinearity>");
+    }
+    if let Some(d) = statement.samples_digest() {
+        push_elem(&mut xml, "fx:SamplesDigest", d.as_str());
     }
     if let Some(rule) = statement.selection_rule() {
         push_elem(&mut xml, "fx:SelectionRule", rule);
@@ -806,6 +815,7 @@ fn xml_to_canonical_json(root: &XmlElem) -> Result<Vec<u8>, QifMapError> {
     let mut seen_contributors = false;
     let mut seen_lpu_mc = false;
     let mut seen_nlin = false;
+    let mut seen_samples = false;
     let mut seen_sel = false;
     let mut seen_est = false;
     let mut seen_prov = false;
@@ -1086,6 +1096,13 @@ fn xml_to_canonical_json(root: &XmlElem) -> Result<Vec<u8>, QifMapError> {
                     o.push(("reason".to_owned(), Json::Str(v.to_owned())));
                 }
                 members.push(("nonlinearity".to_owned(), Json::Obj(o)));
+            }
+            "SamplesDigest" => {
+                if seen_samples {
+                    return Err(QifMapError::MalformedXml("duplicate fx:SamplesDigest"));
+                }
+                seen_samples = true;
+                members.push(("samples_digest".to_owned(), Json::Str(leaf_text(child)?.to_owned())));
             }
             "SelectionRule" => {
                 if seen_sel {

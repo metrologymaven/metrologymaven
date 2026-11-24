@@ -106,7 +106,8 @@ fn ac2_uec0_has_no_native_numeric_fields_and_carries_reason() {
     assert_eq!(err, QifMapError::Conflict { field: "U" });
 }
 
-/// AC-3: all four QIF Results documents in `fixtures/unc/qif/docs/*.qif` (one per class UEC-0..3)
+/// AC-3: the QIF Results documents in `fixtures/unc/qif/docs/*.qif` (one per class UEC-0..3, plus
+/// one MCM statement carrying `fx:SamplesDigest`)
 /// parse and round-trip with canonical digests matching the source statements, and their extension
 /// XML matches `to_qif` byte for byte.
 #[test]
@@ -116,6 +117,7 @@ fn ac3_qif_docs_per_class_roundtrip_and_match_to_qif() {
         ("fixtures/unc/qif/docs/uec1.qif", "fixtures/unc/stmt/valid/uec1_declared.json"),
         ("fixtures/unc/qif/docs/uec2.qif", "fixtures/unc/stmt/valid/uec2_lpu.json"),
         ("fixtures/unc/qif/docs/uec3.qif", "fixtures/unc/stmt/valid/uec3_iso15530_3.json"),
+        ("fixtures/unc/qif/docs/uec1_mcm_samples.qif", "fixtures/unc/stmt/valid/uec1_mcm_samples.json"),
     ];
     for (qif_rel, json_rel) in pairs {
         let qif_xml = std::fs::read_to_string(repo_root().join(qif_rel)).expect("read qif doc");
@@ -213,5 +215,5 @@ fn ac6_unsupported_version_and_bounds() {
     assert_eq!(ALGORITHM_ID, "unc.uec.qif_map@1.0.0");
     assert_eq!(EXTENSION_VERSION, "unc-qif-stmt@1");
     assert_eq!(MAP_ID, "qif-unc-map@1");
-    assert_eq!(QIF_UNC_MAP.len(), 19);
+    assert_eq!(QIF_UNC_MAP.len(), 20);
 }
