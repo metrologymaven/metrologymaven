@@ -231,7 +231,7 @@ impl<'b> FaceSet<'b> {
             }
             list.push((ix, tf));
         }
-        list.sort_by(|a, b| a.0.cmp(&b.0));
+        list.sort_by_key(|a| a.0);
         for w in list.windows(2) {
             if w[0].0 == w[1].0 {
                 return Err(DevError::DuplicateFace { face: w[1].1.face.clone() });
@@ -457,8 +457,9 @@ pub fn deviations(
             None => DevOutcome::NoProjection,
             Some((ix, hit)) => {
                 let pr = project_one(faces, index, q, hit, ix)?;
+                // Both values are finite and >= 0 (checked in `FaceSet::new`).
                 max_approx = match max_approx {
-                    Some(m) if !(pr.approx_error > m) => Some(m),
+                    Some(m) if pr.approx_error <= m => Some(m),
                     _ => Some(pr.approx_error),
                 };
                 DevOutcome::Projected(pr)
