@@ -25,9 +25,13 @@
 //! [`ApiReply::DryRun`] always becomes outcome `dry_run` with no journal entry hash, never
 //! `committed` or `computed` (D-045).
 //!
-//! **Hidden commands.** Bus code `hidden_command` becomes envelope code `not_found`, so a
-//! surface that does not filter does not confirm that a hidden major exists (D-035). The bus
-//! code stays in the error details for `AUTO.CLI.DISPATCH`, which keys on it.
+//! **Hidden commands (D-035).** A failure with bus code `hidden_command`, from any stage, is
+//! reported byte for byte as the bus's own refusal of a major its table does not hold:
+//! `not_found` with message `"<name>"@<major>: unknown major` (the detail of
+//! `fid_bus::validate::CommandTable::resolve`) and details `bus_code: not_found`,
+//! `bus_reason: unknown_major`, `bus_origin: pipeline` ([`hidden_as_unknown_major`]). So no
+//! surface, filtering or not, can tell a lifecycle-hidden major from a missing one, and
+//! `AUTO.CLI.DISPATCH` still counts it as absent (maintainer decision 2026-11-25).
 //!
 //! Determinism N (call IDs); [`envelope_for`] is D0.
 
@@ -71,6 +75,8 @@ pub const BUS_ERROR_TABLE: &[(&str, Option<&str>, ErrorCode)] = &[
     ("conflict", None, ErrorCode::Conflict),
     ("idempotency_mismatch", None, ErrorCode::Conflict),
     ("not_found", None, ErrorCode::NotFound),
+    // Never reached through `envelope_for`, which reports `hidden_command` as the unknown-major
+    // refusal first (D-035); kept so the table covers every bus code.
     ("hidden_command", None, ErrorCode::NotFound),
     ("unauthenticated", None, ErrorCode::PolicyRefused),
     ("upgrade_refused", None, ErrorCode::PolicyRefused),
@@ -119,6 +125,8 @@ fn text(s: &str) -> CValue {
 ///   `RequestFiled` is `request_filed` with `request_id`, `DryRun` is `dry_run`; each carries
 ///   the reply's result, if any;
 /// - a failure with bus code `cancelled` is outcome `cancelled` with no error;
+/// - a failure with bus code `hidden_command`, from any stage, is [`hidden_as_unknown_major`]
+///   (D-035);
 /// - any other failure is `failed` with the code [`error_code_for`] gives, the bus detail as
 ///   the message and the details `bus_code`, `bus_reason` and `bus_origin`.
 ///
@@ -141,19 +149,43 @@ pub fn envelope_for(command: &CommandId, reply: &ApiReply) -> Envelope {
             Envelope { request_id: Some(request_id.clone()), ..Envelope::bare(id, Outcome::RequestFiled) }
         }
         ApiReply::DryRun { result } => Envelope { result: Some(result.clone()), ..Envelope::bare(id, Outcome::DryRun) },
-        ApiReply::Failed(e) => failed_envelope(id, e),
+        ApiReply::Failed(e) => failed_envelope(command, e),
     }
 }
 
-fn failed_envelope(id: &str, e: &ApiError) -> Envelope {
+/// The bus code that is reported as the unknown-major refusal (D-035).
+pub const HIDDEN_COMMAND: &str = "hidden_command";
+/// Longest name the bus shows in a resolve refusal (`fid_bus::validate::CommandTable::resolve`).
+const SHOWN_NAME_CHARS: usize = 128;
+
+/// The envelope of a `hidden_command` failure for `command` (D-035): exactly the envelope of
+/// the bus's `not_found/unknown_major` refusal of `command` at stage `resolve`, whose detail is
+/// `"<name>"@<major>: unknown major` with the name shown as a Rust debug string, cut to 128
+/// characters, as `fid_bus::validate::CommandTable::resolve` writes it. The hidden error's own
+/// reason, detail and stage are dropped.
+pub fn hidden_as_unknown_major(command: &CommandId) -> Envelope {
+    let shown: String = command.name().chars().take(SHOWN_NAME_CHARS).collect();
+    let message = format!("{shown:?}@{}: unknown major", command.major());
+    failed_body(command.as_str(), "not_found", "unknown_major", ApiStage::Resolve, &message)
+}
+
+fn failed_envelope(command: &CommandId, e: &ApiError) -> Envelope {
+    let id = command.as_str();
     if e.code() == CANCELLED {
         return Envelope::bare(id, Outcome::Cancelled);
     }
+    if e.code() == HIDDEN_COMMAND {
+        return hidden_as_unknown_major(command);
+    }
+    failed_body(id, e.code(), e.reason(), e.stage(), e.detail())
+}
+
+fn failed_body(id: &str, code: &str, reason: &str, stage: ApiStage, message: &str) -> Envelope {
     let mut details = BTreeMap::new();
-    details.insert("bus_code".to_string(), text(e.code()));
-    details.insert("bus_reason".to_string(), text(e.reason()));
-    details.insert("bus_origin".to_string(), text(bus_origin(e.stage())));
-    Envelope::failed(id, error_code_for(e.code(), e.reason()), e.detail(), Some(CValue::Obj(details)))
+    details.insert("bus_code".to_string(), text(code));
+    details.insert("bus_reason".to_string(), text(reason));
+    details.insert("bus_origin".to_string(), text(bus_origin(stage)));
+    Envelope::failed(id, error_code_for(code, reason), message, Some(CValue::Obj(details)))
 }
 
 /// The [`BusTransport`] over one in-process [`BusPort`] (module docs).

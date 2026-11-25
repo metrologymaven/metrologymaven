@@ -30,6 +30,10 @@ fn pipeline_misses_are_absent_answers() {
     ] {
         assert!(verdict(code, reason, ApiStage::Resolve), "{code}/{reason}");
     }
+    // D-035: a hidden major is reported as the resolve stage's unknown major from any stage.
+    for stage in ApiStage::ALL {
+        assert!(verdict("hidden_command", "hidden_major", *stage), "hidden_command from {stage}");
+    }
     assert!(!verdict("not_found", "unknown_entity", ApiStage::Resolve));
     assert!(!verdict("not_found", "unknown_command", ApiStage::Session));
 }

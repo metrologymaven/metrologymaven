@@ -8,8 +8,8 @@
 use fid_bus_api::{ApiError, ApiReply, ApiStage, BusCall, BusPort, ChannelInfo, PortKind, PrincipalKind};
 use fid_canon::{parse, to_canonical_bytes, CValue};
 use fid_surface::inproc::{
-    bus_origin, envelope_for, error_code_for, InProcTransport, BUS_ERROR_TABLE, CANCELLED, MAX_QUEUED_EVENTS,
-    NO_LIVE_JOB,
+    bus_origin, envelope_for, error_code_for, hidden_as_unknown_major, InProcTransport, BUS_ERROR_TABLE, CANCELLED,
+    MAX_QUEUED_EVENTS, NO_LIVE_JOB,
 };
 use fid_surface::jobs::{
     BusEvent, BusRequest, BusTransport, CancelStatus, CountingKeySource, InvocationId, ManualClock, Purpose, Reason,
@@ -344,21 +344,36 @@ fn dry_run_never_looks_committed() {
     env.validate().unwrap();
 }
 
-/// REQ-005 and D-035: a hidden command and an unknown one get the same envelope code.
+/// D-035 (maintainer decision 2026-11-25): a `hidden_command` failure from any stage, whatever
+/// its reason and detail, gives exactly the bytes of the bus's `not_found/unknown_major`
+/// refusal of the same ID from stage `resolve`. The refusal here carries the detail
+/// `fid_bus::validate::CommandTable::resolve` writes; `tests/inproc_bus.rs` takes both sides
+/// from a real bus.
 #[test]
-fn hidden_and_unknown_commands_share_the_envelope_code() {
-    let hidden = envelope_for(
-        &cmd(),
-        &ApiReply::Failed(api_error("hidden_command", "hidden_major", "demo.show_thing@1", ApiStage::Resolve)),
-    );
+fn hidden_command_is_byte_for_byte_the_unknown_major_refusal() {
     let unknown = envelope_for(
         &cmd(),
-        &ApiReply::Failed(api_error("not_found", "unknown_command", "demo.show_thing@1", ApiStage::Resolve)),
+        &ApiReply::Failed(api_error(
+            "not_found",
+            "unknown_major",
+            "\"demo.show_thing\"@1: unknown major",
+            ApiStage::Resolve,
+        )),
     );
-    let code = |e: &Envelope| e.error.as_ref().map(|b| b.code.clone());
-    assert_eq!(code(&hidden), Some(ErrorCode::NotFound));
-    assert_eq!(code(&hidden), code(&unknown));
-    assert_eq!(hidden.error.as_ref().map(|b| b.message.clone()), unknown.error.as_ref().map(|b| b.message.clone()));
+    let expected = encoded(&unknown);
+    assert_eq!(encoded(&hidden_as_unknown_major(&cmd())), expected);
+    for stage in ApiStage::ALL {
+        for detail in ["demo.show_thing@1: hidden major; only replay may invoke it", "", "other"] {
+            let hidden =
+                envelope_for(&cmd(), &ApiReply::Failed(api_error("hidden_command", "hidden_major", detail, *stage)));
+            assert_eq!(encoded(&hidden), expected, "{stage} {detail:?}");
+        }
+    }
+    // The name is shown as the bus shows it, and the major is the requested one.
+    let other = CommandId::parse("a.b_c@12").unwrap();
+    let hidden =
+        envelope_for(&other, &ApiReply::Failed(api_error("hidden_command", "hidden_major", "x", ApiStage::Resolve)));
+    assert_eq!(hidden.error.map(|e| e.message), Some("\"a.b_c\"@12: unknown major".to_string()));
 }
 
 // ------------------------------------------------------------------ AC-3
