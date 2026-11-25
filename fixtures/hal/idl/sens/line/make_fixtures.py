@@ -147,9 +147,10 @@ LINESCAN_CORE = [
         "every per-profile array holds one value per profile and the sequence range one number per profile",
         "the payload holds exactly the declared arrays in layout order",
     ]),
-    ("LS-03", "Timestamp monotonicity", [
+    ("LS-03", "Timestamp monotonicity and distinct profiles", [
         "t_host never decreases from one profile to the next",
-        "t_dev, when present, never decreases from one profile to the next",
+        "t_dev, when present, increases strictly from one profile to the next",
+        "no two profiles of a batch share a profile ID",
     ]),
     ("LS-04", "Masked-sample handling", [
         "every sample whose mask bit is set decodes to a finite value",
@@ -445,7 +446,7 @@ def validate(header_bytes: bytes, payload: bytes):
 
     t_host = take(p, "q", 8)
     t_dev = take(p, "q", 8) if "t_dev" in lens else None
-    take(p, "Q", 8)  # profile IDs: no rule beyond their count
+    profile_ids = take(p, "Q", 8)
     if "pose_seq" in lens:
         take(p, "Q", 8)
     mask = payload[pos:pos + (samples + 7) // 8]
@@ -456,9 +457,13 @@ def validate(header_bytes: bytes, payload: bytes):
     for k in ("x", "z", "intensity"):
         if k in encs:
             columns[k] = take(samples, FMT[encs[k]["numeric"]], WIDTH[encs[k]["numeric"]])
-    for series in (t_host, t_dev):
-        if series is not None and any(b < a_ for a_, b in zip(series, series[1:])):
-            raise Fail("timestamps_not_monotonic")
+    # t_host may repeat (profiles received together); t_dev must increase strictly.
+    if any(b < a_ for a_, b in zip(t_host, t_host[1:])):
+        raise Fail("timestamps_not_monotonic")
+    if t_dev is not None and any(b <= a_ for a_, b in zip(t_dev, t_dev[1:])):
+        raise Fail("timestamps_not_monotonic")
+    if len(set(profile_ids)) != len(profile_ids):
+        raise Fail("profile_id_duplicate")
     for k in ("x", "z", "intensity"):
         if k not in columns:
             continue
@@ -468,6 +473,9 @@ def validate(header_bytes: bytes, payload: bytes):
                 value = e["offset"] + e["scale"] * float(raw)
                 if not math.isfinite(value):
                     raise Fail("sample_not_finite")
+    # One batch, one wire header: the bytes must be the RFC 8785 form of what they say.
+    if jcs(h) != header_bytes:
+        raise Fail("batch_header_invalid")
     return {
         "first_seq": str(first),
         "last_seq": str(last),
@@ -602,6 +610,21 @@ def build_cases():
     # AC-4: t_host decreasing between profiles.
     add("t_host_decreasing", "timestamps_not_monotonic", case_batch(set_(t_host=[100, 300, 200])))
     add("t_dev_decreasing", "timestamps_not_monotonic", case_batch(set_(t_dev=[1000, 3000, 2999])))
+    add("t_dev_equal", "timestamps_not_monotonic", case_batch(set_(t_dev=[1000, 2000, 2000])))
+    # A repeated profile: the third profile copies the second (time, ID and samples).
+    def repeat_profile(b):
+        b["t_host"][2] = b["t_host"][1]
+        if b.get("t_dev") is not None:
+            b["t_dev"][2] = b["t_dev"][1]
+        b["profile_id"][2] = b["profile_id"][1]
+        for col in ("x", "z"):
+            b[col][8:12] = b[col][4:8]
+    # Without device time (as an encoder- or externally-triggered sensor may run) only the
+    # profile ID catches it; with device time t_dev does first.
+    add("duplicate_profile_no_t_dev", "profile_id_duplicate",
+        case_batch(lambda b: (b.update(t_dev=None), repeat_profile(b))))
+    add("duplicate_profile_with_t_dev", "timestamps_not_monotonic", case_batch(repeat_profile))
+    add("profile_id_repeat", "profile_id_duplicate", case_batch(set_(profile_id=[7, 8, 7])))
     # Other length rules.
     add("payload_trailing_byte", "array_length_mismatch", payload_edit=lambda pl: pl + b"\x00")
     add("seq_range_mismatch", "array_length_mismatch", header_edit=lambda h: h.update(last_seq="13"))
@@ -639,6 +662,11 @@ def build_cases():
     add("schema_unknown", "batch_header_invalid", header_edit=lambda h: h.update(schema="linescan-batch/2"))
     add("array_unknown", "batch_header_invalid", header_edit=lambda h: h["arrays"].update(normals={"len": "12"}))
     add("t_host_missing", "batch_header_invalid", header_edit=lambda h: h["arrays"].pop("t_host"))
+    # Non-canonical spellings of a valid header.
+    add("header_whitespace", "batch_header_invalid", raw_header=lambda t: t.replace(b'":"', b'": "'))
+    add("header_key_order", "batch_header_invalid",
+        raw_header=lambda t: b'{"schema":"linescan-batch/1",' + t[1:].replace(b',"schema":"linescan-batch/1"', b''))
+    add("header_trailing_newline", "batch_header_invalid", raw_header=lambda t: t + b"\n")
     add("duplicate_key", "batch_header_invalid",
         raw_header=lambda t: t.replace(b'"schema":"linescan-batch/1"',
                                        b'"schema":"linescan-batch/1","schema":"linescan-batch/1"'))

@@ -76,7 +76,7 @@ Generated binary fixture with seed under `fixtures/hal/idl/sens/line/` (CC-BY-4.
 
 ## Open questions
 
-- None.
+- `LineScanPackage` (`fid-hal-idl` `caps::linescan`) is not yet in the package inventory, because `inventory::packages()` belongs to `HAL.IDL.GEN.EXPORT`, which is not built. When that leaf is built, it must register `LineScanPackage` as the `LineScan@1` entry.
 
 ## Children
 

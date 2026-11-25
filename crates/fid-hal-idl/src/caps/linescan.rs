@@ -106,8 +106,12 @@ pub enum LineScanError {
     /// `encoding_invalid`: a malformed encoding, or x or z without target unit m, or
     /// intensity without target unit `1`.
     Encoding { array: &'static str, reason: String },
-    /// `timestamps_not_monotonic`: `t_host` or `t_dev` decreases at profile `index`.
+    /// `timestamps_not_monotonic`: `t_host` decreases, or `t_dev` does not increase, at
+    /// profile `index`.
     NotMonotonic { array: &'static str, index: usize },
+    /// `profile_id_duplicate`: profile `index` repeats the ID of an earlier profile of the
+    /// batch.
+    DuplicateProfile { index: usize },
     /// `sample_not_finite`: a sample whose mask bit is set does not decode to a finite value.
     SampleNotFinite { array: &'static str, index: usize },
     /// `mask_invalid`: the mask bytes do not match its bit count, or a padding bit is set.
@@ -132,6 +136,7 @@ impl LineScanError {
             LineScanError::ArrayLength { .. } => "array_length_mismatch",
             LineScanError::Encoding { .. } => "encoding_invalid",
             LineScanError::NotMonotonic { .. } => "timestamps_not_monotonic",
+            LineScanError::DuplicateProfile { .. } => "profile_id_duplicate",
             LineScanError::SampleNotFinite { .. } => "sample_not_finite",
             LineScanError::MaskInvalid => "mask_invalid",
             LineScanError::Header { .. } => "batch_header_invalid",
@@ -146,7 +151,7 @@ impl LineScanError {
         match self {
             LineScanError::Encoding { .. } => Some(ITEM_ENCODING),
             LineScanError::ArrayLength { .. } => Some(ITEM_LENGTHS),
-            LineScanError::NotMonotonic { .. } => Some(ITEM_TIMESTAMPS),
+            LineScanError::NotMonotonic { .. } | LineScanError::DuplicateProfile { .. } => Some(ITEM_TIMESTAMPS),
             LineScanError::SampleNotFinite { .. } | LineScanError::MaskInvalid => Some(ITEM_MASK),
             _ => None,
         }
@@ -169,8 +174,9 @@ impl fmt::Display for LineScanError {
             }
             LineScanError::Encoding { array, reason } => write!(f, "encoding_invalid: {array}: {reason}"),
             LineScanError::NotMonotonic { array, index } => {
-                write!(f, "timestamps_not_monotonic: {array} decreases at profile {index}")
+                write!(f, "timestamps_not_monotonic: {array} at profile {index}")
             }
+            LineScanError::DuplicateProfile { index } => write!(f, "profile_id_duplicate: profile {index}"),
             LineScanError::SampleNotFinite { array, index } => write!(f, "sample_not_finite: {array} at {index}"),
             LineScanError::MaskInvalid => f.write_str("mask_invalid"),
             LineScanError::Header { pointer, reason } => write!(f, "batch_header_invalid{{{pointer}}}: {reason}"),
@@ -419,7 +425,9 @@ impl ProfileBatch {
 
     /// Checks the batch, in order: shape and limits (`batch_header_invalid`); the x, z and
     /// intensity encodings (`encoding_invalid`); every array length (`array_length_mismatch`);
-    /// `t_host`, then `t_dev`, never decreasing (`timestamps_not_monotonic`); every valid
+    /// `t_host` never decreasing and `t_dev` strictly increasing (`timestamps_not_monotonic`);
+    /// distinct profile IDs (`profile_id_duplicate`), so a repeated profile is refused in every
+    /// trigger mode, with or without device time; every valid
     /// sample of x, z and intensity decoding to a finite value (`sample_not_finite`). Masked
     /// samples are not decoded, so they may hold any raw value.
     pub fn validate(&self) -> Result<(), LineScanError> {
@@ -444,9 +452,13 @@ impl ProfileBatch {
         if let Some(i) = &self.intensity {
             check_array("intensity", samples, i)?;
         }
-        check_monotonic("t_host", &self.t_host)?;
+        check_monotonic("t_host", &self.t_host, false)?;
         if let Some(t) = &self.t_dev {
-            check_monotonic("t_dev", t)?;
+            check_monotonic("t_dev", t, true)?;
+        }
+        let mut seen = BTreeSet::new();
+        if let Some(index) = self.profile_ids.iter().position(|id| !seen.insert(*id)) {
+            return Err(LineScanError::DuplicateProfile { index });
         }
         let mut arrays = vec![("x", &self.x), ("z", &self.z)];
         if let Some(i) = &self.intensity {
@@ -486,6 +498,11 @@ impl ProfileBatch {
     /// The wire header (validates the batch first).
     pub fn header_bytes(&self) -> Result<Vec<u8>, LineScanError> {
         self.validate()?;
+        self.canonical_header()
+    }
+
+    /// The RFC 8785 header of a batch whose shape was already checked.
+    fn canonical_header(&self) -> Result<Vec<u8>, LineScanError> {
         let len = |n: u64| obj(vec![("len", dec(n))]);
         let enc = |a: &EncodedArray| obj(vec![("encoding", a.descriptor.to_value()), ("len", dec(a.len() as u64))]);
         let p = self.profiles;
@@ -570,8 +587,10 @@ impl ProfileBatch {
     /// Reads and checks a batch from its wire form, in order: the header shape
     /// (`batch_header_invalid`); the sequence range against `profiles`; the limits; the
     /// encodings (`encoding_invalid`); every declared array length, then the payload size
-    /// (`array_length_mismatch`); the mask padding (`mask_invalid`); then the rest of
-    /// [`ProfileBatch::validate`].
+    /// (`array_length_mismatch`); the mask padding (`mask_invalid`); the rest of
+    /// [`ProfileBatch::validate`]; and last, the header bytes equal to
+    /// [`ProfileBatch::header_bytes`] of the decoded batch (`batch_header_invalid`,
+    /// `not_canonical`).
     pub fn decode(header: &[u8], payload: &[u8]) -> Result<ProfileBatch, LineScanError> {
         let h = Header::parse(header)?;
         let span =
@@ -642,6 +661,12 @@ impl ProfileBatch {
             pose,
         };
         batch.validate()?;
+        // One batch has one wire header: a header with other bytes (whitespace, key order, an
+        // escaped spelling) is refused, so the bytes that were digested or sized are exactly
+        // the ones `header_bytes` writes.
+        if batch.canonical_header()? != header {
+            return Err(LineScanError::header("", "not_canonical"));
+        }
         Ok(batch)
     }
 
@@ -716,8 +741,9 @@ fn check_array(array: &'static str, samples: u64, a: &EncodedArray) -> Result<()
     Ok(())
 }
 
-fn check_monotonic(array: &'static str, t: &[i64]) -> Result<(), LineScanError> {
-    match t.windows(2).position(|w| w[1] < w[0]) {
+/// `strict`: each value must exceed the one before it; otherwise it must not be below it.
+fn check_monotonic(array: &'static str, t: &[i64], strict: bool) -> Result<(), LineScanError> {
+    match t.windows(2).position(|w| if strict { w[1] <= w[0] } else { w[1] < w[0] }) {
         Some(i) => Err(LineScanError::NotMonotonic { array, index: i + 1 }),
         None => Ok(()),
     }
@@ -1098,7 +1124,10 @@ impl LineScanSettings {
 
 /// Item `LS-05` over consecutive recorded batches of one stream.
 ///
-/// The settings must come from [`LineScanSettings::from_configuration`], which already
+/// Every batch is first checked with [`ProfileBatch::validate`], in every mode, so a batch
+/// built in memory gets the same checks as a decoded one: a failure there is reported with
+/// the item it belongs to ([`LineScanError::item`], for example `LS-03` for a repeated
+/// profile), its error code as the reason and the batch's index. The settings must come from [`LineScanSettings::from_configuration`], which already
 /// enforces the parameter of each mode. In `time` mode every batch must carry device time
 /// (`no_device_time`), the period must be at least 1 ns and at most about 292 years
 /// (`period_invalid`), and every interval of device time between consecutive profiles, also
@@ -1111,6 +1140,11 @@ pub fn check_trigger_mode(settings: &LineScanSettings, batches: &[ProfileBatch])
     let fail = |reason, index| Err(ItemFailure { item: ITEM_TRIGGER, reason, index });
     if batches.is_empty() {
         return fail("no_batches", None);
+    }
+    for (k, b) in batches.iter().enumerate() {
+        if let Err(e) = b.validate() {
+            return Err(ItemFailure { item: e.item().unwrap_or(ITEM_TRIGGER), reason: e.code(), index: Some(k) });
+        }
     }
     let Trigger::Time { period_s } = settings.trigger else {
         return Ok(());
@@ -1181,10 +1215,11 @@ pub const LINESCAN_CORE: ConformanceProfile = ConformanceProfile {
         },
         ProfileItem {
             id: ITEM_TIMESTAMPS,
-            title: "Timestamp monotonicity",
+            title: "Timestamp monotonicity and distinct profiles",
             checks: &[
                 "t_host never decreases from one profile to the next",
-                "t_dev, when present, never decreases from one profile to the next",
+                "t_dev, when present, increases strictly from one profile to the next",
+                "no two profiles of a batch share a profile ID",
             ],
         },
         ProfileItem {

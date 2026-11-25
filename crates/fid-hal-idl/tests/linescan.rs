@@ -313,7 +313,7 @@ fn ac5_package_export_validates_and_matches_the_oracle() {
         [
             "Encoding declaration",
             "Array lengths",
-            "Timestamp monotonicity",
+            "Timestamp monotonicity and distinct profiles",
             "Masked-sample handling",
             "Trigger-mode behaviour"
         ]
@@ -539,10 +539,17 @@ fn ls05_time_mode_profiles_follow_the_period() {
     let (h, p) = case("ok_no_t_dev");
     let no_dev = ProfileBatch::decode(&h, &p).unwrap();
     assert_eq!(check_trigger_mode(&time(1e-4), &[no_dev]).unwrap_err().reason, "no_device_time");
-    let mut single = b.clone();
+    // A valid one-profile batch: the first profile of ok_base.
+    let (h, p) = case("ok_base");
+    let mut single = ProfileBatch::decode(&h, &p).unwrap();
     single.profiles = 1;
     single.t_host.truncate(1);
     single.t_dev.as_mut().unwrap().truncate(1);
+    single.profile_ids.truncate(1);
+    single.x.bytes.truncate(16);
+    single.z.bytes.truncate(16);
+    single.mask = ValidityMask::all_valid(4);
+    single.validate().unwrap();
     assert_eq!(check_trigger_mode(&time(1e-4), &[single]).unwrap_err().reason, "not_exercised");
     assert_eq!(check_trigger_mode(&time(1e-4), &[]).unwrap_err().reason, "no_batches");
 
@@ -550,6 +557,78 @@ fn ls05_time_mode_profiles_follow_the_period() {
     let pkg = LineScanPackage::streaming().unwrap();
     let enc = LineScanSettings::from_configuration(&pkg, &schema_with(Vec::new()), &config("encoder")).unwrap();
     check_trigger_mode(&enc, std::slice::from_ref(&b)).unwrap();
+    let ext = LineScanSettings::from_configuration(&pkg, &schema_with(Vec::new()), &config("external")).unwrap();
+    check_trigger_mode(&ext, std::slice::from_ref(&b)).unwrap();
+
+    // ...but a batch built in memory is validated first, in every mode.
+    let mut bad = b.clone();
+    bad.t_host[3] = bad.t_host[2] - 1;
+    for settings in [&enc, &ext, &time(1e-4)] {
+        let e = check_trigger_mode(settings, &[b.clone(), bad.clone()]).unwrap_err();
+        assert_eq!((e.item, e.reason, e.index), (ITEM_TIMESTAMPS, "timestamps_not_monotonic", Some(1)));
+    }
+}
+
+/// The third profile repeats the second: same host time, profile ID and samples.
+fn repeated_profile(with_t_dev: bool) -> ProfileBatch {
+    let (h, p) = case(if with_t_dev { "ok_base" } else { "ok_no_t_dev" });
+    let mut b = ProfileBatch::decode(&h, &p).unwrap();
+    b.t_host[2] = b.t_host[1];
+    if let Some(t) = b.t_dev.as_mut() {
+        t[2] = t[1];
+    }
+    b.profile_ids[2] = b.profile_ids[1];
+    for a in [&mut b.x, &mut b.z] {
+        let second: Vec<u8> = a.bytes[16..32].to_vec();
+        a.bytes[32..48].copy_from_slice(&second);
+    }
+    b
+}
+
+#[test]
+fn repeated_profiles_are_refused_in_every_trigger_mode() {
+    // The oracle agrees on the wire form.
+    let (h, p) = case("duplicate_profile_no_t_dev");
+    assert_eq!(ProfileBatch::decode(&h, &p).unwrap_err(), LineScanError::DuplicateProfile { index: 2 });
+    let (h, p) = case("duplicate_profile_with_t_dev");
+    assert_eq!(ProfileBatch::decode(&h, &p).unwrap_err(), LineScanError::NotMonotonic { array: "t_dev", index: 2 });
+    let (h, p) = case("t_dev_equal");
+    assert_eq!(ProfileBatch::decode(&h, &p).unwrap_err().code(), "timestamps_not_monotonic");
+
+    // Encoder and external modes have no timing rule, so only validation can catch the
+    // repeat; it does, with or without device time.
+    let pkg = LineScanPackage::streaming().unwrap();
+    let schema = schema_with(Vec::new());
+    for mode in ["encoder", "external"] {
+        let set = LineScanSettings::from_configuration(&pkg, &schema, &config(mode)).unwrap();
+        for with_t_dev in [false, true] {
+            let b = repeated_profile(with_t_dev);
+            let want = if with_t_dev { "timestamps_not_monotonic" } else { "profile_id_duplicate" };
+            assert_eq!(b.validate().unwrap_err().code(), want, "{mode}");
+            assert_eq!(b.encode().unwrap_err().code(), want, "{mode}");
+            let e = check_trigger_mode(&set, &[b]).unwrap_err();
+            assert_eq!((e.item, e.reason, e.index), (ITEM_TIMESTAMPS, want, Some(0)), "{mode} {with_t_dev}");
+        }
+    }
+}
+
+#[test]
+fn only_the_canonical_header_is_accepted() {
+    let (h, p) = case("ok_base");
+    assert_eq!(ProfileBatch::decode(&h, &p).unwrap().header_bytes().unwrap(), h);
+    for name in ["header_whitespace", "header_key_order", "header_trailing_newline"] {
+        let (h, p) = case(name);
+        assert_eq!(
+            ProfileBatch::decode(&h, &p).unwrap_err(),
+            LineScanError::Header { pointer: String::new(), reason: "not_canonical" },
+            "{name}"
+        );
+    }
+    // The seeded fixture's header is canonical too.
+    let (h, p) = big();
+    let mut spaced = h.clone();
+    spaced.push(b' ');
+    assert_eq!(ProfileBatch::decode(&spaced, &p).unwrap_err().code(), "batch_header_invalid");
 }
 
 #[test]

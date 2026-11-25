@@ -261,7 +261,7 @@
       },
       {
         "id": "LS-03",
-        "summary": "Timestamp monotonicity: t_host never decreases from one profile to the next; t_dev, when present, never decreases from one profile to the next."
+        "summary": "Timestamp monotonicity and distinct profiles: t_host never decreases from one profile to the next; t_dev, when present, increases strictly from one profile to the next; no two profiles of a batch share a profile ID."
       },
       {
         "id": "LS-04",
