@@ -451,6 +451,13 @@ fn reader_ids_and_versions_are_checked() {
 }
 
 #[test]
+fn principal_kind_is_the_one_shared_type() {
+    let id = std::any::TypeId::of::<PrincipalKind>();
+    assert_eq!(id, std::any::TypeId::of::<fid_types::PrincipalKind>());
+    assert_eq!(id, std::any::TypeId::of::<fid_journal::PrincipalKind>());
+}
+
+#[test]
 fn every_principal_kind_is_recorded_by_its_journal_wire_name() {
     for &p in PrincipalKind::ALL {
         let rec = SourceProvenance::builder(

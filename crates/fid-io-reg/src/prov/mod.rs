@@ -27,7 +27,8 @@ mod unit;
 
 /// Re-exported so callers need no direct dependency for the unit, frame and principal types.
 pub use fid_geo_frame::{FrameId, LengthUnit};
-pub use fid_journal::{OsSalts, PrincipalCommit, PrincipalDraft, PrincipalKind, RecordedSalts, SaltSource};
+pub use fid_journal::{OsSalts, PrincipalCommit, PrincipalDraft, RecordedSalts, SaltSource};
+pub use fid_types::PrincipalKind;
 pub use hash::{HashingSource, SourceDigest};
 pub use unit::{factor_decimal, resolve_unit, to_metres, NonFiniteLength, UnitResolution, UnitSource};
 

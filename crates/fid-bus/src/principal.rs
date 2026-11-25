@@ -35,7 +35,8 @@ use std::sync::{Arc, Weak};
 use std::time::Duration;
 use unicode_normalization::is_nfc;
 
-pub use fid_journal::{ConfirmMethod, PrincipalKind};
+pub use fid_journal::ConfirmMethod;
+pub use fid_types::PrincipalKind;
 
 /// How long a person has to confirm an upgrade (REQ-010).
 pub const UPGRADE_DEADLINE: Duration = Duration::from_secs(120);
