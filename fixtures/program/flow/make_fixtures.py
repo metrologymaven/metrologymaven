@@ -296,6 +296,17 @@ def jump_undefined():
     return p, p.doc([a1, a2])
 
 
+def jump_across_branches():
+    """REQ-003: a jump in if branch 0 to a label in branch 1 enters a body it is not inside."""
+    p = P(22)
+    j1 = p.step("jump", label="other", cond="true")
+    l1 = p.step("label", name="other")
+    c1 = p.step("comment", text="branch 1")
+    i1 = p.step("if", branches=[{"body": [j1], "cond": "true"}, {"body": [l1, c1], "cond": "false"}], else_body=[])
+    p.diag("illegal_jump", None, j1, ["other", "into_body"])
+    return p, p.doc([i1])
+
+
 def loop_limit_high():
     """REQ-001: max_iterations above 1 000 000 (the format accepts it)."""
     p = P(13)
@@ -425,6 +436,7 @@ ERRORS = {
     "jump-into-loop": jump_into_loop,
     "jump-other-sub": jump_other_sub,
     "jump-undefined": jump_undefined,
+    "jump-across-branches": jump_across_branches,
     "loop-limit-high": loop_limit_high,
     "area-missing-return": area_missing_return,
     "area-bad-call": area_bad_call,

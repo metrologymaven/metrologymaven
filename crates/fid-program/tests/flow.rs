@@ -77,7 +77,7 @@ fn assert_case(name: &str) -> FlowReport {
 #[test]
 fn every_case_matches() {
     let names: Vec<String> = section("cases").keys().cloned().collect();
-    assert_eq!(names.len(), 16);
+    assert_eq!(names.len(), 17);
     for n in names {
         assert_case(&n);
     }
@@ -217,6 +217,15 @@ fn ac6_deterministic() {
 
 #[test]
 fn other_rules() {
+    // A jump from if branch 0 into branch 1.
+    let r = assert_case("jump-across-branches");
+    let p = program("jump-across-branches");
+    let StepKind::If { branches, .. } = &p.main[0].kind else { panic!("if") };
+    let jump = branches[0].body[0].step_id;
+    assert_eq!(r.diagnostics.len(), 1);
+    assert_eq!((r.diagnostics[0].code, r.diagnostics[0].step), (FlowCode::IllegalJump, Some(jump)));
+    assert_eq!(r.diagnostics[0].names, ["other", "into_body"]);
+    assert!(r.cfgs[&SubId::Main].successors(jump).iter().all(|(_, k)| *k != EdgeKind::Jump));
     let r = assert_case("duplicate-label");
     assert_eq!(r.diagnostics.len(), 1);
     assert_eq!(r.diagnostics[0].code, FlowCode::DuplicateLabel);
