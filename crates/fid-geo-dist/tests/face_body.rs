@@ -476,10 +476,13 @@ fn ac1_ref_v1_body_queries() {
                     }
                 }
                 Ok(None) => bad.push(format!("{} {}: no hit", fx.file, q.id)),
-                Err(BodyError::Face { face, error: FaceError::Trim(fid_geo_cad::TrimError::Undecidable(u)) })
-                    if (fx.file.as_str(), label_of(&face).as_str()) == TRIM_GAP =>
-                {
-                    assert_eq!(u.code(), "DoublyPeriodicSeam");
+                Err(BodyError::Face { face, error }) if (fx.file.as_str(), label_of(&face).as_str()) == TRIM_GAP => {
+                    match *error {
+                        FaceError::Trim(fid_geo_cad::TrimError::Undecidable(u)) => {
+                            assert_eq!(u.code(), "DoublyPeriodicSeam")
+                        }
+                        other => panic!("{} {}: {other:?}", fx.file, q.id),
+                    }
                     gap += 1;
                 }
                 Err(e) => bad.push(format!("{} {}: error {e}", fx.file, q.id)),

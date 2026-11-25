@@ -174,8 +174,8 @@ pub enum BodyError {
     Face {
         /// The face.
         face: TopologyId,
-        /// Its error.
-        error: FaceError,
+        /// Its error (boxed: a face error can carry a whole hit).
+        error: Box<FaceError>,
     },
     /// A trim classification needed by a directional hit failed.
     Trim {
@@ -615,12 +615,11 @@ fn pcurve_image(
         for t in range {
             uv.push([o[0] + t * d[0], o[1] + t * d[1]]);
         }
-    } else if let Some(n) = pc.as_nurbs() {
+    } else {
+        let n = pc.as_nurbs()?;
         for c in n.ctrl() {
             uv.push([c[0], c[1]]);
         }
-    } else {
-        return None;
     }
     let first = uv.first()?;
     let (mut lo, mut hi) = (*first, *first);
@@ -914,8 +913,9 @@ impl<'b> FaceSetTarget<'b> {
     /// Projects face position `m`; a hit lowers `best`.
     fn eval(&self, m: usize, p: V3, fopts: FaceQueryOptions, hits: &mut Hits, best: &mut f64) -> Result<(), BodyError> {
         let mm = self.members.get(m).ok_or(BodyError::Inconsistent)?;
-        let pr = mm.projector.as_ref().map_err(|e| BodyError::Face { face: mm.id.clone(), error: e.clone() })?;
-        match pr.project(p, fopts).map_err(|e| BodyError::Face { face: mm.id.clone(), error: e })? {
+        let pr =
+            mm.projector.as_ref().map_err(|e| BodyError::Face { face: mm.id.clone(), error: Box::new(e.clone()) })?;
+        match pr.project(p, fopts).map_err(|e| BodyError::Face { face: mm.id.clone(), error: Box::new(e) })? {
             FaceProjection::Hit(h) => {
                 if h.distance < *best {
                     *best = h.distance;
