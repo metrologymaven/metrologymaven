@@ -149,6 +149,7 @@ python fixtures/hal/idl/base/health/make_fixtures.py --check
 python fixtures/hal/idl/gen/fmt/make_fixtures.py --check
 python fixtures/hal/idl/neg/make_fixtures.py --check
 python fixtures/hal/idl/profile/make_fixtures.py --check
+python fixtures/hal/idl/sens/gauenv/make_fixtures.py --check
 python fixtures/hal/idl/sens/line/make_fixtures.py --check
 python fixtures/hal/idl/sens/stream/make_fixtures.py --check
 python fixtures/hal/idl/stamp/make_fixtures.py --check
