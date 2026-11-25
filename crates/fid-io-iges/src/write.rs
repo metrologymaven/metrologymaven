@@ -101,8 +101,12 @@ fn int8(v: i64, de: u32) -> Result<String, IgesError> {
     Ok(format!("{v:>8}"))
 }
 
+/// A text field (label or reserved field) in 8 columns, right-justified. The parser trims
+/// spaces, so a value with a leading or trailing space could not be read back unchanged and
+/// is refused.
 fn text8(t: &crate::IgesText, de: u32) -> Result<String, IgesError> {
-    if t.len() > 8 {
+    let raw = t.raw();
+    if t.len() > 8 || raw.starts_with(' ') || raw.ends_with(' ') {
         return Err(unwritable("de_text_width", Some(de)));
     }
     Ok(format!("{:>8}", t.raw()))

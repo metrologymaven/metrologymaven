@@ -9,8 +9,6 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
-built_in: [fid-io-iges]
-built_pr: 632
 satisfies: [REQ-IO.CAD.IGES-003, REQ-IO.CAD.IGES-005]
 covers: []
 depends_on: [IO.REG.LIMITS, IO.REG.PROV]
@@ -83,6 +81,9 @@ Hand-written IGES files under `fixtures/io/cad/iges/sect/` (CC-BY-4.0); `corpus/
 ## Open questions
 
 - IGES edition: 5.3 assumed [unverified; carried from IO.CAD.IGES].
+- Partial build (PR #632, crate `fid-io-iges`): AC-1 to AC-4 are met; AC-5 and AC-6 are only partly met, so the leaf is not marked built.
+  - AC-5: `corpus/iges.toml` does not exist yet. The IGES corpus manifest is `fixtures/io/cad/iges/sect/iges.toml` (IO.CORP.MANIF schema) and holds invented fixtures only. Real-world corpus content is still open.
+  - AC-6: the cargo-fuzz target `iges_parse` exists, but CI runs only a stable deterministic mutation test. Real fuzzing in CI starts once IO.CAD.IGES.CMD registers the format, so that the IO.CORP.FUZZ workflow covers it.
 
 ## Children
 

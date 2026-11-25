@@ -261,7 +261,7 @@ fn hollerith_strings_are_untrusted_text_with_delimiters_inside() {
 #[test]
 fn ac5_corpus_manifest_round_trips() {
     let manifest: toml::Table = std::str::from_utf8(&read("iges.toml")).unwrap().parse().unwrap();
-    assert_eq!(manifest["format"].as_str(), Some("cad.iges"));
+    assert_eq!(manifest["format"].as_str(), Some("iges"));
     let entries = manifest["entry"].as_array().unwrap();
     let (mut accepted, mut rejected, mut canonical) = (0, 0, 0);
     for entry in entries {
@@ -475,6 +475,9 @@ fn writer_rejects_what_the_form_cannot_hold() {
         ("params_without_entry", Box::new(|f| drop(f.params.insert(99, Vec::new())))),
         ("de_field_width", Box::new(|f| f.directory.get_mut(&1).unwrap().color = 100_000_000)),
         ("de_text_width", Box::new(|f| f.directory.get_mut(&1).unwrap().label = IgesText::new("NINECHARS").unwrap())),
+        ("de_text_width", Box::new(|f| f.directory.get_mut(&1).unwrap().label = IgesText::new(" PT").unwrap())),
+        ("de_text_width", Box::new(|f| f.directory.get_mut(&1).unwrap().label = IgesText::new("PT ").unwrap())),
+        ("de_text_width", Box::new(|f| f.directory.get_mut(&1).unwrap().reserved1 = IgesText::new(" ").unwrap())),
         ("de_status", Box::new(|f| f.directory.get_mut(&1).unwrap().status.hierarchy = 100)),
     ];
     for (reason, change) in cases {
@@ -524,6 +527,7 @@ fn ac6_mutated_inputs_never_panic_and_accepted_ones_round_trip() {
     let mut accepted = 0;
     for stem in ACCEPT.iter().chain(["bad_pointer", "back_pointer"].iter()) {
         let base = read(&format!("{stem}.igs"));
+        let mut accepted_here = 0;
         for _ in 0..1500 {
             let mut m = base.clone();
             for _ in 0..(1 + next() % 3) {
@@ -538,15 +542,30 @@ fn ac6_mutated_inputs_never_panic_and_accepted_ones_round_trip() {
                     _ => {}
                 }
             }
-            let opts = ParseOptions { unit: Some(IgesUnit::Millimetre), ..ParseOptions::default() };
-            let Ok(f) = parse_opts(&m, &opts) else {
-                continue;
+            // The file's own unit first; a caller unit only when the file declares none, so
+            // files declaring any unit reach the write check (a caller unit would conflict).
+            let mut opts = ParseOptions::default();
+            let f = match parse_opts(&m, &opts) {
+                Ok(f) => f,
+                Err(IgesError::UnitRequired) => {
+                    opts.unit = Some(IgesUnit::Millimetre);
+                    match parse_opts(&m, &opts) {
+                        Ok(f) => f,
+                        Err(_) => continue,
+                    }
+                }
+                Err(_) => continue,
             };
             accepted += 1;
+            accepted_here += 1;
             let written = write(&f).unwrap_or_else(|e| panic!("{e}"));
             let again = parse_opts(&written, &opts).unwrap_or_else(|e| panic!("{e}"));
             assert!(again.content_eq(&f));
         }
+        if ACCEPT.contains(stem) {
+            assert!(accepted_here > 0, "{stem}: no mutation reached the write check");
+        }
+        eprintln!("{stem}: {accepted_here} of 1500 mutations accepted");
     }
     assert!(accepted > 100, "{accepted}");
 }
