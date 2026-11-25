@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-24
 ---
 
 # RPT.STATS.CAP.INDEX: Capability index kernel
@@ -45,9 +45,9 @@ The pure function that turns a mean, a spread estimate, the specification limits
 
 - **REQ-RPT.STATS.CAP.INDEX-001** With both limits, the function shall return the potential index (USL − LSL)/(6σ) and the centred index min(USL − μ, μ − LSL)/(3σ).
 - **REQ-RPT.STATS.CAP.INDEX-002** With only an upper limit, it shall return the upper index (USL − μ)/(3σ) as the centred index and `NOT_APPLICABLE` for the potential index; with only a lower limit, it shall return (μ − LSL)/(3σ) and `NOT_APPLICABLE`.
-- **REQ-RPT.STATS.CAP.INDEX-003** If n is below the configured minimum (default 25 [unverified]), then every index shall be `INSUFFICIENT_DATA` and no number shall be produced.
+- **REQ-RPT.STATS.CAP.INDEX-003** If n is below the configured minimum (default 25 [unverified]), then every applicable index shall be `INSUFFICIENT_DATA` and no number shall be produced (the potential index of a one-sided tolerance stays `NOT_APPLICABLE`).
 - **REQ-RPT.STATS.CAP.INDEX-004** If σ is zero, then every applicable index shall be `UNDEFINED_ZERO_SPREAD` and no number shall be produced; `INSUFFICIENT_DATA` shall take precedence over `UNDEFINED_ZERO_SPREAD`, which shall take precedence over a number.
-- **REQ-RPT.STATS.CAP.INDEX-005** If USL ≤ LSL, or any input is non-finite, or σ is negative, then the function shall fail with `stats.bad_capability_input`.
+- **REQ-RPT.STATS.CAP.INDEX-005** If USL ≤ LSL, or any input is non-finite, or σ is negative, or neither limit is given, or the minimum sample size is below 2, or the estimator ID is malformed, or an index overflows the `f64` range, then the function shall fail with `stats.bad_capability_input`, before any status is decided.
 - **REQ-RPT.STATS.CAP.INDEX-006** The result shall carry the estimator ID supplied by the caller, the index family (`C` or `P`) and the algorithm ID `stats.cap.index@1.0.0`.
 - **REQ-RPT.STATS.CAP.INDEX-007** The function shall use only IEEE basic operations without FMA and total-order min, and shall be bit-identical on every supported target (D0).
 - **REQ-RPT.STATS.CAP.INDEX-008** The method documentation shall cite the index definitions by designator and clause only (for example the ISO 22514 series [unverified part, edition and clause]) and embed no standards text.
@@ -65,7 +65,7 @@ The pure function that turns a mean, a spread estimate, the specification limits
 - **Kernel function:** `fn capability(mean: f64, sigma: f64, n: u64, lsl: Option<f64>, usl: Option<f64>, min_n: u64, family: Family, estimator: EstimatorId) -> Result<IndexPair, StatsError>`.
 - **Data structures:** `IndexPair { potential: IndexValue, centred: IndexValue, side: Side::{Both, UpperOnly, LowerOnly}, family, estimator, algorithm }`; `enum IndexValue { Value(f64), NotApplicable, InsufficientData, UndefinedZeroSpread }`.
 - **Algorithm:** REQ-001 to REQ-004; compute 3σ and 6σ as `3.0 * sigma` and `6.0 * sigma`, then divide; min by `fid-num` total order.
-- **Errors:** `stats.bad_capability_input{reason}`.
+- **Errors:** `stats.bad_capability_input{reason}`, reason one of `non_finite_mean`, `non_finite_sigma`, `non_finite_lsl`, `non_finite_usl`, `negative_sigma`, `no_limits`, `limits_not_ordered`, `min_n_too_small`, `bad_estimator_id`, `result_not_finite`. `σ = -0.0` is a zero spread, not a negative one.
 - **Determinism:** D0.
 - **Crate:** `fid-stats` (kernel graph; KNP-1).
 
