@@ -9,6 +9,7 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-io-iges]
 satisfies: [REQ-IO.CAD.IGES-003, REQ-IO.CAD.IGES-005]
 covers: []
 depends_on: [IO.REG.LIMITS, IO.REG.PROV]

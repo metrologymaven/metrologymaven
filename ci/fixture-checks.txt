@@ -158,6 +158,7 @@ python fixtures/hal/idl/sens/gauenv/make_fixtures.py --check
 python fixtures/hal/idl/sens/line/make_fixtures.py --check
 python fixtures/hal/idl/sens/stream/make_fixtures.py --check
 python fixtures/hal/idl/stamp/make_fixtures.py --check
+python fixtures/io/cad/iges/sect/make_fixtures.py --check
 python fixtures/io/cad/pmi/read/make_cases.py --check
 python fixtures/io/cad/step/geom/make_cases.py --check
 python fixtures/io/cad/step/hdr/make_cases.py --check
