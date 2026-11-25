@@ -1,5 +1,5 @@
 //! Signed deviations from the nominal CAD faces with their approximation error. Spec node
-//! `GDT.PROF.DEV` (REQ-001 to REQ-005).
+//! `GDT.PROF.DEV` (REQ-001 to REQ-004; REQ-005 open: the ORS-PROJ cases are unpublished).
 //!
 //! [`FaceSet::new`] prepares the toleranced faces of one B-rep [`Body`] (GEO.CAD.TOPO.MODEL),
 //! each with its declared `nominal_approximation_error`; [`deviations`] maps every measured
@@ -24,8 +24,18 @@
 //!   signed deviation is `+d` on the outward side of the nominal (the point lies beyond the
 //!   material boundary: excess material) and `-d` inside the material, per the leaf's
 //!   Algorithm (`sign = sign of (p - foot) . n`, `n` outward from material).
+//! - **Edge of the toleranced set.** At an edge or vertex foot whose adjacent faces
+//!   (GEO.CAD.TOPO.ADJ `faces_of_edge` / `faces_of_vertex`) include a face that is **not**
+//!   toleranced, no sign is given: the incident normals there would mix in a face that is not
+//!   part of the profile, so the side of the toleranced surface is not defined (a point just
+//!   below the base of a dome, beside a toleranced dome, would otherwise read as inside the
+//!   dome). Such a deviation has `signed_dev: None`, status
+//!   `Undefined(SignUndefined::Boundary)` (the foot is on the boundary of the toleranced set)
+//!   and **no normal** (`normal: None`); its foot, face, unsigned distance and `on_boundary`
+//!   are still given.
 //! - **Normal.** The face's outward unit normal at an interior foot (face sense applied);
-//!   at an edge or vertex foot, `N / |N|` (the direction the sign is decided on).
+//!   at an edge or vertex foot inside the toleranced set, `N / |N|` (the direction the sign
+//!   is decided on).
 //!
 //! **Honesty (D-045).** A deviation never looks measured when it is not:
 //! [`Projected::signed_dev`] is `None` whenever GEO.DIST.SIGN gives no sign of record
@@ -36,9 +46,16 @@
 //!
 //! # Approximation error (REQ-002)
 //!
-//! Every projected deviation carries the hit face's declared approximation error (`0.0` for
-//! an exact analytic face, never omitted); [`DeviationSet::max_approx_error`] is the largest
-//! over the faces hit, `None` only when no point was projected.
+//! Every projected deviation carries the hit face's approximation error (`0.0` for an exact
+//! analytic face, never omitted); [`DeviationSet::max_approx_error`] is the largest over the
+//! faces hit, `None` only when no point was projected.
+//!
+//! The value is **declared by the caller** in [`TolerancedFace`] and is **not verified**
+//! here (D-045): no GEO.CAD or IO.CAD node computes or stores it yet, so it is carried as a
+//! declared contributor, never as a measured or checked one. Deviations are measured from the
+//! surface the body represents (for an approximated face, the B-spline, not the design
+//! nominal); when `|signed_dev| <= approx_error` the sign is relative to that represented
+//! surface and may differ from the sign against the design nominal.
 //!
 //! # Boundary flag (REQ-003)
 //!
@@ -68,10 +85,10 @@ use core::fmt;
 use std::collections::BTreeMap;
 
 use fid_canon::{digest_bytes, to_canonical_bytes, CValue};
-use fid_geo_cad::{classify_uv, Body, EntityIx, FaceIx, TopologyId, TrimClass, TrimError, TrimIndex};
+use fid_geo_cad::{classify_uv, AdjError, Body, EntityIx, FaceIx, TopologyId, TrimClass, TrimError, TrimIndex};
 use fid_geo_dist::{
     BodyError, FaceFeature, FaceHit, FaceSetTarget, Incid, IncidError, Incident, ProjectionOptions, SignStatus,
-    Undefined,
+    SignUndefined, Undefined,
 };
 use fid_geo_frame::{Rigid, Transform, XformError};
 use fid_geo_nurbs::AnalyticSurface;
@@ -122,6 +139,8 @@ pub enum DevError {
     Projection { index: u32, error: BodyError },
     /// `sign`: the sign or the incident normals of a foot could not be computed.
     Sign { index: u32, error: IncidError },
+    /// `adjacency`: the faces around an edge or vertex foot could not be listed.
+    Adjacency { index: u32, error: AdjError },
     /// `boundary`: the boundary test of an interior foot failed (its trim index could not
     /// be built, or the classification failed).
     Boundary { index: u32, face: TopologyId, error: TrimError },
@@ -148,6 +167,7 @@ impl DevError {
             DevError::Transform { .. } => "transform",
             DevError::Projection { .. } => "projection",
             DevError::Sign { .. } => "sign",
+            DevError::Adjacency { .. } => "adjacency",
             DevError::Boundary { .. } => "boundary",
             DevError::PoseDigest => "pose_digest",
             DevError::Inconsistent => "inconsistent",
@@ -171,6 +191,7 @@ impl fmt::Display for DevError {
             DevError::Transform { index, error } => write!(f, "transform{{point {index}}}: {error}"),
             DevError::Projection { index, error } => write!(f, "projection{{point {index}}}: {error}"),
             DevError::Sign { index, error } => write!(f, "sign{{point {index}}}: {error}"),
+            DevError::Adjacency { index, error } => write!(f, "adjacency{{point {index}}}: {error}"),
             DevError::Boundary { index, face, error } => write!(f, "boundary{{point {index}, face {face}}}: {error}"),
             DevError::PoseDigest => f.write_str("pose_digest"),
             DevError::Inconsistent => f.write_str("inconsistent"),
@@ -188,7 +209,8 @@ impl std::error::Error for DevError {}
 pub struct TolerancedFace {
     /// The face's topology ID.
     pub face: TopologyId,
-    /// The face's nominal approximation error, metres (finite, `>= 0`).
+    /// The face's nominal approximation error, metres (finite, `>= 0`): declared by the
+    /// caller, not verified here (module docs).
     pub approx_error_m: f64,
 }
 
@@ -259,6 +281,22 @@ impl<'b> FaceSet<'b> {
         self.members.iter().map(|m| TolerancedFace { face: m.id.clone(), approx_error_m: m.approx }).collect()
     }
 
+    fn contains(&self, id: &TopologyId) -> bool {
+        self.members.iter().any(|m| &m.id == id)
+    }
+
+    /// Whether every face adjacent to an edge or vertex foot is toleranced (an interior foot:
+    /// always).
+    fn all_toleranced(&self, feature: &FaceFeature) -> Result<bool, AdjError> {
+        let adj = self.incid.adjacency();
+        let around = match feature {
+            FaceFeature::Interior => return Ok(true),
+            FaceFeature::Edge(e) => adj.faces_of_edge(e)?,
+            FaceFeature::Vertex(v) => adj.faces_of_vertex(v)?,
+        };
+        Ok(around.iter().all(|f| self.contains(f)))
+    }
+
     fn member(&self, ix: FaceIx) -> Result<&Member, DevError> {
         match self.members.binary_search_by(|m| m.ix.cmp(&ix)) {
             Ok(k) => self.members.get(k).ok_or(DevError::Inconsistent),
@@ -281,11 +319,13 @@ pub struct Projected {
     /// The unsigned distance `|q - foot|`, metres.
     pub distance: f64,
     /// The signed deviation, metres: `+distance` outside the material, `-distance` inside;
-    /// `None` when GEO.DIST.SIGN gives no sign of record (D-045).
+    /// `None` when GEO.DIST.SIGN gives no sign of record or the foot is on the boundary of
+    /// the toleranced set (D-045).
     pub signed_dev: Option<f64>,
     /// The sign status of GEO.DIST.SIGN.
     pub sign: SignStatus,
-    /// The hit face's nominal approximation error, metres (never omitted).
+    /// The hit face's declared nominal approximation error, metres (never omitted; not
+    /// verified here).
     pub approx_error: f64,
     /// REQ-003: the foot lies on the face boundary within [`BOUNDARY_TOL_M`].
     pub on_boundary: bool,
@@ -406,6 +446,19 @@ fn project_one(faces: &FaceSet<'_>, index: u32, q: V3, hit: FaceHit, ix: FaceIx)
         }
         FaceFeature::Edge(_) | FaceFeature::Vertex(_) => true,
     };
+    if !faces.all_toleranced(&hit.feature).map_err(|error| DevError::Adjacency { index, error })? {
+        // The foot is on the boundary of the toleranced set (module docs): no sign, no normal.
+        return Ok(Projected {
+            face_id: member.id.clone(),
+            foot_point: hit.foot,
+            normal: None,
+            distance: hit.distance,
+            signed_dev: None,
+            sign: SignStatus::Undefined(SignUndefined::Boundary),
+            approx_error: member.approx,
+            on_boundary,
+        });
+    }
     let signed = faces.incid.signed(q, &hit).map_err(|error| DevError::Sign { index, error })?;
     let normal = match faces.incid.incident_at(&hit) {
         Ok(list) => foot_normal(&list),

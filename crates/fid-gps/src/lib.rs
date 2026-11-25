@@ -22,8 +22,9 @@
 //! input: every outcome is a returned `Result`. The only floating-point arithmetic is in
 //! [`zone`], [`drf`], [`dim`] and [`prof`] (outside the fits of `fid-fit`), written in KNP-1 style
 //! (pinned evaluation order, no fused multiply-add, no `f64::min`/`f64::max`, square root
-//! through `fid-num`, NaN rejected), so its results are bit-identical on every platform
-//! including wasm32.
+//! through `fid-num`, NaN rejected), so its results are bit-identical on every platform.
+//! CI runs `zone_shape` on wasm32 too; the [`prof`] output pin (GDT.PROF.DEV AC-5) is
+//! checked on Linux, Windows and macOS only, not on wasm32.
 
 pub mod dim;
 pub mod dmt;

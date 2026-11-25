@@ -272,7 +272,8 @@ fn run_case(fx: &Fixture, id: &str) -> DeviationSet {
         let want_n = dec3(get(e, "normal"));
         let want_dev = dec(get(e, "signed_dev"));
         let want_b = truthy(get(e, "on_boundary"));
-        let want_err = if is_null(get(e, "approx_error_m")) { 0.0 } else { dec(get(e, "approx_error_m")) };
+        // Every projected expectation states its approximation error (no default).
+        let want_err = dec(get(e, "approx_error_m"));
         let ok = label_of(&p.face_id) == want_face
             && close3(p.foot_point, want_foot, tol)
             && p.normal.is_some_and(|n| close3(n, want_n, tol))
@@ -493,6 +494,32 @@ fn open_edge_foot_has_no_sign() {
     assert!(close3(p.foot_point, [0.0, 0.01, 0.0], 1e-12));
     assert!((p.distance - 0.001 * core::f64::consts::SQRT_2).abs() <= 1e-12);
     assert_eq!(p.approx_error, 2e-7);
+}
+
+/// At a foot on the edge of the toleranced set (only `F2-dome` toleranced; the equator also
+/// bounds the untoleranced base) no sign and no normal are given, whichever side the
+/// whole-body rule would pick. Hand-labelled: both points lie just below the base, inside the
+/// equator's cylinder; the closest point of the dome is the equator point `(R, 0, 0)` at
+/// distance `hypot(a, b)`. The body rule would call the first inside (`(-a + b) < 0`) and the
+/// second outside; neither is a sign of the dome surface.
+#[test]
+fn edge_of_toleranced_set_has_no_sign() {
+    let fx = fixture(DOME);
+    let set = FaceSet::new(&fx.body, frame_ref(), &tol_faces(case(&fx, "restrict_dome"))).unwrap();
+    let (r, a, b) = (0.02, 2e-5, 1e-5);
+    let pts = [[r - a, 0.0, -b], [r - b, 0.0, -a]];
+    let out = deviations(&pts, &Rigid::IDENTITY, &set, 0.001).unwrap();
+    for d in &out.items {
+        let p = d.projected().unwrap();
+        assert_eq!(label_of(&p.face_id), "F2-dome");
+        assert!(close3(p.foot_point, [r, 0.0, 0.0], 1e-12), "{:?}", p.foot_point);
+        assert!((p.distance - (a * a + b * b).sqrt()).abs() <= 1e-12);
+        assert_eq!(p.signed_dev, None);
+        assert_eq!(p.normal, None);
+        assert_eq!(p.sign, SignStatus::Undefined(SignUndefined::Boundary));
+        assert!(p.on_boundary);
+        assert_eq!(p.approx_error, 0.0);
+    }
 }
 
 #[test]

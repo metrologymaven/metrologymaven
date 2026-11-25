@@ -215,14 +215,14 @@ def expect_sphere(q):
     db = norm([foot[k] - eq[k] for k in range(3)])
     assert foot[2] > 0
     return {"face": "F2-dome", "foot": d3(foot), "normal": d3(u), "signed_dev": dstr(n - D(R)),
-            "on_boundary": db <= BOUNDARY_TOL, "no_projection": False, "_db": db}
+            "on_boundary": db <= BOUNDARY_TOL, "no_projection": False, "approx_error_m": "0", "_db": db}
 
 
 def expect_plane(q):
     foot = [q[0], q[1], Decimal(0)]
     assert dsqrt(q[0] * q[0] + q[1] * q[1]) < D(R) - Decimal("0.001")
     return {"face": "F1-base", "foot": d3(foot), "normal": ["0", "0", "-1"], "signed_dev": dstr(-q[2]),
-            "on_boundary": False, "no_projection": False}
+            "on_boundary": False, "no_projection": False, "approx_error_m": "0"}
 
 
 def expect_edge(q):
@@ -236,7 +236,7 @@ def expect_edge(q):
     side = sum((q[k] - foot[k]) * n[k] for k in range(3))
     assert side > 0
     return {"face": "F1-base", "foot": d3(foot), "normal": d3(n), "signed_dev": dstr(d),
-            "on_boundary": True, "no_projection": False}
+            "on_boundary": True, "no_projection": False, "approx_error_m": "0"}
 
 
 def no_projection():
