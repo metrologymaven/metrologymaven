@@ -1,6 +1,6 @@
 [package]
 name = "fid-hal-idl"
-description = "Metrology Maven device interface types: SI quantities, encodings, frames, timestamps (HAL.IDL.UNITS); provenance stamp, batch envelope and external claim schemas (HAL.IDL.STAMP); typed configuration and configuration digest (HAL.IDL.BASE.CFG); device error model (HAL.IDL.BASE.ERR); Device@1 package, DeviceInstance and Device-core@1 profile (HAL.IDL.BASE.DESC); capability-package/v1 description format (HAL.IDL.GEN.FMT); instrument-profile/v1 descriptor (HAL.IDL.PROFILE); capability negotiation and semver rules (HAL.IDL.NEG)"
+description = "Metrology Maven device interface types: SI quantities, encodings, frames, timestamps (HAL.IDL.UNITS); provenance stamp, batch envelope and external claim schemas (HAL.IDL.STAMP); typed configuration and configuration digest (HAL.IDL.BASE.CFG); device error model (HAL.IDL.BASE.ERR); Device@1 package, DeviceInstance and Device-core@1 profile (HAL.IDL.BASE.DESC); capability-package/v1 description format (HAL.IDL.GEN.FMT); instrument-profile/v1 descriptor (HAL.IDL.PROFILE); capability negotiation and semver rules (HAL.IDL.NEG); shared streaming template, vendor-extension rule and Stream-common@1 profile (HAL.IDL.SENS.STREAM)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
