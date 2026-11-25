@@ -370,6 +370,97 @@
    }
   },
   {
+   "id": "signed_zero_lower",
+   "note": "mu -0.0 on LSL +0.0: (-0.0 - 0.0)/3 is -0.0 before the + 0.0, so the index is +0.0",
+   "mean": "-0.0",
+   "sigma": "1",
+   "lsl": "0",
+   "usl": null,
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "LOWER_ONLY",
+    "potential": {
+     "status": "NOT_APPLICABLE"
+    },
+    "centred": {
+     "value": {
+      "expected": "0000000000000000",
+      "pinned": "0000000000000000",
+      "tolerance_ulp": 0,
+      "exact": "0/1",
+      "decimal": "0.0",
+      "hand": "0"
+     }
+    }
+   }
+  },
+  {
+   "id": "signed_zero_upper",
+   "note": "USL -0.0 with mu +0.0: (-0.0 - 0.0)/3 is -0.0 before the + 0.0",
+   "mean": "0",
+   "sigma": "1",
+   "lsl": null,
+   "usl": "-0.0",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "UPPER_ONLY",
+    "potential": {
+     "status": "NOT_APPLICABLE"
+    },
+    "centred": {
+     "value": {
+      "expected": "0000000000000000",
+      "pinned": "0000000000000000",
+      "tolerance_ulp": 0,
+      "exact": "0/1",
+      "decimal": "0.0",
+      "hand": "0"
+     }
+    }
+   }
+  },
+  {
+   "id": "signed_zero_both",
+   "note": "USL -0.0, mu +0.0, LSL -3: total_min(-0.0, 3) is -0.0 before the + 0.0",
+   "mean": "0",
+   "sigma": "0.5",
+   "lsl": "-3",
+   "usl": "-0.0",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "value": {
+      "expected": "3ff0000000000000",
+      "pinned": "3ff0000000000000",
+      "tolerance_ulp": 0,
+      "exact": "1/1",
+      "decimal": "1.0",
+      "hand": "1"
+     }
+    },
+    "centred": {
+     "value": {
+      "expected": "0000000000000000",
+      "pinned": "0000000000000000",
+      "tolerance_ulp": 0,
+      "exact": "0/1",
+      "decimal": "0.0",
+      "hand": "0"
+     }
+    }
+   }
+  },
+  {
    "id": "custom_min_n",
    "note": "a caller-configured minimum of 5 with n 6",
    "mean": "0.5",
@@ -717,6 +808,21 @@
    }
   },
   {
+   "id": "overflow_upper_only",
+   "note": "one-sided: USL - mu overflows to infinity",
+   "mean": "-1.5e308",
+   "sigma": "1",
+   "lsl": null,
+   "usl": "1.5e308",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "error": "result_not_finite"
+   }
+  },
+  {
    "id": "overflow_subnormal_sigma",
    "note": "a subnormal sigma makes the quotient overflow",
    "mean": "0",
@@ -810,5 +916,5 @@
    "valid": false
   }
  ],
- "digest": "b760ac432832e8a0259074d0fa6ccd203190d0d1c859c0e77b65f5306343528b"
+ "digest": "18add6b4d2285fe8e8544f6c9ce7d069320dc225c2f16b938097a523b3636782"
 }

@@ -42,7 +42,8 @@
 //! Exactly the IEEE 754 basic operations, in this pinned order and never fused:
 //! `d = USL − LSL; s6 = 6.0 * σ; potential = d / s6` and
 //! `a = USL − μ; b = μ − LSL; s3 = 3.0 * σ; centred = total_min(a, b) / s3`, with
-//! `total_min` from `fid-num` (KRN.NUM.FN). Each index is therefore within a few ulp of the
+//! `total_min` from `fid-num` (KRN.NUM.FN), then `+ 0.0` on each index, which turns a `-0.0`
+//! (from a signed-zero limit or mean) into `+0.0` and changes nothing else. Each index is therefore within a few ulp of the
 //! exact value and bit-identical on every target (REQ-RPT.STATS.CAP.INDEX-007).
 
 use core::fmt;
@@ -276,8 +277,11 @@ fn finite(x: f64, reason: BadInput) -> Result<f64, StatsError> {
     }
 }
 
+/// A finite index with any negative zero made `+0.0`: in round-to-nearest-even `-0.0 + 0.0`
+/// is `+0.0` and every other value is unchanged, so a signed-zero limit or mean (for example
+/// `μ = -0.0` on `LSL = +0.0`) cannot produce a `-0.0` index.
 fn finite_index(x: f64) -> Result<IndexValue, StatsError> {
-    finite(x, BadInput::ResultNotFinite).map(IndexValue::Value)
+    finite(x + 0.0, BadInput::ResultNotFinite).map(IndexValue::Value)
 }
 
 /// The potential and centred capability indices of one characteristic (see the module

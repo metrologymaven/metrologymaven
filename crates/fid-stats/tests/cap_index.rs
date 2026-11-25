@@ -51,10 +51,44 @@ fn run(c: &Json) -> Result<IndexPair, StatsError> {
     )
 }
 
-/// Ordered distance in ulps between two finite doubles of the same sign.
+/// The position of a finite double on the number line in ulps: `+0.0` and `-0.0` both map to
+/// 0, positive values to their bits, negative values to minus their magnitude bits.
+fn ordered(x: f64) -> i64 {
+    assert!(x.is_finite(), "{x}");
+    let mag = (x.to_bits() & !(1u64 << 63)) as i64;
+    if x.is_sign_negative() {
+        -mag
+    } else {
+        mag
+    }
+}
+
+/// Distance in ulps between two finite doubles, across zero and with `-0.0 == +0.0`.
 fn ulps(a: f64, b: f64) -> u64 {
-    assert_eq!(a.is_sign_negative(), b.is_sign_negative(), "{a} vs {b}");
-    a.to_bits().abs_diff(b.to_bits())
+    ordered(a).abs_diff(ordered(b))
+}
+
+#[test]
+fn ulps_handles_signed_zero() {
+    assert_eq!(ulps(0.0, -0.0), 0);
+    assert_eq!(ulps(-0.0, 0.0), 0);
+    assert_eq!(ulps(0.0, f64::from_bits(1)), 1);
+    assert_eq!(ulps(-0.0, f64::from_bits(1)), 1);
+    assert_eq!(ulps(-f64::from_bits(1), f64::from_bits(1)), 2);
+    assert_eq!(ulps(1.0, f64::from_bits(1.0f64.to_bits() + 1)), 1);
+    assert_eq!(ulps(-1.0, -f64::from_bits(1.0f64.to_bits() + 1)), 1);
+}
+
+/// A signed-zero limit or mean never yields a `-0.0` index.
+#[test]
+fn signed_zero_limits_give_positive_zero() {
+    let e = || est("overall_sd@1");
+    let lower = capability(-0.0, 1.0, 30, Some(0.0), None, DEFAULT_MIN_N, Family::P, e()).unwrap();
+    let upper = capability(0.0, 1.0, 30, None, Some(-0.0), DEFAULT_MIN_N, Family::P, e()).unwrap();
+    let both = capability(0.0, 0.5, 30, Some(-3.0), Some(-0.0), DEFAULT_MIN_N, Family::P, e()).unwrap();
+    for p in [lower, upper, both] {
+        assert_eq!(p.centred.value().unwrap().to_bits(), 0, "{p:?}");
+    }
 }
 
 fn token(v: IndexValue) -> String {
