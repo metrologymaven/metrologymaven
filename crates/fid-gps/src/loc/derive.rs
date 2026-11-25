@@ -47,6 +47,8 @@
 //! D0. The only arithmetic is the squared-norm check `(x·x + y·y) + z·z` (pinned order, no fused
 //! multiply-add); lookups are in a `BTreeMap`. Nothing panics on any input.
 
+pub mod axis;
+
 use crate::dmt::{AlgId, Operator, OperatorChain, OperatorKind};
 use fid_canon::CValue;
 use std::collections::{BTreeMap, BTreeSet};
@@ -710,10 +712,16 @@ impl DeriveRegistry {
     }
 
     /// The registry of the derivations this crate implements, built at startup. Each
-    /// derivation leaf (`GDT.LOC.DERIV.AXIS`, `.MLINE`, `.MSURF`) registers itself here; none
-    /// is on main yet, so today it is empty and every reduction is `UNSUPPORTED`.
+    /// derivation leaf (`GDT.LOC.DERIV.AXIS`, `.MLINE`, `.MSURF`) registers itself here. Today
+    /// it holds the axis of an associated feature ([`axis::derive_axis`] under
+    /// [`axis::AXIS_REDUCTION_ALG`]); every other reduction is `UNSUPPORTED`.
     pub fn builtin() -> DeriveRegistry {
-        DeriveRegistry::new()
+        let mut r = DeriveRegistry::new();
+        // The constant ID parses (pinned by a test); a fresh registry has no duplicate.
+        if let Ok(a) = AlgId::parse(axis::AXIS_REDUCTION_ALG) {
+            r.impls.insert(a, axis::derive_axis);
+        }
+        r
     }
 
     /// Registers `f` for `alg`; a second registration of the same ID is `duplicate_alg`.
