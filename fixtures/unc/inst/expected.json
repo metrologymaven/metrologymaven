@@ -1,0 +1,259 @@
+{
+  "tracker_digest": "sha256:42b5cda7cd67157f27dd285f838f144d02a382f39bb6d15dc8de5c9b5221a646",
+  "tracker_canonical_size": 1071,
+  "descriptor_digest": "sha256:725ce5f839d3273cf332e0f00c3c3471a5548102f21f12aa518f07c079118741",
+  "device_instance_digest": "sha256:cbb4feb64a26092837cfc8d2954547b88b3cf9ba60ee779f143ec47c7fd35e7f",
+  "evidence": "{\"descriptor\":{\"device_class\":[\"PortablePose\"],\"frame_chain\":[{\"kind\":\"sensor\",\"name\":\"reflector\"},{\"kind\":\"device\",\"name\":\"tracker-head\"}],\"make\":\"Example Tracker Works (invented stand-in)\",\"model\":\"StandIn Tracker 1\",\"mpe_terms\":[],\"profile_id\":\"sim-tracker-standin@1.0.0\",\"schema\":\"instrument-profile/v1\",\"signature\":{\"keyid\":\"key:fixture-profile-signer-2026\",\"sig\":\"Zml4dHVyZSBzaWduYXR1cmUgYnl0ZXMsIG5vdCBhIHJlYWwgc2lnbmF0dXJl\"},\"source\":{\"citation\":\"Stand-in descriptor written for UNC.INST.SCHEMA tests until HAL.SIM ships; invented values, not a real product (CC-BY-4.0)\",\"digest\":\"sha256:759ff45a2ab21a3dede083c02dd056c4d018814e9f0351486d13d165bdd46bb7\",\"kind\":\"spec-sheet\"},\"uec_max\":1,\"um_model\":{\"digest\":\"sha256:42b5cda7cd67157f27dd285f838f144d02a382f39bb6d15dc8de5c9b5221a646\",\"id\":\"im:tracker-example@1.0.0\"},\"validity\":{\"range\":{\"lower\":{\"unit\":\"m\",\"value\":\"0x3fe0000000000000\"},\"upper\":{\"unit\":\"m\",\"value\":\"0x4044000000000000\"}},\"temperature\":{\"lower\":{\"unit\":\"K\",\"value\":\"0x4071b26666666666\"},\"upper\":{\"unit\":\"K\",\"value\":\"0x4073926666666666\"}}}},\"device\":\"sim-tracker-1\",\"instance\":{\"driver_id\":\"standin-tracker-driver\",\"make\":{\"bytes\":\"Example Tracker Works (invented stand-in)\",\"truncated\":false},\"model\":{\"bytes\":\"StandIn Tracker 1\",\"truncated\":false},\"serial\":{\"bytes\":\"EXAMPLE-0001\",\"truncated\":false}}}",
+  "evidence_digest": "sha256:229edb692bf00545a03ce4613cd0845b1beeef71520012691ac0ba8b34035b26",
+  "ac1_event": "{\"author_kind\":\"human\",\"blob\":\"sha256:42b5cda7cd67157f27dd285f838f144d02a382f39bb6d15dc8de5c9b5221a646\",\"blob_size\":1071,\"branch\":\"main\",\"by\":\"alice\",\"command\":\"unc.import_instrument_model@1\",\"digest\":\"sha256:42b5cda7cd67157f27dd285f838f144d02a382f39bb6d15dc8de5c9b5221a646\",\"model\":\"im:tracker-example@1.0.0\"}",
+  "ac1_result": "{\"author_kind\":\"human\",\"digest\":\"sha256:42b5cda7cd67157f27dd285f838f144d02a382f39bb6d15dc8de5c9b5221a646\",\"model\":\"im:tracker-example@1.0.0\",\"outcome\":\"stored\"}",
+  "ac1_again_result": "{\"author_kind\":\"human\",\"digest\":\"sha256:42b5cda7cd67157f27dd285f838f144d02a382f39bb6d15dc8de5c9b5221a646\",\"model\":\"im:tracker-example@1.0.0\",\"outcome\":\"already_stored\"}",
+  "dry_run_result": "{\"author_kind\":\"human\",\"digest\":\"sha256:42b5cda7cd67157f27dd285f838f144d02a382f39bb6d15dc8de5c9b5221a646\",\"model\":\"im:tracker-example@1.0.0\",\"outcome\":\"dry_run\"}",
+  "show_result": "{\"author_kind\":\"human\",\"canonical\":\"{\\\"device_class\\\":\\\"tracker\\\",\\\"id\\\":\\\"im:tracker-example@1.0.0\\\",\\\"kind\\\":\\\"observation\\\",\\\"params\\\":[{\\\"dist\\\":{\\\"kind\\\":\\\"normal\\\",\\\"params\\\":{\\\"mu\\\":\\\"0x0000000000000000\\\",\\\"sigma\\\":\\\"0x3ed4f8b588e368f1\\\"}},\\\"name\\\":\\\"angle_sigma\\\",\\\"unit\\\":\\\"rad\\\",\\\"value\\\":\\\"0x3ed4f8b588e368f1\\\"},{\\\"dist\\\":{\\\"kind\\\":\\\"rect\\\",\\\"params\\\":{\\\"a\\\":\\\"0xbee4f8b588e368f1\\\",\\\"b\\\":\\\"0x3ee4f8b588e368f1\\\"}},\\\"name\\\":\\\"probing_noise\\\",\\\"unit\\\":\\\"m\\\",\\\"value\\\":\\\"0x3ee4f8b588e368f1\\\"},{\\\"dist\\\":{\\\"kind\\\":\\\"normal\\\",\\\"params\\\":{\\\"mu\\\":\\\"0x0000000000000000\\\",\\\"sigma\\\":\\\"0x3eef75104d551d69\\\"}},\\\"name\\\":\\\"range_const_sigma\\\",\\\"unit\\\":\\\"m\\\",\\\"value\\\":\\\"0x3eef75104d551d69\\\"},{\\\"dist\\\":{\\\"kind\\\":\\\"normal\\\",\\\"params\\\":{\\\"mu\\\":\\\"0x0000000000000000\\\",\\\"sigma\\\":\\\"0x3ed92a737110e454\\\"}},\\\"name\\\":\\\"range_prop_sigma\\\",\\\"unit\\\":\\\"1\\\",\\\"value\\\":\\\"0x3ed92a737110e454\\\"}],\\\"range\\\":[{\\\"axis\\\":\\\"range\\\",\\\"max\\\":\\\"0x4044000000000000\\\",\\\"min\\\":\\\"0x3fe0000000000000\\\",\\\"unit\\\":\\\"m\\\"},{\\\"axis\\\":\\\"temperature\\\",\\\"max\\\":\\\"0x4073926666666666\\\",\\\"min\\\":\\\"0x4071b26666666666\\\",\\\"unit\\\":\\\"K\\\"}],\\\"schema\\\":\\\"instrument-model/v1\\\",\\\"source\\\":\\\"Invented example model for tests: the parameter values are made up and describe no real instrument (project fixture, D-038, CC-BY-4.0)\\\"}\",\"digest\":\"sha256:42b5cda7cd67157f27dd285f838f144d02a382f39bb6d15dc8de5c9b5221a646\",\"model\":\"im:tracker-example@1.0.0\"}",
+  "ac3_event": "{\"author_kind\":\"human\",\"branch\":\"main\",\"by\":\"alice\",\"command\":\"unc.bind_instrument_model@1\",\"descriptor_digest\":\"sha256:725ce5f839d3273cf332e0f00c3c3471a5548102f21f12aa518f07c079118741\",\"device\":\"sim-tracker-1\",\"device_instance_digest\":\"sha256:cbb4feb64a26092837cfc8d2954547b88b3cf9ba60ee779f143ec47c7fd35e7f\",\"evidence\":\"sha256:229edb692bf00545a03ce4613cd0845b1beeef71520012691ac0ba8b34035b26\",\"evidence_size\":1325,\"model\":\"im:tracker-example@1.0.0\",\"model_digest\":\"sha256:42b5cda7cd67157f27dd285f838f144d02a382f39bb6d15dc8de5c9b5221a646\",\"target\":\"device\"}",
+  "ac3_result": "{\"descriptor_digest\":\"sha256:725ce5f839d3273cf332e0f00c3c3471a5548102f21f12aa518f07c079118741\",\"device\":\"sim-tracker-1\",\"device_instance_digest\":\"sha256:cbb4feb64a26092837cfc8d2954547b88b3cf9ba60ee779f143ec47c7fd35e7f\",\"model\":\"im:tracker-example@1.0.0\",\"model_digest\":\"sha256:42b5cda7cd67157f27dd285f838f144d02a382f39bb6d15dc8de5c9b5221a646\",\"outcome\":\"bound\",\"target\":\"device\"}",
+  "ac3_again_result": "{\"descriptor_digest\":\"sha256:725ce5f839d3273cf332e0f00c3c3471a5548102f21f12aa518f07c079118741\",\"device\":\"sim-tracker-1\",\"device_instance_digest\":\"sha256:cbb4feb64a26092837cfc8d2954547b88b3cf9ba60ee779f143ec47c7fd35e7f\",\"model\":\"im:tracker-example@1.0.0\",\"model_digest\":\"sha256:42b5cda7cd67157f27dd285f838f144d02a382f39bb6d15dc8de5c9b5221a646\",\"outcome\":\"already_bound\",\"target\":\"device\"}",
+  "project_event": "{\"author_kind\":\"human\",\"branch\":\"main\",\"by\":\"alice\",\"command\":\"unc.bind_instrument_model@1\",\"model\":\"im:tracker-example@1.0.0\",\"model_digest\":\"sha256:42b5cda7cd67157f27dd285f838f144d02a382f39bb6d15dc8de5c9b5221a646\",\"target\":\"project\"}",
+  "project_result": "{\"model\":\"im:tracker-example@1.0.0\",\"model_digest\":\"sha256:42b5cda7cd67157f27dd285f838f144d02a382f39bb6d15dc8de5c9b5221a646\",\"outcome\":\"bound\",\"target\":\"project\"}",
+  "range_cases": [
+    {
+      "name": "ac4_52m",
+      "context": [
+        {
+          "axis": "range",
+          "value": "52",
+          "unit": "m"
+        }
+      ],
+      "verdict": {
+        "verdict": "out_of_model_range",
+        "axis": "range",
+        "side": "upper",
+        "bound": "0x4044000000000000",
+        "unit": "m"
+      }
+    },
+    {
+      "name": "ac4_52m_in_temperature",
+      "context": [
+        {
+          "axis": "range",
+          "value": "52",
+          "unit": "m"
+        },
+        {
+          "axis": "temperature",
+          "value": "293.15",
+          "unit": "K"
+        }
+      ],
+      "verdict": {
+        "verdict": "out_of_model_range",
+        "axis": "range",
+        "side": "upper",
+        "bound": "0x4044000000000000",
+        "unit": "m"
+      }
+    },
+    {
+      "name": "below_min",
+      "context": [
+        {
+          "axis": "range",
+          "value": "0.4",
+          "unit": "m"
+        },
+        {
+          "axis": "temperature",
+          "value": "293.15",
+          "unit": "K"
+        }
+      ],
+      "verdict": {
+        "verdict": "out_of_model_range",
+        "axis": "range",
+        "side": "lower",
+        "bound": "0x3fe0000000000000",
+        "unit": "m"
+      }
+    },
+    {
+      "name": "at_min_closed",
+      "context": [
+        {
+          "axis": "range",
+          "value": "0.5",
+          "unit": "m"
+        },
+        {
+          "axis": "temperature",
+          "value": "293.15",
+          "unit": "K"
+        }
+      ],
+      "verdict": {
+        "verdict": "in_range"
+      }
+    },
+    {
+      "name": "at_max_closed",
+      "context": [
+        {
+          "axis": "range",
+          "value": "40000",
+          "unit": "mm"
+        },
+        {
+          "axis": "temperature",
+          "value": "313.15",
+          "unit": "K"
+        }
+      ],
+      "verdict": {
+        "verdict": "in_range"
+      }
+    },
+    {
+      "name": "just_above_max",
+      "context": [
+        {
+          "axis": "range",
+          "value": "40.000001",
+          "unit": "m"
+        },
+        {
+          "axis": "temperature",
+          "value": "293.15",
+          "unit": "K"
+        }
+      ],
+      "verdict": {
+        "verdict": "out_of_model_range",
+        "axis": "range",
+        "side": "upper",
+        "bound": "0x4044000000000000",
+        "unit": "m"
+      }
+    },
+    {
+      "name": "in_range",
+      "context": [
+        {
+          "axis": "range",
+          "value": "12.5",
+          "unit": "m"
+        },
+        {
+          "axis": "temperature",
+          "value": "293.15",
+          "unit": "K"
+        }
+      ],
+      "verdict": {
+        "verdict": "in_range"
+      }
+    },
+    {
+      "name": "temperature_missing",
+      "context": [
+        {
+          "axis": "range",
+          "value": "12.5",
+          "unit": "m"
+        }
+      ],
+      "verdict": {
+        "verdict": "not_checked",
+        "axis": "temperature",
+        "reason": "not_observed"
+      }
+    },
+    {
+      "name": "temperature_too_hot",
+      "context": [
+        {
+          "axis": "range",
+          "value": "12.5",
+          "unit": "m"
+        },
+        {
+          "axis": "temperature",
+          "value": "320",
+          "unit": "K"
+        }
+      ],
+      "verdict": {
+        "verdict": "out_of_model_range",
+        "axis": "temperature",
+        "side": "upper",
+        "bound": "0x4073926666666666",
+        "unit": "K"
+      }
+    },
+    {
+      "name": "range_in_seconds",
+      "context": [
+        {
+          "axis": "range",
+          "value": "12.5",
+          "unit": "s"
+        },
+        {
+          "axis": "temperature",
+          "value": "293.15",
+          "unit": "K"
+        }
+      ],
+      "verdict": {
+        "verdict": "not_checked",
+        "axis": "range",
+        "reason": "unit_mismatch"
+      }
+    },
+    {
+      "name": "out_beats_unchecked",
+      "context": [
+        {
+          "axis": "range",
+          "value": "12.5",
+          "unit": "s"
+        },
+        {
+          "axis": "temperature",
+          "value": "200",
+          "unit": "K"
+        }
+      ],
+      "verdict": {
+        "verdict": "out_of_model_range",
+        "axis": "temperature",
+        "side": "lower",
+        "bound": "0x4071b26666666666",
+        "unit": "K"
+      }
+    },
+    {
+      "name": "extra_axis_ignored",
+      "context": [
+        {
+          "axis": "range",
+          "value": "1",
+          "unit": "m"
+        },
+        {
+          "axis": "temperature",
+          "value": "300",
+          "unit": "K"
+        },
+        {
+          "axis": "elevation",
+          "value": "2",
+          "unit": "rad"
+        }
+      ],
+      "verdict": {
+        "verdict": "in_range"
+      }
+    }
+  ]
+}
