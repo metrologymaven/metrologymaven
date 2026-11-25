@@ -1,0 +1,42 @@
+{
+ "note": "AC-6: SplitMix64 points (seed 0x5ec7); per point: p = (U(-0.05,0.05), U(-0.05,0.05), U(0,0.1)), kind = next() % 16 (0 no projection, 1 no sign, 2 no normal, else both), d = U(-1e-4,1e-4), v = 3 x U(-1,1), normal = v / |v| (or z when |v| < 0.25). U(lo,hi) = lo + ((next() >> 11) * 2^-53) * (hi - lo). The digest is SHA-256 over, per run (normal3d then inplane), per section in chain order: u32 index, f64 position, u32 count and (u32 index, f64 dev) per member, u32 count and (u32 index, u8 reason 0 no_sign 1 no_normal) per withheld point, u32 count and u32 index per oblique point, u32 no-projection count, u8 flags (1 empty, 2 oblique, 4 no_projection, 8 withheld); little-endian.",
+ "seed": 24263,
+ "count": 1000000,
+ "pose": {
+  "r": [
+   [
+    "0x3fe3333333333333",
+    "0xbfe999999999999a",
+    "0x0000000000000000"
+   ],
+   [
+    "0x3fe999999999999a",
+    "0x3fe3333333333333",
+    "0x0000000000000000"
+   ],
+   [
+    "0x0000000000000000",
+    "0x0000000000000000",
+    "0x3ff0000000000000"
+   ]
+  ],
+  "t": [
+   "0x3f50624dd2f1a9fc",
+   "0xbf60624dd2f1a9fc",
+   "0x3f689374bc6a7efa"
+  ]
+ },
+ "normal": [
+  "0x0000000000000000",
+  "0x3fe3333333333333",
+  "0x3fe999999999999a"
+ ],
+ "start": "0xbfa47ae147ae147b",
+ "step": "0x3f5a36e2eb1c432d",
+ "sections": 100,
+ "w": "0x3f3a36e2eb1c432d",
+ "min_inplane": "0x3fd3333333333333",
+ "members_normal3d": 436260,
+ "members_inplane": 385528,
+ "digest": "sha256:7ea5acbd7b0cb743cb220e9f1a08f5a5cbe92761af695ea66e6a5fc97c157f34"
+}

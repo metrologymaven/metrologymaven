@@ -17,7 +17,9 @@
 //! - [`prof`] (`GDT.PROF.DEV`): per-point signed deviations from the nominal CAD faces
 //!   (GEO.DIST.FACE.BODY closest points, GEO.DIST.FACE.INCID signs) with each face's
 //!   nominal approximation error, boundary and no-projection flags; and (`GDT.PROF.ZDEF.UNIF`)
-//!   the constant-width profile zone definitions as allowed intervals on those deviations.
+//!   the constant-width profile zone definitions as allowed intervals on those deviations;
+//!   and (`GDT.PROF.LINE.SECT`) the section bands and line-element deviations of profile of a
+//!   line, with exact band membership.
 //!
 //! Pure: no I/O (callers pass bytes), no `HashMap`/`HashSet`, and nothing here panics on any
 //! input: every outcome is a returned `Result`. The only floating-point arithmetic is in
