@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-hal-idl]
+built_pr: 615
 satisfies: [REQ-HAL.IDL.SENS-001, REQ-HAL.IDL.SENS-002]
 covers: []
 depends_on: [HAL.IDL.SENS.STREAM, HAL.IDL.BASE, HAL.IDL.UNITS, HAL.IDL.GEN.FMT]
