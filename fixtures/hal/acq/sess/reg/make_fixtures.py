@@ -3,7 +3,8 @@
 
 Writes project-authored fixtures (CC-BY-4.0) under fixtures/hal/acq/sess/reg/:
   - three_sources.json         AC-1, AC-4: three registrations (driver, simulator, file), in a
-                               deliberately unsorted order; the simulator claims to be a driver
+                               deliberately unsorted order; the simulator claims to be a driver;
+                               the file source declares neither serial nor firmware
   - expected_show_devices.json AC-4: RFC 8785 canonical result of device.show_devices@1 over
                                the three sources with no session open (no trailing newline)
   - expected_events.json       AC-1: RFC 8785 canonical list of the device.event records the
@@ -71,7 +72,9 @@ def offer(name, versions, features):
 
 
 def declaration(driver_id, make, model, serial, capabilities, firmware=None):
-    device = {"driver_id": driver_id, "make": text(make), "model": text(model), "serial": text(serial)}
+    device = {"driver_id": driver_id, "make": text(make), "model": text(model)}
+    if serial is not None:
+        device["serial"] = text(serial)
     if firmware is not None:
         device["firmware"] = text(firmware)
     return {
@@ -112,7 +115,7 @@ REGISTRATIONS = [
             "file.example.points",
             "Example Metrology (invented)",
             "EM-CMM 700 (invented)",
-            "INVENTED-SN-0702",
+            None,
             [offer("Device", ">=1.0 <2", [])],
         ),
     },

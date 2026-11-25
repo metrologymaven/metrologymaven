@@ -9,10 +9,12 @@ use fid_bus::error::{BusError, Detail, ValidationReason};
 use fid_bus::unit::Normalised;
 use fid_bus::validate::{Compiled, Hooks, RefLookup};
 use fid_canon::{to_canonical_bytes, CValue};
-use fid_hal_idl::CapabilityDeclaration;
+use fid_hal_idl::negotiate::{MAX_CAPABILITIES, MAX_FEATURES};
+use fid_hal_idl::{CapabilityDeclaration, CapabilityOffer, Quantity, SiUnit, VersionRange};
 use fid_hal_runtime::registry::{
     command_defs, run_show_devices, show_devices, ClaimedKind, DeviceRegistry, NoSessions, Registration, RegistryError,
-    SessionLookup, SessionState, SourceId, SourceKind, FILE_SOURCE_NAMESPACE, FILE_SOURCE_NAMESPACE_NAME, SHOW_DEVICES,
+    SessionLookup, SessionState, SourceId, SourceKind, FILE_SOURCE_NAMESPACE, FILE_SOURCE_NAMESPACE_NAME, MAX_EVENTS,
+    MAX_SOURCES, SHOW_DEVICES,
 };
 use fid_types::Digest;
 use fid_uuid::{uuid_v5, Uuid};
@@ -226,76 +228,85 @@ fn ac4_show_devices_is_sorted_and_byte_identical_across_runs() {
     assert_eq!(run_show_devices(&reg, &NoSessions, &CValue::Null).unwrap_err().code(), "bad_params");
 }
 
-#[test]
-fn ac5_no_public_function_takes_a_kind_for_an_existing_source() {
-    // The kind is fixed by the entry point's name. Scan the public API of `DeviceRegistry`
-    // and `SourceRecord`: exactly these functions, and none of them takes a `SourceKind`.
-    let src = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/registry.rs")).unwrap();
-    let mut found = BTreeMap::new();
-    let mut current: Option<&str> = None;
-    // A signature that rustfmt wrapped: (key, text so far), until its body opens.
-    let mut open: Option<(String, String)> = None;
+/// Every `pub` and `pub(crate)` function signature in `src`, at any indentation, as
+/// `(enclosing impl type or "", whole signature up to its body or `;`)`.
+fn signatures(src: &str) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    let mut current = String::new();
+    let mut open: Option<String> = None;
     for line in src.lines() {
-        if let Some((key, mut sig)) = open.take() {
+        if let Some(mut sig) = open.take() {
+            sig.push(' ');
             sig.push_str(line.trim());
-            if line.contains('{') {
-                found.insert(key, sig);
+            if line.contains('{') || line.contains(';') {
+                out.push((current.clone(), sig));
             } else {
-                open = Some((key, sig));
+                open = Some(sig);
             }
             continue;
         }
         if line == "}" {
-            current = None;
+            current.clear();
         }
-        if let Some(rest) = line.strip_prefix("impl ") {
-            current = Some(if rest.starts_with("DeviceRegistry ") {
-                "DeviceRegistry"
-            } else if rest.starts_with("SourceRecord ") {
-                "SourceRecord"
+        if let Some(rest) = line.strip_prefix("impl") {
+            // `impl X {`, `impl<T> X {` or `impl Trait for X {`: the self type is the word before `{`.
+            let head = rest.split('{').next().unwrap_or_default();
+            let head = head.rsplit(" for ").next().unwrap_or(head);
+            current = head.split_whitespace().last().unwrap_or_default().to_string();
+        }
+        let t = line.trim_start();
+        let sig = t.strip_prefix("pub fn ").or_else(|| t.strip_prefix("pub(crate) fn "));
+        if let Some(sig) = sig {
+            if sig.contains('{') || sig.contains(';') {
+                out.push((current.clone(), sig.to_string()));
             } else {
-                "other"
-            });
-        }
-        if let (Some(ty), Some(sig)) = (current, line.strip_prefix("    pub fn ")) {
-            if ty != "other" {
-                let name = sig.split(['(', '<']).next().unwrap().to_string();
-                if sig.contains('{') {
-                    found.insert(format!("{ty}::{name}"), sig.to_string());
-                } else {
-                    open = Some((format!("{ty}::{name}"), sig.to_string()));
-                }
+                open = Some(sig.to_string());
             }
         }
     }
-    let names: Vec<&str> = found.keys().map(String::as_str).collect();
-    assert_eq!(
-        names,
-        [
-            "DeviceRegistry::events",
-            "DeviceRegistry::get",
-            "DeviceRegistry::is_empty",
-            "DeviceRegistry::len",
-            "DeviceRegistry::new",
-            "DeviceRegistry::records",
-            "DeviceRegistry::register_driver",
-            "DeviceRegistry::register_emulator",
-            "DeviceRegistry::register_file",
-            "DeviceRegistry::register_playback",
-            "DeviceRegistry::register_simulator",
-            "DeviceRegistry::take_events",
-            "DeviceRegistry::unregister",
-            "SourceRecord::declaration",
-            "SourceRecord::registered_at",
-            "SourceRecord::registered_by",
-            "SourceRecord::source_id",
-            "SourceRecord::source_kind",
-        ]
-    );
-    for (name, sig) in &found {
-        let params = sig.split_once('(').map(|(_, p)| p.split_once(')').map_or(p, |(p, _)| p)).unwrap();
-        assert!(!params.contains("SourceKind"), "{name} takes a kind: {sig}");
-        assert!(!params.contains("SourceRecord"), "{name} takes a record: {sig}");
+    out
+}
+
+/// The signatures that take a `SourceKind` together with a registry or a record: as a
+/// parameter, or as the receiver of a method of `DeviceRegistry` or `SourceRecord`.
+fn kind_setters(src: &str) -> Vec<String> {
+    signatures(src)
+        .into_iter()
+        .filter(|(ty, sig)| {
+            let params = sig.split_once('(').map_or("", |(_, p)| p.split_once(')').map_or(p, |(p, _)| p));
+            let receiver = params.contains("self") && matches!(ty.as_str(), "DeviceRegistry" | "SourceRecord");
+            let names_owner = receiver || params.contains("DeviceRegistry") || params.contains("SourceRecord");
+            names_owner && params.contains("SourceKind")
+        })
+        .map(|(ty, sig)| format!("{ty}: {sig}"))
+        .collect()
+}
+
+#[test]
+fn ac5_no_public_function_takes_a_kind_for_an_existing_source() {
+    let src = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/registry.rs")).unwrap();
+    let all = signatures(&src);
+    assert!(all.len() >= 30, "scanned only {} signatures", all.len());
+    assert!(all.iter().any(|(ty, sig)| ty == "DeviceRegistry" && sig.starts_with("register_file(")));
+    assert!(all.iter().any(|(ty, sig)| ty.is_empty() && sig.starts_with("show_devices(")));
+    assert_eq!(kind_setters(&src), Vec::<String>::new());
+    // The scan catches a kind setter however it is written.
+    for bad in [
+        "impl DeviceRegistry {\n    pub fn relabel(&mut self, id: &SourceId, kind: SourceKind) {}\n}\n",
+        "impl DeviceRegistry {\n        pub(crate) fn relabel(\n            &mut self,\n            kind: SourceKind,\n        ) -> bool {\n}\n",
+        "impl SourceRecord {\n    pub fn set_kind(&mut self, k: SourceKind) {}\n}\n",
+        "impl Display for SourceRecord {\n    pub fn set_kind(&mut self, k: SourceKind) {}\n}\n",
+        "pub fn relabel(r: &mut SourceRecord, k: SourceKind) {}\n",
+        "    pub(crate) fn relabel(reg: &mut DeviceRegistry, id: SourceId, k: SourceKind);\n",
+    ] {
+        assert_eq!(kind_setters(bad).len(), 1, "{bad}");
+    }
+    // A getter returning the kind, or a kind's own method, is not a setter.
+    for ok in [
+        "impl SourceRecord {\n    pub fn source_kind(&self) -> SourceKind {\n}\n",
+        "impl SourceKind {\n    pub fn parse(s: &str) -> Option<SourceKind> {\n}\n",
+    ] {
+        assert!(kind_setters(ok).is_empty(), "{ok}");
     }
     // Behaviour: a taken ID cannot be re-registered through another entry point.
     let mut reg = loaded();
@@ -314,6 +325,159 @@ fn ac5_no_public_function_takes_a_kind_for_an_existing_source() {
 }
 
 #[test]
+fn unregistered_minted_ids_are_never_reused() {
+    let mut reg = loaded();
+    let drv = case("driver");
+    let id = drv.source_id.unwrap();
+    let sid = reg.records().find(|r| r.source_id().uuid() == id).unwrap().source_id();
+    reg.unregister(&sid, &NoSessions).unwrap();
+    assert!(reg.get(&sid).is_none());
+    // Through any entry point, the retired ID is refused and nothing is registered.
+    for r in [
+        reg.register_driver(id, drv.reg.clone()),
+        reg.register_simulator(id, drv.reg.clone()),
+        reg.register_emulator(id, drv.reg.clone()),
+        reg.register_playback(id, drv.reg.clone()),
+    ] {
+        assert_eq!(r.unwrap_err(), RegistryError::SourceConflict(sid));
+    }
+    assert!(reg.get(&sid).is_none());
+    assert_eq!(reg.len(), 2);
+    // A file source is not retired: re-importing the same file yields the same ID again.
+    let file = case("file");
+    let fid = SourceId::for_file(file.file_digest.as_ref().unwrap());
+    reg.unregister(&fid, &NoSessions).unwrap();
+    assert_eq!(register(&mut reg, &file).unwrap(), fid);
+}
+
+fn offer(name: &str, features: &[&str]) -> CapabilityOffer {
+    CapabilityOffer {
+        name: name.to_string(),
+        versions: VersionRange::new(1, 0, 2).unwrap(),
+        features: features.iter().map(|f| f.to_string()).collect(),
+        limits: BTreeMap::new(),
+    }
+}
+
+#[test]
+fn declaration_breaking_any_neg_rule_is_refused() {
+    let drv = case("driver");
+    let many_features: Vec<String> = (0..=MAX_FEATURES).map(|i| format!("f{i}")).collect();
+    let many_features: Vec<&str> = many_features.iter().map(String::as_str).collect();
+    let many_caps: Vec<CapabilityOffer> = (0..=MAX_CAPABILITIES).map(|i| offer(&format!("Cap{i}"), &[])).collect();
+    let device = offer("Device", &["health_push"]);
+    let cases: Vec<(&str, Vec<CapabilityOffer>)> = vec![
+        ("capability_name_invalid", vec![device.clone(), offer("lineScan", &[])]),
+        ("capability_name_invalid", vec![device.clone(), offer("", &[])]),
+        ("feature_invalid", vec![device.clone(), offer("LineScan", &["Intensity"])]),
+        ("feature_invalid", vec![device.clone(), offer("LineScan", &["9lives"])]),
+        ("duplicate_feature", vec![device.clone(), offer("LineScan", &["intensity", "intensity"])]),
+        ("too_many_features", vec![device.clone(), offer("LineScan", &many_features)]),
+        ("too_many_capabilities", many_caps),
+        ("duplicate_capability", vec![device.clone(), offer("LineScan", &[]), offer("LineScan", &[])]),
+    ];
+    for (reason, capabilities) in cases {
+        let mut reg = DeviceRegistry::new();
+        let mut r = drv.reg.clone();
+        r.declaration.capabilities = capabilities;
+        let err = reg.register_driver(drv.source_id.unwrap(), r).unwrap_err();
+        match &err {
+            RegistryError::DeclarationInvalid(e) => assert_eq!(e.reason, reason),
+            other => panic!("{reason}: {other:?}"),
+        }
+        assert_eq!(err.code(), "declaration_invalid");
+        assert!(reg.is_empty() && reg.events().is_empty(), "{reason}");
+    }
+    let mut r = drv.reg.clone();
+    r.declaration.capabilities[0].limits.insert("Bad Limit".to_string(), Quantity::new(0.1, SiUnit::Metre).unwrap());
+    assert!(matches!(
+        DeviceRegistry::new().register_driver(drv.source_id.unwrap(), r),
+        Err(RegistryError::DeclarationInvalid(e)) if e.reason == "limit_invalid"
+    ));
+    for (reason, edit) in [
+        (
+            "driver_version_invalid",
+            (|d: &mut CapabilityDeclaration| d.driver_version = "1.0".to_string()) as fn(&mut _),
+        ),
+        ("time_sources_empty", |d: &mut CapabilityDeclaration| d.time_sources.clear()),
+        ("duplicate_time_source", |d: &mut CapabilityDeclaration| {
+            let t = d.time_sources[0];
+            d.time_sources.push(t)
+        }),
+    ] {
+        let mut r = drv.reg.clone();
+        edit(&mut r.declaration);
+        let err = DeviceRegistry::new().register_driver(drv.source_id.unwrap(), r).unwrap_err();
+        assert!(matches!(&err, RegistryError::DeclarationInvalid(e) if e.reason == reason), "{reason}: {err:?}");
+    }
+}
+
+/// A distinct UUIDv7 for each `i`.
+fn v7(i: u128) -> Uuid {
+    Uuid::from_u128((0x0193_f0a0_0000u128 << 80) | (0x7u128 << 76) | (0b10u128 << 62) | i)
+}
+
+#[test]
+fn full_event_buffer_refuses_registrations_that_would_raise_an_event() {
+    let sim = case("simulator");
+    let mut reg = DeviceRegistry::new();
+    for i in 0..MAX_EVENTS as u128 {
+        reg.register_simulator(v7(i), sim.reg.clone()).unwrap();
+    }
+    assert_eq!(reg.events().len(), MAX_EVENTS);
+    let next = v7(MAX_EVENTS as u128);
+    assert_eq!(reg.register_simulator(next, sim.reg.clone()).unwrap_err(), RegistryError::EventsFull);
+    assert_eq!(reg.len(), MAX_EVENTS);
+    // A registration that raises no event still goes in; after the caller takes the events,
+    // the refused one does too.
+    let mut quiet = sim.reg.clone();
+    quiet.claimed_kind = None;
+    reg.register_simulator(v7(10_000), quiet).unwrap();
+    assert_eq!(reg.take_events().len(), MAX_EVENTS);
+    reg.register_simulator(next, sim.reg.clone()).unwrap();
+    assert_eq!(reg.events().len(), 1);
+}
+
+#[test]
+fn full_registry_refuses_new_sources() {
+    let drv = case("driver");
+    let mut reg = DeviceRegistry::new();
+    for i in 0..MAX_SOURCES as u128 {
+        reg.register_driver(v7(i), drv.reg.clone()).unwrap();
+    }
+    assert_eq!(reg.register_driver(v7(MAX_SOURCES as u128), drv.reg.clone()).unwrap_err().code(), "registry_full");
+    assert_eq!(reg.len(), MAX_SOURCES);
+    assert!(reg.events().is_empty());
+}
+
+#[test]
+fn repeated_import_with_mismatched_claim_raises_the_event() {
+    let file = case("file");
+    let mut reg = DeviceRegistry::new();
+    let id = register(&mut reg, &file).unwrap();
+    assert!(reg.events().is_empty());
+    let mut again = file.reg.clone();
+    again.claimed_kind = Some("driver".to_string());
+    again.registered_at += 7;
+    assert_eq!(reg.register_file(file.file_digest.as_ref().unwrap(), again).unwrap(), id);
+    assert_eq!(reg.len(), 1);
+    assert_eq!(reg.get(&id).unwrap().registered_at(), file.reg.registered_at);
+    assert_eq!(reg.events().len(), 1);
+    assert_eq!(reg.events()[0].source_kind, SourceKind::File);
+    assert_eq!(reg.events()[0].claimed_kind, ClaimedKind::Known(SourceKind::Driver));
+    assert_eq!(reg.events()[0].at, file.reg.registered_at + 7);
+}
+
+#[test]
+fn listing_keeps_absent_identity_fields_absent() {
+    let v = show_devices(&loaded(), &NoSessions);
+    let CValue::Arr(sources) = field(&v, "sources") else { panic!() };
+    let file = sources.iter().find(|s| text(field(s, "source_kind")) == "file").unwrap();
+    let CValue::Obj(identity) = field(file, "identity") else { panic!() };
+    assert_eq!(identity.keys().map(String::as_str).collect::<Vec<_>>(), ["make", "model"]);
+}
+
+#[test]
 fn registration_inputs_fail_closed() {
     let drv = case("driver");
     let mut reg = DeviceRegistry::new();
@@ -327,10 +491,6 @@ fn registration_inputs_fail_closed() {
         r.registered_by = who.to_string();
         assert_eq!(reg.register_driver(drv.source_id.unwrap(), r).unwrap_err().code(), "registrar_invalid", "{who:?}");
     }
-    let mut r = drv.reg.clone();
-    let dup = r.declaration.capabilities[0].clone();
-    r.declaration.capabilities.push(dup);
-    assert_eq!(reg.register_driver(drv.source_id.unwrap(), r).unwrap_err().code(), "declaration_invalid");
     assert!(reg.is_empty());
     assert!(reg.events().is_empty());
 }

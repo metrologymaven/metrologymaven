@@ -77,10 +77,6 @@
           "model": {
             "bytes": "EM-CMM 700 (invented)",
             "truncated": false
-          },
-          "serial": {
-            "bytes": "INVENTED-SN-0702",
-            "truncated": false
           }
         },
         "capabilities": [

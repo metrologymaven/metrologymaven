@@ -7,7 +7,8 @@
 //!   [`DeviceRegistry::register_simulator`], [`DeviceRegistry::register_emulator`],
 //!   [`DeviceRegistry::register_playback`], [`DeviceRegistry::register_file`]). The record's
 //!   fields are private and no operation takes a kind for an existing source ID: a second
-//!   registration of a taken ID through any entry point fails `source_conflict`.
+//!   registration of a taken ID through any entry point fails `source_conflict`, and so does a
+//!   live or simulated ID that was registered before and then unregistered (IDs are never reused).
 //! - **REQ-002:** a kind the source claims for itself ([`Registration::claimed_kind`]) is never
 //!   used; when it differs from the entry point's kind the registry keeps the entry point's
 //!   kind and records one [`DeviceEvent`] (`device.event`, reason `source_kind_mismatch`). The
@@ -27,7 +28,7 @@
 //! state through [`SessionLookup`], and [`NoSessions`] reports none.
 
 use fid_canon::CValue;
-use fid_hal_idl::CapabilityDeclaration;
+use fid_hal_idl::{CapabilityDeclaration, NegError};
 use fid_registry::{CommandDef, DefError};
 use fid_types::Digest;
 use fid_uuid::{uuid_v5, Uuid};
@@ -52,6 +53,15 @@ pub const FILE_SOURCE_NAMESPACE_NAME: &str = "metrologymaven/hal.acq.sess.reg/fi
 
 /// Longest registrar name, in bytes.
 pub const MAX_REGISTRAR_BYTES: usize = 64;
+
+/// Most sources registered at once.
+pub const MAX_SOURCES: usize = 4096;
+
+/// Most retired live and simulated IDs kept (they are never reused).
+pub const MAX_RETIRED: usize = 65_536;
+
+/// Most `device.event` records held before the caller takes them.
+pub const MAX_EVENTS: usize = 1024;
 
 const LIFECYCLE_SINCE: &str = "2026-11-24";
 
@@ -138,8 +148,15 @@ pub enum RegistryError {
     SourceIdInvalid,
     /// `registrar_invalid`: the registrar name is empty, too long or not a lowercase name.
     RegistrarInvalid,
-    /// `declaration_invalid`: the declaration names a capability twice.
-    DeclarationInvalid,
+    /// `declaration_invalid`: the declaration breaks a `HAL.IDL.NEG` declaration rule
+    /// ([`CapabilityDeclaration::check`]); carries the entry and the rule, never device text.
+    DeclarationInvalid(NegError),
+    /// `registry_full`: [`MAX_SOURCES`] sources are registered, or [`MAX_RETIRED`] IDs are
+    /// retired; nothing changed.
+    RegistryFull,
+    /// `events_full`: [`MAX_EVENTS`] events wait to be taken; the registration that would
+    /// raise another is refused and nothing changed.
+    EventsFull,
     /// `bad_params`: `device.show_devices@1` takes an empty parameter object.
     BadParams,
 }
@@ -153,7 +170,9 @@ impl RegistryError {
             RegistryError::SourceConflict(_) => "source_conflict",
             RegistryError::SourceIdInvalid => "source_id_invalid",
             RegistryError::RegistrarInvalid => "registrar_invalid",
-            RegistryError::DeclarationInvalid => "declaration_invalid",
+            RegistryError::DeclarationInvalid(_) => "declaration_invalid",
+            RegistryError::RegistryFull => "registry_full",
+            RegistryError::EventsFull => "events_full",
             RegistryError::BadParams => "bad_params",
         }
     }
@@ -165,6 +184,7 @@ impl fmt::Display for RegistryError {
             RegistryError::SourceInUse(id) | RegistryError::SourceUnknown(id) | RegistryError::SourceConflict(id) => {
                 write!(f, "{}: {id}", self.code())
             }
+            RegistryError::DeclarationInvalid(e) => write!(f, "declaration_invalid: {} at {}", e.reason, e.entry),
             _ => f.write_str(self.code()),
         }
     }
@@ -320,10 +340,13 @@ impl SessionLookup for NoSessions {
 
 // ------------------------------------------------------------------ registry
 
-/// The registry of serving sources, keyed and ordered by source ID.
+/// The registry of serving sources, keyed and ordered by source ID. Live and simulated IDs
+/// of unregistered sources are retired and never registered again; file IDs are not retired,
+/// because re-importing the same file must yield the same ID (REQ-003).
 #[derive(Debug, Clone, Default)]
 pub struct DeviceRegistry {
     sources: BTreeMap<SourceId, SourceRecord>,
+    retired: BTreeSet<SourceId>,
     events: Vec<DeviceEvent>,
 }
 
@@ -354,7 +377,8 @@ impl DeviceRegistry {
 
     /// Registers a file pseudo-device (file import entry point). The ID is derived from
     /// `file_digest`; a repeat with the same declaration and registrar returns the same ID
-    /// and changes nothing (REQ-003).
+    /// and leaves the record unchanged (REQ-003), though a mismatched claim on the repeat
+    /// still raises its `device.event`.
     pub fn register_file(&mut self, file_digest: &Digest, reg: Registration) -> Result<SourceId, RegistryError> {
         let id = SourceId::for_file(file_digest);
         check(&reg)?;
@@ -362,9 +386,16 @@ impl DeviceRegistry {
             let same = existing.source_kind == SourceKind::File
                 && existing.declaration == reg.declaration
                 && existing.registered_by == reg.registered_by;
-            return if same { Ok(id) } else { Err(RegistryError::SourceConflict(id)) };
+            if !same {
+                return Err(RegistryError::SourceConflict(id));
+            }
+            if let Some(event) = mismatch(id, SourceKind::File, &reg) {
+                self.room_for_event()?;
+                self.events.push(event);
+            }
+            return Ok(id);
         }
-        Ok(self.insert(id, SourceKind::File, reg))
+        self.insert(id, SourceKind::File, reg)
     }
 
     fn register_minted(&mut self, id: Uuid, kind: SourceKind, reg: Registration) -> Result<SourceId, RegistryError> {
@@ -373,23 +404,29 @@ impl DeviceRegistry {
         }
         check(&reg)?;
         let id = SourceId(id);
-        if self.sources.contains_key(&id) {
+        if self.sources.contains_key(&id) || self.retired.contains(&id) {
             return Err(RegistryError::SourceConflict(id));
         }
-        Ok(self.insert(id, kind, reg))
+        self.insert(id, kind, reg)
     }
 
-    fn insert(&mut self, id: SourceId, kind: SourceKind, reg: Registration) -> SourceId {
-        if let Some(claim) = reg.claimed_kind.as_deref().map(ClaimedKind::of) {
-            if claim != ClaimedKind::Known(kind) {
-                self.events.push(DeviceEvent {
-                    source_id: id,
-                    source_kind: kind,
-                    claimed_kind: claim,
-                    at: reg.registered_at,
-                });
-            }
+    fn room_for_event(&self) -> Result<(), RegistryError> {
+        if self.events.len() >= MAX_EVENTS {
+            return Err(RegistryError::EventsFull);
         }
+        Ok(())
+    }
+
+    /// Every limit is checked before anything changes.
+    fn insert(&mut self, id: SourceId, kind: SourceKind, reg: Registration) -> Result<SourceId, RegistryError> {
+        if self.sources.len() >= MAX_SOURCES {
+            return Err(RegistryError::RegistryFull);
+        }
+        let event = mismatch(id, kind, &reg);
+        if event.is_some() {
+            self.room_for_event()?;
+        }
+        self.events.extend(event);
         let record = SourceRecord {
             source_id: id,
             source_kind: kind,
@@ -398,7 +435,7 @@ impl DeviceRegistry {
             registered_at: reg.registered_at,
         };
         self.sources.insert(id, record);
-        id
+        Ok(id)
     }
 
     /// The source with this ID.
@@ -419,15 +456,24 @@ impl DeviceRegistry {
         self.sources.is_empty()
     }
 
-    /// Removes a source; `source_in_use` while a session on it exists (REQ-004).
+    /// Removes a source; `source_in_use` while a session on it exists (REQ-004). A live or
+    /// simulated source's ID is retired, so it can never be registered again.
     pub fn unregister(&mut self, id: &SourceId, sessions: &dyn SessionLookup) -> Result<SourceRecord, RegistryError> {
-        if !self.sources.contains_key(id) {
+        let Some(kind) = self.sources.get(id).map(|r| r.source_kind) else {
             return Err(RegistryError::SourceUnknown(*id));
-        }
+        };
         if sessions.session_state(id) != SessionState::None {
             return Err(RegistryError::SourceInUse(*id));
         }
-        self.sources.remove(id).ok_or(RegistryError::SourceUnknown(*id))
+        let retire = kind != SourceKind::File;
+        if retire && self.retired.len() >= MAX_RETIRED {
+            return Err(RegistryError::RegistryFull);
+        }
+        let record = self.sources.remove(id).ok_or(RegistryError::SourceUnknown(*id))?;
+        if retire {
+            self.retired.insert(*id);
+        }
+        Ok(record)
     }
 
     /// The events raised so far, oldest first.
@@ -441,7 +487,18 @@ impl DeviceRegistry {
     }
 }
 
-/// Checks the registrar name and refuses a declaration naming a capability twice.
+/// The mismatch event of a registration, if its claim differs from `kind` (REQ-002).
+fn mismatch(id: SourceId, kind: SourceKind, reg: &Registration) -> Option<DeviceEvent> {
+    let claim = ClaimedKind::of(reg.claimed_kind.as_deref()?);
+    (claim != ClaimedKind::Known(kind)).then_some(DeviceEvent {
+        source_id: id,
+        source_kind: kind,
+        claimed_kind: claim,
+        at: reg.registered_at,
+    })
+}
+
+/// Checks the registrar name and the declaration (every `HAL.IDL.NEG` declaration rule).
 fn check(reg: &Registration) -> Result<(), RegistryError> {
     let r = reg.registered_by.as_bytes();
     let ok = !r.is_empty()
@@ -452,11 +509,7 @@ fn check(reg: &Registration) -> Result<(), RegistryError> {
     if !ok {
         return Err(RegistryError::RegistrarInvalid);
     }
-    let mut seen = BTreeSet::new();
-    if reg.declaration.capabilities.iter().any(|c| !seen.insert(c.name.as_str())) {
-        return Err(RegistryError::DeclarationInvalid);
-    }
-    Ok(())
+    reg.declaration.check().map_err(RegistryError::DeclarationInvalid)
 }
 
 // ------------------------------------------------------------------ device.show_devices@1
@@ -534,6 +587,13 @@ fn str_prop(description: &str) -> CValue {
     obj([("type", s("string")), ("description", s(description))])
 }
 
+const UUID_PATTERN: &str = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
+const DECIMAL_PATTERN: &str = "^(0|[1-9][0-9]{0,19})$";
+
+fn pattern_prop(pattern: &str, description: &str) -> CValue {
+    obj([("type", s("string")), ("pattern", s(pattern)), ("description", s(description))])
+}
+
 fn enum_prop(values: &[&str], description: &str) -> CValue {
     obj([("type", s("string")), ("enum", strs(values)), ("description", s(description))])
 }
@@ -595,10 +655,16 @@ fn result_schema() -> CValue {
             "source_kind",
         ],
         obj([
-            ("source_id", str_prop("Source ID: UUIDv7, or UUIDv5 of the file digest for file sources.")),
+            (
+                "source_id",
+                pattern_prop(UUID_PATTERN, "Source ID: UUIDv7, or UUIDv5 of the file digest for file sources."),
+            ),
             ("source_kind", enum_prop(&kinds, "Kind set by the registering entry point.")),
             ("registered_by", str_prop("The registering component.")),
-            ("registered_at", str_prop("Journal-clock monotonic time of the registration, decimal nanoseconds.")),
+            (
+                "registered_at",
+                pattern_prop(DECIMAL_PATTERN, "Journal-clock monotonic time of the registration, decimal nanoseconds."),
+            ),
             ("session_state", enum_prop(&["interrupted", "none", "open"], "Current session state.")),
             ("driver_id", str_prop("Driver ID.")),
             ("driver_version", str_prop("Driver version (SemVer).")),
