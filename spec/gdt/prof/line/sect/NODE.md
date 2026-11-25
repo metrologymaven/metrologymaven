@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-gps]
+built_pr: 614
 satisfies: [REQ-GDT.PROF.LINE-001]
 covers: []
 depends_on: [GDT.PROF.DEV, GEO.FRAME.XFORM]
