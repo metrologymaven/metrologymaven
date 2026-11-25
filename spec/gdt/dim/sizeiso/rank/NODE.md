@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-gps]
 satisfies: [REQ-GDT.DIM.SIZEISO-003, REQ-GDT.DIM.SIZEISO-004]
 covers: []
 depends_on: [KRN.NUM]
@@ -66,7 +67,11 @@ Hand-built dyadic value lists and a seeded generator (CC0); ORS-SIZE suite from 
 
 ## Open questions
 
-- None.
+- **Built** in `fid-gps` `dim::size::iso::rank` (`rank_statistic`, `RankStat`, `MedianEven`, `StdDenominator`, `RankError`). AC-1 to AC-4 are met on invented fixtures `fixtures/gdt/size/rank_sizes.json` and `rank_seeded.json`, whose expected values come from the oracle `fixtures/gdt/size/make_rank_fixtures.py`. Each `exact` value is the true statistic in rational arithmetic, rounded once (the square root via an integer square root with a bracketing check). Each `pinned` value is the written procedure, re-implemented in plain binary64 in the oracle. AC-1 uses `(10240 + k)·2⁻²⁰` m with a dyadic mean. The n − 1 standard deviation is 1 ulp from exact and the n one is exact. AC-2 includes a middle pair whose midpoint is a rounding tie. AC-4 pins the one-million-value SplitMix64 stream (seed 0x512e) by a SHA-256 and checks order independence under reversal and a fixed shuffle. The test runs on Linux, Windows, macOS and wasm32.
+- **Rounding bounds** (stated in the module documentation). Max, min and the lower, upper and odd-count medians are exact input values. Range, mid-range and the mean-of-middle median are correctly rounded: the midpoint is `(a + b)·0.5`, with `a·0.5 + b·0.5` when the sum overflows. The mean is correctly rounded whenever the fixed-order sum is exact; otherwise its error is the sum's error divided by n, plus half an ulp. The standard deviation is not correctly rounded. Its first-order relative error of about 4u is derived but [unverified], and it does not hold in the subnormal range: the fixture `subnormal_midpoint_tie` is 1 ulp but a 100 % relative error.
+- **Errors beyond the leaf's three.** An infinite size is `infinite_input{index}`, because a local size cannot be infinite and NaN-free arithmetic on infinities is undefined for mid-range and the mean. A sum, product, deviation or range that overflows is `overflow`, and no value is made up. Any other `fid-num` refusal passes through as `numeric`. The checks run in this order: `empty_sizes`, then the first non-finite element in index order, then `insufficient_count`. So a single NaN with `StdDev{NMinus1}` is `nan_input`.
+- **Zero signs.** Order statistics use the total order, so −0.0 < +0.0. A zero range is +0.0. A zero mean is −0.0 only when every size is −0.0, which is the KRN.NUM.RED sum rule. A zero standard deviation is +0.0.
+- The value is a number, not a conformance decision; UNC.DEC owns that. REQ-GDT.DIM.SIZEISO-004 (the ORS-SIZE cases) is not an AC of this leaf: `UNC.ORS.SIZE` publishes no cases yet.
 
 ## Children
 

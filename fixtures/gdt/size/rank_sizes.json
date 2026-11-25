@@ -1,0 +1,730 @@
+{
+ "schema": "fid.test.gdt.dim.size.rank.cases/1",
+ "keys": [
+  "max",
+  "min",
+  "mean",
+  "median.mean_of_middle",
+  "median.lower",
+  "median.upper",
+  "mid_range",
+  "range",
+  "std_dev.n",
+  "std_dev.n_minus_1"
+ ],
+ "cases": [
+  {
+   "name": "ac1_dyadic_ten",
+   "ac": "AC-1",
+   "note": "(10240 + k) * 2^-20 m; mean exact, std_dev within 1 ulp",
+   "sizes": [
+    "0x3f84038000000000",
+    "0x3f83fe8000000000",
+    "0x3f84060000000000",
+    "0x3f84000000000000",
+    "0x3f83fc0000000000",
+    "0x3f84028000000000",
+    "0x3f84028000000000",
+    "0x3f84010000000000",
+    "0x3f83ff8000000000",
+    "0x3f84058000000000"
+   ],
+   "results": {
+    "max": {
+     "exact": "0x3f84060000000000"
+    },
+    "min": {
+     "exact": "0x3f83fc0000000000"
+    },
+    "mean": {
+     "exact": "0x3f84018000000000",
+     "pinned": "0x3f84018000000000",
+     "max_ulps": 1
+    },
+    "median.mean_of_middle": {
+     "exact": "0x3f8401c000000000"
+    },
+    "median.lower": {
+     "exact": "0x3f84010000000000"
+    },
+    "median.upper": {
+     "exact": "0x3f84028000000000"
+    },
+    "mid_range": {
+     "exact": "0x3f84010000000000"
+    },
+    "range": {
+     "exact": "0x3ef4000000000000"
+    },
+    "std_dev.n": {
+     "exact": "0x3ed7bb598c88b4ad",
+     "pinned": "0x3ed7bb598c88b4ad",
+     "max_ulps": 1
+    },
+    "std_dev.n_minus_1": {
+     "exact": "0x3ed903fb21c5c8de",
+     "pinned": "0x3ed903fb21c5c8df",
+     "max_ulps": 1
+    }
+   }
+  },
+  {
+   "name": "ac2_even_tie",
+   "ac": "AC-2",
+   "note": "middle pair 0.01 and its successor: the midpoint is a tie",
+   "sizes": [
+    "0x3f84e3bcd35a8588",
+    "0x3f847ae147ae147b",
+    "0x3f847ae147ae147c",
+    "0x3f84467381d7dbf5",
+    "0x3f84af4f0d844d01",
+    "0x3f841205bc01a36e"
+   ],
+   "results": {
+    "max": {
+     "exact": "0x3f84e3bcd35a8588"
+    },
+    "min": {
+     "exact": "0x3f841205bc01a36e"
+    },
+    "mean": {
+     "exact": "0x3f847ae147ae147b",
+     "pinned": "0x3f847ae147ae147b",
+     "max_ulps": 2
+    },
+    "median.mean_of_middle": {
+     "exact": "0x3f847ae147ae147c"
+    },
+    "median.lower": {
+     "exact": "0x3f847ae147ae147b"
+    },
+    "median.upper": {
+     "exact": "0x3f847ae147ae147c"
+    },
+    "mid_range": {
+     "exact": "0x3f847ae147ae147b"
+    },
+    "range": {
+     "exact": "0x3f3a36e2eb1c4340"
+    },
+    "std_dev.n": {
+     "exact": "0x3f20ebdbc98e4cab",
+     "pinned": "0x3f20ebdbc98e4cab",
+     "max_ulps": 2
+    },
+    "std_dev.n_minus_1": {
+     "exact": "0x3f2289503332927e",
+     "pinned": "0x3f2289503332927e",
+     "max_ulps": 2
+    }
+   }
+  },
+  {
+   "name": "ac2_odd_seven",
+   "ac": "AC-2",
+   "note": "odd count: every median variant is the middle value",
+   "sizes": [
+    "0x3f847c73eee52589",
+    "0x3f8479d4d834091c",
+    "0x3f847b677f6b1a2a",
+    "0x3f847ae147ae147b",
+    "0x3f847a5b0ff10ecb",
+    "0x3f847bedb7281fda",
+    "0x3f84794ea077036d"
+   ],
+   "results": {
+    "max": {
+     "exact": "0x3f847c73eee52589"
+    },
+    "min": {
+     "exact": "0x3f84794ea077036d"
+    },
+    "mean": {
+     "exact": "0x3f847ae147ae147b",
+     "pinned": "0x3f847ae147ae147b",
+     "max_ulps": 2
+    },
+    "median.mean_of_middle": {
+     "exact": "0x3f847ae147ae147b"
+    },
+    "median.lower": {
+     "exact": "0x3f847ae147ae147b"
+    },
+    "median.upper": {
+     "exact": "0x3f847ae147ae147b"
+    },
+    "mid_range": {
+     "exact": "0x3f847ae147ae147b"
+    },
+    "range": {
+     "exact": "0x3ed92a737110e000"
+    },
+    "std_dev.n": {
+     "exact": "0x3ec0c6f7a0b5ec92",
+     "pinned": "0x3ec0c6f7a0b5ec92",
+     "max_ulps": 2
+    },
+    "std_dev.n_minus_1": {
+     "exact": "0x3ec21f184adbd231",
+     "pinned": "0x3ec21f184adbd231",
+     "max_ulps": 2
+    }
+   }
+  },
+  {
+   "name": "ac3_empty",
+   "ac": "AC-3",
+   "note": "",
+   "sizes": [],
+   "results": {
+    "max": {
+     "error": "empty_sizes"
+    },
+    "min": {
+     "error": "empty_sizes"
+    },
+    "mean": {
+     "error": "empty_sizes"
+    },
+    "median.mean_of_middle": {
+     "error": "empty_sizes"
+    },
+    "median.lower": {
+     "error": "empty_sizes"
+    },
+    "median.upper": {
+     "error": "empty_sizes"
+    },
+    "mid_range": {
+     "error": "empty_sizes"
+    },
+    "range": {
+     "error": "empty_sizes"
+    },
+    "std_dev.n": {
+     "error": "empty_sizes"
+    },
+    "std_dev.n_minus_1": {
+     "error": "empty_sizes"
+    }
+   }
+  },
+  {
+   "name": "ac3_one_value",
+   "ac": "AC-3",
+   "note": "std_dev.n_minus_1 needs two values",
+   "sizes": [
+    "0x3f8999999999999a"
+   ],
+   "results": {
+    "max": {
+     "exact": "0x3f8999999999999a"
+    },
+    "min": {
+     "exact": "0x3f8999999999999a"
+    },
+    "mean": {
+     "exact": "0x3f8999999999999a",
+     "pinned": "0x3f8999999999999a",
+     "max_ulps": 2
+    },
+    "median.mean_of_middle": {
+     "exact": "0x3f8999999999999a"
+    },
+    "median.lower": {
+     "exact": "0x3f8999999999999a"
+    },
+    "median.upper": {
+     "exact": "0x3f8999999999999a"
+    },
+    "mid_range": {
+     "exact": "0x3f8999999999999a"
+    },
+    "range": {
+     "exact": "0x0000000000000000"
+    },
+    "std_dev.n": {
+     "exact": "0x0000000000000000",
+     "pinned": "0x0000000000000000",
+     "max_ulps": 2
+    },
+    "std_dev.n_minus_1": {
+     "error": "insufficient_count",
+     "needed": 2,
+     "got": 1
+    }
+   }
+  },
+  {
+   "name": "ac3_nan",
+   "ac": "AC-3",
+   "note": "",
+   "sizes": [
+    "0x3f847ae147ae147b",
+    "0x3f947ae147ae147b",
+    "0x7ff8000000000000",
+    "0x3f9eb851eb851eb8"
+   ],
+   "results": {
+    "max": {
+     "error": "nan_input",
+     "index": 2
+    },
+    "min": {
+     "error": "nan_input",
+     "index": 2
+    },
+    "mean": {
+     "error": "nan_input",
+     "index": 2
+    },
+    "median.mean_of_middle": {
+     "error": "nan_input",
+     "index": 2
+    },
+    "median.lower": {
+     "error": "nan_input",
+     "index": 2
+    },
+    "median.upper": {
+     "error": "nan_input",
+     "index": 2
+    },
+    "mid_range": {
+     "error": "nan_input",
+     "index": 2
+    },
+    "range": {
+     "error": "nan_input",
+     "index": 2
+    },
+    "std_dev.n": {
+     "error": "nan_input",
+     "index": 2
+    },
+    "std_dev.n_minus_1": {
+     "error": "nan_input",
+     "index": 2
+    }
+   }
+  },
+  {
+   "name": "ac3_nan_one_value",
+   "ac": "AC-3",
+   "note": "nan_input before insufficient_count",
+   "sizes": [
+    "0x7ff8000000000000"
+   ],
+   "results": {
+    "max": {
+     "error": "nan_input",
+     "index": 0
+    },
+    "min": {
+     "error": "nan_input",
+     "index": 0
+    },
+    "mean": {
+     "error": "nan_input",
+     "index": 0
+    },
+    "median.mean_of_middle": {
+     "error": "nan_input",
+     "index": 0
+    },
+    "median.lower": {
+     "error": "nan_input",
+     "index": 0
+    },
+    "median.upper": {
+     "error": "nan_input",
+     "index": 0
+    },
+    "mid_range": {
+     "error": "nan_input",
+     "index": 0
+    },
+    "range": {
+     "error": "nan_input",
+     "index": 0
+    },
+    "std_dev.n": {
+     "error": "nan_input",
+     "index": 0
+    },
+    "std_dev.n_minus_1": {
+     "error": "nan_input",
+     "index": 0
+    }
+   }
+  },
+  {
+   "name": "infinite_input",
+   "ac": "AC-3",
+   "note": "first non-finite wins",
+   "sizes": [
+    "0x3f847ae147ae147b",
+    "0x7ff0000000000000",
+    "0x7ff8000000000000"
+   ],
+   "results": {
+    "max": {
+     "error": "infinite_input",
+     "index": 1
+    },
+    "min": {
+     "error": "infinite_input",
+     "index": 1
+    },
+    "mean": {
+     "error": "infinite_input",
+     "index": 1
+    },
+    "median.mean_of_middle": {
+     "error": "infinite_input",
+     "index": 1
+    },
+    "median.lower": {
+     "error": "infinite_input",
+     "index": 1
+    },
+    "median.upper": {
+     "error": "infinite_input",
+     "index": 1
+    },
+    "mid_range": {
+     "error": "infinite_input",
+     "index": 1
+    },
+    "range": {
+     "error": "infinite_input",
+     "index": 1
+    },
+    "std_dev.n": {
+     "error": "infinite_input",
+     "index": 1
+    },
+    "std_dev.n_minus_1": {
+     "error": "infinite_input",
+     "index": 1
+    }
+   }
+  },
+  {
+   "name": "negative_infinite_input",
+   "ac": "AC-3",
+   "note": "",
+   "sizes": [
+    "0xfff0000000000000"
+   ],
+   "results": {
+    "max": {
+     "error": "infinite_input",
+     "index": 0
+    },
+    "min": {
+     "error": "infinite_input",
+     "index": 0
+    },
+    "mean": {
+     "error": "infinite_input",
+     "index": 0
+    },
+    "median.mean_of_middle": {
+     "error": "infinite_input",
+     "index": 0
+    },
+    "median.lower": {
+     "error": "infinite_input",
+     "index": 0
+    },
+    "median.upper": {
+     "error": "infinite_input",
+     "index": 0
+    },
+    "mid_range": {
+     "error": "infinite_input",
+     "index": 0
+    },
+    "range": {
+     "error": "infinite_input",
+     "index": 0
+    },
+    "std_dev.n": {
+     "error": "infinite_input",
+     "index": 0
+    },
+    "std_dev.n_minus_1": {
+     "error": "infinite_input",
+     "index": 0
+    }
+   }
+  },
+  {
+   "name": "signed_zeros",
+   "ac": "edge",
+   "note": "",
+   "sizes": [
+    "0x0000000000000000",
+    "0x8000000000000000",
+    "0x8000000000000000"
+   ],
+   "results": {
+    "max": {
+     "exact": "0x0000000000000000"
+    },
+    "min": {
+     "exact": "0x8000000000000000"
+    },
+    "mean": {
+     "exact": "0x0000000000000000",
+     "pinned": "0x0000000000000000",
+     "max_ulps": 2
+    },
+    "median.mean_of_middle": {
+     "exact": "0x8000000000000000"
+    },
+    "median.lower": {
+     "exact": "0x8000000000000000"
+    },
+    "median.upper": {
+     "exact": "0x8000000000000000"
+    },
+    "mid_range": {
+     "exact": "0x0000000000000000"
+    },
+    "range": {
+     "exact": "0x0000000000000000"
+    },
+    "std_dev.n": {
+     "exact": "0x0000000000000000",
+     "pinned": "0x0000000000000000",
+     "max_ulps": 2
+    },
+    "std_dev.n_minus_1": {
+     "exact": "0x0000000000000000",
+     "pinned": "0x0000000000000000",
+     "max_ulps": 2
+    }
+   }
+  },
+  {
+   "name": "negative_zero_alone",
+   "ac": "edge",
+   "note": "",
+   "sizes": [
+    "0x8000000000000000"
+   ],
+   "results": {
+    "max": {
+     "exact": "0x8000000000000000"
+    },
+    "min": {
+     "exact": "0x8000000000000000"
+    },
+    "mean": {
+     "exact": "0x8000000000000000",
+     "pinned": "0x8000000000000000",
+     "max_ulps": 2
+    },
+    "median.mean_of_middle": {
+     "exact": "0x8000000000000000"
+    },
+    "median.lower": {
+     "exact": "0x8000000000000000"
+    },
+    "median.upper": {
+     "exact": "0x8000000000000000"
+    },
+    "mid_range": {
+     "exact": "0x8000000000000000"
+    },
+    "range": {
+     "exact": "0x0000000000000000"
+    },
+    "std_dev.n": {
+     "exact": "0x0000000000000000",
+     "pinned": "0x0000000000000000",
+     "max_ulps": 2
+    },
+    "std_dev.n_minus_1": {
+     "error": "insufficient_count",
+     "needed": 2,
+     "got": 1
+    }
+   }
+  },
+  {
+   "name": "subnormal_midpoint_tie",
+   "ac": "edge",
+   "note": "(2^-1074 + 0) / 2 ties to +0.0",
+   "sizes": [
+    "0x0000000000000001",
+    "0x0000000000000000"
+   ],
+   "results": {
+    "max": {
+     "exact": "0x0000000000000001"
+    },
+    "min": {
+     "exact": "0x0000000000000000"
+    },
+    "mean": {
+     "exact": "0x0000000000000000",
+     "pinned": "0x0000000000000000",
+     "max_ulps": 2
+    },
+    "median.mean_of_middle": {
+     "exact": "0x0000000000000000"
+    },
+    "median.lower": {
+     "exact": "0x0000000000000000"
+    },
+    "median.upper": {
+     "exact": "0x0000000000000001"
+    },
+    "mid_range": {
+     "exact": "0x0000000000000000"
+    },
+    "range": {
+     "exact": "0x0000000000000001"
+    },
+    "std_dev.n": {
+     "exact": "0x0000000000000000",
+     "pinned": "0x0000000000000000",
+     "max_ulps": 2
+    },
+    "std_dev.n_minus_1": {
+     "exact": "0x0000000000000001",
+     "pinned": "0x0000000000000000",
+     "max_ulps": 2
+    }
+   }
+  },
+  {
+   "name": "midpoint_overflow_fallback",
+   "ac": "edge",
+   "note": "max + min overflows; halves are exact",
+   "sizes": [
+    "0x7fefffffffffffff",
+    "0x7feffffffffffffe"
+   ],
+   "results": {
+    "max": {
+     "exact": "0x7fefffffffffffff"
+    },
+    "min": {
+     "exact": "0x7feffffffffffffe"
+    },
+    "mean": {
+     "error": "overflow"
+    },
+    "median.mean_of_middle": {
+     "exact": "0x7feffffffffffffe"
+    },
+    "median.lower": {
+     "exact": "0x7feffffffffffffe"
+    },
+    "median.upper": {
+     "exact": "0x7fefffffffffffff"
+    },
+    "mid_range": {
+     "exact": "0x7feffffffffffffe"
+    },
+    "range": {
+     "exact": "0x7ca0000000000000"
+    },
+    "std_dev.n": {
+     "error": "overflow"
+    },
+    "std_dev.n_minus_1": {
+     "error": "overflow"
+    }
+   }
+  },
+  {
+   "name": "range_overflow",
+   "ac": "edge",
+   "note": "",
+   "sizes": [
+    "0x7fefffffffffffff",
+    "0xffefffffffffffff"
+   ],
+   "results": {
+    "max": {
+     "exact": "0x7fefffffffffffff"
+    },
+    "min": {
+     "exact": "0xffefffffffffffff"
+    },
+    "mean": {
+     "exact": "0x0000000000000000",
+     "pinned": "0x0000000000000000",
+     "max_ulps": 2
+    },
+    "median.mean_of_middle": {
+     "exact": "0x0000000000000000"
+    },
+    "median.lower": {
+     "exact": "0xffefffffffffffff"
+    },
+    "median.upper": {
+     "exact": "0x7fefffffffffffff"
+    },
+    "mid_range": {
+     "exact": "0x0000000000000000"
+    },
+    "range": {
+     "error": "overflow"
+    },
+    "std_dev.n": {
+     "error": "overflow"
+    },
+    "std_dev.n_minus_1": {
+     "error": "overflow"
+    }
+   }
+  },
+  {
+   "name": "mean_overflow",
+   "ac": "edge",
+   "note": "",
+   "sizes": [
+    "0x7fefffffffffffff",
+    "0x7fefffffffffffff"
+   ],
+   "results": {
+    "max": {
+     "exact": "0x7fefffffffffffff"
+    },
+    "min": {
+     "exact": "0x7fefffffffffffff"
+    },
+    "mean": {
+     "error": "overflow"
+    },
+    "median.mean_of_middle": {
+     "exact": "0x7fefffffffffffff"
+    },
+    "median.lower": {
+     "exact": "0x7fefffffffffffff"
+    },
+    "median.upper": {
+     "exact": "0x7fefffffffffffff"
+    },
+    "mid_range": {
+     "exact": "0x7fefffffffffffff"
+    },
+    "range": {
+     "exact": "0x0000000000000000"
+    },
+    "std_dev.n": {
+     "error": "overflow"
+    },
+    "std_dev.n_minus_1": {
+     "error": "overflow"
+    }
+   }
+  }
+ ]
+}

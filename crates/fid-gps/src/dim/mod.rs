@@ -4,7 +4,9 @@
 //! - [`radial`] (`GDT.DIM.RADIAL`): diameter and radius of a least-squares circle, cylinder or
 //!   sphere fitted by `fid-fit`, after checking the feature's fit against the association the
 //!   resolved operator chain names.
+//! - [`size`] (`GDT.DIM.SIZEISO.RANK`): the ISO rank-order statistics over local sizes.
 
 pub mod angle;
 pub mod linear;
 pub mod radial;
+pub mod size;
