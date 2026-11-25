@@ -1,0 +1,1 @@
+{"format":"fid.layouts","layouts":[{"id":"inspect.default","name":"Inspector","panels":["view.viewport"]},{"id":"report.default","name":"Reviewer","panels":["report.outline","report.preview"]}],"version":1}

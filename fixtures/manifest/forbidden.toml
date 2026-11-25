@@ -1,0 +1,24 @@
+# AC-3: enables namespace cmm, which holds the M1 command cmm.run_program@1, while forbidding M1.
+schema = 1
+id = "report"
+status = "alpha"
+status_scope = "Report authoring and preview for single-stage FAI; no SPC yet"
+known_gaps = [
+  { seed = "PW.RPT.01" },
+  { text = "SPC charts are not available yet", node = "RPT.MODEL" },
+]
+namespaces = ["cmm", "report", "view"]
+forbidden_classes = ["M1"]
+panels = ["report.outline", "report.preview"]
+layout = "report.default"
+templates = ["0193a5b0-7c1e-7d2a-9f00-3b5c6d7e8f90"]
+
+[defaults]
+"report.decimal_places" = 3
+"ui.show_tips" = false
+
+[branding]
+name = "placeholder-report"
+icon = "placeholder-report-icon"
+colours = ["placeholder-accent"]
+internal = true

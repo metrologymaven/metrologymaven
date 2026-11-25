@@ -1,0 +1,1 @@
+{"format":"fid.panels","panels":[{"crate":"fid-report","id":"report.outline","title":"panel.report.outline.title"},{"crate":"fid-report","id":"report.preview","title":"panel.report.preview.title"},{"crate":"fid-shell","id":"view.viewport","title":"panel.view.viewport.title"}],"version":1}
