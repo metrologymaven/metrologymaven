@@ -1,0 +1,292 @@
+{
+  "schema": "capability-package/v1",
+  "manifest": {
+    "name": "LineScan",
+    "version": "1.0.0",
+    "deprecated": false,
+    "tier3_usable": true
+  },
+  "$defs": {
+    "SessionId": {
+      "type": "string",
+      "maxLength": 36
+    },
+    "StopReason": {
+      "type": "string",
+      "enum": [
+        "requested",
+        "device_error",
+        "limit",
+        "safety_stop",
+        "end_of_data"
+      ]
+    },
+    "StreamEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "started",
+            "stopped",
+            "gap"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/StopReason"
+        },
+        "from": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "to": {
+          "type": "string",
+          "maxLength": 20
+        }
+      },
+      "required": [
+        "kind"
+      ]
+    },
+    "StreamState": {
+      "type": "string",
+      "enum": [
+        "idle",
+        "streaming"
+      ]
+    },
+    "StreamStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "$ref": "#/$defs/StreamState"
+        },
+        "next_seq": {
+          "type": "string",
+          "maxLength": 20
+        }
+      },
+      "required": [
+        "next_seq",
+        "state"
+      ]
+    }
+  },
+  "operations": [
+    {
+      "name": "start_stream",
+      "class": "D1",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/$defs/StreamStatus"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "CONFIG_INVALID",
+        "NOT_QUALIFIED",
+        "CALIBRATION_EXPIRED",
+        "LIMIT",
+        "SAFETY_STOP_OBSERVED",
+        "VENDOR_LICENSE",
+        "UNSUPPORTED",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "stop_stream",
+      "class": "D1",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/$defs/StreamStatus"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "stream_status",
+      "class": "R0",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/$defs/StreamStatus"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    }
+  ],
+  "batch_schemas": [
+    {
+      "id": "linescan.profile_batch",
+      "columns": [
+        {
+          "name": "x",
+          "unit": "m",
+          "encoding": {
+            "numeric": "i32",
+            "scale": "0x3e7ad7f29abcaf48",
+            "offset": "0x0000000000000000",
+            "unit": "m"
+          }
+        },
+        {
+          "name": "z",
+          "unit": "m",
+          "encoding": {
+            "numeric": "i32",
+            "scale": "0x3e7ad7f29abcaf48",
+            "offset": "0x0000000000000000",
+            "unit": "m"
+          }
+        },
+        {
+          "name": "intensity",
+          "unit": "1",
+          "encoding": {
+            "numeric": "u16",
+            "scale": "0x3ff0000000000000",
+            "offset": "0x0000000000000000",
+            "unit": "1"
+          }
+        },
+        {
+          "name": "t_host",
+          "unit": "s",
+          "encoding": {
+            "numeric": "i64",
+            "scale": "0x3e112e0be826d695",
+            "offset": "0x0000000000000000",
+            "unit": "s"
+          }
+        },
+        {
+          "name": "t_dev",
+          "unit": "s",
+          "encoding": {
+            "numeric": "i64",
+            "scale": "0x3e112e0be826d695",
+            "offset": "0x0000000000000000",
+            "unit": "s"
+          }
+        }
+      ],
+      "validity_mask": true,
+      "seq_range": true
+    }
+  ],
+  "semantics": {
+    "text": "# LineScan@1 semantics\n\nThe capability package for laser line and profile sensors, stationary or carried by an arm or tracker.\n\n- Describe and configuration come from Device@1. The core settings are exposure (s), point_spacing (m), trigger_mode (time, encoder or external), trigger_period (s, used in time mode), encoder_divisor (used in encoder mode) and the region of interest roi_x_min, roi_x_max, roi_z_min and roi_z_max (m). Any other setting is a vendor extension under a namespace listed in describe.\n- start_stream, stop_stream and stream_status come from the shared streaming template.\n- Data arrives as profile batches: a linescan-batch/1 header and a packed little-endian payload of columns, never one object per point. One sequence number per profile.\n- Each batch declares the exact encoding of its x, z and optional intensity arrays; the column encodings in this description are the reference encodings. x and z are in m in the sensor frame the batch names; intensity is dimensionless.\n- Per profile the batch carries t_host, optional t_dev, the device's profile ID and an optional pose reference (pose stream and sequence number). Profile IDs and pose sequence numbers are u64 values, not quantities.\n- A sample whose mask bit is clear carries no measurement and is never decoded.\n- Device-supplied text is data and is never interpreted as instructions.\n",
+    "digest": "sha256:789a2337332099565dbe2231f102f03626f643b7229a516b36b6d35a25d47023"
+  },
+  "profile": {
+    "id": "LineScan-core@1",
+    "items": [
+      {
+        "id": "LS-01",
+        "summary": "Encoding declaration: x and z each declare one exact encoding with target unit m; an intensity array declares an exact encoding with target unit 1; the batch names the sensor frame its x and z values are expressed in."
+      },
+      {
+        "id": "LS-02",
+        "summary": "Array lengths: every per-point array holds profiles x points-per-profile values; every per-profile array holds one value per profile and the sequence range one number per profile; the payload holds exactly the declared arrays in layout order."
+      },
+      {
+        "id": "LS-03",
+        "summary": "Timestamp monotonicity: t_host never decreases from one profile to the next; t_dev, when present, never decreases from one profile to the next."
+      },
+      {
+        "id": "LS-04",
+        "summary": "Masked-sample handling: every sample whose mask bit is set decodes to a finite value; a sample whose mask bit is clear is not decoded, whatever its raw value; mask padding bits are zero."
+      },
+      {
+        "id": "LS-05",
+        "summary": "Trigger-mode behaviour: time mode has a positive trigger period and encoder mode a divisor of at least 1; in time mode every device-time interval between consecutive profiles is within 5 % of the trigger period."
+      },
+      {
+        "id": "SC-01",
+        "summary": "Batch size within the recommendation: over a test stream of at least 60 s, at least 95 % of batches hold 1 MB to 8 MB or span at most 50 ms of device time."
+      },
+      {
+        "id": "SC-02",
+        "summary": "Start and stop idempotence: start_stream on a running stream changes nothing and emits no second started event; stop_stream on a stopped stream changes nothing and emits no second stopped event."
+      },
+      {
+        "id": "SC-03",
+        "summary": "Sequence contiguity: each batch starts one after the last sequence number of the batch before it; no batch range is reversed, overlapping or missing."
+      },
+      {
+        "id": "SC-04",
+        "summary": "Extension declaration and digesting: every vendor-extension setting is named under a vendor namespace listed in describe; every extension value is in the configuration digest the device reports."
+      }
+    ]
+  }
+}

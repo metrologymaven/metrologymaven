@@ -227,3 +227,5 @@ fixtures/pkg/golden/** -text
 # IO.REG.PLUGIN.DRAW fixtures: PDF, PNG and TIFF drawing fixtures and SHA-256 digests compared byte for byte.
 fixtures/io/reg/plugin/draw/** -text
 fixtures/rpt/balloon/auto/** -text
+# HAL.IDL.SENS.LINE fixtures: a binary payload and canonical headers compared byte for byte by --check.
+fixtures/hal/idl/sens/line/** -text
