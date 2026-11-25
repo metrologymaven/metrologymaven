@@ -1,0 +1,2497 @@
+{
+ "lengths": [
+  {
+   "text": "15mm",
+   "units": "1500"
+  },
+  {
+   "text": "0mm",
+   "units": "0"
+  },
+  {
+   "text": "000mm",
+   "units": "0"
+  },
+  {
+   "text": "10.25mm",
+   "units": "1025"
+  },
+  {
+   "text": "10.2500mm",
+   "units": "1025"
+  },
+  {
+   "text": "0.01mm",
+   "units": "1"
+  },
+  {
+   "text": "8.5in",
+   "units": "21590"
+  },
+  {
+   "text": "11in",
+   "units": "27940"
+  },
+  {
+   "text": "0.5in",
+   "units": "1270"
+  },
+  {
+   "text": "0.05in",
+   "units": "127"
+  },
+  {
+   "error": "not_exact",
+   "text": "0.01in"
+  },
+  {
+   "text": "0.25in",
+   "units": "635"
+  },
+  {
+   "error": "not_exact",
+   "text": "1.27in"
+  },
+  {
+   "error": "not_exact",
+   "text": "10.005mm"
+  },
+  {
+   "error": "not_exact",
+   "text": "0.001mm"
+  },
+  {
+   "text": "2000mm",
+   "units": "200000"
+  },
+  {
+   "text": "2000.00mm",
+   "units": "200000"
+  },
+  {
+   "error": "too_large",
+   "text": "2000.01mm"
+  },
+  {
+   "error": "not_exact",
+   "text": "78.74in"
+  },
+  {
+   "error": "too_large",
+   "text": "78.75in"
+  },
+  {
+   "error": "too_large",
+   "text": "99999999mm"
+  },
+  {
+   "error": "not_a_length",
+   "text": ""
+  },
+  {
+   "error": "not_a_length",
+   "text": "mm"
+  },
+  {
+   "error": "not_a_length",
+   "text": "in"
+  },
+  {
+   "error": "not_a_length",
+   "text": "1"
+  },
+  {
+   "error": "not_a_length",
+   "text": "-1mm"
+  },
+  {
+   "error": "not_a_length",
+   "text": "+1mm"
+  },
+  {
+   "error": "not_a_length",
+   "text": "1.mm"
+  },
+  {
+   "error": "not_a_length",
+   "text": ".5mm"
+  },
+  {
+   "error": "not_a_length",
+   "text": "1 mm"
+  },
+  {
+   "error": "not_a_length",
+   "text": "1cm"
+  },
+  {
+   "error": "not_a_length",
+   "text": "1e2mm"
+  },
+  {
+   "error": "not_a_length",
+   "text": "1,5mm"
+  },
+  {
+   "error": "not_a_length",
+   "text": "1.5MM"
+  },
+  {
+   "error": "not_a_length",
+   "text": "\uff11mm"
+  },
+  {
+   "error": "not_a_length",
+   "text": "0x10mm"
+  }
+ ],
+ "scenarios": [
+  {
+   "fixture": "one_page_report",
+   "name": "ac1_a4_landscape",
+   "steps": [
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "15800",
+        "width": "26700",
+        "x": "1500",
+        "y": "2700"
+       },
+       "footer": "1000",
+       "header": "1200",
+       "margins": {
+        "bottom": "1500",
+        "left": "1500",
+        "right": "1500",
+        "top": "1500"
+       },
+       "orientation": "landscape",
+       "page": null,
+       "page_height": "21000",
+       "page_width": "29700",
+       "report": "R",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "footer": "10mm",
+      "header": "12mm",
+      "margins": "15mm,15mm,15mm,15mm",
+      "orientation": "landscape",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "15800",
+        "width": "26700",
+        "x": "1500",
+        "y": "2700"
+       },
+       "footer": "1000",
+       "header": "1200",
+       "margins": {
+        "bottom": "1500",
+        "left": "1500",
+        "right": "1500",
+        "top": "1500"
+       },
+       "orientation": "landscape",
+       "page_height": "21000",
+       "page_id": "P1",
+       "page_width": "29700",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "fixture": "one_page_report",
+   "name": "ac2_custom_inches",
+   "steps": [
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "23940",
+        "width": "17590",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page": null,
+       "page_height": "27940",
+       "page_width": "21590",
+       "report": "R",
+       "size": "custom",
+       "size_height": "27940",
+       "size_width": "21590"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "height": "11in",
+      "report": "R",
+      "size": "custom",
+      "width": "8.5in"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "23940",
+        "width": "17590",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "27940",
+       "page_id": "P1",
+       "page_width": "21590",
+       "size": "custom",
+       "size_height": "27940",
+       "size_width": "21590",
+       "source": "default"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "fixture": "one_page_report",
+   "name": "ac1_then_ac2",
+   "steps": [
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "15800",
+        "width": "26700",
+        "x": "1500",
+        "y": "2700"
+       },
+       "footer": "1000",
+       "header": "1200",
+       "margins": {
+        "bottom": "1500",
+        "left": "1500",
+        "right": "1500",
+        "top": "1500"
+       },
+       "orientation": "landscape",
+       "page": null,
+       "page_height": "21000",
+       "page_width": "29700",
+       "report": "R",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "footer": "10mm",
+      "header": "12mm",
+      "margins": "15mm,15mm,15mm,15mm",
+      "orientation": "landscape",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "15800",
+        "width": "26700",
+        "x": "1500",
+        "y": "2700"
+       },
+       "footer": "1000",
+       "header": "1200",
+       "margins": {
+        "bottom": "1500",
+        "left": "1500",
+        "right": "1500",
+        "top": "1500"
+       },
+       "orientation": "landscape",
+       "page_height": "21000",
+       "page_id": "P1",
+       "page_width": "29700",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "16390",
+        "width": "24940",
+        "x": "1500",
+        "y": "2700"
+       },
+       "footer": "1000",
+       "header": "1200",
+       "margins": {
+        "bottom": "1500",
+        "left": "1500",
+        "right": "1500",
+        "top": "1500"
+       },
+       "orientation": "landscape",
+       "page": null,
+       "page_height": "21590",
+       "page_width": "27940",
+       "report": "R",
+       "size": "custom",
+       "size_height": "27940",
+       "size_width": "21590"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "height": "11in",
+      "report": "R",
+      "size": "custom",
+      "width": "8.5in"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "16390",
+        "width": "24940",
+        "x": "1500",
+        "y": "2700"
+       },
+       "footer": "1000",
+       "header": "1200",
+       "margins": {
+        "bottom": "1500",
+        "left": "1500",
+        "right": "1500",
+        "top": "1500"
+       },
+       "orientation": "landscape",
+       "page_height": "21590",
+       "page_id": "P1",
+       "page_width": "27940",
+       "size": "custom",
+       "size_height": "27940",
+       "size_width": "21590",
+       "source": "default"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "fixture": "one_page_report",
+   "name": "ac3_inexact_margin",
+   "steps": [
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "margin_top",
+      "reason": "not_exact"
+     },
+     "journaled": false,
+     "params": {
+      "margins": "10.005mm,10mm,10mm,10mm",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "fixture": "one_page_report",
+   "name": "ac4_body_too_narrow",
+   "steps": [
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "body_width",
+      "reason": "body_too_narrow"
+     },
+     "journaled": false,
+     "params": {
+      "margins": "10mm,100mm,10mm,100mm",
+      "orientation": "portrait",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "fixture": "three_page_report",
+   "name": "ac5_page2_landscape",
+   "steps": [
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "17000",
+        "width": "25700",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "landscape",
+       "page": "P2",
+       "page_height": "21000",
+       "page_width": "29700",
+       "report": "R",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "orientation": "landscape",
+      "page": "P2",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      },
+      {
+       "body": {
+        "height": "17000",
+        "width": "25700",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "landscape",
+       "page_height": "21000",
+       "page_id": "P2",
+       "page_width": "29700",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "override"
+      },
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P3",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "fixture": "one_page_report",
+   "name": "presets",
+   "steps": [
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "25700",
+        "width": "38000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "landscape",
+       "page": null,
+       "page_height": "29700",
+       "page_width": "42000",
+       "report": "R",
+       "size": "A3",
+       "size_height": "42000",
+       "size_width": "29700"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "orientation": "landscape",
+      "report": "R",
+      "size": "A3"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "38000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "landscape",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "42000",
+       "size": "A3",
+       "size_height": "42000",
+       "size_width": "29700",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "17590",
+        "width": "23940",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "landscape",
+       "page": null,
+       "page_height": "21590",
+       "page_width": "27940",
+       "report": "R",
+       "size": "Letter",
+       "size_height": "27940",
+       "size_width": "21590"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "orientation": "landscape",
+      "report": "R",
+      "size": "Letter"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "17590",
+        "width": "23940",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "landscape",
+       "page_height": "21590",
+       "page_id": "P1",
+       "page_width": "27940",
+       "size": "Letter",
+       "size_height": "27940",
+       "size_width": "21590",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "25400",
+        "width": "17780",
+        "x": "1905",
+        "y": "1270"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "1270",
+        "left": "1905",
+        "right": "1905",
+        "top": "1270"
+       },
+       "orientation": "portrait",
+       "page": null,
+       "page_height": "27940",
+       "page_width": "21590",
+       "report": "R",
+       "size": "Letter",
+       "size_height": "27940",
+       "size_width": "21590"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "margins": "0.5in,0.75in,0.5in,0.75in",
+      "orientation": "portrait",
+      "report": "R",
+      "size": "Letter"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25400",
+        "width": "17780",
+        "x": "1905",
+        "y": "1270"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "1270",
+        "left": "1905",
+        "right": "1905",
+        "top": "1270"
+       },
+       "orientation": "portrait",
+       "page_height": "27940",
+       "page_id": "P1",
+       "page_width": "21590",
+       "size": "Letter",
+       "size_height": "27940",
+       "size_width": "21590",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "39460",
+        "width": "25890",
+        "x": "1905",
+        "y": "1270"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "1270",
+        "left": "1905",
+        "right": "1905",
+        "top": "1270"
+       },
+       "orientation": "portrait",
+       "page": null,
+       "page_height": "42000",
+       "page_width": "29700",
+       "report": "R",
+       "size": "A3",
+       "size_height": "42000",
+       "size_width": "29700"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "report": "R",
+      "size": "A3"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "39460",
+        "width": "25890",
+        "x": "1905",
+        "y": "1270"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "1270",
+        "left": "1905",
+        "right": "1905",
+        "top": "1270"
+       },
+       "orientation": "portrait",
+       "page_height": "42000",
+       "page_id": "P1",
+       "page_width": "29700",
+       "size": "A3",
+       "size_height": "42000",
+       "size_width": "29700",
+       "source": "default"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "fixture": "three_page_report",
+   "name": "default_and_overrides",
+   "steps": [
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "17000",
+        "width": "25700",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "landscape",
+       "page": "P2",
+       "page_height": "21000",
+       "page_width": "29700",
+       "report": "R",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "orientation": "landscape",
+      "page": "P2",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      },
+      {
+       "body": {
+        "height": "17000",
+        "width": "25700",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "landscape",
+       "page_height": "21000",
+       "page_id": "P2",
+       "page_width": "29700",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "override"
+      },
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P3",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "21590",
+        "width": "16510",
+        "x": "2540",
+        "y": "3810"
+       },
+       "footer": "0",
+       "header": "1270",
+       "margins": {
+        "bottom": "2540",
+        "left": "2540",
+        "right": "2540",
+        "top": "2540"
+       },
+       "orientation": "portrait",
+       "page": null,
+       "page_height": "27940",
+       "page_width": "21590",
+       "report": "R",
+       "size": "Letter",
+       "size_height": "27940",
+       "size_width": "21590"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "header": "0.5in",
+      "margins": "1in,1in,1in,1in",
+      "report": "R",
+      "size": "Letter"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "21590",
+        "width": "16510",
+        "x": "2540",
+        "y": "3810"
+       },
+       "footer": "0",
+       "header": "1270",
+       "margins": {
+        "bottom": "2540",
+        "left": "2540",
+        "right": "2540",
+        "top": "2540"
+       },
+       "orientation": "portrait",
+       "page_height": "27940",
+       "page_id": "P1",
+       "page_width": "21590",
+       "size": "Letter",
+       "size_height": "27940",
+       "size_width": "21590",
+       "source": "default"
+      },
+      {
+       "body": {
+        "height": "17000",
+        "width": "25700",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "landscape",
+       "page_height": "21000",
+       "page_id": "P2",
+       "page_width": "29700",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "override"
+      },
+      {
+       "body": {
+        "height": "21590",
+        "width": "16510",
+        "x": "2540",
+        "y": "3810"
+       },
+       "footer": "0",
+       "header": "1270",
+       "margins": {
+        "bottom": "2540",
+        "left": "2540",
+        "right": "2540",
+        "top": "2540"
+       },
+       "orientation": "portrait",
+       "page_height": "27940",
+       "page_id": "P3",
+       "page_width": "21590",
+       "size": "Letter",
+       "size_height": "27940",
+       "size_width": "21590",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "35650",
+        "width": "24620",
+        "x": "2540",
+        "y": "3810"
+       },
+       "footer": "0",
+       "header": "1270",
+       "margins": {
+        "bottom": "2540",
+        "left": "2540",
+        "right": "2540",
+        "top": "2540"
+       },
+       "orientation": "portrait",
+       "page": "P3",
+       "page_height": "42000",
+       "page_width": "29700",
+       "report": "R",
+       "size": "A3",
+       "size_height": "42000",
+       "size_width": "29700"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "page": "P3",
+      "report": "R",
+      "size": "A3"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "21590",
+        "width": "16510",
+        "x": "2540",
+        "y": "3810"
+       },
+       "footer": "0",
+       "header": "1270",
+       "margins": {
+        "bottom": "2540",
+        "left": "2540",
+        "right": "2540",
+        "top": "2540"
+       },
+       "orientation": "portrait",
+       "page_height": "27940",
+       "page_id": "P1",
+       "page_width": "21590",
+       "size": "Letter",
+       "size_height": "27940",
+       "size_width": "21590",
+       "source": "default"
+      },
+      {
+       "body": {
+        "height": "17000",
+        "width": "25700",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "landscape",
+       "page_height": "21000",
+       "page_id": "P2",
+       "page_width": "29700",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "override"
+      },
+      {
+       "body": {
+        "height": "35650",
+        "width": "24620",
+        "x": "2540",
+        "y": "3810"
+       },
+       "footer": "0",
+       "header": "1270",
+       "margins": {
+        "bottom": "2540",
+        "left": "2540",
+        "right": "2540",
+        "top": "2540"
+       },
+       "orientation": "portrait",
+       "page_height": "42000",
+       "page_id": "P3",
+       "page_width": "29700",
+       "size": "A3",
+       "size_height": "42000",
+       "size_width": "29700",
+       "source": "override"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "16200",
+        "width": "25700",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "800",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "landscape",
+       "page": "P2",
+       "page_height": "21000",
+       "page_width": "29700",
+       "report": "R",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "footer": "8mm",
+      "page": "P2",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "21590",
+        "width": "16510",
+        "x": "2540",
+        "y": "3810"
+       },
+       "footer": "0",
+       "header": "1270",
+       "margins": {
+        "bottom": "2540",
+        "left": "2540",
+        "right": "2540",
+        "top": "2540"
+       },
+       "orientation": "portrait",
+       "page_height": "27940",
+       "page_id": "P1",
+       "page_width": "21590",
+       "size": "Letter",
+       "size_height": "27940",
+       "size_width": "21590",
+       "source": "default"
+      },
+      {
+       "body": {
+        "height": "16200",
+        "width": "25700",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "800",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "landscape",
+       "page_height": "21000",
+       "page_id": "P2",
+       "page_width": "29700",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "override"
+      },
+      {
+       "body": {
+        "height": "35650",
+        "width": "24620",
+        "x": "2540",
+        "y": "3810"
+       },
+       "footer": "0",
+       "header": "1270",
+       "margins": {
+        "bottom": "2540",
+        "left": "2540",
+        "right": "2540",
+        "top": "2540"
+       },
+       "orientation": "portrait",
+       "page_height": "42000",
+       "page_id": "P3",
+       "page_width": "29700",
+       "size": "A3",
+       "size_height": "42000",
+       "size_width": "29700",
+       "source": "override"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "14650",
+        "width": "24620",
+        "x": "2540",
+        "y": "3810"
+       },
+       "footer": "0",
+       "header": "1270",
+       "margins": {
+        "bottom": "2540",
+        "left": "2540",
+        "right": "2540",
+        "top": "2540"
+       },
+       "orientation": "landscape",
+       "page": null,
+       "page_height": "21000",
+       "page_width": "29700",
+       "report": "R",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "orientation": "landscape",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "14650",
+        "width": "24620",
+        "x": "2540",
+        "y": "3810"
+       },
+       "footer": "0",
+       "header": "1270",
+       "margins": {
+        "bottom": "2540",
+        "left": "2540",
+        "right": "2540",
+        "top": "2540"
+       },
+       "orientation": "landscape",
+       "page_height": "21000",
+       "page_id": "P1",
+       "page_width": "29700",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      },
+      {
+       "body": {
+        "height": "16200",
+        "width": "25700",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "800",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "landscape",
+       "page_height": "21000",
+       "page_id": "P2",
+       "page_width": "29700",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "override"
+      },
+      {
+       "body": {
+        "height": "35650",
+        "width": "24620",
+        "x": "2540",
+        "y": "3810"
+       },
+       "footer": "0",
+       "header": "1270",
+       "margins": {
+        "bottom": "2540",
+        "left": "2540",
+        "right": "2540",
+        "top": "2540"
+       },
+       "orientation": "portrait",
+       "page_height": "42000",
+       "page_id": "P3",
+       "page_width": "29700",
+       "size": "A3",
+       "size_height": "42000",
+       "size_width": "29700",
+       "source": "override"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "fixture": "one_page_report",
+   "name": "refusals",
+   "steps": [
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "width",
+      "reason": "only_for_custom"
+     },
+     "journaled": false,
+     "params": {
+      "report": "R",
+      "size": "A4",
+      "width": "100mm"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "height",
+      "reason": "only_for_custom"
+     },
+     "journaled": false,
+     "params": {
+      "height": "100mm",
+      "report": "R",
+      "size": "Letter"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "width",
+      "reason": "required_for_custom"
+     },
+     "journaled": false,
+     "params": {
+      "height": "100mm",
+      "report": "R",
+      "size": "custom"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "height",
+      "reason": "required_for_custom"
+     },
+     "journaled": false,
+     "params": {
+      "report": "R",
+      "size": "custom",
+      "width": "100mm"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "width",
+      "reason": "outside_custom_range"
+     },
+     "journaled": false,
+     "params": {
+      "height": "100mm",
+      "report": "R",
+      "size": "custom",
+      "width": "49.99mm"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "height",
+      "reason": "too_large"
+     },
+     "journaled": false,
+     "params": {
+      "height": "2000.01mm",
+      "report": "R",
+      "size": "custom",
+      "width": "100mm"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "width",
+      "reason": "not_exact"
+     },
+     "journaled": false,
+     "params": {
+      "height": "100mm",
+      "report": "R",
+      "size": "custom",
+      "width": "0.01in"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "margins",
+      "reason": "need_four_lengths"
+     },
+     "journaled": false,
+     "params": {
+      "margins": "10mm,10mm,10mm",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "margins",
+      "reason": "need_four_lengths"
+     },
+     "journaled": false,
+     "params": {
+      "margins": "10mm,10mm,10mm,10mm,10mm",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "margin_left",
+      "reason": "not_a_length"
+     },
+     "journaled": false,
+     "params": {
+      "margins": "10mm,10mm,10mm,-1mm",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "margin_left",
+      "reason": "not_a_length"
+     },
+     "journaled": false,
+     "params": {
+      "margins": "10mm,10mm,10mm, 10mm",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "header",
+      "reason": "not_a_length"
+     },
+     "journaled": false,
+     "params": {
+      "header": "12cm",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "footer",
+      "reason": "not_a_length"
+     },
+     "journaled": false,
+     "params": {
+      "footer": "1.5",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "body_height",
+      "reason": "body_too_short"
+     },
+     "journaled": false,
+     "params": {
+      "header": "260mm",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "body_height",
+      "reason": "body_too_short"
+     },
+     "journaled": false,
+     "params": {
+      "footer": "51mm",
+      "header": "100mm",
+      "orientation": "landscape",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.not_found"
+     },
+     "journaled": false,
+     "params": {
+      "page": "X",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.not_found"
+     },
+     "journaled": false,
+     "params": {
+      "report": "R?",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "margin_top",
+      "reason": "not_exact"
+     },
+     "journaled": false,
+     "params": {
+      "margins": "10.001mm,10mm,10mm,10mm",
+      "report": "R?",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "25700",
+        "width": "17000",
+        "x": "2000",
+        "y": "2000"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "2000",
+        "left": "2000",
+        "right": "2000",
+        "top": "2000"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "fixture": "one_page_report",
+   "name": "boundaries",
+   "steps": [
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "200000",
+        "width": "5000",
+        "x": "0",
+        "y": "0"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "0",
+        "left": "0",
+        "right": "0",
+        "top": "0"
+       },
+       "orientation": "portrait",
+       "page": null,
+       "page_height": "200000",
+       "page_width": "5000",
+       "report": "R",
+       "size": "custom",
+       "size_height": "200000",
+       "size_width": "5000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "height": "2000mm",
+      "margins": "0mm,0mm,0mm,0mm",
+      "report": "R",
+      "size": "custom",
+      "width": "50mm"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "200000",
+        "width": "5000",
+        "x": "0",
+        "y": "0"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "0",
+        "left": "0",
+        "right": "0",
+        "top": "0"
+       },
+       "orientation": "portrait",
+       "page_height": "200000",
+       "page_id": "P1",
+       "page_width": "5000",
+       "size": "custom",
+       "size_height": "200000",
+       "size_width": "5000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "5000",
+        "width": "200000",
+        "x": "0",
+        "y": "0"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "0",
+        "left": "0",
+        "right": "0",
+        "top": "0"
+       },
+       "orientation": "portrait",
+       "page": null,
+       "page_height": "5000",
+       "page_width": "200000",
+       "report": "R",
+       "size": "custom",
+       "size_height": "5000",
+       "size_width": "200000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "height": "50mm",
+      "margins": "0mm,0mm,0mm,0mm",
+      "report": "R",
+      "size": "custom",
+      "width": "2000mm"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "5000",
+        "width": "200000",
+        "x": "0",
+        "y": "0"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "0",
+        "left": "0",
+        "right": "0",
+        "top": "0"
+       },
+       "orientation": "portrait",
+       "page_height": "5000",
+       "page_id": "P1",
+       "page_width": "200000",
+       "size": "custom",
+       "size_height": "5000",
+       "size_width": "200000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "29700",
+        "width": "2000",
+        "x": "9500",
+        "y": "0"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "0",
+        "left": "9500",
+        "right": "9500",
+        "top": "0"
+       },
+       "orientation": "portrait",
+       "page": null,
+       "page_height": "29700",
+       "page_width": "21000",
+       "report": "R",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "margins": "0mm,95mm,0mm,95mm",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "29700",
+        "width": "2000",
+        "x": "9500",
+        "y": "0"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "0",
+        "left": "9500",
+        "right": "9500",
+        "top": "0"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "body_width",
+      "reason": "body_too_narrow"
+     },
+     "journaled": false,
+     "params": {
+      "margins": "0mm,95mm,0mm,95.01mm",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "29700",
+        "width": "2000",
+        "x": "9500",
+        "y": "0"
+       },
+       "footer": "0",
+       "header": "0",
+       "margins": {
+        "bottom": "0",
+        "left": "9500",
+        "right": "9500",
+        "top": "0"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "result": {
+       "body": {
+        "height": "2000",
+        "width": "21000",
+        "x": "0",
+        "y": "10000"
+       },
+       "footer": "17700",
+       "header": "10000",
+       "margins": {
+        "bottom": "0",
+        "left": "0",
+        "right": "0",
+        "top": "0"
+       },
+       "orientation": "portrait",
+       "page": null,
+       "page_height": "29700",
+       "page_width": "21000",
+       "report": "R",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "footer": "177mm",
+      "header": "100mm",
+      "margins": "0mm,0mm,0mm,0mm",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "2000",
+        "width": "21000",
+        "x": "0",
+        "y": "10000"
+       },
+       "footer": "17700",
+       "header": "10000",
+       "margins": {
+        "bottom": "0",
+        "left": "0",
+        "right": "0",
+        "top": "0"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "body_height",
+      "reason": "body_too_short"
+     },
+     "journaled": false,
+     "params": {
+      "footer": "177.01mm",
+      "header": "100mm",
+      "margins": "0mm,0mm,0mm,0mm",
+      "report": "R",
+      "size": "A4"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "2000",
+        "width": "21000",
+        "x": "0",
+        "y": "10000"
+       },
+       "footer": "17700",
+       "header": "10000",
+       "margins": {
+        "bottom": "0",
+        "left": "0",
+        "right": "0",
+        "top": "0"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "width",
+      "reason": "outside_custom_range"
+     },
+     "journaled": false,
+     "params": {
+      "height": "2000mm",
+      "report": "R",
+      "size": "custom",
+      "width": "49.99mm"
+     },
+     "show": [
+      {
+       "body": {
+        "height": "2000",
+        "width": "21000",
+        "x": "0",
+        "y": "10000"
+       },
+       "footer": "17700",
+       "header": "10000",
+       "margins": {
+        "bottom": "0",
+        "left": "0",
+        "right": "0",
+        "top": "0"
+       },
+       "orientation": "portrait",
+       "page_height": "29700",
+       "page_id": "P1",
+       "page_width": "21000",
+       "size": "A4",
+       "size_height": "29700",
+       "size_width": "21000",
+       "source": "default"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

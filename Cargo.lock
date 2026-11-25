@@ -1259,6 +1259,7 @@ dependencies = [
 name = "fid-cli"
 version = "0.0.1"
 dependencies = [
+ "fid-bus-api",
  "fid-canon",
  "fid-ctrl",
  "fid-registry-build",
@@ -2427,6 +2428,7 @@ name = "fid-surface"
 version = "0.0.1"
 dependencies = [
  "fid-bus",
+ "fid-bus-api",
  "fid-canon",
  "fid-journal",
  "fid-registry",
