@@ -110,12 +110,15 @@ fn unc_defs() -> Result<Vec<CommandDef>, DefError> {
 
 /// The six document commands of RPT.MODEL.DOC, the four template commands of
 /// RPT.MODEL.TMPL.VER (`report.save_template@1`, `report.apply_template@1`,
-/// `report.show_template@1`, `report.list_template@1`) and the six balloon register commands
-/// of RPT.BALLOON.REG (`report.add_balloon@1` ... `report.list_balloon@1`).
+/// `report.show_template@1`, `report.list_template@1`), the six balloon register commands
+/// of RPT.BALLOON.REG (`report.add_balloon@1` ... `report.list_balloon@1`) and the two
+/// page-setup commands of RPT.DESIGN.PAGE (`report.set_page_layout@1`,
+/// `report.show_page_layout@1`).
 fn report_defs() -> Result<Vec<CommandDef>, DefError> {
     let mut defs = fid_report::doc::command_defs()?;
     defs.extend(fid_report::tmpl::ver::command_defs()?);
     defs.extend(fid_report::balloon::register::command_defs()?);
+    defs.extend(fid_report::layout::page::command_defs()?);
     Ok(defs)
 }
 
