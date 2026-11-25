@@ -2,6 +2,7 @@
 # One line per run: <crate> [extra `cargo test` arguments]. Every crate must be a workspace
 # package. Keep the lines sorted (LC_ALL=C sort) and unique; CI checks both.
 fid-align-solve
+fid-bus-api
 fid-canon
 fid-clarabel
 fid-construct

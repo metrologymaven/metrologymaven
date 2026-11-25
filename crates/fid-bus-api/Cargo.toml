@@ -1,0 +1,21 @@
+[package]
+name = "fid-bus-api"
+description = "Metrology Maven bus API: the call, reply and channel types and the BusPort trait a surface sees; no bus, sessions or presence (spec node CORE.BUS.API)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# REQ-CORE.BUS.API-001: exactly these two normal dependencies, both below `fid-bus`, so a surface
+# crate may link this one (CORE.BUS.LINT `bus_api`) and still build for wasm32.
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-types = { path = "../fid-types" }
+
+# tests/graph.rs reads layers.toml and lint-allowlist.toml (AC-1); it runs cargo, so not on wasm.
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+[lints]
+workspace = true

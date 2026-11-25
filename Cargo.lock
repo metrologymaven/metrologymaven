@@ -1178,6 +1178,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-bus-api"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-types",
+ "toml",
+]
+
+[[package]]
 name = "fid-cad-proto"
 version = "0.0.1"
 dependencies = [

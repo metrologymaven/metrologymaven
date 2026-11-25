@@ -41,6 +41,7 @@ python fixtures/cli/make_fixtures.py --check
 python fixtures/cons/check_row_schema.py
 python fixtures/cons/make_decl_fixtures.py --check
 python fixtures/cons/make_mid_fixtures.py --check
+python fixtures/core/bus/api/make_cases.py --check
 python fixtures/core/bus/pipe/stage/make_fixtures.py --check
 python fixtures/core/bus/pipe/valid/make_cases.py --check
 python fixtures/core/bus/pol/class/make_matrix.py --check
