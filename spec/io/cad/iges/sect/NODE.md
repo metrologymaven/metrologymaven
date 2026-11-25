@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-io-iges]
+built_pr: 632
 satisfies: [REQ-IO.CAD.IGES-003, REQ-IO.CAD.IGES-005]
 covers: []
 depends_on: [IO.REG.LIMITS, IO.REG.PROV]
