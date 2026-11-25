@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-hal-runtime]
+built_pr: 608
 satisfies: [REQ-HAL.ACQ.INGEST-001]
 covers: []
 depends_on: [HAL.IDL.STAMP]
