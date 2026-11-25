@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-geo-dist]
+built_pr: 599
 satisfies: [REQ-GEO.DIST.FACE-001, REQ-GEO.DIST.FACE-006]
 covers: []
 depends_on: [GEO.CAD.TOPO.MODEL, GEO.CAD.TOPO.ADJ, GEO.CAD.TOPO.PCURVE, GEO.NURBS.EVAL, GEO.DIST.SIGN]
