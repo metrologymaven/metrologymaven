@@ -1,0 +1,21 @@
+[package]
+name = "fid-stats"
+description = "Metrology Maven statistics kernel: the capability index function stats.cap.index@1.0.0 (Cp/Cpk, Pp/Ppk and the one-sided indices) with its typed non-results (spec node RPT.STATS.CAP.INDEX)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Kernel crate (KNP-1): no third-party dependencies; only fid-num (layer num) for the
+# total-order minimum (KRN.NUM.FN).
+[dependencies]
+fid-num = { path = "../fid-num" }
+
+[dev-dependencies]
+# Test-support only (never in the kernel graph): the workspace root for fixture paths and the
+# SHA-256 of the cross-target result digest.
+fid-testkit = { path = "../fid-testkit" }
+
+[lints]
+workspace = true
