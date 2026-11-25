@@ -1,0 +1,138 @@
+{
+ "about": "GDT.LOC.DERIV.TYPES AC-5: serialised examples of all four DerivedElement variants (see make_deriv_fixtures.py). Synthetic, CC0.",
+ "examples": [
+  {
+   "canonical": "{\"alg\":\"syn.axis.example@1.0.0\",\"element\":{\"direction\":[\"0x3fe3333333333333\",\"0x0000000000000000\",\"0xbfe999999999999a\"],\"extent\":\"0x3f9eb851eb851eb8\",\"kind\":\"axis\",\"point\":[\"0x3f847ae147ae147b\",\"0xbf947ae147ae147b\",\"0x3f8eb851eb851eb8\"]},\"flags\":[\"local_optimum_only\"],\"schema\":\"fid.derived-element/1\"}",
+   "name": "axis_flagged",
+   "record": {
+    "alg": "syn.axis.example@1.0.0",
+    "element": {
+     "direction": [
+      "0x3fe3333333333333",
+      "0x0000000000000000",
+      "0xbfe999999999999a"
+     ],
+     "extent": "0x3f9eb851eb851eb8",
+     "kind": "axis",
+     "point": [
+      "0x3f847ae147ae147b",
+      "0xbf947ae147ae147b",
+      "0x3f8eb851eb851eb8"
+     ]
+    },
+    "flags": [
+     "local_optimum_only"
+    ],
+    "schema": "fid.derived-element/1"
+   }
+  },
+  {
+   "canonical": "{\"alg\":\"syn.mline.example@1.0.0\",\"element\":{\"kind\":\"median_line\",\"points\":[[\"0x0000000000000000\",\"0x0000000000000000\",\"0x0000000000000000\"],[\"0x3eb0c6f7a0b5ed8d\",\"0xbec0c6f7a0b5ed8d\",\"0x3f847ae147ae147b\"],[\"0x0000000000000000\",\"0x3ec92a737110e454\",\"0x3f947ae147ae147b\"]]},\"flags\":[],\"schema\":\"fid.derived-element/1\"}",
+   "name": "median_line",
+   "record": {
+    "alg": "syn.mline.example@1.0.0",
+    "element": {
+     "kind": "median_line",
+     "points": [
+      [
+       "0x0000000000000000",
+       "0x0000000000000000",
+       "0x0000000000000000"
+      ],
+      [
+       "0x3eb0c6f7a0b5ed8d",
+       "0xbec0c6f7a0b5ed8d",
+       "0x3f847ae147ae147b"
+      ],
+      [
+       "0x0000000000000000",
+       "0x3ec92a737110e454",
+       "0x3f947ae147ae147b"
+      ]
+     ]
+    },
+    "flags": [],
+    "schema": "fid.derived-element/1"
+   }
+  },
+  {
+   "canonical": "{\"alg\":\"syn.msurf.example@1.0.0\",\"element\":{\"kind\":\"median_surface\",\"normals\":[[\"0x8000000000000000\",\"0x3ff0000000000000\",\"0x0000000000000000\"],[\"0x0000000000000000\",\"0x3ff0000000000000\",\"0x0000000000000000\"]],\"points\":[[\"0x3f747ae147ae147b\",\"0x3f8999999999999a\",\"0x0000000000000000\"],[\"0x3f8eb851eb851eb8\",\"0x3f8999999999999a\",\"0x8000000000000000\"]]},\"flags\":[],\"schema\":\"fid.derived-element/1\"}",
+   "name": "median_surface_normals",
+   "record": {
+    "alg": "syn.msurf.example@1.0.0",
+    "element": {
+     "kind": "median_surface",
+     "normals": [
+      [
+       "0x8000000000000000",
+       "0x3ff0000000000000",
+       "0x0000000000000000"
+      ],
+      [
+       "0x0000000000000000",
+       "0x3ff0000000000000",
+       "0x0000000000000000"
+      ]
+     ],
+     "points": [
+      [
+       "0x3f747ae147ae147b",
+       "0x3f8999999999999a",
+       "0x0000000000000000"
+      ],
+      [
+       "0x3f8eb851eb851eb8",
+       "0x3f8999999999999a",
+       "0x8000000000000000"
+      ]
+     ]
+    },
+    "flags": [],
+    "schema": "fid.derived-element/1"
+   }
+  },
+  {
+   "canonical": "{\"alg\":\"syn.msurf.example@1.0.0\",\"element\":{\"kind\":\"median_surface\",\"points\":[[\"0x3f747ae147ae147b\",\"0x3f8999999999999a\",\"0x3f60624dd2f1a9fc\"]]},\"flags\":[],\"schema\":\"fid.derived-element/1\"}",
+   "name": "median_surface_plain",
+   "record": {
+    "alg": "syn.msurf.example@1.0.0",
+    "element": {
+     "kind": "median_surface",
+     "points": [
+      [
+       "0x3f747ae147ae147b",
+       "0x3f8999999999999a",
+       "0x3f60624dd2f1a9fc"
+      ]
+     ]
+    },
+    "flags": [],
+    "schema": "fid.derived-element/1"
+   }
+  },
+  {
+   "canonical": "{\"alg\":\"syn.mpts.example@2.1.0\",\"element\":{\"kind\":\"median_points\",\"points\":[[\"0xbf50624dd2f1a9fc\",\"0x0000000000000000\",\"0x3fd0000000000000\"],[\"0x01b01297d23ab683\",\"0xfe37e43c8800759c\",\"0x0000000000000001\"]]},\"flags\":[],\"schema\":\"fid.derived-element/1\"}",
+   "name": "median_points",
+   "record": {
+    "alg": "syn.mpts.example@2.1.0",
+    "element": {
+     "kind": "median_points",
+     "points": [
+      [
+       "0xbf50624dd2f1a9fc",
+       "0x0000000000000000",
+       "0x3fd0000000000000"
+      ],
+      [
+       "0x01b01297d23ab683",
+       "0xfe37e43c8800759c",
+       "0x0000000000000001"
+      ]
+     ]
+    },
+    "flags": [],
+    "schema": "fid.derived-element/1"
+   }
+  }
+ ]
+}

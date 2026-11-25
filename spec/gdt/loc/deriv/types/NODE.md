@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-gps]
 satisfies: [REQ-GDT.LOC.DERIV-001, REQ-GDT.LOC.DERIV-002]
 covers: []
 depends_on: [GDT.RES.RESOLVE, GEO.FRAME]

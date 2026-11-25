@@ -20,10 +20,14 @@
 //!   the constant-width profile zone definitions as allowed intervals on those deviations;
 //!   and (`GDT.PROF.LINE.SECT`) the section bands and line-element deviations of profile of a
 //!   line, with exact band membership.
+//! - [`loc`] (`GDT.LOC.DERIV.TYPES`): the derived-element type (axis, median line, median
+//!   surface, median points) with the producing algorithm ID, `derive()` dispatch on the
+//!   chain's reduction operator through a registry keyed by algorithm ID, and the typed
+//!   derivation failure reasons, with its exported JSON Schema.
 //!
 //! Pure: no I/O (callers pass bytes), no `HashMap`/`HashSet`, and nothing here panics on any
 //! input: every outcome is a returned `Result`. The only floating-point arithmetic is in
-//! [`zone`], [`drf`], [`dim`] and [`prof`] (outside the fits of `fid-fit`), written in KNP-1 style
+//! [`zone`], [`drf`], [`dim`], [`prof`] and [`loc`] (outside the fits of `fid-fit`), written in KNP-1 style
 //! (pinned evaluation order, no fused multiply-add, no `f64::min`/`f64::max`, square root
 //! through `fid-num`, NaN rejected), so its results are bit-identical on every platform.
 //! CI runs `zone_shape` on wasm32 too; the [`prof`] output pin (GDT.PROF.DEV AC-5) is
@@ -33,6 +37,7 @@ pub mod dim;
 pub mod dmt;
 pub mod drf;
 pub mod form;
+pub mod loc;
 pub mod prof;
 pub mod resolve;
 pub mod zone;

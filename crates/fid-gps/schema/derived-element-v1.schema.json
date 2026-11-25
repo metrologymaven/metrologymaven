@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.io/schema/gdt/derived-element-v1.schema.json",
+  "title": "Metrology Maven derived toleranced element (fid.derived-element/1)",
+  "description": "A derived element returned by derive() (spec node GDT.LOC.DERIV.TYPES): an axis, a derived median line, a median surface or median points, with the algorithm ID of the reduction operator that produced it and the flags its implementation passed through. Every float is bit exact: \"0x\" plus 16 lowercase hex digits of the IEEE 754 binary64 bits, finite only. Coordinates are in metres in the frame of the input points. The fid-gps constructors are stricter: an axis direction and every normal is a unit vector within 1e-12 on its squared norm, and an axis extent is not negative.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "alg", "element", "flags"],
+  "properties": {
+    "schema": { "const": "fid.derived-element/1" },
+    "alg": { "$ref": "#/$defs/algId" },
+    "element": {
+      "oneOf": [
+        { "$ref": "#/$defs/axis" },
+        { "$ref": "#/$defs/medianLine" },
+        { "$ref": "#/$defs/medianSurface" },
+        { "$ref": "#/$defs/medianPoints" }
+      ]
+    },
+    "flags": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 1,
+      "items": { "enum": ["local_optimum_only"] }
+    }
+  },
+  "$defs": {
+    "algId": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9_]{0,31}\\.[a-z][a-z0-9_]{0,31}\\.[a-z][a-z0-9_]{0,31}@(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})$"
+    },
+    "f64": {
+      "description": "A finite binary64 as 0x plus 16 lowercase hex digits; the first three digits (sign and exponent) are never 7ff or fff.",
+      "type": "string",
+      "pattern": "^0x([0-6][0-9a-f]{2}|7[0-9a-e][0-9a-f]|7f[0-9a-e]|[89a-e][0-9a-f]{2}|f[0-9a-e][0-9a-f]|ff[0-9a-e])[0-9a-f]{13}$"
+    },
+    "vec3": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "$ref": "#/$defs/f64" } },
+    "axis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "point", "direction", "extent"],
+      "properties": {
+        "kind": { "const": "axis" },
+        "point": { "$ref": "#/$defs/vec3" },
+        "direction": { "$ref": "#/$defs/vec3" },
+        "extent": { "$ref": "#/$defs/f64" }
+      }
+    },
+    "medianLine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "points"],
+      "properties": {
+        "kind": { "const": "median_line" },
+        "points": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/vec3" } }
+      }
+    },
+    "medianSurface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "points"],
+      "properties": {
+        "kind": { "const": "median_surface" },
+        "points": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/vec3" } },
+        "normals": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/vec3" } }
+      }
+    },
+    "medianPoints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "points"],
+      "properties": {
+        "kind": { "const": "median_points" },
+        "points": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/vec3" } }
+      }
+    }
+  }
+}
