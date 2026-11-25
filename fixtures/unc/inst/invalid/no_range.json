@@ -1,0 +1,58 @@
+{
+  "schema": "instrument-model/v1",
+  "id": "im:tracker-example@1.0.0",
+  "kind": "observation",
+  "device_class": "tracker",
+  "params": [
+    {
+      "name": "range_const_sigma",
+      "unit": "um",
+      "value": "15",
+      "dist": {
+        "kind": "normal",
+        "params": {
+          "mu": "0",
+          "sigma": "15"
+        }
+      }
+    },
+    {
+      "name": "range_prop_sigma",
+      "unit": "um/m",
+      "value": "6",
+      "dist": {
+        "kind": "normal",
+        "params": {
+          "mu": "0",
+          "sigma": "6"
+        }
+      }
+    },
+    {
+      "name": "angle_sigma",
+      "unit": "urad",
+      "value": "5",
+      "dist": {
+        "kind": "normal",
+        "params": {
+          "mu": "0",
+          "sigma": "5"
+        }
+      }
+    },
+    {
+      "name": "probing_noise",
+      "unit": "um",
+      "value": "10",
+      "dist": {
+        "kind": "rect",
+        "params": {
+          "a": "-10",
+          "b": "10"
+        }
+      }
+    }
+  ],
+  "range": [],
+  "source": "Invented example model for tests: the parameter values are made up and describe no real instrument (project fixture, D-038, CC-BY-4.0)"
+}

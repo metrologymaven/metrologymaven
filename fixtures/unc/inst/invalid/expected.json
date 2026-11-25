@@ -1,0 +1,86 @@
+{
+  "bad_axis_unit.json": {
+    "code": "schema_invalid",
+    "field": "/range/0/unit"
+  },
+  "bad_dist.json": {
+    "code": "schema_invalid",
+    "field": "/params/0/dist/params/sigma"
+  },
+  "bad_id.json": {
+    "code": "schema_invalid",
+    "field": "/id"
+  },
+  "bad_kind.json": {
+    "code": "schema_invalid",
+    "field": "/kind"
+  },
+  "bad_unit.json": {
+    "code": "schema_invalid",
+    "field": "/params/0/unit"
+  },
+  "bad_value.json": {
+    "code": "schema_invalid",
+    "field": "/params/0/value"
+  },
+  "control_in_source.json": {
+    "code": "schema_invalid",
+    "field": "/source"
+  },
+  "dist_on_kelvin.json": {
+    "code": "schema_invalid",
+    "field": "/params/4/dist"
+  },
+  "dup_axis.json": {
+    "code": "schema_invalid",
+    "field": "/range/1/axis"
+  },
+  "dup_param.json": {
+    "code": "schema_invalid",
+    "field": "/params/1/name"
+  },
+  "empty_range_axis.json": {
+    "code": "invalid_range",
+    "field": "temperature"
+  },
+  "empty_source.json": {
+    "code": "missing_source",
+    "field": "source"
+  },
+  "empty_unit.json": {
+    "code": "missing_unit",
+    "field": "angle_sigma"
+  },
+  "hex_with_prefixed_unit.json": {
+    "code": "schema_invalid",
+    "field": "/params/0/value"
+  },
+  "inverted_range.json": {
+    "code": "invalid_range",
+    "field": "range"
+  },
+  "no_range.json": {
+    "code": "schema_invalid",
+    "field": "/range"
+  },
+  "no_source.json": {
+    "code": "missing_source",
+    "field": "source"
+  },
+  "no_unit.json": {
+    "code": "missing_unit",
+    "field": "range_const_sigma"
+  },
+  "overflow_value.json": {
+    "code": "schema_invalid",
+    "field": "/params/3/value"
+  },
+  "unknown_field.json": {
+    "code": "schema_invalid",
+    "field": "/notes"
+  },
+  "wrong_schema.json": {
+    "code": "schema_invalid",
+    "field": "/schema"
+  }
+}

@@ -81,6 +81,8 @@ Defines `InstrumentModel` as versioned data (never code): named parameters with 
 ## Open questions
 
 - Whether the range check should also cover environmental axes reported by HAL (temperature, warm-up state) depends on the provenance stamp fields frozen by `HAL.IDL`.
+- **Partial build, not marked built** (crate `fid-unc-inst`). AC-1, AC-2, AC-4 and AC-5 are implemented and tested. Open: **AC-3**, because `HAL.SIM` (and `HAL.SIM.PORT`, which owns the tracker simulator) is not built, so no HAL simulator descriptor for `sim-tracker-1` exists; the bind command is tested against a stand-in `instrument-profile/v1` descriptor in `fixtures/unc/inst/standin/`. **AC-6** is tested on the journal of AC-1 plus the stand-in bind and must be re-run on the AC-3 journal once the simulator descriptor exists. Set `built_in` when both pass against `HAL.SIM`.
+- The build reads `unc.show_instrument_model@1` as R0 and does not journal it (CONSTITUTION §3, D-031: R0 and R1 are not written to the Record Journal), although the frontmatter lists it under `journal:`.
 
 ## Children
 

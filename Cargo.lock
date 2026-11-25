@@ -2139,6 +2139,7 @@ dependencies = [
  "fid-store",
  "fid-surface",
  "fid-unc",
+ "fid-unc-inst",
  "fid-uuid",
 ]
 
@@ -2432,6 +2433,22 @@ dependencies = [
  "fid-replay",
  "fid-store",
  "fid-types",
+]
+
+[[package]]
+name = "fid-unc-inst"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-hal-idl",
+ "fid-kci",
+ "fid-kunc",
+ "fid-registry",
+ "fid-replay",
+ "fid-store",
+ "fid-types",
+ "fid-unc",
 ]
 
 [[package]]

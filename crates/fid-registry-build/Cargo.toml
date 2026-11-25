@@ -41,6 +41,10 @@ fid-store = { path = "../fid-store" }
 # The model commands of UNC.MODEL.GRAPH.STORE (unc.create_model@1, unc.validate_model@1,
 # unc.show_model@1), read through `fid_unc::model_store::declarations()`. Layer engine.
 fid-unc = { path = "../fid-unc" }
+# The instrument-model commands of UNC.INST.SCHEMA (unc.import_instrument_model@1,
+# unc.show_instrument_model@1, unc.bind_instrument_model@1), `fid_unc_inst::command_defs`.
+# Layer engine.
+fid-unc-inst = { path = "../fid-unc-inst" }
 # The settings each crate declares with `fid_settings!` (CORE.STO.SET), collected into the
 # workspace settings manifest: `fid_bus::policy::fs::fs_settings` (`bus.fs_roots`); and the
 # request commands of CORE.BUS.POL.PROJ (`fid_bus::policy::projection::command_defs`). Layer

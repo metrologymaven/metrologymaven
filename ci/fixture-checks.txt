@@ -293,6 +293,7 @@ python fixtures/unc/dec/eval/make_cases.py --check
 python fixtures/unc/dec/risk/make_cases.py --check
 python fixtures/unc/dec/type/make_fixtures.py --check
 python fixtures/unc/dist/make_fixtures.py --check
+python fixtures/unc/inst/make_fixtures.py --check
 python fixtures/unc/mcm/adapt/make_fixtures.py --check
 python fixtures/unc/mcm/block/make_fixtures.py --check
 python fixtures/unc/mcm/intvl/make_fixtures.py --check
