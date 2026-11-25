@@ -191,13 +191,15 @@ wire_enum!(
     /// AI-assistance level; mandatory on every entry (REQ-004).
     AiAssistance, "ai_assistance" { None => "none", Suggested => "suggested", Authored => "authored", Executed => "executed" }
 );
-wire_enum!(
-    /// Principal kind (CONSTITUTION §3, D-012).
-    PrincipalKind, "principal.kind" {
-        Human => "human", Agent => "agent", Script => "script",
-        Service => "service", Device => "device", System => "system",
-    }
-);
+/// Principal kind (CONSTITUTION §3, D-012): the one shared type from `fid-types`, with the
+/// same six wire strings this module always wrote, so entry bytes and digests are unchanged.
+pub use fid_types::PrincipalKind;
+
+/// Parses a `principal.kind` wire string; anything else is a `schema` error, with the same
+/// message as before `PrincipalKind` moved to `fid-types`.
+pub(crate) fn parse_principal_kind(s: &str) -> Result<PrincipalKind, EntryError> {
+    PrincipalKind::parse(s).map_err(|_| EntryError::Schema(format!("principal.kind: unknown value {s:?}")))
+}
 wire_enum!(
     /// How a person confirmed a session upgrade (REQ-007).
     ConfirmMethod, "upgrade.method" { GuiPrompt => "gui_prompt", OsPresence => "os_presence" }

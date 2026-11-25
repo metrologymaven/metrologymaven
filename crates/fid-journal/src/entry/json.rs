@@ -3,10 +3,10 @@
 //! for one; `tools/check_entries.py` runs the same fixtures through the schema itself.
 
 use super::{
-    parse_digest, AiAssistance, CommandDraft, CommandHeader, ConfirmMethod, DraftBody, EntryDraft, EntryError,
-    EntryHeader, EntryKind, EntryTime, EventSource, HeadMove, HeaderBody, Manifests, OutputDigest, PrincipalCommit,
-    PrincipalDraft, PrincipalKind, SessionInfo, TaggedDigest, UpgradeDraft, UpgradeHeader, R1_RESULT_TAG, SCHEMA_V1,
-    SCHEMA_V2, TOMBSTONE,
+    parse_digest, parse_principal_kind, AiAssistance, CommandDraft, CommandHeader, ConfirmMethod, DraftBody,
+    EntryDraft, EntryError, EntryHeader, EntryKind, EntryTime, EventSource, HeadMove, HeaderBody, Manifests,
+    OutputDigest, PrincipalCommit, PrincipalDraft, SessionInfo, TaggedDigest, UpgradeDraft, UpgradeHeader,
+    R1_RESULT_TAG, SCHEMA_V1, SCHEMA_V2, TOMBSTONE,
 };
 use fid_canon::{digest_bytes, to_canonical_bytes, CValue, Digest};
 use fid_kci::AlgorithmId;
@@ -367,7 +367,7 @@ pub fn validate_header_value(v: &CValue) -> Result<(), EntryError> {
     time(o, at)?;
     let p = obj(get(o, "principal", at)?, "header.principal")?;
     shaped(p, "header.principal", &PRINCIPAL_SHAPE)?;
-    PrincipalKind::parse(string(p, "kind", "header.principal")?)?;
+    parse_principal_kind(string(p, "kind", "header.principal")?)?;
     digest(p, "commit", "header.principal")?;
     opt_digest(p, "on_behalf_of_commit", "header.principal")?;
     AiAssistance::parse(string(o, "ai_assistance", at)?)?;
@@ -453,7 +453,7 @@ pub(super) fn header_from_value(v: &CValue) -> Result<EntryHeader, EntryError> {
     let pat = "header.principal";
     let p = obj(get(o, "principal", at)?, pat)?;
     let principal = PrincipalCommit {
-        kind: PrincipalKind::parse(string(p, "kind", pat)?)?,
+        kind: parse_principal_kind(string(p, "kind", pat)?)?,
         commit: digest(p, "commit", pat)?,
         on_behalf_of_commit: opt_digest(p, "on_behalf_of_commit", pat)?,
     };
@@ -539,7 +539,7 @@ pub(super) fn draft_from_value(v: &CValue) -> Result<EntryDraft, EntryError> {
     let p = obj(get(o, "principal", at)?, pat)?;
     fields(p, pat, &["kind", "identity"], &["on_behalf_of"])?;
     let principal = PrincipalDraft {
-        kind: PrincipalKind::parse(string(p, "kind", pat)?)?,
+        kind: parse_principal_kind(string(p, "kind", pat)?)?,
         identity: get(p, "identity", pat)?.clone(),
         on_behalf_of: p.get("on_behalf_of").cloned(),
     };
