@@ -21,7 +21,9 @@ All geometry is invented. Every expected value is computed here, never by the Ru
   start + k * step, each operation rounded once.
 - In-plane deviations: `cases.json` and `cone_inplane.json` give d / m with m the exact
   in-plane length of the binary64 surface normal (60-digit `decimal`), compared at 1e-12
-  relative. AC-6 replicates the documented binary64 formula
+  relative; in `cases.json` the oblique cut-off and the division follow the module's
+  declared rule, the binary64 m (replicated), and every m checks the documented bound
+  |m_rounded - m_exact| <= 2^-50 max(1, |ns|), also on a seeded sweep of 20 000 normals. AC-6 replicates the documented binary64 formula
   c = (ns0 n0 + ns1 n1) + ns2 n2, v_i = ns_i - c n_i, m = sqrt((v0 v0 + v1 v1) + v2 v2),
   dev = d / m (math.sqrt is correctly rounded), because a bit pin needs the exact bits.
 
@@ -83,6 +85,25 @@ def in_band(v: Fraction, s: float, w: float) -> bool:
 
 def float_norm(n):
     return math.sqrt((n[0] * n[0] + n[1] * n[1]) + n[2] * n[2])
+
+
+def float_m(ns, n):
+    """The in-plane length by the module's declared binary64 formula (the cut-off rule)."""
+    c = (ns[0] * n[0] + ns[1] * n[1]) + ns[2] * n[2]
+    v = [ns[0] - c * n[0], ns[1] - c * n[1], ns[2] - c * n[2]]
+    return math.sqrt((v[0] * v[0] + v[1] * v[1]) + v[2] * v[2])
+
+
+M_BOUND = Decimal(2) ** -50  # documented |m_rounded - m_exact| <= 2^-50 * max(1, |ns|)
+
+
+def check_m_bound(ns, n):
+    """Asserts the documented forward-error bound of the rounded m on these inputs."""
+    ns_len = Decimal(sum(Fraction(c) ** 2 for c in ns).numerator) / Decimal(
+        sum(Fraction(c) ** 2 for c in ns).denominator)
+    scale = max(Decimal(1), ns_len.sqrt())
+    err = abs(Decimal(float_m(ns, n)) - exact_m(ns, n))
+    assert err <= M_BOUND * scale, (ns, n, err)
 
 
 def exact_m(ns, n):
@@ -179,12 +200,14 @@ def reference(case):
             elif dv["normal"] is None:
                 sec["withheld"].append([i, "no_normal"])
             else:
-                m = exact_m(dv["normal"], n)
-                if m < Decimal(method["inplane"]):
+                # The declared rule: the cut-off and the division use the rounded m.
+                check_m_bound(dv["normal"], n)
+                m = float_m(dv["normal"], n)
+                if m < method["inplane"]:
                     sec["oblique"].append(i)
                 else:
                     sec["members"].append(i)
-                    sec["dev"].append(dstr(Decimal(dv["signed"]) / m))
+                    sec["dev"].append(dstr(Decimal(dv["signed"]) / Decimal(m)))
     out = []
     for sec in secs:
         flags = []
@@ -339,6 +362,7 @@ def cone_fixture():
         v = exact_dot(n, p)
         hits = [k for k in range(3) if in_band(v, pos[k], w)]
         assert hits == [i // 120], (i, hits)
+        check_m_bound(ns, n)
         m = exact_m(ns, n)
         e = Decimal(d) / m
         lit = Decimal(d) / cos30  # AC-2 as stated: d / cos 30 deg
@@ -459,6 +483,19 @@ def cases_fixture():
     devs = [plain(1e-5, ns), plain(-1e-5, [0.4999999999999999, 0.0, math.sqrt(0.75)])]
     cases.append(make_case("inplane_threshold", "m = 0.5 exactly is kept; one ulp below is oblique",
                            spec(Z, {"explicit": [0.01]}, 1e-4, {"inplane": 0.5}), pts, devs))
+    # Reviewer's counter-example (#614): exact m = 0.5 - 1.1e-18, rounded m = 0.5 exactly.
+    # By the declared rule (rounded m) the point is kept at min_inplane 0.5 and oblique one
+    # ulp above.
+    n = [0.0, 0.6, 0.8]
+    ns = [float.fromhex("0x1.3d21e59798201p-2"), float.fromhex("0x1.a509a19658804p-3"),
+          float.fromhex("0x1.db4fcbdab5654p-1")]
+    assert float_m(ns, n) == 0.5 and exact_m(ns, n) < Decimal("0.5")
+    pts = [[0.0, 0.006, 0.008]]
+    cases.append(make_case("inplane_rounded_cutoff", "exact m < 0.5 but rounded m = 0.5: kept by the declared rule",
+                           spec(n, {"explicit": [0.01]}, 1e-4, {"inplane": 0.5}), pts, [plain(1e-5, ns)]))
+    cases.append(make_case("inplane_rounded_cutoff_above", "the same point at min_inplane one ulp above 0.5",
+                           spec(n, {"explicit": [0.01]}, 1e-4, {"inplane": math.nextafter(0.5, 1.0)}), pts,
+                           [plain(1e-5, ns)]))
     # Pose.
     tz = {"r": IDENTITY["r"], "t": [0.0, 0.0, 0.001]}
     pts = [[0.0, 0.0, 0.009], [0.0, 0.0, 0.01], [0.0, 0.0, 0.00905]]
@@ -514,6 +551,16 @@ def cases_fixture():
     cases.append(make_case("exact_domain", "q_x = 1e-150 is refused only where the exact sign is needed",
                            spec(Z, {"explicit": [s7]}, w14), pts, [plain(1e-6), plain(2e-6), plain(3e-6)],
                            needs_exact_out_of_domain={"2": True}))
+    # The documented bound of the rounded m holds on a seeded sweep of unit normals.
+    rng = SplitMix(0x6D62)
+    for _ in range(20000):
+        v = [rng.uniform(-1.0, 1.0) for _ in range(3)]
+        ln = math.sqrt((v[0] * v[0] + v[1] * v[1]) + v[2] * v[2])
+        if ln < 0.25:
+            continue
+        ns = [c / ln for c in v]
+        for nn in (Z, [0.0, 0.6, 0.8], [0.48, 0.36, 0.8]):
+            check_m_bound(ns, nn)
     return {"cases": cases}
 
 

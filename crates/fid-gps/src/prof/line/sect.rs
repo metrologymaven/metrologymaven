@@ -55,6 +55,15 @@
 //!   `v_i = n_s_i - c n_i`, `m = sqrt((v0 v0 + v1 v1) + v2 v2)`, each step rounded once. A point
 //!   with `m < min_inplane` is flagged `oblique_section` and excluded from that section.
 //!   `min_inplane` has no default: the row must state it (`0 < min_inplane <= 1`).
+//! - **The cut-off is on the rounded `m`, not the exact one.** It is a declared quality
+//!   cut-off on the in-plane correction, not a band verdict. With `|n|` within 1e-12 of 1, the
+//!   computed `m` is within `2^-50 * max(1, |n_s|)` (about 8.9e-16 for a unit normal) of the
+//!   exact `|n_s - (n_s . n) n|` on the binary64 inputs (forward error: `c` 3u, `v` 2u more,
+//!   the sum of squares and the square root 2.5u; u = 2^-53). A point whose exact `m` is
+//!   within that bound of `min_inplane` can therefore fall on either side. Example: for
+//!   `n = (0, 0.6, 0.8)` and `n_s = (0x1.3d21e59798201p-2, 0x1.a509a19658804p-3,
+//!   0x1.db4fcbdab5654p-1)` the exact `m` is `0.5 - 1.1e-18`, the rounded `m` is exactly
+//!   `0.5`, and with `min_inplane = 0.5` the point is kept (pinned in the oracle's cases).
 //!
 //! # Honesty (D-045)
 //!
@@ -94,8 +103,10 @@ type V3 = [f64; 3];
 /// REQ-006: `|(|n|) - 1|` above this is `non_unit_direction`.
 pub const UNIT_TOL: f64 = 1e-12;
 
-/// Most sections one call accepts.
-pub const MAX_SECTIONS: usize = 1_000_000;
+/// Most sections one call accepts. Each costs about 200 bytes before any member (the
+/// [`Section`] with its empty vectors, plus the chain and sorted position entries), so the cap
+/// bounds that overhead to about 20 MB.
+pub const MAX_SECTIONS: usize = 100_000;
 
 /// Most points one call accepts: indexes are `u32`.
 pub const MAX_POINTS: usize = u32::MAX as usize;
@@ -123,7 +134,7 @@ pub enum SectError {
     /// `section_positions_missing`: no positions are stated (none, an empty list or a
     /// count of zero).
     SectionPositionsMissing,
-    /// `too_many_sections`: more than [`MAX_SECTIONS`] positions.
+    /// `too_many_sections`: more than [`MAX_SECTIONS`] (100 000) positions.
     TooManySections,
     /// `non_unit_direction`: `|(|n|) - 1| > 1e-12`.
     NonUnitDirection,
@@ -570,6 +581,9 @@ fn place(sec: &mut Section, index: u32, item: &Item, plan: &Plan) -> Result<(), 
             Method::InPlane { min_inplane } => match normal {
                 None => sec.withheld.push((index, Withheld::NoNormal)),
                 Some(ns) => {
+                    // The rounded m (within 2^-50 * max(1, |n_s|) of the exact one, module
+                    // docs) decides the cut-off: a point within that bound of min_inplane may
+                    // fall either side, by the declared rule.
                     let m = inplane_len(ns, &plan.n)?;
                     if m < min_inplane {
                         sec.oblique.push(index);

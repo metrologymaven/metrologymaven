@@ -412,6 +412,19 @@ fn ac5_plane_oblique() {
     assert_eq!(secs[0].excluded_oblique, 21);
 }
 
+/// The oblique cut-off is on the rounded `m` (module docs): the reviewer's counter-example of
+/// #614 has an exact `m` just below 0.5 and a rounded `m` of exactly 0.5, so it is kept at
+/// `min_inplane = 0.5` and oblique one ulp above.
+#[test]
+fn oblique_cutoff_is_on_rounded_m() {
+    check_ids(&["inplane_rounded_cutoff", "inplane_rounded_cutoff_above"]);
+    let root = cases();
+    let kept = run(find_case(&root, "inplane_rounded_cutoff")).unwrap();
+    assert_eq!(kept[0].members, vec![0]);
+    let cut = run(find_case(&root, "inplane_rounded_cutoff_above")).unwrap();
+    assert_eq!(cut[0].oblique, vec![0]);
+}
+
 /// REQ-008 and D-045: `no_projection` points are counted per section, unsigned points and
 /// (under `inplane`) points without a normal are withheld, never given a value.
 #[test]
@@ -472,6 +485,11 @@ fn constants_and_codes() {
     assert_eq!(MAX_MAGNITUDE, 2f64.powi(480));
     assert_eq!(MIN_EXACT_MAGNITUDE, 2f64.powi(-480));
     assert_eq!(SectError::OverlappingBands { a: 0, b: 1 }.to_string(), "overlapping_bands{0,1}");
+    assert_eq!(MAX_SECTIONS, 100_000);
+    // The documented per-section overhead (about 200 bytes): the Section plus its chain
+    // position (f64) and sorted entry ((f64, u32)).
+    let per_section = std::mem::size_of::<Section>() + 8 + 16;
+    assert!((150..=250).contains(&per_section), "{per_section} bytes per section");
     assert_eq!(SectError::SectionPositionsMissing.code(), "section_positions_missing");
     assert_eq!(SectError::NonUnitDirection.code(), "non_unit_direction");
     assert_eq!(SectError::NanInput { index: Some(3) }.to_string(), "nan_input{point 3}");
