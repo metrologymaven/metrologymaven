@@ -1,0 +1,19 @@
+[package]
+name = "fid-platform-core"
+description = "Metrology Maven support matrix (PLAT.MATRIX.FILE) and hardware profile file (PLAT.HW.PROFILE): schemas, validators and the tier lookup, below the tool layer so fid doctor (PLAT.DOCTOR.LOOKUP) can read them; re-exported by fid-platform"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+# Reads both files as untyped tables (no serde derive); the same pinned parser fid-platform
+# used for them, already in Cargo.lock. Duplicate keys and malformed TOML are rejected.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+# The OS family, architecture and version types shared with the GPU policy (model layer).
+fid-gpu-policy = { path = "../fid-gpu-policy" }
+
+[lints]
+workspace = true

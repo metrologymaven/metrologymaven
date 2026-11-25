@@ -130,10 +130,11 @@ fn setext_heading_ends_section() {
 }
 
 /// Review follow-up: the local `Tier` names must match `fid_platform::matrix::Tier`
-/// (`fid-xtask` cannot depend on that `tool` crate, so the source is read instead).
+/// (`fid-xtask` cannot depend on that `tool` crate, so the source is read instead; the module
+/// lives in `fid-platform-core` and `fid-platform` re-exports it).
 #[test]
 fn tier_names_match_fid_platform() {
-    let src = std::fs::read_to_string(root().join("crates/fid-platform/src/matrix.rs")).unwrap();
+    let src = std::fs::read_to_string(root().join("crates/fid-platform-core/src/matrix.rs")).unwrap();
     let line = src.lines().map(str::trim).find(|l| l.starts_with("Tier {")).expect("Tier enum in matrix.rs");
     let names: Vec<&str> = line.split('"').skip(1).step_by(2).collect();
     let ours: Vec<&str> = Tier::ALL.iter().map(|t| t.name()).collect();

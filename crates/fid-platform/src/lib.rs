@@ -1,7 +1,9 @@
 //! Metrology Maven platform support (spec node `PLAT`). Layer `tool` in `layers.toml`.
 //!
-//! - [`matrix`]: the support matrix schema, validator and tier lookup (`PLAT.MATRIX.FILE`).
-//! - [`hw_profile`]: the hardware profile file schema and validator (`PLAT.HW.PROFILE`).
+//! - [`matrix`]: the support matrix schema, validator and tier lookup (`PLAT.MATRIX.FILE`),
+//!   re-exported from crate `fid-platform-core` (below the tool layer, for `PLAT.DOCTOR.LOOKUP`).
+//! - [`hw_profile`]: the hardware profile file schema and validator (`PLAT.HW.PROFILE`),
+//!   re-exported from crate `fid-platform-core`.
 //! - [`bench_schema`]: the benchmark suite manifest and result document schemas, their
 //!   validators and the result JSON Schema export (`PLAT.HW.SCHEMA`).
 //! - [`kiosk_display`]: the reference kiosk display file, its validator and derived pixel
@@ -23,11 +25,11 @@
 
 pub mod bench_schema;
 pub mod gpu_policy;
-pub mod hw_profile;
 pub mod install_manifest;
 pub mod kiosk_display;
-pub mod matrix;
 pub mod matrix_policy;
 pub mod os_eol;
 pub mod page;
 pub mod peruser_layout;
+
+pub use fid_platform_core::{hw_profile, matrix};

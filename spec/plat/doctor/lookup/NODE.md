@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-doctor]
 satisfies: [REQ-PLAT.DOCTOR-001, REQ-PLAT.DOCTOR-002, REQ-PLAT.DOCTOR-005]
 covers: []
 depends_on: [PLAT.DOCTOR.PROBE, PLAT.MATRIX.FILE, PLAT.HW.PROFILE]
