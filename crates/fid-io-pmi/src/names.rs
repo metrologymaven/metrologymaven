@@ -146,6 +146,23 @@ pub(crate) enum Class {
     Unsupported(PmiKind, UnsupportedReason),
 }
 
+impl Class {
+    /// True for a definition an association may present: a supported or unsupported
+    /// semantic item that is a characteristic, so not a bare shape aspect, not of unknown
+    /// kind and not a presentation-semantic mix [unverified: against the CAx-IF
+    /// recommended practices].
+    pub(crate) fn is_characteristic(self) -> bool {
+        match self {
+            Class::Supported(k) => !matches!(k, PmiKind::ShapeAspect | PmiKind::Unknown | PmiKind::Presentation),
+            Class::Unsupported(k, r) => {
+                !matches!(k, PmiKind::ShapeAspect | PmiKind::Unknown | PmiKind::Presentation)
+                    && r != UnsupportedReason::MixedPresentation
+            }
+            Class::Presentation | Class::NotPmi => false,
+        }
+    }
+}
+
 /// The single kind the supported names of an instance agree on (`ShapeAspect` yields to
 /// any other kind), or `Unknown`.
 fn kind_of(names: &[&Ident]) -> PmiKind {

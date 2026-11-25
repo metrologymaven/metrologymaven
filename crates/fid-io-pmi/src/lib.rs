@@ -198,8 +198,9 @@ pub struct PmiValue {
     pub measure: u64,
     /// The measure type name (`LENGTH_MEASURE`, ...), when the value is typed.
     pub measure_type: Option<Ident>,
-    /// The authored lexeme of a real, or the decimal form of an integer; `None` when the
-    /// value is not numeric.
+    /// For a real, its authored lexeme as the file spells it. For an integer, its decimal
+    /// form: the parser keeps no integer spelling, so `+05` reads as `5`. `None` when the
+    /// value is neither, or is a real without a lexeme (only in files built in memory).
     pub lexeme: Option<Box<str>>,
     /// The unit entity the measure names.
     pub unit_entity: Option<u64>,

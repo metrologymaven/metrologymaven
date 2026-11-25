@@ -97,7 +97,7 @@ fn scan_count(lines: &[String]) -> usize {
 #[test]
 fn every_fixture_matches_the_oracle() {
     let exp = expected();
-    assert_eq!(exp.len(), 5);
+    assert_eq!(exp.len(), 6);
     for (name, lines) in &exp {
         let g = read_fixture(name);
         let mut got: Vec<String> = g.items.values().map(line).collect();
@@ -125,6 +125,17 @@ fn ac1_flatness_semantic() {
     assert_eq!(p.class, PmiClass::Semantic);
     assert_eq!(p.refs, vec![t.entity]);
     assert_eq!(g.count(PmiClass::GraphicOnly), 0);
+}
+
+#[test]
+fn association_to_a_bare_shape_aspect_stays_graphic_only() {
+    // A shape aspect is not a characteristic, so presenting it does not make the
+    // presentation semantic.
+    let g = read_fixture("aspect_association.stp");
+    assert_eq!(g.items[&74].class, PmiClass::GraphicOnly);
+    assert!(g.items[&74].refs.is_empty());
+    assert!(g.items[&60].presented_by.is_empty());
+    assert_eq!(g.items[&60].links, vec![30]);
 }
 
 #[test]
@@ -241,7 +252,7 @@ fn malformed_references_fail_closed() {
     assert_eq!(
         malformed(
             "#2=SHAPE_ASPECT('a','',$,.T.);\n#9=DRAUGHTING_CALLOUT('c',#20);\n\
-             #11=DRAUGHTING_MODEL_ITEM_ASSOCIATION('','',#2,#20,#9);\n"
+             #5=FLATNESS_TOLERANCE('f','',$,#2);\n#11=DRAUGHTING_MODEL_ITEM_ASSOCIATION('','',#5,#20,#9);\n"
         ),
         (9, "callout_contents")
     );

@@ -2,6 +2,11 @@
 # Block: '== <fixture>', one 'item' line per graph item, then 'count' (graph items) and
 # 'scan' (PMI-related instances found by an independent top-level name scan of the text).
 # value: <measure>:<measure type>:<lexeme>:<unit entity>:<unit context>:<unit>.
+== aspect_association.stp
+item 60 class=semantic kind=shape_aspect reason=- types=SHAPE_ASPECT links=30 unresolved=- refs=- presented_by=- values=-
+item 74 class=graphic_only kind=presentation reason=- types=ANNOTATION_CURVE_OCCURRENCE links=- unresolved=- refs=- presented_by=- values=-
+count 2
+scan 2
 == dangling_aspect.stp
 item 63 class=semantic kind=tolerance reason=- types=FLATNESS_TOLERANCE links=- unresolved=999 refs=- presented_by=- values=62:LENGTH_MEASURE:0.05:10:14:mm
 count 1

@@ -8,6 +8,9 @@ use crate::{
 use fid_io_step::{Instance, P21File, Param, StepHeaderInfo};
 use std::collections::{BTreeMap, BTreeSet};
 
+/// Bytes charged for the decimal form of an integer value (an i64 has at most 20).
+const MAX_INT_TEXT: u64 = 20;
+
 /// Reads the PMI graph of `file` with the default bounds.
 pub fn read_pmi(file: &P21File, header: &StepHeaderInfo) -> Result<PmiGraph, PmiError> {
     read_pmi_with(file, header, &PmiOptions::default())
@@ -182,8 +185,12 @@ impl Index {
         };
         for (&n, inst) in &file.data {
             meter.step(1)?;
+            let names_cost = LINK_COST.saturating_mul(len64(inst.parts.len()));
+            meter.charge(names_cost)?;
             let names: Vec<_> = inst.names().collect();
             let class = names::classify(&names);
+            drop(names);
+            meter.release(names_cost);
             if class != Class::NotPmi {
                 if idx.classes.len() >= opts.max_items {
                     return Err(PmiError::LimitExceeded {
@@ -203,11 +210,15 @@ impl Index {
             if has_any(inst, names::USAGE_NAMES) {
                 let def = req_ref(inst, names::USAGE_ROOT, 2, "usage_definition")?;
                 let items = match attr(inst, names::USAGE_ROOT, 4) {
-                    Some(Param::Ref(x)) => vec![*x],
+                    Some(Param::Ref(x)) => {
+                        meter.charge(INDEX_COST.saturating_add(LINK_COST))?;
+                        vec![*x]
+                    }
                     Some(Param::List(xs)) => {
-                        let mut out = Vec::new();
+                        meter.step(len64(xs.len()))?;
+                        meter.charge(INDEX_COST.saturating_add(LINK_COST.saturating_mul(len64(xs.len()))))?;
+                        let mut out = Vec::with_capacity(xs.len());
                         for x in xs {
-                            meter.step(1)?;
                             match x {
                                 Param::Ref(x) => out.push(*x),
                                 _ => return Err(malformed(n, "usage_item")),
@@ -217,7 +228,6 @@ impl Index {
                     }
                     _ => return Err(malformed(n, "usage_item")),
                 };
-                meter.charge(INDEX_COST.saturating_add(LINK_COST.saturating_mul(len64(items.len()))))?;
                 if has_any(inst, names::ASSOCIATION_NAMES) {
                     idx.assocs.push((def, items));
                 } else {
@@ -281,8 +291,8 @@ impl Ctx<'_> {
             Class::Presentation | Class::NotPmi => (PmiClass::GraphicOnly, PmiKind::Presentation, None),
         };
         self.meter.charge(ITEM_COST)?;
+        self.meter.charge(IDENT_COST.saturating_mul(len64(inst.parts.len())))?;
         let types: Vec<_> = inst.names().cloned().collect();
-        self.meter.charge(IDENT_COST.saturating_mul(len64(types.len())))?;
         // Charge the raw copy before making it: every parameter node and its text.
         let mut stack: Vec<&Param> = Vec::new();
         for (_, params) in &inst.parts {
@@ -360,6 +370,7 @@ impl Ctx<'_> {
     /// representation context for a dimension's representation items; otherwise the
     /// lowest context assigning the measure's unit is used.
     fn value(&mut self, item: &mut PmiItem, m: u64, ctx: Option<Option<u64>>) -> Result<(), PmiError> {
+        self.meter.step(len64(item.values.len()))?;
         if item.values.iter().any(|v| v.measure == m) {
             return Ok(());
         }
@@ -371,6 +382,13 @@ impl Ctx<'_> {
             Param::Typed(t, inner) => (Some(t.clone()), &**inner),
             other => (None, other),
         };
+        // Charged before anything is allocated: an i64 has at most 20 decimal characters.
+        let text = match inner {
+            Param::Real(_, Some(l)) => len64(l.as_str().len()),
+            Param::Int(_) => MAX_INT_TEXT,
+            _ => 0,
+        };
+        self.meter.charge(VALUE_COST.saturating_add(text))?;
         let lexeme: Option<Box<str>> = match inner {
             Param::Real(_, Some(l)) => Some(Box::from(l.as_str())),
             Param::Int(i) => Some(i.to_string().into_boxed_str()),
@@ -396,8 +414,6 @@ impl Ctx<'_> {
                 }
             }
         }
-        let text = lexeme.as_ref().map_or(0, |l| len64(l.len()));
-        self.meter.charge(VALUE_COST.saturating_add(text))?;
         item.values.push(PmiValue { measure: m, measure_type, lexeme, unit_entity: Some(u), unit_ctx, unit });
         Ok(())
     }
@@ -469,33 +485,33 @@ impl Ctx<'_> {
                 }
             }
             let Some(Class::Supported(kind)) = idx.classes.get(&a) else { continue };
-            let mut next: Vec<u64> = Vec::new();
+            let members = if has_any(ai, names::COMPOSITE_ASPECTS) { idx.fwd.get(&a) } else { None };
+            let features = if *kind == PmiKind::Datum { idx.rev.get(&a) } else { None };
+            let own = match kind {
+                PmiKind::Tolerance => 1,
+                PmiKind::Dimension if has(ai, "DIMENSIONAL_SIZE") => 1,
+                PmiKind::Dimension => 2,
+                _ => 0,
+            };
+            let count = own + members.map_or(0, Vec::len) + features.map_or(0, Vec::len);
+            let cost = LINK_COST.saturating_mul(len64(count));
+            self.meter.step(len64(count))?;
+            self.meter.charge(cost)?;
+            *charged = charged.saturating_add(cost);
+            todo.reserve(count);
             match kind {
-                PmiKind::Tolerance => next.push(req_ref(ai, "GEOMETRIC_TOLERANCE", 3, "tolerance_target")?),
+                PmiKind::Tolerance => todo.push(req_ref(ai, "GEOMETRIC_TOLERANCE", 3, "tolerance_target")?),
                 PmiKind::Dimension if has(ai, "DIMENSIONAL_SIZE") => {
-                    next.push(req_ref(ai, "DIMENSIONAL_SIZE", 0, "dimension_aspect")?)
+                    todo.push(req_ref(ai, "DIMENSIONAL_SIZE", 0, "dimension_aspect")?)
                 }
                 PmiKind::Dimension => {
-                    next.push(req_ref(ai, "SHAPE_ASPECT_RELATIONSHIP", 2, "dimension_aspect")?);
-                    next.push(req_ref(ai, "SHAPE_ASPECT_RELATIONSHIP", 3, "dimension_aspect")?);
+                    todo.push(req_ref(ai, "SHAPE_ASPECT_RELATIONSHIP", 2, "dimension_aspect")?);
+                    todo.push(req_ref(ai, "SHAPE_ASPECT_RELATIONSHIP", 3, "dimension_aspect")?);
                 }
                 _ => {}
             }
-            if has_any(ai, names::COMPOSITE_ASPECTS) {
-                if let Some(members) = idx.fwd.get(&a) {
-                    next.extend(members.iter().copied());
-                }
-            }
-            if *kind == PmiKind::Datum {
-                if let Some(features) = idx.rev.get(&a) {
-                    next.extend(features.iter().copied());
-                }
-            }
-            let cost = LINK_COST.saturating_mul(len64(next.len()));
-            self.meter.step(len64(next.len()))?;
-            self.meter.charge(cost)?;
-            *charged = charged.saturating_add(cost);
-            todo.extend(next);
+            todo.extend(members.into_iter().flatten().copied());
+            todo.extend(features.into_iter().flatten().copied());
         }
         Ok(())
     }
@@ -506,7 +522,7 @@ impl Ctx<'_> {
         let file = self.file;
         for (def, targets) in &idx.assocs {
             let def = *def;
-            let def_semantic = matches!(idx.classes.get(&def), Some(Class::Supported(_) | Class::Unsupported(..)));
+            let def_semantic = idx.classes.get(&def).is_some_and(|c| c.is_characteristic());
             for &p in targets {
                 self.meter.step(1)?;
                 if !self.defined(p) {

@@ -223,6 +223,15 @@ d[62] = length(Real("0.05"))
 d[63] = simple("FLATNESS_TOLERANCE", "flatness", "", Ref(62), Ref(999))
 FIXTURES["dangling_aspect.stp"] = ("AC-4: tolerance #63 refers to undefined aspect #999.", d)
 
+# An association whose definition is a bare shape aspect (with a usage to a face): the
+# presentation stays graphic-only, because a shape aspect is not a characteristic.
+d = prelude()
+polyline_presentation(d)
+d[60] = simple("SHAPE_ASPECT", "top face", "", Ref(40), Enum("T"))
+d[61] = gisu(60, Ref(30))
+d[76] = dmia(60, 74)
+FIXTURES["aspect_association.stp"] = ("Association of presentation #74 to bare shape aspect #60: graphic-only.", d)
+
 # Coverage: datums, datum systems, composite aspects, dimensions with values, callouts,
 # graphic-only and orphan presentations, unsupported constructs, unresolved units.
 d = prelude()
@@ -625,7 +634,11 @@ def oracle(data):
         items[dfn]["presented_by"].add(p)
 
     for dfn, targets in assocs:
-        d_is_sem = dfn in items and items[dfn]["class"] != "presentation"
+        # A definition counts only when it is a characteristic: a supported or unsupported
+        # semantic item whose kind is not shape_aspect or unknown, and not mixed_presentation.
+        c = classes.get(dfn)
+        d_is_sem = (c is not None and c[0] in ("semantic", "unsupported") and c[1] not in ("shape_aspect", "unknown")
+                    and (len(c) < 3 or c[2] != "mixed_presentation"))
         for p in targets:
             if p not in data:
                 if d_is_sem:
