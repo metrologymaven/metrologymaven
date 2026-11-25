@@ -349,8 +349,7 @@ fn two_prod(a: f64, b: f64) -> (f64, f64) {
 /// non-overlapping expansion is the sign of its largest non-zero component).
 fn exact_sign(terms: &[f64; 8]) -> Ordering {
     let mut e = [0.0f64; 8];
-    let mut len = 0usize;
-    for &b in terms {
+    for (len, &b) in terms.iter().enumerate() {
         let mut q = b;
         for slot in e.iter_mut().take(len) {
             let (s, h) = two_sum(q, *slot);
@@ -360,7 +359,6 @@ fn exact_sign(terms: &[f64; 8]) -> Ordering {
         if let Some(slot) = e.get_mut(len) {
             *slot = q;
         }
-        len += 1;
     }
     for x in e.iter().rev() {
         if *x > 0.0 {
@@ -374,7 +372,7 @@ fn exact_sign(terms: &[f64; 8]) -> Ordering {
 }
 
 fn in_exact_domain(x: f64) -> bool {
-    x == 0.0 || (x.abs() >= MIN_EXACT_MAGNITUDE && x.abs() <= MAX_MAGNITUDE)
+    x == 0.0 || (MIN_EXACT_MAGNITUDE..=MAX_MAGNITUDE).contains(&x.abs())
 }
 
 /// `n . q` of one point: the float value, its absolute-term sum, and the exact products
