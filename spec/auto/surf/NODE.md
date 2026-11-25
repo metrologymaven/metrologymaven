@@ -90,3 +90,5 @@ Alternatives considered:
 | AUTO.SURF.ENV | Shared result envelope and error-code set (leaf) | 005 | none |
 | AUTO.SURF.JOBS | Progress, cancellation and honest timeouts for surfaces (leaf) | 006 007 | none |
 | AUTO.SURF.ROOTS | Root handles and raw-path refusal (leaf) | 008 009 010 | none |
+| AUTO.SURF.INPROC | In-process bus transport and bus-error envelopes (leaf) | 005 007 | none |
+| AUTO.SURF.COMPOSE | Composition root: handlers, project buses and the fid entry point (leaf) | 008 | none |
