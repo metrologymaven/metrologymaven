@@ -34,6 +34,7 @@ Run (stdlib only, Python 3.8+):
   python fixtures/io/cad/step/geom/make_cases.py --check   # fail if any file is stale
 """
 
+import math
 import struct
 import sys
 from fractions import Fraction
@@ -548,7 +549,9 @@ def offset_extrusion_point(u, v):
     db = [-3 * (1 - u) ** 2, 3 * (1 - u) ** 2 - 6 * u * (1 - u), 6 * u * (1 - u) - 3 * u * u, 3 * u * u]
     c = [sum(b[i] * cp[i][k] for i in range(4)) for k in range(3)]
     dc = [sum(db[i] * cp[i][k] for i in range(4)) for k in range(3)]
-    norm = float(dc[0] * dc[0] + dc[1] * dc[1]) ** 0.5
+    # math.sqrt is correctly rounded on every platform (IEEE 754); `** 0.5` goes through the C
+    # library's pow, which is not, and made the file differ between machines.
+    norm = math.sqrt(float(dc[0] * dc[0] + dc[1] * dc[1]))
     d = Fraction(OFFSET_EXT_D) / 1000
     nx, ny = float(dc[1]) / norm, -float(dc[0]) / norm
     return [float(c[0]) + float(d) * nx, float(c[1]) + float(d) * ny, float(c[2] + v * Fraction(12, 1000))]
