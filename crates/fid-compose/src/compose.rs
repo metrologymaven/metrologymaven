@@ -453,7 +453,7 @@ impl OpenedProject {
 
     fn scan_store(&self) -> &Store {
         match &self.inner {
-            Inner::Writable { scan, .. } => &**scan,
+            Inner::Writable { scan, .. } => scan,
             Inner::ReadOnly { store } => store,
         }
     }
