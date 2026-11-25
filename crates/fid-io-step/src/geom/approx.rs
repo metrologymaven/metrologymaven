@@ -143,7 +143,11 @@ fn basis_funs(knots: &[f64], q: usize, s: usize, t: f64) -> [f64; CUBIC + 1] {
     nb
 }
 
-/// LU factors (no pivoting) of a banded collocation matrix, stored dense row-major.
+/// LU factors (no pivoting) of a banded collocation matrix. Only the band is stored: row `i`
+/// holds columns `i - w ..= i + w` at `i * (2w + 1) + (j + w - i)`, `w` the degree. At the
+/// Greville abscissae every non-zero `N_j(xi_i)` has `|i - j| <= w` (the span holding `xi_i` is
+/// in `i ..= i + w`), and elimination without pivoting creates no fill outside the band, so the
+/// storage is `n (2w + 1)` values, linear in the knot count.
 struct Banded {
     n: usize,
     band: usize,
@@ -151,6 +155,11 @@ struct Banded {
 }
 
 impl Banded {
+    /// Index of `(i, j)`, `|i - j| <= band` (callers stay inside the band).
+    fn at(&self, i: usize, j: usize) -> usize {
+        i * (2 * self.band + 1) + (j + self.band - i)
+    }
+
     /// Collocation matrix `N_j(xi_i)` at the Greville abscissae of `knots`, factored.
     fn collocation(knots: &[f64], q: usize) -> Result<(Banded, Vec<f64>), Fail> {
         let n = knots.len() - q - 1;
@@ -162,20 +171,23 @@ impl Banded {
             }
             xi.push(s / q as f64);
         }
-        let mut a = vec![0.0_f64; n * n];
-        let mut band = 0usize;
+        let width = n.checked_mul(2 * q + 1).ok_or(Fail::ApproxBudget)?;
+        let mut m = Banded { n, band: q, a: vec![0.0_f64; width] };
         for (i, &t) in xi.iter().enumerate() {
             let s = find_span(knots, q, n, t);
             let nb = basis_funs(knots, q, s, t);
             for (r, &b) in nb.iter().enumerate().take(q + 1) {
                 let j = s - q + r;
-                a[i * n + j] = b;
-                if b != 0.0 {
-                    band = band.max(i.abs_diff(j));
+                if i.abs_diff(j) > q {
+                    if b != 0.0 {
+                        return Err(Fail::Fit);
+                    }
+                    continue;
                 }
+                let k = m.at(i, j);
+                m.a[k] = b;
             }
         }
-        let mut m = Banded { n, band, a };
         m.factor()?;
         Ok((m, xi))
     }
@@ -183,16 +195,19 @@ impl Banded {
     fn factor(&mut self) -> Result<(), Fail> {
         let (n, w) = (self.n, self.band);
         for k in 0..n {
-            let piv = self.a[k * n + k];
+            let piv = self.a[self.at(k, k)];
             if !piv.is_finite() || piv == 0.0 {
                 return Err(Fail::Fit);
             }
             for i in k + 1..n.min(k + w + 1) {
-                let f = self.a[i * n + k] / piv;
-                self.a[i * n + k] = f;
+                let ik = self.at(i, k);
+                let f = self.a[ik] / piv;
+                self.a[ik] = f;
                 if f != 0.0 {
+                    // Row k's band ends at k + w, row i's at i + w > k + w.
                     for j in k + 1..n.min(k + w + 1) {
-                        self.a[i * n + j] -= f * self.a[k * n + j];
+                        let (ij, kj) = (self.at(i, j), self.at(k, j));
+                        self.a[ij] -= f * self.a[kj];
                     }
                 }
             }
@@ -205,7 +220,7 @@ impl Banded {
         let (n, w) = (self.n, self.band);
         for k in 0..n {
             for i in k + 1..n.min(k + w + 1) {
-                let f = self.a[i * n + k];
+                let f = self.a[self.at(i, k)];
                 if f != 0.0 {
                     b[i] = axpy(b[i], -f, b[k]);
                 }
@@ -214,9 +229,9 @@ impl Banded {
         for i in (0..n).rev() {
             let mut s = b[i];
             for (j, bj) in b.iter().enumerate().skip(i + 1).take(w) {
-                s = axpy(s, -self.a[i * n + j], *bj);
+                s = axpy(s, -self.a[self.at(i, j)], *bj);
             }
-            let d = self.a[i * n + i];
+            let d = self.a[self.at(i, i)];
             b[i] = [s[0] / d, s[1] / d, s[2] / d];
             if !b[i].iter().all(|c| c.is_finite()) {
                 return Err(Fail::NonFinite);

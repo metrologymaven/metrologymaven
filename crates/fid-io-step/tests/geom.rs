@@ -444,8 +444,10 @@ fn ac4_unknown_surface_is_skipped_and_the_plane_is_mapped() {
 // ------------------------------------------------------------------ swept surfaces, pcurves
 
 fn mm() -> Option<LengthUnit> {
-    // The pcurves' 2D context declares no unit, which IO.CAD.STEP.HDR refuses without a
-    // caller unit; the 3D context declares millimetre, so the caller unit agrees.
+    // HDR gap (PR #625, Open questions): the pcurves' 2D parametric context declares no unit,
+    // which IO.CAD.STEP.HDR refuses with `unit_required` without a caller unit. The 3D context
+    // declares millimetre, so the caller unit agrees. Drop this helper once HDR exempts unitless
+    // 2D contexts; `unitless_2d_context_is_still_parameter_space` covers that case already.
     Some(LengthUnit::Mm)
 }
 
@@ -566,6 +568,7 @@ fn ac5_mapping_twice_gives_byte_identical_records() {
         ("degree_units.stp", None),
         ("rational_bspline.stp", None),
         ("offset_cyl.stp", None),
+        ("offset_extrusion.stp", None),
         ("unknown_surface.stp", None),
         ("invalid.stp", None),
         ("swept.stp", mm()),
@@ -626,4 +629,74 @@ fn perturbed_parameters_never_panic_and_never_stop_the_mapping() {
         }
         assert!(runs > 50, "{name}: {runs}");
     }
+}
+
+#[test]
+fn unitless_2d_context_is_still_parameter_space() {
+    // Simulates HDR exempting the unitless 2D context: it is absent from `header.contexts`.
+    let bytes = std::fs::read(dir().join("swept.stp")).unwrap();
+    let file = parse(&bytes).unwrap();
+    let mut header = resolve_header(&file, &HeaderOptions { unit: mm(), ..HeaderOptions::default() }).unwrap();
+    assert!(header.contexts.remove(&9205).is_some());
+    let m = map_geometry(&file, &header, &GeomOptions::default()).unwrap();
+    let full = map_with("swept.stp", mm(), &GeomOptions::default());
+    assert_eq!(m.to_records(), full.to_records());
+    assert!(!m.curves.contains_key(&34) && !m.curves.contains_key(&44) && !m.points.contains_key(&31));
+    assert!(m.pcurves.contains_key(&36) && m.pcurves.contains_key(&46));
+}
+
+// ------------------------------------------------------------------ offset of an extrusion
+
+fn offset_ext_check(m: &GeomMap, field: &str) -> f64 {
+    let file = "offset_extrusion.stp";
+    let s = approximant(m, 12);
+    let rows = expected(file, 12, field);
+    assert_eq!(rows.len(), 50);
+    let mut worst = 0.0_f64;
+    for r in rows {
+        let v: Vec<f64> = r.iter().map(|h| f(h)).collect();
+        let p = s.eval(v[0], v[1], 0).unwrap().p;
+        worst = worst.max(dist(p, [v[2], v[3], v[4]]));
+    }
+    worst
+}
+
+#[test]
+fn offset_of_extrusion_records_the_defaulted_basis_range() {
+    let file = "offset_extrusion.stp";
+    let m = map(file);
+    check_skips(file, &m);
+    let a = m.approximations[&12];
+    assert_eq!(a.status, ApproxStatus::WithinTolerance);
+    assert!(a.domain_defaulted, "the extrusion basis got v = [0, 1] without a box");
+    assert_eq!(a.domain, ParamBox { u: (0.0, 1.0), v: (0.0, 1.0) });
+    assert_eq!(a.spans[1], 1, "the offset of an extrusion is linear along the extrusion");
+    let worst = offset_ext_check(&m, "eval_default");
+    assert!(worst <= 2.0 * a.tolerance_m, "{worst:e} (recorded {:e})", a.max_dev_m);
+}
+
+#[test]
+fn offset_of_extrusion_uses_the_offset_box_for_its_basis() {
+    let file = "offset_extrusion.stp";
+    let bx = one(file, 12, "box");
+    let b = ParamBox { u: (bx[0], bx[1]), v: (bx[2], bx[3]) };
+    let mut opts = GeomOptions::default();
+    opts.domains.insert(12, b);
+    let m = map_with(file, None, &opts);
+    let a = m.approximations[&12];
+    assert_eq!(a.status, ApproxStatus::WithinTolerance);
+    assert!(!a.domain_defaulted);
+    assert_eq!(a.domain, b);
+    assert_eq!(approximant(&m, 12).domain(), (b.u, b.v));
+    let worst = offset_ext_check(&m, "eval_box");
+    assert!(worst <= 2.0 * a.tolerance_m, "{worst:e} (recorded {:e})", a.max_dev_m);
+
+    // A box given only for the basis extrusion is used for it, and so for the offset's domain.
+    let mut opts = GeomOptions::default();
+    opts.domains.insert(11, b);
+    let m = map_with(file, None, &opts);
+    let a = m.approximations[&12];
+    assert!(!a.domain_defaulted);
+    assert_eq!(a.domain, b);
+    assert!(offset_ext_check(&m, "eval_box") <= 2.0 * a.tolerance_m);
 }

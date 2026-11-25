@@ -73,7 +73,8 @@ pub struct GeomOptions {
     /// Parameter boxes, in the GEO parameters of the basis surface, for surfaces whose basis
     /// is unbounded in a parameter (an extrusion's `v`, the offset of a plane, cylinder or cone),
     /// by entity number of the extrusion or offset surface. `IO.CAD.STEP.BREP` passes each
-    /// face's box; without one an unbounded parameter uses `[0, 1]` and the record says so.
+    /// face's box; without one an unbounded parameter uses `[0, 1]` and the record says so. The
+    /// box of an offset also builds its extrusion basis; without it the basis's own box is used.
     pub domains: BTreeMap<u64, ParamBox>,
 }
 
@@ -257,7 +258,8 @@ pub struct Approx {
     pub refined: u32,
     /// The parameter box fitted.
     pub domain: ParamBox,
-    /// True when an unbounded parameter got `[0, 1]` for want of a caller box.
+    /// True when an unbounded parameter got `[0, 1]` for want of a caller box, including the
+    /// `v` of an extrusion basis built without one.
     pub domain_defaulted: bool,
     /// Within or out of tolerance.
     pub status: ApproxStatus,
@@ -528,8 +530,11 @@ fn type_name(inst: &Instance) -> String {
 /// The context assignment of an entity.
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum Assign {
-    /// Units and dimension of the (first) context that reaches it.
-    One { units: Units, dim: u8 },
+    /// Units of the (first) 3D context that reaches it.
+    One { units: Units },
+    /// Reached from a 2D context: parameter-space data, mapped only through its pcurve. 2D
+    /// contexts are walked whether or not they carry units.
+    Param,
     /// Contexts with different units or dimensions reach it.
     Conflict,
 }
@@ -585,8 +590,11 @@ fn assign_contexts(file: &P21File, ctx: &BTreeMap<u64, (Option<Units>, u8)>) -> 
     let mut stack: Vec<u64> = Vec::new();
     let mut params: Vec<&Param> = Vec::new();
     for (refs, c) in reps.values() {
-        let Some(&(Some(units), dim)) = ctx.get(c) else { continue };
-        let here = Assign::One { units, dim };
+        let here = match ctx.get(c) {
+            Some(&(_, 2)) => Assign::Param,
+            Some(&(Some(units), _)) => Assign::One { units },
+            _ => continue,
+        };
         stack.extend(refs.iter().rev());
         while let Some(e) = stack.pop() {
             if stops.contains(&e) {
@@ -651,8 +659,8 @@ pub fn map_geometry(file: &P21File, header: &StepHeaderInfo, opts: &GeomOptions)
             continue;
         }
         let units = match assigned.get(&n) {
-            Some(Assign::One { dim: 2, .. }) => continue,
-            Some(Assign::One { units, .. }) => Ok(*units),
+            Some(Assign::Param) => continue,
+            Some(Assign::One { units }) => Ok(*units),
             Some(Assign::Conflict) => Err(SkipReason::ContextConflict),
             None => fallback.ok_or(SkipReason::NoContext),
         };
@@ -717,8 +725,14 @@ fn map_one(
             if base_kind == Kind::Offset {
                 return Err(Fail::Unsupported { at: base_n });
             }
-            let base = map_surface(file, base_inst, base_kind, units, opts, &mut out.warnings)?;
-            let (nurbs, approx) = approx::offset(&base, d, opts, opts.domains.get(&n))?;
+            // A box given for the offset is in the basis's parameters, so an extrusion basis is
+            // built over it; else over the basis's own box, else its default (then recorded).
+            let hint = opts.domains.get(&n);
+            let base_hint = hint.or_else(|| opts.domains.get(&base_n));
+            let base = map_surface(file, base_inst, base_kind, units, base_hint, &mut out.warnings)?;
+            let base_defaulted = matches!(base, SurfaceRef::Extrusion { domain_defaulted: true, .. });
+            let (nurbs, mut approx) = approx::offset(&base, d, opts, hint)?;
+            approx.domain_defaulted = approx.domain_defaulted || base_defaulted;
             out.surfaces.insert(n, SurfaceRef::Approximated(nurbs));
             out.approximations.insert(n, approx);
             Ok(())
@@ -726,7 +740,7 @@ fn map_one(
         Kind::Unsupported => Err(Fail::Unsupported { at: n }),
         Kind::Other => Ok(()),
         _ => {
-            let s = map_surface(file, inst, kind, units, opts, &mut out.warnings)?;
+            let s = map_surface(file, inst, kind, units, opts.domains.get(&n), &mut out.warnings)?;
             out.surfaces.insert(n, s);
             Ok(())
         }
@@ -738,7 +752,7 @@ fn map_surface(
     inst: &Instance,
     kind: Kind,
     units: Units,
-    opts: &GeomOptions,
+    hint: Option<&ParamBox>,
     warnings: &mut Vec<GeomWarning>,
 ) -> Result<SurfaceRef, Fail> {
     match kind {
@@ -746,7 +760,7 @@ fn map_surface(
             Ok(SurfaceRef::Analytic(surface::analytic(file, inst, kind, units, warnings)?))
         }
         Kind::BsplineSurface => Ok(SurfaceRef::Nurbs(surface::bspline_surface(file, inst, units)?)),
-        Kind::Extrusion => surface::extrusion(file, inst, units, opts.domains.get(&inst.number)),
+        Kind::Extrusion => surface::extrusion(file, inst, units, hint),
         Kind::Revolution => surface::revolution(file, inst, units),
         _ => Err(Fail::Unsupported { at: inst.number }),
     }
