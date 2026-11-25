@@ -8,7 +8,7 @@
 use fid_canon::{parse, CValue};
 use fid_kunc::dist::{Params, UnitCode};
 use fid_types::Digest;
-use fid_unc_inst::model::{hex, MAX_DEPTH, MAX_INPUT_BYTES};
+use fid_unc_inst::model::{hex, shown_name, MAX_DEPTH, MAX_INPUT_BYTES, MAX_TOKEN_BYTES, UNSHOWN_NAME};
 use fid_unc_inst::{
     check_range, BoundSide, ContextError, InstrumentModel, ModelError, ModelKind, NotCheckedReason, ObservationContext,
     RangeVerdict, SiUnit,
@@ -166,6 +166,26 @@ fn ac2_each_invalid_file_fails_naming_its_field() {
     assert_eq!(err("no_unit.json"), ModelError::MissingUnit { param: "range_const_sigma".into() });
     assert_eq!(err("inverted_range.json"), ModelError::InvalidRange { axis: "range".into() });
     assert_eq!(err("no_source.json"), ModelError::MissingSource);
+}
+
+#[test]
+fn unknown_member_names_are_cut_or_replaced_in_the_field() {
+    let doc = String::from_utf8(read("tracker_example.json")).unwrap();
+    // `k` is JSON string text, inserted as a top-level member name.
+    let with_key = |k: &str| {
+        let d = doc.replacen('{', &format!("{{\"{k}\": \"x\","), 1);
+        InstrumentModel::parse(d.as_bytes()).unwrap_err()
+    };
+    assert_eq!(with_key("notes").field(), "/notes");
+    let long = "z".repeat(300);
+    assert_eq!(with_key(&long).field(), format!("/{}", "z".repeat(MAX_TOKEN_BYTES)));
+    for bad in ["Notes", "a/b", "a~b", r"zz‮bidi", "9lives", r"été"] {
+        assert_eq!(with_key(bad).field(), format!("/{UNSHOWN_NAME}"), "{bad}");
+    }
+    assert_eq!(shown_name("ok_name"), "ok_name");
+    // Cut at a character boundary: 63 ASCII bytes and a two-byte character keep 63 bytes.
+    assert_eq!(shown_name(&format!("{}\u{e9}x", "a".repeat(MAX_TOKEN_BYTES - 1))), "a".repeat(MAX_TOKEN_BYTES - 1));
+    assert_eq!(shown_name("ab\u{202e}"), UNSHOWN_NAME);
 }
 
 #[test]

@@ -266,6 +266,21 @@ fn text(b: &[u8]) -> String {
 // ------------------------------------------------------------------ AC-1
 
 #[test]
+fn import_whose_journal_commit_fails_stores_nothing() {
+    let mut table = SessionTable::new();
+    let a = alice(&mut table);
+    let mut w = World::new();
+    w.journal.fail = true;
+    assert_eq!(code(w.import(&a, "tracker_example.json")), "journal_failed");
+    assert!(w.journal.entries.is_empty());
+    assert!(w.store.model(TRACKER).is_none());
+    // Nothing was committed, so the same import succeeds once the journal works.
+    w.journal.fail = false;
+    assert_eq!(text(&w.import(&a, "tracker_example.json").unwrap()), Expected::load().s("ac1_result"));
+    assert_eq!(w.journal.entries.len(), 1);
+}
+
+#[test]
 fn ac1_import_stores_the_reference_digest_and_journals_one_event() {
     let ex = Expected::load();
     let mut table = SessionTable::new();
@@ -513,6 +528,23 @@ fn replay_diverges_on_forged_or_missing_inputs() {
     let bad = text(&forged[1].event).replace(&ex.s("descriptor_digest"), &ex.s("device_instance_digest"));
     forged[1].event = bad.into_bytes();
     assert_eq!(run(&forged, &w.blobs), ReplayOutcome::Divergent);
+    // A blob key the bytes do not have: replay derives the keys from the bytes read back.
+    let model_size = ex.b("ac1_event").len(); // any wrong size; the right one is checked below
+    let right_size = read("tracker_example.canonical.json").len();
+    assert_ne!(model_size, right_size);
+    let mut forged = entries.clone();
+    let bad =
+        text(&forged[0].event).replace(&format!("\"blob_size\":{right_size}"), &format!("\"blob_size\":{model_size}"));
+    assert_ne!(bad.as_bytes(), forged[0].event.as_slice());
+    forged[0].event = bad.into_bytes();
+    assert_eq!(run(&forged, &w.blobs), ReplayOutcome::Divergent);
+    let mut forged = entries.clone();
+    let evidence_size = ex.b("evidence").len();
+    let bad = text(&forged[1].event)
+        .replace(&format!("\"evidence_size\":{evidence_size}"), &format!("\"evidence_size\":{}", evidence_size + 1));
+    assert_ne!(bad.as_bytes(), forged[1].event.as_slice());
+    forged[1].event = bad.into_bytes();
+    assert_eq!(run(&forged, &w.blobs), ReplayOutcome::Divergent);
     // Not an event.
     let mut forged = entries.clone();
     forged[0].event = b"{}".to_vec();
@@ -626,6 +658,25 @@ fn declarations_validate_and_calls_and_results_conform_to_their_schemas() {
             panic!("{key}: {} at {} ({})", f.keyword, f.pointer, f.message);
         }
     }
+    // The dry-run results of both write commands conform too.
+    let mut table = SessionTable::new();
+    let a = alice(&mut table);
+    let mut w = World::new();
+    let dry = w.cli(&a, MAIN, &["unc", "import-instrument-model", "--file", "tracker_example.json", "--dry-run"]);
+    let dry = parse(&dry.unwrap()).unwrap();
+    assert!(results("unc.import_instrument_model").evaluate(&dry, &NoHooks).is_ok());
+    w.import(&a, "tracker_example.json").unwrap();
+    for args in [&["--device", "sim-tracker-1", "--dry-run"][..], &["--project", "--dry-run"]] {
+        let mut v = vec!["unc", "bind-instrument-model", "--model", TRACKER];
+        v.extend_from_slice(args);
+        let out = parse(&w.cli(&a, MAIN, &v).unwrap()).unwrap();
+        let CValue::Obj(o) = &out else { panic!() };
+        assert_eq!(o.get("outcome"), Some(&CValue::Str("dry_run".into())), "{args:?}");
+        if let Err(f) = results("unc.bind_instrument_model").evaluate(&out, &NoHooks) {
+            panic!("bind dry run {args:?}: {} at {} ({})", f.keyword, f.pointer, f.message);
+        }
+    }
+    assert_eq!(w.journal.entries.len(), 1);
     let bad = ex.s("ac1_result").replace("\"stored\"", "\"deleted\"");
     assert!(results("unc.import_instrument_model").evaluate(&parse(bad.as_bytes()).unwrap(), &NoHooks).is_err());
 }

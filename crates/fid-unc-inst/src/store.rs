@@ -6,6 +6,12 @@
 //! - A binding is keyed by its target, a device instance or the project default. Binding a
 //!   target again replaces its current binding (a device may move to a new model version);
 //!   the journal keeps every binding ever made.
+//!
+//! **FOLD-008 not applicable.** Nothing in this store carries authority: models and bindings
+//! are evidence and configuration data, no approval, branch protection, promotion, sign-off or
+//! conformance decision, and no command's permission is decided from them. So
+//! REQ-CORE.RPL.RECON.FOLD-008 does not apply (see [`crate::replay`] for how replay still binds
+//! each event to its journal entry's principal kind and branch).
 
 use crate::model::{split_id, InstrumentModel};
 use crate::InstError;

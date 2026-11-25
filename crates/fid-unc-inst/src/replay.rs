@@ -16,7 +16,19 @@
 //! A step is `IDENTICAL` when the re-derived event's canonical bytes equal the recorded ones;
 //! `DIVERGENT` when a check fails or the bytes differ; `NOT_REPLAYABLE` when the bytes are not
 //! a readable event or a blob cannot be read. Replay stops at the first step that is not
-//! `IDENTICAL`. Its result is a comparison-only copy of the store.
+//! `IDENTICAL`. Its result is a comparison-only copy of the store. The blob keys of the
+//! re-derived event (`blob`, `evidence`) are computed from the bytes read back, never copied
+//! from the recorded event, so an event naming a key its bytes do not have is `DIVERGENT`.
+//!
+//! **FOLD-008 not applicable.** The state this replay rebuilds (imported models and bindings)
+//! is evidence and configuration data: it carries no approval, branch protection, promotion,
+//! sign-off or conformance decision, and no later command's permission depends on it (a
+//! binding only selects which model a producer evaluates; the bus class and branch rules decide
+//! who may run every command). So REQ-CORE.RPL.RECON.FOLD-008 does not apply and no effect name
+//! is reserved in `RESERVED_EFFECTS`. Replay still binds each event to its journal entry: the
+//! author kind must equal the principal kind of the entry's envelope and the recorded branch
+//! must be one that kind may write (otherwise `DIVERGENT`). Every branch counts, each replayed
+//! on its own store; a refused entry is fatal (replay stops there).
 
 use crate::command::{binding_from, branch_allowed, check_import, evidence_of, stored_from, Plan};
 use crate::event::{BindEvent, DeviceFacts, ImportEvent, InstEvent};
@@ -26,7 +38,7 @@ use fid_canon::{parse_with_limits, CValue};
 use fid_hal_idl::DeviceInstance;
 use fid_kci::kci::sha256_digest;
 use fid_replay::ReplayOutcome;
-use fid_unc::model_store::{AuthorKind, ModelBlobs, RecordedEntry};
+use fid_unc::model_store::{AuthorKind, BlobKey, ModelBlobs, RecordedEntry};
 
 /// Deepest nesting of an evidence document: the descriptor's own limit plus one level.
 const MAX_EVIDENCE_DEPTH: usize = fid_hal_idl::profile::MAX_DEPTH + 1;
@@ -65,6 +77,13 @@ pub struct InstReplayed {
     pub store: ReplayedInstruments,
 }
 
+/// The CORE.STO.CAS key of `bytes`, derived from the bytes and never copied from the event: a
+/// model (at most 1 MiB) or an evidence document (a descriptor of at most 1 MiB plus the
+/// identity) is far below `CHUNK_SIZE`, so it is one blob addressed by its SHA-256.
+fn key_of(bytes: &[u8]) -> BlobKey {
+    BlobKey { address: sha256_digest(bytes), size: bytes.len() as u64 }
+}
+
 fn import_step(store: &mut InstrumentStore, blobs: &dyn ModelBlobs, e: &ImportEvent, entry: u64) -> ReplayOutcome {
     let Ok(bytes) = blobs.get(&e.blob) else {
         return ReplayOutcome::NotReplayable;
@@ -85,7 +104,7 @@ fn import_step(store: &mut InstrumentStore, blobs: &dyn ModelBlobs, e: &ImportEv
     let derived = ImportEvent {
         model: model.id(),
         digest: model.digest(),
-        blob: e.blob,
+        blob: key_of(&bytes),
         author_kind: e.author_kind,
         by: e.by.clone(),
         branch: e.branch.clone(),
@@ -125,7 +144,7 @@ fn device_step(blobs: &dyn ModelBlobs, d: &DeviceFacts) -> Result<DeviceFacts, R
         device,
         device_instance_digest: ev.instance_digest,
         descriptor_digest: ev.descriptor_digest,
-        evidence: d.evidence,
+        evidence: key_of(&ev.bytes),
     })
 }
 

@@ -46,7 +46,9 @@
 //! (duplicates refused), `unit` (absent or empty: `missing_unit` naming the parameter),
 //! `value`, `dist`. Inside `range`, axis by axis: unknown members, `axis` (duplicates
 //! refused), `unit`, `min`, `max`, then `min < max` (`invalid_range` naming the axis: an
-//! inverted or empty interval). Fields are RFC 6901 JSON pointers into the input.
+//! inverted or empty interval). Fields are RFC 6901 JSON pointers into the input. An unknown
+//! member's name is untrusted, so the pointer shows it cut to [`MAX_TOKEN_BYTES`] bytes, or as
+//! [`UNSHOWN_NAME`] when it is not a token ([`shown_name`]).
 //!
 //! # Canonical form and digest (REQ-001)
 //!
@@ -508,7 +510,7 @@ impl Members {
         let CValue::Obj(o) = v else { return Err(invalid(at)) };
         // BTreeMap order is byte order: the first unknown member in sorted order.
         if let Some(k) = o.keys().find(|k| !allowed.contains(&k.as_str())) {
-            return Err(invalid(&pointer(at, k)));
+            return Err(invalid(&pointer(at, &shown_name(k))));
         }
         Ok(Members { o, at: at.to_owned() })
     }
@@ -530,6 +532,24 @@ impl Members {
             CValue::Str(v) => Ok(v),
             _ => Err(invalid(&self.ptr(k))),
         }
+    }
+}
+
+/// Placeholder for an unknown member name that cannot be echoed.
+pub const UNSHOWN_NAME: &str = "*";
+
+/// How an unknown member name appears in an error's field pointer: cut to at most
+/// [`MAX_TOKEN_BYTES`] bytes (at a character boundary), and replaced by [`UNSHOWN_NAME`] when
+/// what is left is not a token or holds a forbidden character. Untrusted input never reaches
+/// an error message beyond that.
+pub fn shown_name(k: &str) -> String {
+    let mut end = k.len().min(MAX_TOKEN_BYTES);
+    while !k.is_char_boundary(end) {
+        end -= 1;
+    }
+    match k.get(..end) {
+        Some(cut) if is_token(cut) && !cut.chars().any(is_forbidden_char) => cut.to_owned(),
+        _ => UNSHOWN_NAME.to_owned(),
     }
 }
 
