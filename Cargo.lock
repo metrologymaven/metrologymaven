@@ -1163,6 +1163,7 @@ dependencies = [
  "cap-fs-ext",
  "cap-std",
  "fid-bus",
+ "fid-bus-api",
  "fid-canon",
  "fid-geo-frame",
  "fid-journal",

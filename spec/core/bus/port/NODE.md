@@ -9,6 +9,7 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-bus]
 satisfies: [REQ-CORE.BUS-001, REQ-CORE.BUS-002]
 covers: []
 depends_on: [CORE.BUS.API, CORE.BUS.PRIN, CORE.BUS.PIPE.STAGE]
@@ -104,6 +105,7 @@ Reuses `fixtures/core/bus/principal/presence.json` (scripted presence outcomes) 
 
 - Cancelling a call that is running inside `Bus::execute` (Ctrl+C from `AUTO.CLI.JOB`) needs a cancel handle into the handler's `HandlerCtx`. The port does not offer one yet; long-running commands go to `CORE.JOB`, which has its own cancel.
 - A control-channel server could open `control` ports for its clients, but REQ-CORE.BUS.PRIN-010 refuses upgrades on `control` channels, while `AUTO.CLI.TARGET.APP` expects the app to confirm a human for a CLI client. Which channel kind an app-side CLI session uses is for `AUTO.CTRL.EXEC` and `CORE.BUS.PRIN`.
+- Build notes (fid-bus `port`). AC-7's "W3 command from an `mcp` port" does not fail at `authorise`: CORE.BUS.POL.PROJ turns an agent's W3 call into a pending request, which `SessionRouter` then refuses at `route` (`policy/agent_write_forbidden`, an agent may not write to `main`). The test checks the `authorise` stage with a W3 call from a `cli` port (`policy/class_forbidden`) and checks the `mcp` W3 call at `route`. `fid-bus` has no `test-support` command set; the tests build their bus from the CORE.BUS.PIPE.STAGE probe registry and four commands defined in the test file. `SessionHost::new` returns a `Result`: it first checks that every code and reason of the bus error catalogue builds an `ApiError`, and keeps one prebuilt `internal/invariant_violated` error, so that turning a bus error into an `ApiError` needs no panic. `JournalId` is opaque and issued by `JournalId::fresh` from a process-wide counter.
 - The write lock taken by `open` waits for running calls. If a process serves many sessions (the app's control-channel server), the session table may need finer locking.
 
 ## Children
