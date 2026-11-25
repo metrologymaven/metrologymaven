@@ -8,7 +8,9 @@
 //! under `--json` every result, including usage and input errors, is one envelope on stdout.
 
 use fid_canon::CValue;
-use fid_cli::{embedded_tree, resolve_args, ExitCode as Fx, Output, ResolveOutcome, CLI_COMMAND_ID};
+use fid_cli::dispatch::resolve_visible;
+use fid_cli::{embedded_tree, ExitCode as Fx, Output, ResolveOutcome, CLI_COMMAND_ID};
+use fid_surface::roots::PrincipalKind;
 use fid_surface::{Envelope, ErrorCode};
 use std::collections::BTreeMap;
 use std::io::{Read, Write};
@@ -35,7 +37,11 @@ fn main() -> ExitCode {
         }
     };
     let version = env!("CARGO_PKG_VERSION");
-    match resolve_args(&tree, &args) {
+    // AUTO.CLI.DISPATCH visibility (D-035): hidden and removed majors, and root-configuration
+    // commands, are absent. This build has no bus API, so no session can hold a `--confirm-human`
+    // upgrade and the principal kind is `script` (fail closed).
+    let (outcome, tree) = resolve_visible(&tree, PrincipalKind::Script, &args);
+    match outcome {
         ResolveOutcome::Version => {
             println!("{}", tree.render_version(version));
             ExitCode::SUCCESS
@@ -104,8 +110,10 @@ fn main() -> ExitCode {
             }
         },
         ResolveOutcome::Invoke { command_id, json, .. } => {
+            // `fid_cli::dispatch::run` needs a `TargetTransport`; none exists until the bus API
+            // crate, the composition root and AUTO.CLI.TARGET are built.
             let msg = format!(
-                "command `{}` resolved from embedded CLI tree; runtime bus dispatch is provided by AUTO.CLI.DISPATCH",
+                "`{}`: this build has no bus transport (the in-process bus and the CLI targets are not built yet); nothing was sent",
                 command_id.as_str()
             );
             let env = Envelope::failed(command_id.as_str(), ErrorCode::PreconditionFailed, &msg, None);

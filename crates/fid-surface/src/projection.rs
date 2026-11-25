@@ -199,6 +199,11 @@ pub struct SurfaceProjection {
     /// metadata read by the MCP emitter (AUTO.MCP.PROJ), which lists no tool for a command
     /// without `mcp` here, as the bus refuses it on MCP; not part of [`Self::to_value`].
     pub exposure: Vec<String>,
+    /// Declared lifecycle `state` (`active`, `deprecated`, `hidden`, `removed`), or `None` when
+    /// the lifecycle record names no state. Registry metadata read by the CLI tree
+    /// (AUTO.CLI.DISPATCH treats `hidden` and `removed` majors as absent); not part of
+    /// [`Self::to_value`].
+    pub lifecycle: Option<String>,
     /// The parameter schema declares `"path_like": true` somewhere other than on a top-level
     /// property. Such a file parameter cannot be checked, so every surface refuses the command
     /// ([`crate::roots::gate_raw_paths`]); not part of [`Self::to_value`].
@@ -475,6 +480,7 @@ struct Def {
     human_only: bool,
     effects: Vec<String>,
     exposure: Vec<String>,
+    lifecycle: Option<String>,
 }
 
 impl Def {
@@ -554,6 +560,14 @@ fn read_def(index: usize, mut o: BTreeMap<String, CValue>, definition_digest: Di
     };
     let effects = strings("effects")?;
     let exposure = strings("exposure")?;
+    let lifecycle = match o.get("lifecycle") {
+        Some(CValue::Obj(l)) => match l.get("state") {
+            None => None,
+            Some(CValue::Str(s)) => Some(s.clone()),
+            Some(_) => return Err(at("lifecycle.state must be a string")),
+        },
+        _ => return Err(at("lifecycle must be an object")),
+    };
     let def = Def {
         title,
         description,
@@ -565,6 +579,7 @@ fn read_def(index: usize, mut o: BTreeMap<String, CValue>, definition_digest: Di
         human_only,
         effects,
         exposure,
+        lifecycle,
     };
     Ok(Entry { id, definition_digest, def })
 }
@@ -702,6 +717,7 @@ pub fn project(manifest: &[u8]) -> Result<Projection, ProjError> {
             help: DocText { title: def.title, description: def.description },
             effects: def.effects,
             exposure: def.exposure,
+            lifecycle: def.lifecycle,
             nested_path_like,
             command_digest: definition_digest,
             command_id: id,

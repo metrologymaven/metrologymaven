@@ -1,6 +1,8 @@
 //! Library half of the `fid` binary.
 //!
-//! Spec node AUTO.CLI.OUT: JSON and human output with exit codes. The exit-code table is
+//! Spec node AUTO.CLI.OUT: JSON and human output with exit codes. Module [`dispatch`] is
+//! AUTO.CLI.DISPATCH: visibility, the flag table and one invocation through the tracker.
+//! The exit-code table is
 //! [`ExitCode`] (defined once, rendered to `docs/cli/exit-codes.md`); [`Output`] is the
 //! single sink that keeps stdout for the final envelope. [`invoke`] runs one
 //! `fid <domain> <verb-object> [--json]` call against a [`Bus`] and is what the fake-bus
@@ -8,6 +10,7 @@
 //! API crate land.
 
 pub mod ctrl;
+pub mod dispatch;
 pub mod exit;
 pub mod output;
 pub mod tree;
@@ -55,7 +58,8 @@ pub fn invoke(args: &[String], bus: &mut dyn Bus, stdout: &mut dyn Write, stderr
 
 /// Resolves `args` against a generated [`CliTree`] (handling `--version`, `--help`, `--major`,
 /// and nearest-match `usage_error` suggestions) and dispatches registered commands to `bus`
-/// (REQ-AUTO.CLI.TREE-002..005).
+/// (REQ-AUTO.CLI.TREE-002..005). No visibility filter: [`dispatch::run`] is the path that
+/// applies AUTO.CLI.DISPATCH.
 pub fn invoke_with_tree(
     tree: &CliTree,
     version: &str,
@@ -65,6 +69,26 @@ pub fn invoke_with_tree(
     stderr: &mut dyn Write,
 ) -> ExitCode {
     match resolve_args(tree, args) {
+        ResolveOutcome::Invoke { command_id, json, .. } => {
+            let out = Output::new(json, stdout, stderr);
+            call_bus(bus, command_id.as_str(), out)
+        }
+        other => render_outcome(tree, version, other, stdout, stderr),
+    }
+}
+
+/// Renders every [`ResolveOutcome`] that is not a command invocation: version, help, host
+/// subcommands handled elsewhere, and usage errors. One function, so a refusal of an absent
+/// major (AUTO.CLI.DISPATCH) is byte-identical to a real miss. An `Invoke` reaching here is
+/// an internal error.
+pub fn render_outcome(
+    tree: &CliTree,
+    version: &str,
+    outcome: ResolveOutcome,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> ExitCode {
+    match outcome {
         ResolveOutcome::Version => {
             if writeln!(stdout, "{}", tree.render_version(version)).is_err() {
                 return ExitCode::Internal;
@@ -117,8 +141,13 @@ pub fn invoke_with_tree(
             ExitCode::Usage
         }
         ResolveOutcome::Invoke { command_id, json, .. } => {
-            let out = Output::new(json, stdout, stderr);
-            call_bus(bus, command_id.as_str(), out)
+            let msg = "a resolved command reached the renderer";
+            Output::new(json, stdout, stderr).finish(&Envelope::failed(
+                command_id.as_str(),
+                ErrorCode::InternalError,
+                msg,
+                None,
+            ))
         }
         ResolveOutcome::UsageError { message, json, .. } => {
             if json {

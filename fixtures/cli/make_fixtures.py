@@ -151,8 +151,12 @@ def build_tree_object(manifest_bytes: bytes) -> tuple[str, dict]:
                 "dry_run": False,
                 "help": c["description"],
                 "human_only": bool(c.get("human_only", False)),
+                # AUTO.CLI.DISPATCH visibility metadata: the lifecycle record's state, and the
+                # AUTO.SURF.ROOTS root-configuration rule (class A0, or effect RootsChanged).
+                "lifecycle": c.get("lifecycle", {}).get("state"),
                 "major": major,
                 "params": params,
+                "root_config": c["side_effect"] == "A0" or "RootsChanged" in c.get("effects", []),
                 "side_effect": c["side_effect"],
                 "summary": c["title"],
             }
