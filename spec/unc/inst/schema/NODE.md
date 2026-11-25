@@ -16,8 +16,8 @@ side_effect: W2
 determinism: D0
 cli: [fid unc import-instrument-model, fid unc bind-instrument-model, fid unc show-instrument-model]
 mcp: [unc_import_instrument_model, unc_bind_instrument_model, unc_show_instrument_model]
-journal: [unc.import_instrument_model@1, unc.bind_instrument_model@1, unc.show_instrument_model@1]
-updated: 2026-11-16
+journal: [unc.import_instrument_model@1, unc.bind_instrument_model@1]
+updated: 2026-11-24
 ---
 
 # UNC.INST.SCHEMA: Instrument model data format, import, binding and range check
@@ -60,8 +60,12 @@ Defines `InstrumentModel` as versioned data (never code): named parameters with 
 ## Design
 
 - **Registry command(s):** `unc.import_instrument_model@1` (W2; `file: ImportHandle` from an approved import root, never a raw path), `unc.show_instrument_model@1` (R0; `id`), `unc.bind_instrument_model@1` (W2; `model: ModelRef`, `target: DeviceId | Project`).
-- **Data structures:** `InstrumentModel { id, semver, kind, device_class, params: Vec<Param{name, unit, value, dist: Option<Distribution>}>, range: Vec<RangeAxis{axis, min, max, unit}>, source: UntrustedString, digest }`; `InstrumentBinding { model, target, descriptor_digest }`; `RangeVerdict = InRange | OutOfModelRange{axis, bound}`.
+- **Data structures:** `InstrumentModel { id, semver, kind, device_class, params: Vec<Param{name, unit, value, dist: Option<Distribution>}>, range: Vec<RangeAxis{axis, min, max, unit}>, source: UntrustedString, digest }`; `InstrumentBinding { model, target, descriptor_digest }`; `RangeVerdict = InRange | OutOfModelRange{axis, bound} | NotChecked{axis, reason: not_observed | unit_mismatch}` with `must_flag()`, true for every verdict but `InRange`.
 - **Algorithm:** bounded JSON parse (max 1 MB, max depth 32), schema validation, unit conversion to SI by single correctly rounded parse, canonicalize and digest, store. Range check compares each axis with closed bounds.
+  - **Units are SI or SI-prefixed only** (m, km, mm, um, nm, rad, mrad, urad, K, mK, s, ms, us, 1, ppm, um/m): a prefix is a shift of the decimal exponent, so the conversion stays one correctly rounded parse. Degrees and degrees Celsius need a second rounding or an offset and are refused (`schema_invalid`).
+  - **Empty range:** an axis with `min == max` is empty and, like `min > max`, is `invalid_range{axis}`. A model with no range axes at all is `schema_invalid{range}`.
+  - **Unchecked axes (D-045):** a declared axis the observation context does not hold, or holds in another SI unit, is `NotChecked`. The model's validity was not established, so producers flag it exactly like `OutOfModelRange` (`must_flag`) and never present the result as in range. An axis out of range is reported before an unchecked one.
+  - `unc.show_instrument_model@1` is R0 and is not journaled (CONSTITUTION §3, D-031).
 - **Errors:** `schema_invalid{field}`, `missing_unit{param}`, `invalid_range{axis}`, `missing_source`, `version_conflict`, `device_not_found`.
 - **Determinism:** D0.
 - **Performance budget:** import of a 1 MB model in under 50 ms [unverified until measured].
@@ -75,7 +79,7 @@ Defines `InstrumentModel` as versioned data (never code): named parameters with 
 
 > In crate `fid-unc-inst`, define the `instrument-model/v1` JSON schema and `InstrumentModel` type: `id` `im:<name>@<semver>`, kind (`spec_derived | iemps | observation`), device class, parameters with SI units and optional distributions (use `Distribution` from `fid-kunc` module `dist`), range axes with min/max/unit, an untrusted source citation (never interpreted, C6), and a SHA-256 digest over RFC 8785 canonical JSON.
 > Implement registry commands `unc.import_instrument_model@1` (W2; CLI `fid unc import-instrument-model`; takes an import-root handle, never a raw path; bounded parse ≤ 1 MB, depth ≤ 32), `unc.show_instrument_model@1` (R0) and `unc.bind_instrument_model@1` (W2; binds to a HAL device identity, recording the `instrument-profile/v1` descriptor digest, or to a project default). Each is journaled with its command ID and result digest.
-> Errors: `schema_invalid{field}`, `missing_unit{param}`, `invalid_range{axis}`, `missing_source`, `version_conflict` (same id, different digest), `device_not_found`; failures commit nothing. Provide `check_range(model, ctx) -> InRange | OutOfModelRange{axis, bound}`; producers must flag, never extrapolate.
+> Errors: `schema_invalid{field}`, `missing_unit{param}`, `invalid_range{axis}`, `missing_source`, `version_conflict` (same id, different digest), `device_not_found`; failures commit nothing. Provide `check_range(model, ctx) -> InRange | OutOfModelRange{axis, bound} | NotChecked{axis, reason}`; producers must flag every verdict but `InRange` (`must_flag`), never extrapolate.
 > Tests with `fixtures/unc/inst/`: import digest matches; each invalid file fails with its field; bind to simulated `sim-tracker-1`; 52 m observation flagged against the 40 m bound; version conflict; exact replay IDENTICAL. Support `--json` and `--dry-run`. No panics, no `unwrap`.
 
 ## Open questions
