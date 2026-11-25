@@ -53,7 +53,11 @@
 //!   relative error is at most about `4u` (one rounding per deviation, square, the sum,
 //!   the division and the root, the square root halving the error of its argument) plus
 //!   `n * e^2 / (2 * sum (x_i - mean)^2)` from a mean error `e`, which only overestimates
-//!   [unverified: derived here, not independently reviewed].
+//!   [unverified: derived here, not independently reviewed]. The `4u` bound fails whenever
+//!   a square `d_i * d_i` or the quotient `S / D` underflows into the subnormal range or to
+//!   zero: in the fixture case `subnormal_midpoint_tie` (sizes `2^-1074` and `0`) every
+//!   square underflows to zero, so `StdDev{NMinus1}` is `0` against an exact `2^-1074`,
+//!   1 ulp but a 100 % relative error.
 //!
 //! # Determinism
 //!

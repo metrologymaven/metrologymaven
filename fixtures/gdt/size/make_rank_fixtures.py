@@ -339,6 +339,12 @@ def sizes_doc():
         case("midpoint_overflow_fallback", "edge", [big, big_prev], note="max + min overflows; halves are exact"),
         case("range_overflow", "edge", [big, -big]),
         case("mean_overflow", "edge", [big, big]),
+        case(
+            "deviation_overflow",
+            "edge",
+            [big, -big, -big],
+            note="sum and mean (-MAX / 3) are finite; MAX - mean overflows",
+        ),
     ]
     return {"schema": "fid.test.gdt.dim.size.rank.cases/1", "keys": KEYS, "cases": cases}
 

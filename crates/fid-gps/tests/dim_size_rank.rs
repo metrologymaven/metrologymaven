@@ -182,6 +182,18 @@ fn ac3_errors() {
     assert_eq!(codes, ["empty_sizes", "nan_input", "infinite_input", "insufficient_count", "overflow"]);
 }
 
+/// The deviation-overflow path of the standard deviation: the sum (`-MAX`) and the mean
+/// (`-MAX / 3`) are finite, but the deviation `MAX - mean` overflows, so both denominators
+/// are `overflow` while the mean itself is returned.
+#[test]
+fn std_dev_deviation_overflow() {
+    let sizes = [f64::MAX, -f64::MAX, -f64::MAX];
+    assert_eq!(rank_statistic(&sizes, RankStat::Mean), Ok(-f64::MAX / 3.0));
+    for denominator in [StdDenominator::N, StdDenominator::NMinus1] {
+        assert_eq!(rank_statistic(&sizes, RankStat::StdDev { denominator }), Err(RankError::Overflow));
+    }
+}
+
 /// Stable keys round-trip.
 #[test]
 fn keys_round_trip() {

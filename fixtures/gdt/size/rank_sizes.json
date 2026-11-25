@@ -725,6 +725,50 @@
      "error": "overflow"
     }
    }
+  },
+  {
+   "name": "deviation_overflow",
+   "ac": "edge",
+   "note": "sum and mean (-MAX / 3) are finite; MAX - mean overflows",
+   "sizes": [
+    "0x7fefffffffffffff",
+    "0xffefffffffffffff",
+    "0xffefffffffffffff"
+   ],
+   "results": {
+    "max": {
+     "exact": "0x7fefffffffffffff"
+    },
+    "min": {
+     "exact": "0xffefffffffffffff"
+    },
+    "mean": {
+     "exact": "0xffd5555555555555",
+     "pinned": "0xffd5555555555555",
+     "max_ulps": 2
+    },
+    "median.mean_of_middle": {
+     "exact": "0xffefffffffffffff"
+    },
+    "median.lower": {
+     "exact": "0xffefffffffffffff"
+    },
+    "median.upper": {
+     "exact": "0xffefffffffffffff"
+    },
+    "mid_range": {
+     "exact": "0x0000000000000000"
+    },
+    "range": {
+     "error": "overflow"
+    },
+    "std_dev.n": {
+     "error": "overflow"
+    },
+    "std_dev.n_minus_1": {
+     "error": "overflow"
+    }
+   }
   }
  ]
 }
