@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid construct build-cylinder, fid construct build-cone, fid construct build-slot, fid construct build-rectangle]
 mcp: [construct_build_cylinder, construct_build_cone, construct_build_slot, construct_build_rectangle]
 journal: [construct.build_cylinder@1, construct.build_cone@1, construct.build_slot@1, construct.build_rectangle@1]
-updated: 2026-11-17
+built_in: [fid-construct]
+updated: 2026-11-23
 ---
 
 # KRN.CONS.ELEM.SHAPE: Definitional cylinder, cone, slot and rectangle builds

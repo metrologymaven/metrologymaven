@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid project create-project, fid project open-project, fid project close-project, fid project save-project-as, fid project list-projects]
 mcp: [project_create_project, project_open_project, project_close_project, project_save_project_as, project_list_projects]
 journal: [project.create_project@1, project.open_project@1, project.close_project@1, project.save_project_as@1, project.list_projects@1]
-updated: 2026-11-21
+built_in: [fid-project, fid-project-cmd]
+updated: 2026-11-23
 ---
 
 # CORE.PRJ.CONT.LIFE: Project lifecycle

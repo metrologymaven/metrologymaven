@@ -9,8 +9,8 @@
 //! # Validation order (pinned, so the first reported error is deterministic)
 //!
 //! 1. **Class.** A UEC-0 statement carries no evaluation output: the first of `method`,
-//!    `u_std`, `expanded`, `interval`, `contributors` (non-empty), `lpu_validated_by_mc` and
-//!    `nonlinearity` that is set fails with `uec0_has_value{field}`. A UEC-1..3 statement
+//!    `u_std`, `expanded`, `interval`, `contributors` (non-empty), `lpu_validated_by_mc`,
+//!    `nonlinearity` and `samples_digest` that is set fails with `uec0_has_value{field}`. A UEC-1..3 statement
 //!    carrying a `uec0_reason` fails with `class_mismatch{uec0_reason}`.
 //! 2. **Numbers**, in declaration order, with `invalid_number{field}`: `u_std`,
 //!    `expanded.U`, `expanded.k`, `interval.low`, `interval.high`, `interval.p`, then per
@@ -30,7 +30,9 @@
 //!    REQ-UNC.UEC-005) none of them marked `unverified` (`class_mismatch{sources.unverified}`).
 //!    UEC-1..3 with any method but `DECLARED` need at least one source
 //!    (`SPEC_DERIVED` cites its specification). A claimed method carries no `contributors`, `lpu_validated_by_mc`
-//!    or `nonlinearity`; `lpu_validated_by_mc` only with `LPU`. Provenance: `principal` and
+//!    or `nonlinearity`; `lpu_validated_by_mc` only with `LPU`; `samples_digest` only with
+//!    `MCM` (`class_mismatch{samples_digest}`), so no claim or non-Monte-Carlo value ever
+//!    points at a sample set. Provenance: `principal` and
 //!    `principal_kind` together; `DECLARED` needs a `principal`; an agent principal or an
 //!    adopter implies a proposal (CONSTITUTION C5).
 //!
@@ -337,6 +339,9 @@ pub struct StatementParts {
     pub contributors: Vec<Contributor>,
     pub lpu_validated_by_mc: Option<bool>,
     pub nonlinearity: Option<Nonlinearity>,
+    /// SHA-256 of the encoded `mcm-samples@1` set the statement was evaluated from
+    /// (`UNC.PROP.MCM.SAMP`). `MCM` only; absent when the samples are not retained.
+    pub samples_digest: Option<Digest>,
     pub selection_rule: Option<String>,
     pub estimate_convention: Option<String>,
     pub provenance: Provenance,
@@ -358,6 +363,7 @@ impl StatementParts {
             contributors: Vec::new(),
             lpu_validated_by_mc: None,
             nonlinearity: None,
+            samples_digest: None,
             selection_rule: None,
             estimate_convention: None,
             provenance: Provenance::default(),
@@ -595,6 +601,12 @@ impl UncertaintyStatement {
     pub fn nonlinearity(&self) -> Option<&Nonlinearity> {
         self.parts.nonlinearity.as_ref()
     }
+    /// SHA-256 of the retained `mcm-samples@1` set (`MCM` statements only). A decision that
+    /// counts Monte Carlo samples must require the samples to have exactly this digest and
+    /// must never take one computed from the bytes it was handed (`UNC.DEC.EVAL`).
+    pub fn samples_digest(&self) -> Option<&Digest> {
+        self.parts.samples_digest.as_ref()
+    }
     /// The selection-rule version.
     pub fn selection_rule(&self) -> Option<&str> {
         self.parts.selection_rule.as_deref()
@@ -654,7 +666,7 @@ fn check_class(p: &StatementParts) -> Result<(), StmtError> {
         }
         return Ok(());
     }
-    let set: [(&'static str, bool); 7] = [
+    let set: [(&'static str, bool); 8] = [
         ("method", p.method.is_some()),
         ("u_std", p.u_std.is_some()),
         ("expanded", p.expanded.is_some()),
@@ -662,6 +674,7 @@ fn check_class(p: &StatementParts) -> Result<(), StmtError> {
         ("contributors", !p.contributors.is_empty()),
         ("lpu_validated_by_mc", p.lpu_validated_by_mc.is_some()),
         ("nonlinearity", p.nonlinearity.is_some()),
+        ("samples_digest", p.samples_digest.is_some()),
     ];
     match set.into_iter().find(|(_, s)| *s) {
         Some((field, _)) => Err(StmtError::Uec0HasValue { field }),
@@ -817,6 +830,8 @@ fn check_consistency(p: &StatementParts) -> Result<(), StmtError> {
             mismatch(p.nonlinearity.is_none(), "nonlinearity")?;
         }
         mismatch(p.lpu_validated_by_mc.is_none() || m == Method::Lpu, "lpu_validated_by_mc")?;
+        // Only a Monte Carlo evaluation has a sample set; a claim never points at one.
+        mismatch(p.samples_digest.is_none() || m == Method::Mcm, "samples_digest")?;
         // Only a person's declaration may stand without a cited source; every other method
         // (SPEC_DERIVED included, which cites its specification) names at least one.
         mismatch(m == Method::Declared || !p.sources.is_empty(), "sources")?;

@@ -1,0 +1,66 @@
+# Expected results for the IO.CAD.PMI.READ fixtures, written by make_cases.py.
+# Block: '== <fixture>', one 'item' line per graph item, then 'count' (graph items) and
+# 'scan' (PMI-related instances found by an independent top-level name scan of the text).
+# value: <measure>:<measure type>:<lexeme>:<unit entity>:<unit context>:<unit>.
+== aspect_association.stp
+item 60 class=semantic kind=shape_aspect reason=- types=SHAPE_ASPECT links=30 unresolved=- refs=- presented_by=- values=-
+item 74 class=graphic_only kind=presentation reason=- types=ANNOTATION_CURVE_OCCURRENCE links=- unresolved=- refs=- presented_by=- values=-
+count 2
+scan 2
+== dangling_aspect.stp
+item 63 class=semantic kind=tolerance reason=- types=FLATNESS_TOLERANCE links=- unresolved=999 refs=- presented_by=- values=62:LENGTH_MEASURE:0.05:10:14:mm
+count 1
+scan 1
+== datums_dims.stp
+item 74 class=graphic_only kind=presentation reason=- types=ANNOTATION_CURVE_OCCURRENCE links=- unresolved=- refs=- presented_by=- values=-
+item 100 class=semantic kind=datum_feature reason=- types=DATUM_FEATURE links=31 unresolved=- refs=- presented_by=- values=-
+item 102 class=semantic kind=datum reason=- types=DATUM links=31 unresolved=- refs=- presented_by=- values=-
+item 104 class=semantic kind=datum_reference reason=- types=DATUM_REFERENCE_COMPARTMENT links=- unresolved=- refs=102 presented_by=- values=-
+item 105 class=semantic kind=datum_system reason=- types=DATUM_SYSTEM links=- unresolved=- refs=104 presented_by=- values=-
+item 106 class=semantic kind=shape_aspect reason=- types=SHAPE_ASPECT links=32,33 unresolved=- refs=- presented_by=- values=-
+item 109 class=semantic kind=tolerance reason=- types=GEOMETRIC_TOLERANCE+GEOMETRIC_TOLERANCE_WITH_DATUM_REFERENCE+GEOMETRIC_TOLERANCE_WITH_MODIFIERS+POSITION_TOLERANCE links=32,33 unresolved=- refs=105,106 presented_by=150 values=108:LENGTH_MEASURE:0.1:10:14:mm
+item 110 class=semantic kind=shape_aspect reason=- types=SHAPE_ASPECT links=30 unresolved=- refs=- presented_by=- values=-
+item 112 class=semantic kind=shape_aspect reason=- types=SHAPE_ASPECT links=- unresolved=998 refs=- presented_by=- values=-
+item 114 class=semantic kind=shape_aspect reason=- types=COMPOSITE_SHAPE_ASPECT links=30 unresolved=998 refs=- presented_by=- values=-
+item 118 class=semantic kind=tolerance reason=- types=SURFACE_PROFILE_TOLERANCE links=30 unresolved=996,998 refs=114 presented_by=- values=117:LENGTH_MEASURE:0.02:10:14:mm
+item 120 class=semantic kind=dimension reason=- types=DIMENSIONAL_SIZE links=32,33 unresolved=- refs=106 presented_by=150,152,153 values=-
+item 123 class=semantic kind=dimension_representation reason=- types=DIMENSIONAL_CHARACTERISTIC_REPRESENTATION links=- unresolved=- refs=120 presented_by=- values=121:LENGTH_MEASURE:12.5:10:14:mm
+item 126 class=semantic kind=tolerance_value reason=- types=TOLERANCE_VALUE links=- unresolved=- refs=- presented_by=- values=124:LENGTH_MEASURE:-0.1:10:14:mm;125:LENGTH_MEASURE:0.15:10:14:mm
+item 127 class=semantic kind=plus_minus reason=- types=PLUS_MINUS_TOLERANCE links=- unresolved=- refs=120,126 presented_by=- values=-
+item 128 class=semantic kind=limits_and_fits reason=- types=LIMITS_AND_FITS links=- unresolved=- refs=- presented_by=- values=-
+item 130 class=semantic kind=dimension reason=- types=DIMENSIONAL_LOCATION links=31,32,33 unresolved=- refs=100,106 presented_by=- values=-
+item 133 class=semantic kind=dimension_representation reason=- types=DIMENSIONAL_CHARACTERISTIC_REPRESENTATION links=- unresolved=- refs=130 presented_by=- values=131:LENGTH_MEASURE:40:10:14:mm
+item 135 class=unsupported kind=unknown reason=type_not_supported types=ANGULAR_SIZE links=- unresolved=- refs=106 presented_by=- values=-
+item 137 class=semantic kind=tolerance reason=- types=ANGULARITY_TOLERANCE links=32,33 unresolved=- refs=106 presented_by=- values=136:PLANE_ANGLE_MEASURE:0.5:11:14:radian
+item 138 class=unsupported kind=unknown reason=type_not_supported types=TOLERANCE_ZONE links=- unresolved=- refs=109,139 presented_by=- values=-
+item 139 class=unsupported kind=unknown reason=type_not_supported types=TOLERANCE_ZONE_FORM links=- unresolved=- refs=- presented_by=- values=-
+item 140 class=semantic kind=datum_target reason=- types=DATUM_TARGET links=34 unresolved=- refs=- presented_by=- values=-
+item 142 class=semantic kind=datum_feature reason=- types=COMPOSITE_SHAPE_ASPECT+DATUM_FEATURE+SHAPE_ASPECT links=30 unresolved=- refs=- presented_by=- values=-
+item 144 class=unsupported kind=tolerance reason=two_tolerance_types types=FLATNESS_TOLERANCE+GEOMETRIC_TOLERANCE+STRAIGHTNESS_TOLERANCE links=- unresolved=- refs=110 presented_by=- values=-
+item 145 class=unsupported kind=unknown reason=mixed_kinds types=DATUM+DATUM_FEATURE+SHAPE_ASPECT links=- unresolved=- refs=- presented_by=- values=-
+item 150 class=semantic kind=presentation reason=- types=TESSELLATED_ANNOTATION_OCCURRENCE links=- unresolved=- refs=109,120 presented_by=- values=-
+item 152 class=semantic kind=presentation reason=- types=ANNOTATION_CURVE_OCCURRENCE links=- unresolved=- refs=120 presented_by=- values=-
+item 153 class=semantic kind=presentation reason=- types=DRAUGHTING_CALLOUT links=- unresolved=- refs=120 presented_by=- values=-
+item 156 class=graphic_only kind=presentation reason=- types=ANNOTATION_CURVE_OCCURRENCE links=- unresolved=- refs=- presented_by=- values=-
+item 157 class=graphic_only kind=presentation reason=- types=ANNOTATION_OCCURRENCE links=- unresolved=997 refs=- presented_by=- values=-
+item 160 class=unsupported kind=datum_feature reason=mixed_presentation types=ANNOTATION_OCCURRENCE+DATUM_FEATURE+SHAPE_ASPECT+STYLED_ITEM links=- unresolved=- refs=- presented_by=- values=-
+item 161 class=graphic_only kind=presentation reason=- types=ANNOTATION_CURVE_OCCURRENCE+ANNOTATION_OCCURRENCE+GEOMETRIC_REPRESENTATION_ITEM+REPRESENTATION_ITEM+STYLED_ITEM links=- unresolved=- refs=- presented_by=- values=-
+item 163 class=semantic kind=tolerance reason=- types=STRAIGHTNESS_TOLERANCE links=30 unresolved=995 refs=110 presented_by=- values=162:LENGTH_MEASURE:0.3:995:-:unresolved
+item 166 class=semantic kind=tolerance reason=- types=ROUNDNESS_TOLERANCE links=30 unresolved=- refs=110 presented_by=- values=165:LENGTH_MEASURE:5.E-01:164:-:unresolved
+count 35
+scan 35
+== flatness_semantic.stp
+item 60 class=semantic kind=shape_aspect reason=- types=SHAPE_ASPECT links=30 unresolved=- refs=- presented_by=- values=-
+item 63 class=semantic kind=tolerance reason=- types=FLATNESS_TOLERANCE links=30 unresolved=- refs=60 presented_by=74 values=62:LENGTH_MEASURE:0.05:10:14:mm
+item 74 class=semantic kind=presentation reason=- types=ANNOTATION_CURVE_OCCURRENCE links=- unresolved=- refs=63 presented_by=- values=-
+count 3
+scan 3
+== graphic_only.stp
+item 74 class=graphic_only kind=presentation reason=- types=ANNOTATION_CURVE_OCCURRENCE links=- unresolved=- refs=- presented_by=- values=-
+count 1
+scan 1
+== unknown_complex.stp
+item 60 class=semantic kind=shape_aspect reason=- types=SHAPE_ASPECT links=30 unresolved=- refs=- presented_by=- values=-
+item 63 class=unsupported kind=tolerance reason=type_not_supported types=GEOMETRIC_TOLERANCE+GEOMETRIC_TOLERANCE_WITH_MAXIMUM_TOLERANCE+GEOMETRIC_TOLERANCE_WITH_MODIFIERS+STRAIGHTNESS_TOLERANCE links=- unresolved=- refs=60 presented_by=- values=-
+count 2
+scan 2

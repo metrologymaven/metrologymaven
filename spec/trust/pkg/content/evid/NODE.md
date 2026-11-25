@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-19
+built_in: [fid-pkg]
+built_pr: 521
+updated: 2026-11-22
 ---
 
 # TRUST.PKG.CONTENT.EVID: Evidence tiers and point-set gathering

@@ -1,0 +1,607 @@
+{
+  "schema": "stream-batches/0",
+  "origin": "synthetic",
+  "duration_ns": "60000000000",
+  "batches": [
+    {
+      "first_seq": "0",
+      "last_seq": "99",
+      "bytes": "1000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "100",
+      "last_seq": "199",
+      "bytes": "8000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "200",
+      "last_seq": "299",
+      "bytes": "2500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "300",
+      "last_seq": "399",
+      "bytes": "400000",
+      "span_ns": "50000000"
+    },
+    {
+      "first_seq": "400",
+      "last_seq": "499",
+      "bytes": "999999",
+      "span_ns": "50000001"
+    },
+    {
+      "first_seq": "500",
+      "last_seq": "599",
+      "bytes": "4000000",
+      "span_ns": "40000000"
+    },
+    {
+      "first_seq": "600",
+      "last_seq": "699",
+      "bytes": "1000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "700",
+      "last_seq": "799",
+      "bytes": "8000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "800",
+      "last_seq": "899",
+      "bytes": "2500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "900",
+      "last_seq": "999",
+      "bytes": "8000001",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "1000",
+      "last_seq": "1099",
+      "bytes": "12000000",
+      "span_ns": "20000000"
+    },
+    {
+      "first_seq": "1100",
+      "last_seq": "1199",
+      "bytes": "4000000",
+      "span_ns": "40000000"
+    },
+    {
+      "first_seq": "1200",
+      "last_seq": "1299",
+      "bytes": "1000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "1300",
+      "last_seq": "1399",
+      "bytes": "8000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "1400",
+      "last_seq": "1499",
+      "bytes": "500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "1500",
+      "last_seq": "1599",
+      "bytes": "400000",
+      "span_ns": "50000000"
+    },
+    {
+      "first_seq": "1600",
+      "last_seq": "1699",
+      "bytes": "12000000",
+      "span_ns": "20000000"
+    },
+    {
+      "first_seq": "1700",
+      "last_seq": "1799",
+      "bytes": "4000000",
+      "span_ns": "40000000"
+    },
+    {
+      "first_seq": "1800",
+      "last_seq": "1899",
+      "bytes": "1000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "1900",
+      "last_seq": "1999",
+      "bytes": "9000000",
+      "span_ns": "75000000"
+    },
+    {
+      "first_seq": "2000",
+      "last_seq": "2099",
+      "bytes": "2500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "2100",
+      "last_seq": "2199",
+      "bytes": "400000",
+      "span_ns": "50000000"
+    },
+    {
+      "first_seq": "2200",
+      "last_seq": "2299",
+      "bytes": "12000000",
+      "span_ns": "20000000"
+    },
+    {
+      "first_seq": "2300",
+      "last_seq": "2399",
+      "bytes": "4000000",
+      "span_ns": "40000000"
+    },
+    {
+      "first_seq": "2400",
+      "last_seq": "2499",
+      "bytes": "999999",
+      "span_ns": "50000001"
+    },
+    {
+      "first_seq": "2500",
+      "last_seq": "2599",
+      "bytes": "8000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "2600",
+      "last_seq": "2699",
+      "bytes": "2500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "2700",
+      "last_seq": "2799",
+      "bytes": "400000",
+      "span_ns": "50000000"
+    },
+    {
+      "first_seq": "2800",
+      "last_seq": "2899",
+      "bytes": "12000000",
+      "span_ns": "20000000"
+    },
+    {
+      "first_seq": "2900",
+      "last_seq": "2999",
+      "bytes": "8000001",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "3000",
+      "last_seq": "3099",
+      "bytes": "1000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "3100",
+      "last_seq": "3199",
+      "bytes": "8000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "3200",
+      "last_seq": "3299",
+      "bytes": "2500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "3300",
+      "last_seq": "3399",
+      "bytes": "400000",
+      "span_ns": "50000000"
+    },
+    {
+      "first_seq": "3400",
+      "last_seq": "3499",
+      "bytes": "500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "3500",
+      "last_seq": "3599",
+      "bytes": "4000000",
+      "span_ns": "40000000"
+    },
+    {
+      "first_seq": "3600",
+      "last_seq": "3699",
+      "bytes": "1000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "3700",
+      "last_seq": "3799",
+      "bytes": "8000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "3800",
+      "last_seq": "3899",
+      "bytes": "2500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "3900",
+      "last_seq": "3999",
+      "bytes": "9000000",
+      "span_ns": "75000000"
+    },
+    {
+      "first_seq": "4000",
+      "last_seq": "4099",
+      "bytes": "12000000",
+      "span_ns": "20000000"
+    },
+    {
+      "first_seq": "4100",
+      "last_seq": "4199",
+      "bytes": "4000000",
+      "span_ns": "40000000"
+    },
+    {
+      "first_seq": "4200",
+      "last_seq": "4299",
+      "bytes": "1000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "4300",
+      "last_seq": "4399",
+      "bytes": "8000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "4400",
+      "last_seq": "4499",
+      "bytes": "999999",
+      "span_ns": "50000001"
+    },
+    {
+      "first_seq": "4500",
+      "last_seq": "4599",
+      "bytes": "400000",
+      "span_ns": "50000000"
+    },
+    {
+      "first_seq": "4600",
+      "last_seq": "4699",
+      "bytes": "12000000",
+      "span_ns": "20000000"
+    },
+    {
+      "first_seq": "4700",
+      "last_seq": "4799",
+      "bytes": "4000000",
+      "span_ns": "40000000"
+    },
+    {
+      "first_seq": "4800",
+      "last_seq": "4899",
+      "bytes": "1000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "4900",
+      "last_seq": "4999",
+      "bytes": "8000001",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "5000",
+      "last_seq": "5099",
+      "bytes": "2500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "5100",
+      "last_seq": "5199",
+      "bytes": "400000",
+      "span_ns": "50000000"
+    },
+    {
+      "first_seq": "5200",
+      "last_seq": "5299",
+      "bytes": "12000000",
+      "span_ns": "20000000"
+    },
+    {
+      "first_seq": "5300",
+      "last_seq": "5399",
+      "bytes": "4000000",
+      "span_ns": "40000000"
+    },
+    {
+      "first_seq": "5400",
+      "last_seq": "5499",
+      "bytes": "500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "5500",
+      "last_seq": "5599",
+      "bytes": "8000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "5600",
+      "last_seq": "5699",
+      "bytes": "2500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "5700",
+      "last_seq": "5799",
+      "bytes": "400000",
+      "span_ns": "50000000"
+    },
+    {
+      "first_seq": "5800",
+      "last_seq": "5899",
+      "bytes": "12000000",
+      "span_ns": "20000000"
+    },
+    {
+      "first_seq": "5900",
+      "last_seq": "5999",
+      "bytes": "9000000",
+      "span_ns": "75000000"
+    },
+    {
+      "first_seq": "6000",
+      "last_seq": "6099",
+      "bytes": "1000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "6100",
+      "last_seq": "6199",
+      "bytes": "8000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "6200",
+      "last_seq": "6299",
+      "bytes": "2500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "6300",
+      "last_seq": "6399",
+      "bytes": "400000",
+      "span_ns": "50000000"
+    },
+    {
+      "first_seq": "6400",
+      "last_seq": "6499",
+      "bytes": "999999",
+      "span_ns": "50000001"
+    },
+    {
+      "first_seq": "6500",
+      "last_seq": "6599",
+      "bytes": "4000000",
+      "span_ns": "40000000"
+    },
+    {
+      "first_seq": "6600",
+      "last_seq": "6699",
+      "bytes": "1000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "6700",
+      "last_seq": "6799",
+      "bytes": "8000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "6800",
+      "last_seq": "6899",
+      "bytes": "2500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "6900",
+      "last_seq": "6999",
+      "bytes": "8000001",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "7000",
+      "last_seq": "7099",
+      "bytes": "12000000",
+      "span_ns": "20000000"
+    },
+    {
+      "first_seq": "7100",
+      "last_seq": "7199",
+      "bytes": "4000000",
+      "span_ns": "40000000"
+    },
+    {
+      "first_seq": "7200",
+      "last_seq": "7299",
+      "bytes": "1000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "7300",
+      "last_seq": "7399",
+      "bytes": "8000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "7400",
+      "last_seq": "7499",
+      "bytes": "500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "7500",
+      "last_seq": "7599",
+      "bytes": "400000",
+      "span_ns": "50000000"
+    },
+    {
+      "first_seq": "7600",
+      "last_seq": "7699",
+      "bytes": "12000000",
+      "span_ns": "20000000"
+    },
+    {
+      "first_seq": "7700",
+      "last_seq": "7799",
+      "bytes": "4000000",
+      "span_ns": "40000000"
+    },
+    {
+      "first_seq": "7800",
+      "last_seq": "7899",
+      "bytes": "1000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "7900",
+      "last_seq": "7999",
+      "bytes": "9000000",
+      "span_ns": "75000000"
+    },
+    {
+      "first_seq": "8000",
+      "last_seq": "8099",
+      "bytes": "2500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "8100",
+      "last_seq": "8199",
+      "bytes": "400000",
+      "span_ns": "50000000"
+    },
+    {
+      "first_seq": "8200",
+      "last_seq": "8299",
+      "bytes": "12000000",
+      "span_ns": "20000000"
+    },
+    {
+      "first_seq": "8300",
+      "last_seq": "8399",
+      "bytes": "4000000",
+      "span_ns": "40000000"
+    },
+    {
+      "first_seq": "8400",
+      "last_seq": "8499",
+      "bytes": "999999",
+      "span_ns": "50000001"
+    },
+    {
+      "first_seq": "8500",
+      "last_seq": "8599",
+      "bytes": "8000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "8600",
+      "last_seq": "8699",
+      "bytes": "2500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "8700",
+      "last_seq": "8799",
+      "bytes": "400000",
+      "span_ns": "50000000"
+    },
+    {
+      "first_seq": "8800",
+      "last_seq": "8899",
+      "bytes": "12000000",
+      "span_ns": "20000000"
+    },
+    {
+      "first_seq": "8900",
+      "last_seq": "8999",
+      "bytes": "8000001",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "9000",
+      "last_seq": "9099",
+      "bytes": "1000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "9100",
+      "last_seq": "9199",
+      "bytes": "8000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "9200",
+      "last_seq": "9299",
+      "bytes": "2500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "9300",
+      "last_seq": "9399",
+      "bytes": "400000",
+      "span_ns": "50000000"
+    },
+    {
+      "first_seq": "9400",
+      "last_seq": "9499",
+      "bytes": "500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "9500",
+      "last_seq": "9599",
+      "bytes": "4000000",
+      "span_ns": "40000000"
+    },
+    {
+      "first_seq": "9600",
+      "last_seq": "9699",
+      "bytes": "1000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "9700",
+      "last_seq": "9799",
+      "bytes": "8000000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "9800",
+      "last_seq": "9899",
+      "bytes": "2500000",
+      "span_ns": "1500000000"
+    },
+    {
+      "first_seq": "9900",
+      "last_seq": "9999",
+      "bytes": "9000000",
+      "span_ns": "75000000"
+    }
+  ]
+}

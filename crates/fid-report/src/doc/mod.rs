@@ -42,8 +42,8 @@ pub use command::{
 pub use defs::command_defs;
 pub use error::{ReportError, TextFault};
 pub use event::{
-    Op, ReportEvent, ADD_BLOCK, ADD_PAGE, BIND_BLOCK, CREATE_REPORT, REMOVE_BLOCK, REMOVE_PAGE, SET_TABLE_BLOCK,
-    SHOW_REPORT,
+    Op, ReportEvent, ADD_BLOCK, ADD_PAGE, BIND_BLOCK, CREATE_REPORT, REMOVE_BLOCK, REMOVE_PAGE, SET_IMAGE_BLOCK,
+    SET_TABLE_BLOCK, SET_TEXT_BLOCK, SHOW_REPORT,
 };
 pub use kind::{BlockKind, KindRegistry, KindRegistryError, PayloadError};
 pub use model::{

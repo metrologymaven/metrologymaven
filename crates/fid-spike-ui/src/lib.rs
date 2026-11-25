@@ -1,7 +1,11 @@
-//! Throwaway UI toolkit spike for spec node `VIZ.SHELL.SPKTREE`: an element tree of 10 000
-//! items beside a wgpu viewport, measured against fixed pass criteria. Its report is input
-//! for the maintainers' confirmation of D-005 (egui + winit + wgpu); the spike adopts
-//! nothing, and this crate must never be a dependency of a product crate.
+//! Throwaway UI toolkit spikes for D-005 (egui + winit + wgpu), each measured against fixed
+//! pass criteria: spec node `VIZ.SHELL.SPKTREE` (an element tree of 10 000 items beside a
+//! wgpu viewport; the modules below and the example `tree10k`), `VIZ.SHELL.SPKRPT` (a
+//! report designer page canvas; module [`rpt`] and the example `rptcanvas`) and
+//! `VIZ.SHELL.SPKTABLE` (a characteristic table of 10^5 rows; module [`table`] and the
+//! example `chartable`). Their reports
+//! are input for the maintainers' confirmation of D-005; the spikes adopt nothing, and this
+//! crate must never be a dependency of a product crate.
 //!
 //! The library is the toolkit-independent part, tested in CI without a GPU:
 //!
@@ -30,8 +34,10 @@
 
 pub mod lock;
 pub mod report;
+pub mod rpt;
 pub mod script;
 pub mod stats;
+pub mod table;
 pub mod tree;
 pub mod view;
 

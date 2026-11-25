@@ -5,11 +5,19 @@
 //!   digest is recorded in every Result Package and journal session. Nothing here enforces
 //!   a profile.
 //!
+//! - [`query`] (`TRUST.PROFILE.GATE.QUERY`): the read-only [`ProfileQuery`] interface,
+//!   immutable `Arc`-shared [`ProfileSnapshot`], and deterministic [`GuiGates`] flags.
+//!
 //! This crate links no CORE crate, so the verifier can read profile documents.
 
 pub mod defs;
+pub mod query;
 
 pub use defs::{
     instantiate, AgentWrites, CanonicalProfile, MeaningCode, Params, ProfileDoc, ProfileError, ProfileName,
     ProgramReleaseByOther, TenantMeaning, TenantParams,
+};
+pub use query::{
+    GateSwitch, GuiGates, ProfileQuery, ProfileSnapshot, SelectionReader, SelectionSlot, SlotReader,
+    StoredProfileQuery, StoredSelection, CONFIG_KEY,
 };

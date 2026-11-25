@@ -1,0 +1,61 @@
+{
+ "comment": "HAL.ACQ.INGEST.CREDIT review case: a duplicate acknowledgement is refused with credit_unknown_ack",
+ "window": {
+  "bytes": 8388608,
+  "batches": 4
+ },
+ "events": [
+  [
+   "grant"
+  ],
+  [
+   "admit",
+   4194304,
+   0,
+   9
+  ],
+  [
+   "admit",
+   4194304,
+   10,
+   19
+  ],
+  [
+   "ack",
+   4194304,
+   0,
+   9
+  ],
+  [
+   "ack",
+   4194304,
+   0,
+   9
+  ],
+  [
+   "grant"
+  ],
+  [
+   "admit",
+   4194304,
+   20,
+   29
+  ],
+  [
+   "admit",
+   4194304,
+   30,
+   39
+  ]
+ ],
+ "expected": [
+  "grant granted=8388608/4 active out=8388608/4 fly=0/0",
+  "admit accepted active out=4194304/3 fly=4194304/1",
+  "admit accepted active out=0/2 fly=8388608/2",
+  "ack returned=4194304/1 active out=4194304/3 fly=4194304/1",
+  "ack refused credit_unknown_ack range=0-9 bytes=4194304 active out=4194304/3 fly=4194304/1",
+  "grant granted=0/0 active out=4194304/3 fly=4194304/1",
+  "admit accepted active out=0/2 fly=8388608/2",
+  "admit refused credit_exceeded gap=30-39:CREDIT_EXHAUSTED active out=0/2 fly=8388608/2"
+ ]
+}

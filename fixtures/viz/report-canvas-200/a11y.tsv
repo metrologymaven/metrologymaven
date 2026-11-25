@@ -1,0 +1,201 @@
+# fid-spike-ui canvas a11y v1: block, role, label
+1	group	Band Header 1, page 1 of 5, x 15.0 mm, y 10.0 mm, 180.0 by 15.0 mm
+2	image	3D view Viewport 1, page 1 of 5, x 15.0 mm, y 30.0 mm, 117.5 by 32.0 mm
+3	table	Table Table 1, page 1 of 5, x 135.0 mm, y 30.0 mm, 57.5 by 15.0 mm
+4	paragraph	Text block Text 1, page 1 of 5, x 135.0 mm, y 47.0 mm, 57.5 by 15.0 mm
+5	paragraph	Text block Text 2, page 1 of 5, x 15.0 mm, y 64.0 mm, 57.5 by 15.0 mm
+6	paragraph	Text block Text 3, page 1 of 5, x 75.0 mm, y 64.0 mm, 57.5 by 15.0 mm
+7	paragraph	Text block Text 4, page 1 of 5, x 135.0 mm, y 64.0 mm, 57.5 by 15.0 mm
+8	paragraph	Text block Text 5, page 1 of 5, x 15.0 mm, y 81.0 mm, 57.5 by 15.0 mm
+9	paragraph	Text block Text 6, page 1 of 5, x 75.0 mm, y 81.0 mm, 57.5 by 15.0 mm
+10	table	Table Table 2, page 1 of 5, x 135.0 mm, y 81.0 mm, 57.5 by 15.0 mm
+11	paragraph	Text block Text 7, page 1 of 5, x 15.0 mm, y 98.0 mm, 57.5 by 15.0 mm
+12	paragraph	Text block Text 8, page 1 of 5, x 75.0 mm, y 98.0 mm, 57.5 by 15.0 mm
+13	paragraph	Text block Text 9, page 1 of 5, x 135.0 mm, y 98.0 mm, 57.5 by 15.0 mm
+14	table	Table Table 3, page 1 of 5, x 15.0 mm, y 115.0 mm, 57.5 by 15.0 mm
+15	table	Table Table 4, page 1 of 5, x 75.0 mm, y 115.0 mm, 57.5 by 15.0 mm
+16	paragraph	Text block Text 10, page 1 of 5, x 135.0 mm, y 115.0 mm, 57.5 by 15.0 mm
+17	paragraph	Text block Text 11, page 1 of 5, x 15.0 mm, y 132.0 mm, 57.5 by 15.0 mm
+18	paragraph	Text block Text 12, page 1 of 5, x 75.0 mm, y 132.0 mm, 57.5 by 15.0 mm
+19	paragraph	Text block Text 13, page 1 of 5, x 135.0 mm, y 132.0 mm, 57.5 by 15.0 mm
+20	paragraph	Text block Text 14, page 1 of 5, x 15.0 mm, y 149.0 mm, 57.5 by 15.0 mm
+21	table	Table Table 5, page 1 of 5, x 75.0 mm, y 149.0 mm, 57.5 by 15.0 mm
+22	paragraph	Text block Text 15, page 1 of 5, x 135.0 mm, y 149.0 mm, 57.5 by 15.0 mm
+23	paragraph	Text block Text 16, page 1 of 5, x 15.0 mm, y 166.0 mm, 57.5 by 15.0 mm
+24	paragraph	Text block Text 17, page 1 of 5, x 75.0 mm, y 166.0 mm, 57.5 by 15.0 mm
+25	table	Table Table 6, page 1 of 5, x 135.0 mm, y 166.0 mm, 57.5 by 15.0 mm
+26	paragraph	Text block Text 18, page 1 of 5, x 15.0 mm, y 183.0 mm, 57.5 by 15.0 mm
+27	table	Table Table 7, page 1 of 5, x 75.0 mm, y 183.0 mm, 57.5 by 15.0 mm
+28	paragraph	Text block Text 19, page 1 of 5, x 135.0 mm, y 183.0 mm, 57.5 by 15.0 mm
+29	paragraph	Text block Text 20, page 1 of 5, x 15.0 mm, y 200.0 mm, 57.5 by 15.0 mm
+30	table	Table Table 8, page 1 of 5, x 75.0 mm, y 200.0 mm, 57.5 by 15.0 mm
+31	table	Table Table 9, page 1 of 5, x 135.0 mm, y 200.0 mm, 57.5 by 15.0 mm
+32	table	Table Table 10, page 1 of 5, x 15.0 mm, y 217.0 mm, 57.5 by 15.0 mm
+33	paragraph	Text block Text 21, page 1 of 5, x 75.0 mm, y 217.0 mm, 57.5 by 15.0 mm
+34	paragraph	Text block Text 22, page 1 of 5, x 135.0 mm, y 217.0 mm, 57.5 by 15.0 mm
+35	paragraph	Text block Text 23, page 1 of 5, x 15.0 mm, y 234.0 mm, 57.5 by 15.0 mm
+36	paragraph	Text block Text 24, page 1 of 5, x 75.0 mm, y 234.0 mm, 57.5 by 15.0 mm
+37	paragraph	Text block Text 25, page 1 of 5, x 135.0 mm, y 234.0 mm, 57.5 by 15.0 mm
+38	paragraph	Text block Text 26, page 1 of 5, x 15.0 mm, y 251.0 mm, 57.5 by 15.0 mm
+39	paragraph	Text block Text 27, page 1 of 5, x 75.0 mm, y 251.0 mm, 57.5 by 15.0 mm
+40	group	Band Footer 1, page 1 of 5, x 15.0 mm, y 272.0 mm, 180.0 by 15.0 mm
+41	group	Band Header 2, page 2 of 5, x 15.0 mm, y 10.0 mm, 180.0 by 15.0 mm
+42	table	Table Table 11, page 2 of 5, x 15.0 mm, y 30.0 mm, 57.5 by 15.0 mm
+43	table	Table Table 12, page 2 of 5, x 75.0 mm, y 30.0 mm, 57.5 by 15.0 mm
+44	paragraph	Text block Text 28, page 2 of 5, x 135.0 mm, y 30.0 mm, 57.5 by 15.0 mm
+45	paragraph	Text block Text 29, page 2 of 5, x 15.0 mm, y 47.0 mm, 57.5 by 15.0 mm
+46	table	Table Table 13, page 2 of 5, x 75.0 mm, y 47.0 mm, 57.5 by 15.0 mm
+47	table	Table Table 14, page 2 of 5, x 135.0 mm, y 47.0 mm, 57.5 by 15.0 mm
+48	paragraph	Text block Text 30, page 2 of 5, x 15.0 mm, y 64.0 mm, 57.5 by 15.0 mm
+49	paragraph	Text block Text 31, page 2 of 5, x 75.0 mm, y 64.0 mm, 57.5 by 15.0 mm
+50	paragraph	Text block Text 32, page 2 of 5, x 135.0 mm, y 64.0 mm, 57.5 by 15.0 mm
+51	paragraph	Text block Text 33, page 2 of 5, x 15.0 mm, y 81.0 mm, 57.5 by 15.0 mm
+52	paragraph	Text block Text 34, page 2 of 5, x 75.0 mm, y 81.0 mm, 57.5 by 15.0 mm
+53	paragraph	Text block Text 35, page 2 of 5, x 135.0 mm, y 81.0 mm, 57.5 by 15.0 mm
+54	paragraph	Text block Text 36, page 2 of 5, x 15.0 mm, y 98.0 mm, 57.5 by 15.0 mm
+55	paragraph	Text block Text 37, page 2 of 5, x 75.0 mm, y 98.0 mm, 57.5 by 15.0 mm
+56	paragraph	Text block Text 38, page 2 of 5, x 135.0 mm, y 98.0 mm, 57.5 by 15.0 mm
+57	paragraph	Text block Text 39, page 2 of 5, x 15.0 mm, y 115.0 mm, 57.5 by 15.0 mm
+58	paragraph	Text block Text 40, page 2 of 5, x 75.0 mm, y 115.0 mm, 57.5 by 15.0 mm
+59	paragraph	Text block Text 41, page 2 of 5, x 135.0 mm, y 115.0 mm, 57.5 by 15.0 mm
+60	paragraph	Text block Text 42, page 2 of 5, x 15.0 mm, y 132.0 mm, 57.5 by 15.0 mm
+61	paragraph	Text block Text 43, page 2 of 5, x 75.0 mm, y 132.0 mm, 57.5 by 15.0 mm
+62	paragraph	Text block Text 44, page 2 of 5, x 135.0 mm, y 132.0 mm, 57.5 by 15.0 mm
+63	paragraph	Text block Text 45, page 2 of 5, x 15.0 mm, y 149.0 mm, 57.5 by 15.0 mm
+64	paragraph	Text block Text 46, page 2 of 5, x 75.0 mm, y 149.0 mm, 57.5 by 15.0 mm
+65	paragraph	Text block Text 47, page 2 of 5, x 135.0 mm, y 149.0 mm, 57.5 by 15.0 mm
+66	paragraph	Text block Text 48, page 2 of 5, x 15.0 mm, y 166.0 mm, 57.5 by 15.0 mm
+67	paragraph	Text block Text 49, page 2 of 5, x 75.0 mm, y 166.0 mm, 57.5 by 15.0 mm
+68	paragraph	Text block Text 50, page 2 of 5, x 135.0 mm, y 166.0 mm, 57.5 by 15.0 mm
+69	paragraph	Text block Text 51, page 2 of 5, x 15.0 mm, y 183.0 mm, 57.5 by 15.0 mm
+70	paragraph	Text block Text 52, page 2 of 5, x 75.0 mm, y 183.0 mm, 57.5 by 15.0 mm
+71	paragraph	Text block Text 53, page 2 of 5, x 135.0 mm, y 183.0 mm, 57.5 by 15.0 mm
+72	paragraph	Text block Text 54, page 2 of 5, x 15.0 mm, y 200.0 mm, 57.5 by 15.0 mm
+73	paragraph	Text block Text 55, page 2 of 5, x 75.0 mm, y 200.0 mm, 57.5 by 15.0 mm
+74	paragraph	Text block Text 56, page 2 of 5, x 135.0 mm, y 200.0 mm, 57.5 by 15.0 mm
+75	paragraph	Text block Text 57, page 2 of 5, x 15.0 mm, y 217.0 mm, 57.5 by 15.0 mm
+76	table	Table Table 15, page 2 of 5, x 75.0 mm, y 217.0 mm, 57.5 by 15.0 mm
+77	paragraph	Text block Text 58, page 2 of 5, x 135.0 mm, y 217.0 mm, 57.5 by 15.0 mm
+78	paragraph	Text block Text 59, page 2 of 5, x 15.0 mm, y 234.0 mm, 57.5 by 15.0 mm
+79	paragraph	Text block Text 60, page 2 of 5, x 75.0 mm, y 234.0 mm, 57.5 by 15.0 mm
+80	group	Band Footer 2, page 2 of 5, x 15.0 mm, y 272.0 mm, 180.0 by 15.0 mm
+81	group	Band Header 3, page 3 of 5, x 15.0 mm, y 10.0 mm, 180.0 by 15.0 mm
+82	paragraph	Text block Text 61, page 3 of 5, x 15.0 mm, y 30.0 mm, 57.5 by 15.0 mm
+83	table	Table Table 16, page 3 of 5, x 75.0 mm, y 30.0 mm, 57.5 by 15.0 mm
+84	paragraph	Text block Text 62, page 3 of 5, x 135.0 mm, y 30.0 mm, 57.5 by 15.0 mm
+85	table	Table Table 17, page 3 of 5, x 15.0 mm, y 47.0 mm, 57.5 by 15.0 mm
+86	paragraph	Text block Text 63, page 3 of 5, x 75.0 mm, y 47.0 mm, 57.5 by 15.0 mm
+87	paragraph	Text block Text 64, page 3 of 5, x 135.0 mm, y 47.0 mm, 57.5 by 15.0 mm
+88	table	Table Table 18, page 3 of 5, x 15.0 mm, y 64.0 mm, 57.5 by 15.0 mm
+89	paragraph	Text block Text 65, page 3 of 5, x 75.0 mm, y 64.0 mm, 57.5 by 15.0 mm
+90	paragraph	Text block Text 66, page 3 of 5, x 135.0 mm, y 64.0 mm, 57.5 by 15.0 mm
+91	paragraph	Text block Text 67, page 3 of 5, x 15.0 mm, y 81.0 mm, 57.5 by 15.0 mm
+92	paragraph	Text block Text 68, page 3 of 5, x 75.0 mm, y 81.0 mm, 57.5 by 15.0 mm
+93	paragraph	Text block Text 69, page 3 of 5, x 135.0 mm, y 81.0 mm, 57.5 by 15.0 mm
+94	paragraph	Text block Text 70, page 3 of 5, x 15.0 mm, y 98.0 mm, 57.5 by 15.0 mm
+95	paragraph	Text block Text 71, page 3 of 5, x 75.0 mm, y 98.0 mm, 57.5 by 15.0 mm
+96	paragraph	Text block Text 72, page 3 of 5, x 135.0 mm, y 98.0 mm, 57.5 by 15.0 mm
+97	table	Table Table 19, page 3 of 5, x 15.0 mm, y 115.0 mm, 57.5 by 15.0 mm
+98	paragraph	Text block Text 73, page 3 of 5, x 75.0 mm, y 115.0 mm, 57.5 by 15.0 mm
+99	paragraph	Text block Text 74, page 3 of 5, x 135.0 mm, y 115.0 mm, 57.5 by 15.0 mm
+100	paragraph	Text block Text 75, page 3 of 5, x 15.0 mm, y 132.0 mm, 57.5 by 15.0 mm
+101	paragraph	Text block Text 76, page 3 of 5, x 75.0 mm, y 132.0 mm, 57.5 by 15.0 mm
+102	paragraph	Text block Text 77, page 3 of 5, x 135.0 mm, y 132.0 mm, 57.5 by 15.0 mm
+103	table	Table Table 20, page 3 of 5, x 15.0 mm, y 149.0 mm, 57.5 by 15.0 mm
+104	paragraph	Text block Text 78, page 3 of 5, x 75.0 mm, y 149.0 mm, 57.5 by 15.0 mm
+105	table	Table Table 21, page 3 of 5, x 135.0 mm, y 149.0 mm, 57.5 by 15.0 mm
+106	table	Table Table 22, page 3 of 5, x 15.0 mm, y 166.0 mm, 57.5 by 15.0 mm
+107	paragraph	Text block Text 79, page 3 of 5, x 75.0 mm, y 166.0 mm, 57.5 by 15.0 mm
+108	paragraph	Text block Text 80, page 3 of 5, x 135.0 mm, y 166.0 mm, 57.5 by 15.0 mm
+109	paragraph	Text block Text 81, page 3 of 5, x 15.0 mm, y 183.0 mm, 57.5 by 15.0 mm
+110	table	Table Table 23, page 3 of 5, x 75.0 mm, y 183.0 mm, 57.5 by 15.0 mm
+111	paragraph	Text block Text 82, page 3 of 5, x 135.0 mm, y 183.0 mm, 57.5 by 15.0 mm
+112	paragraph	Text block Text 83, page 3 of 5, x 15.0 mm, y 200.0 mm, 57.5 by 15.0 mm
+113	paragraph	Text block Text 84, page 3 of 5, x 75.0 mm, y 200.0 mm, 57.5 by 15.0 mm
+114	paragraph	Text block Text 85, page 3 of 5, x 135.0 mm, y 200.0 mm, 57.5 by 15.0 mm
+115	paragraph	Text block Text 86, page 3 of 5, x 15.0 mm, y 217.0 mm, 57.5 by 15.0 mm
+116	paragraph	Text block Text 87, page 3 of 5, x 75.0 mm, y 217.0 mm, 57.5 by 15.0 mm
+117	paragraph	Text block Text 88, page 3 of 5, x 135.0 mm, y 217.0 mm, 57.5 by 15.0 mm
+118	paragraph	Text block Text 89, page 3 of 5, x 15.0 mm, y 234.0 mm, 57.5 by 15.0 mm
+119	paragraph	Text block Text 90, page 3 of 5, x 75.0 mm, y 234.0 mm, 57.5 by 15.0 mm
+120	group	Band Footer 3, page 3 of 5, x 15.0 mm, y 272.0 mm, 180.0 by 15.0 mm
+121	group	Band Header 4, page 4 of 5, x 15.0 mm, y 10.0 mm, 180.0 by 15.0 mm
+122	paragraph	Text block Text 91, page 4 of 5, x 15.0 mm, y 30.0 mm, 57.5 by 15.0 mm
+123	paragraph	Text block Text 92, page 4 of 5, x 75.0 mm, y 30.0 mm, 57.5 by 15.0 mm
+124	paragraph	Text block Text 93, page 4 of 5, x 135.0 mm, y 30.0 mm, 57.5 by 15.0 mm
+125	paragraph	Text block Text 94, page 4 of 5, x 15.0 mm, y 47.0 mm, 57.5 by 15.0 mm
+126	paragraph	Text block Text 95, page 4 of 5, x 75.0 mm, y 47.0 mm, 57.5 by 15.0 mm
+127	paragraph	Text block Text 96, page 4 of 5, x 135.0 mm, y 47.0 mm, 57.5 by 15.0 mm
+128	paragraph	Text block Text 97, page 4 of 5, x 15.0 mm, y 64.0 mm, 57.5 by 15.0 mm
+129	paragraph	Text block Text 98, page 4 of 5, x 75.0 mm, y 64.0 mm, 57.5 by 15.0 mm
+130	paragraph	Text block Text 99, page 4 of 5, x 135.0 mm, y 64.0 mm, 57.5 by 15.0 mm
+131	paragraph	Text block Text 100, page 4 of 5, x 15.0 mm, y 81.0 mm, 57.5 by 15.0 mm
+132	paragraph	Text block Text 101, page 4 of 5, x 75.0 mm, y 81.0 mm, 57.5 by 15.0 mm
+133	paragraph	Text block Text 102, page 4 of 5, x 135.0 mm, y 81.0 mm, 57.5 by 15.0 mm
+134	paragraph	Text block Text 103, page 4 of 5, x 15.0 mm, y 98.0 mm, 57.5 by 15.0 mm
+135	paragraph	Text block Text 104, page 4 of 5, x 75.0 mm, y 98.0 mm, 57.5 by 15.0 mm
+136	paragraph	Text block Text 105, page 4 of 5, x 135.0 mm, y 98.0 mm, 57.5 by 15.0 mm
+137	paragraph	Text block Text 106, page 4 of 5, x 15.0 mm, y 115.0 mm, 57.5 by 15.0 mm
+138	paragraph	Text block Text 107, page 4 of 5, x 75.0 mm, y 115.0 mm, 57.5 by 15.0 mm
+139	paragraph	Text block Text 108, page 4 of 5, x 135.0 mm, y 115.0 mm, 57.5 by 15.0 mm
+140	paragraph	Text block Text 109, page 4 of 5, x 15.0 mm, y 132.0 mm, 57.5 by 15.0 mm
+141	paragraph	Text block Text 110, page 4 of 5, x 75.0 mm, y 132.0 mm, 57.5 by 15.0 mm
+142	paragraph	Text block Text 111, page 4 of 5, x 135.0 mm, y 132.0 mm, 57.5 by 15.0 mm
+143	paragraph	Text block Text 112, page 4 of 5, x 15.0 mm, y 149.0 mm, 57.5 by 15.0 mm
+144	paragraph	Text block Text 113, page 4 of 5, x 75.0 mm, y 149.0 mm, 57.5 by 15.0 mm
+145	paragraph	Text block Text 114, page 4 of 5, x 135.0 mm, y 149.0 mm, 57.5 by 15.0 mm
+146	paragraph	Text block Text 115, page 4 of 5, x 15.0 mm, y 166.0 mm, 57.5 by 15.0 mm
+147	paragraph	Text block Text 116, page 4 of 5, x 75.0 mm, y 166.0 mm, 57.5 by 15.0 mm
+148	paragraph	Text block Text 117, page 4 of 5, x 135.0 mm, y 166.0 mm, 57.5 by 15.0 mm
+149	paragraph	Text block Text 118, page 4 of 5, x 15.0 mm, y 183.0 mm, 57.5 by 15.0 mm
+150	paragraph	Text block Text 119, page 4 of 5, x 75.0 mm, y 183.0 mm, 57.5 by 15.0 mm
+151	paragraph	Text block Text 120, page 4 of 5, x 135.0 mm, y 183.0 mm, 57.5 by 15.0 mm
+152	paragraph	Text block Text 121, page 4 of 5, x 15.0 mm, y 200.0 mm, 57.5 by 15.0 mm
+153	table	Table Table 24, page 4 of 5, x 75.0 mm, y 200.0 mm, 57.5 by 15.0 mm
+154	paragraph	Text block Text 122, page 4 of 5, x 135.0 mm, y 200.0 mm, 57.5 by 15.0 mm
+155	paragraph	Text block Text 123, page 4 of 5, x 15.0 mm, y 217.0 mm, 57.5 by 15.0 mm
+156	paragraph	Text block Text 124, page 4 of 5, x 75.0 mm, y 217.0 mm, 57.5 by 15.0 mm
+157	table	Table Table 25, page 4 of 5, x 135.0 mm, y 217.0 mm, 57.5 by 15.0 mm
+158	paragraph	Text block Text 125, page 4 of 5, x 15.0 mm, y 234.0 mm, 57.5 by 15.0 mm
+159	paragraph	Text block Text 126, page 4 of 5, x 75.0 mm, y 234.0 mm, 57.5 by 15.0 mm
+160	group	Band Footer 4, page 4 of 5, x 15.0 mm, y 272.0 mm, 180.0 by 15.0 mm
+161	group	Band Header 5, page 5 of 5, x 15.0 mm, y 10.0 mm, 180.0 by 15.0 mm
+162	paragraph	Text block Text 127, page 5 of 5, x 15.0 mm, y 30.0 mm, 57.5 by 15.0 mm
+163	table	Table Table 26, page 5 of 5, x 75.0 mm, y 30.0 mm, 57.5 by 15.0 mm
+164	paragraph	Text block Text 128, page 5 of 5, x 135.0 mm, y 30.0 mm, 57.5 by 15.0 mm
+165	paragraph	Text block Text 129, page 5 of 5, x 15.0 mm, y 47.0 mm, 57.5 by 15.0 mm
+166	paragraph	Text block Text 130, page 5 of 5, x 75.0 mm, y 47.0 mm, 57.5 by 15.0 mm
+167	paragraph	Text block Text 131, page 5 of 5, x 135.0 mm, y 47.0 mm, 57.5 by 15.0 mm
+168	paragraph	Text block Text 132, page 5 of 5, x 15.0 mm, y 64.0 mm, 57.5 by 15.0 mm
+169	table	Table Table 27, page 5 of 5, x 75.0 mm, y 64.0 mm, 57.5 by 15.0 mm
+170	table	Table Table 28, page 5 of 5, x 135.0 mm, y 64.0 mm, 57.5 by 15.0 mm
+171	paragraph	Text block Text 133, page 5 of 5, x 15.0 mm, y 81.0 mm, 57.5 by 15.0 mm
+172	paragraph	Text block Text 134, page 5 of 5, x 75.0 mm, y 81.0 mm, 57.5 by 15.0 mm
+173	paragraph	Text block Text 135, page 5 of 5, x 135.0 mm, y 81.0 mm, 57.5 by 15.0 mm
+174	paragraph	Text block Text 136, page 5 of 5, x 15.0 mm, y 98.0 mm, 57.5 by 15.0 mm
+175	paragraph	Text block Text 137, page 5 of 5, x 75.0 mm, y 98.0 mm, 57.5 by 15.0 mm
+176	paragraph	Text block Text 138, page 5 of 5, x 135.0 mm, y 98.0 mm, 57.5 by 15.0 mm
+177	paragraph	Text block Text 139, page 5 of 5, x 15.0 mm, y 115.0 mm, 57.5 by 15.0 mm
+178	table	Table Table 29, page 5 of 5, x 75.0 mm, y 115.0 mm, 57.5 by 15.0 mm
+179	paragraph	Text block Text 140, page 5 of 5, x 135.0 mm, y 115.0 mm, 57.5 by 15.0 mm
+180	paragraph	Text block Text 141, page 5 of 5, x 15.0 mm, y 132.0 mm, 57.5 by 15.0 mm
+181	paragraph	Text block Text 142, page 5 of 5, x 75.0 mm, y 132.0 mm, 57.5 by 15.0 mm
+182	paragraph	Text block Text 143, page 5 of 5, x 135.0 mm, y 132.0 mm, 57.5 by 15.0 mm
+183	paragraph	Text block Text 144, page 5 of 5, x 15.0 mm, y 149.0 mm, 57.5 by 15.0 mm
+184	paragraph	Text block Text 145, page 5 of 5, x 75.0 mm, y 149.0 mm, 57.5 by 15.0 mm
+185	paragraph	Text block Text 146, page 5 of 5, x 135.0 mm, y 149.0 mm, 57.5 by 15.0 mm
+186	paragraph	Text block Text 147, page 5 of 5, x 15.0 mm, y 166.0 mm, 57.5 by 15.0 mm
+187	paragraph	Text block Text 148, page 5 of 5, x 75.0 mm, y 166.0 mm, 57.5 by 15.0 mm
+188	paragraph	Text block Text 149, page 5 of 5, x 135.0 mm, y 166.0 mm, 57.5 by 15.0 mm
+189	paragraph	Text block Text 150, page 5 of 5, x 15.0 mm, y 183.0 mm, 57.5 by 15.0 mm
+190	paragraph	Text block Text 151, page 5 of 5, x 75.0 mm, y 183.0 mm, 57.5 by 15.0 mm
+191	paragraph	Text block Text 152, page 5 of 5, x 135.0 mm, y 183.0 mm, 57.5 by 15.0 mm
+192	paragraph	Text block Text 153, page 5 of 5, x 15.0 mm, y 200.0 mm, 57.5 by 15.0 mm
+193	paragraph	Text block Text 154, page 5 of 5, x 75.0 mm, y 200.0 mm, 57.5 by 15.0 mm
+194	paragraph	Text block Text 155, page 5 of 5, x 135.0 mm, y 200.0 mm, 57.5 by 15.0 mm
+195	table	Table Table 30, page 5 of 5, x 15.0 mm, y 217.0 mm, 57.5 by 15.0 mm
+196	paragraph	Text block Text 156, page 5 of 5, x 75.0 mm, y 217.0 mm, 57.5 by 15.0 mm
+197	table	Table Table 31, page 5 of 5, x 135.0 mm, y 217.0 mm, 57.5 by 15.0 mm
+198	paragraph	Text block Text 157, page 5 of 5, x 15.0 mm, y 234.0 mm, 57.5 by 15.0 mm
+199	table	Table Table 32, page 5 of 5, x 75.0 mm, y 234.0 mm, 57.5 by 15.0 mm
+200	group	Band Footer 5, page 5 of 5, x 15.0 mm, y 272.0 mm, 180.0 by 15.0 mm

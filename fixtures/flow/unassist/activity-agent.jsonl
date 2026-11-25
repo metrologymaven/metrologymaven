@@ -1,0 +1,3 @@
+{"branch":"main","command":{"id":"project.list_elements","major":1},"kind":"command","principal":{"commit":"sha256:895c84ae8374e9ac72bdd3ba31a70686b082e1be23858e7c73000b0bca976e7c","kind":"human"},"schema_version":1,"seq":"1","stream":"activity"}
+{"branch":"main","command":{"id":"project.describe_element","major":1},"kind":"command","principal":{"commit":"sha256:c3544aa158a89417843d45b303d3caf7f9d224ba8544d38affaffa6ad19d8c7c","kind":"agent"},"schema_version":1,"seq":"2","stream":"activity"}
+{"branch":"main","command":{"id":"project.list_elements","major":1},"kind":"command","principal":{"commit":"sha256:5dd3076a7b76147c963ef0000f33b0493a26aedefabba5bf3c61d051d99be68f","kind":"script"},"schema_version":1,"seq":"3","stream":"activity"}

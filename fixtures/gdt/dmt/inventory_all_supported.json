@@ -1,0 +1,30 @@
+{
+  "dialect": "asme",
+  "editions": [
+    "y14.5-2018"
+  ],
+  "entries": [
+    {
+      "family": "FORM",
+      "key": "dmt:asme/flatness/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "ORIENT",
+      "key": "dmt:asme/parallelism/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "POS",
+      "key": "dmt:asme/position/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "SIZE",
+      "key": "dmt:asme/size/none@1",
+      "required_status": "supported_or_partial"
+    }
+  ],
+  "phase": "P1a",
+  "schema": "dmt-inventory/v1"
+}

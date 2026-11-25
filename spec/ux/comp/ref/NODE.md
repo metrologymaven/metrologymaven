@@ -17,7 +17,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-24
 ---
 
 # UX.COMP.REF: Component reference renderings and visual baselines
@@ -66,6 +66,7 @@ Reference renderings of every component in every applicable state, in all four t
 ## Open questions
 
 - Whether VIZ compares against these baselines with a tolerance is VIZ's choice; renderings from a design tool will not match a toolkit pixel for pixel.
+- `components/TEMPLATE.md` (UX.COMP.SCHEMA) is a checked `component-spec@1` file with id `comp.template`. `ref-check`'s completeness rule (REQ-001) must either exclude `comp.template` explicitly or the template needs renderings like any other spec; excluding it is the smaller choice, since the template is an example, not a shipped component.
 
 ## Children
 

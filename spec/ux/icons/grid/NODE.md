@@ -9,6 +9,8 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-design]
+built_pr: 443
 satisfies: [REQ-UX.ICONS-001]
 covers: []
 depends_on: [UX.SYSTEM.PKG]
@@ -64,6 +66,14 @@ The rules every icon follows: the 16 and 24 logical-pixel grids, keyline shapes,
 > Write `icons/STYLE.md` in your own words with original example drawings: 16 and 24 px masters, 0.5 px grid, stroke 1 px (16) and 1.5 px (24), keylines, corner radius, optical padding, colour through `currentColor` or `data-role` token roles only. In the Rust tooling crate `fid-design`, add `fid-design icons-lint --root <dir> [--json]` that parses each SVG with a bounded XML parser, allows only svg, g, path, circle, rect, line, polyline, polygon, rejects text, image, script, style, external references, filters, gradients and literal colours, checks the viewBox per master and that coordinates sit on the 0.5 grid, and that both masters exist. Errors as in spec node UX.ICONS.GRID. Exit 0, 1, 2. Tests AC-1..AC-5.
 >
 > Constraints: no panic, no `unsafe`; deny `unwrap`, `expect`, `panic`, `todo`, `unimplemented`, `unreachable`; SVG at most 256 KiB, no entity expansion, no network.
+
+## Build notes (2026-11-23)
+
+Built in `fid-design` module `icons_lint` (PR #443). Beyond the Design above:
+
+- `<svg>` is allowed only as the root element; a nested `<svg>` is `ICON-ELEMENT svg`.
+- A root holding no `.svg` file is the finding `ICON-NO-SVG` with exit 2 (nothing was checked), not a pass. The shipped `design/icons/` holds no icon yet, so linting it exits 2 until `UX.ICONS.CORESET` adds icons.
+- Master suffixes `.16.svg` / `.24.svg` are matched without regard to ASCII case, like the `.svg` selection itself.
 
 ## Open questions
 

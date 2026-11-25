@@ -2,6 +2,7 @@
 
 - :mod:`house_rules.block`: generated block format and digest library (ECO.RULES.BLOCK).
 - :mod:`house_rules.check`: the house-rules check, ``python -m house_rules check`` (ECO.RULES.CHECK).
+- :mod:`house_rules.sync`: the house-rules sync tool, ``python -m house_rules sync`` (ECO.RULES.SYNC).
 """
 
 from .block import (

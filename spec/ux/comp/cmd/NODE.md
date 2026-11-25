@@ -18,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-24
 ---
 
 # UX.COMP.CMD: Command component specs
@@ -48,7 +48,7 @@ The components through which people invoke registry commands: the command palett
 
 ## Design
 
-- **Deliverable:** five Markdown specs in `component-spec@1` and `components/manifest-mapping.md`.
+- **Deliverable:** five Markdown specs in `component-spec@1` and `components/notes/manifest-mapping.md`.
 - **Determinism:** D0.
 - **Crate:** none (package content); checked by `fid-design comp-check`.
 
@@ -58,10 +58,11 @@ The components through which people invoke registry commands: the command palett
 
 ## Build prompt
 
-> Write five component specs in `component-spec@1`: `palette.md` (search field, result list with title, class icon, shortcut, disabled reason), `menu.md` (menus and context menus), `toolbar.md`, `approval-chip.md` (class icon, command count as text, count confirmation hook), `arg-form.md` (one control per manifest parameter type; quantity fields with explicit units restricted to the quantity kind; no raw file-path field, use the approved-root handle picker; dry-run button where the command supports dry-run). Add `components/manifest-mapping.md` mapping manifest fields to component parts. Show class icons for W3, X1, D1, M1, S1, A0 commands; show unavailable commands disabled with a text reason. Original wording and diagrams. Run `fid-design comp-check` until it exits 0, then open a design-review record.
+> Write five component specs in `component-spec@1`: `palette.md` (search field, result list with title, class icon, shortcut, disabled reason), `menu.md` (menus and context menus), `toolbar.md`, `approval-chip.md` (class icon, command count as text, count confirmation hook), `arg-form.md` (one control per manifest parameter type; quantity fields with explicit units restricted to the quantity kind; no raw file-path field, use the approved-root handle picker; dry-run button where the command supports dry-run). Add `components/notes/manifest-mapping.md` mapping manifest fields to component parts. Show class icons for W3, X1, D1, M1, S1, A0 commands; show unavailable commands disabled with a text reason. Original wording and diagrams. Run `fid-design comp-check` until it exits 0, then open a design-review record.
 
 ## Open questions
 
+- The manifest mapping lives in `components/notes/`, not in `components/`: `fid-design comp-check` treats every `*.md` directly under `components/` as a `component-spec@1` file (UX.COMP.SCHEMA) and does not walk subdirectories.
 - The manifest has no icon or title-style field yet (CORE.REG.MAN); the mapping uses the command ID and class until it does.
 
 ## Children

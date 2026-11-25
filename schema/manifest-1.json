@@ -29,7 +29,7 @@
         "path": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^(journal|kernel|points|profile|results)/[^\\\\\\u0000]+$",
+          "pattern": "^(interp|journal|kernel|points|profile|results)/[^\\\\\\u0000]+$",
           "not": {
             "anyOf": [
               { "pattern": "(^|/)\\.{1,2}(/|$)" },

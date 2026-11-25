@@ -9,6 +9,8 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-gps]
+built_pr: 609
 satisfies: [REQ-GDT.PROF-005, REQ-GDT.PROF-006]
 covers: []
 depends_on: [GEO.DIST, GEO.CAD]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-24
 ---
 
 # GDT.PROF.DEV: Signed deviations from nominal with approximation error
@@ -68,6 +70,16 @@ Analytic sphere, plane and cylinder faces with seeded points (CC0, in-repo); one
 ## Open questions
 
 - Trimmed-NURBS projection determinism depends on `GEO.DIST` (WP-PROJ); until it is D0 on NURBS, results on NURBS faces may need determinism class D3 and a flag.
+- **Built** in `fid-gps` `prof::dev` (`FaceSet`, `TolerancedFace`, `deviations`, `Deviation`, `DevOutcome`, `Projected`, `DeviationSet`, `pose_digest`, `DevError`). AC-1 to AC-5 are met on invented fixtures `fixtures/gdt/prof/dev_sphere_plane.json` and `dev_nurbs_approx.json`, whose expected values come from the oracle `fixtures/gdt/prof/make_dev_fixtures.py` (60-digit decimal closed forms). AC-5 is an output pin over 100 000 seeded points on Linux, Windows and macOS (not run on wasm32).
+- GEO.CAD dependency: only GEO.CAD.TOPO.MODEL and TRIM are used (both built). GEO.CAD.NOMINAL (split, no child built) is not needed: this leaf projects onto B-rep faces, not nominal elements. The per-face `nominal_approximation_error` is supplied by the caller in `TolerancedFace` (no GEO.CAD or IO.CAD node stores it yet); when IO.CAD records it per face, the caller passes that value.
+- **Torus faces fail closed.** GEO.CAD.TOPO.TRIM cannot classify a torus face with a seam (`Undecidable(DoublyPeriodicSeam)`, the open AC-1 gap of GEO.DIST.FACE.ONE and GEO.DIST.FACE.BODY), so a face set that names any analytic torus face is refused with `torus_unsupported`, even when its trim would classify. A doubly periodic NURBS face with a seam meets the same trim error inside the projection, which is passed through as `projection` (the call fails; no partial result). Lift the refusal when the trim gap closes.
+- Sign and normal: the sign is GEO.DIST.FACE.INCID on the whole body (the GEO.DIST.SIGN pseudo-normal rule at the foot), positive when `(p - foot) . n > 0` with `n` outward from material, as the Algorithm states. The normal is the face's outward unit normal at an interior foot and the normalised angle-weighted normal at an edge or vertex foot. **At the edge of the toleranced set** (an edge or vertex foot with an adjacent face, per GEO.CAD.TOPO.ADJ, that is not toleranced) no sign is given: `signed_dev` is `None`, the status is `Undefined(Boundary)` and the normal is `None` (the foot, face, distance and `on_boundary` are still given), because the incident normals there would mix in a face outside the profile.
+- "Material side positive" (REQ-001) is read through the Algorithm line: the deviation is positive when the point lies on the outward side of the nominal, away from the material (excess material), and negative inside the material. If the intended reading is the opposite, only the sign flips; the GDT.PROF.ZDEF owner should confirm.
+- Approximation error: `nominal_approximation_error` is declared by the caller in `TolerancedFace` and not verified here (D-045). UNC should treat it as a declared contributor until IO.CAD supplies a per-face value from the STEP-to-QIF conversion. Deviations are measured from the represented surface (for an approximated face, the B-spline, not the design nominal), so when `|d| <= approx_error` the sign is relative to the represented surface and may differ from the sign against the design nominal.
+- D-045: `signed_dev` is `None` whenever GEO.DIST.SIGN gives no sign of record (`Undecidable` within the 1e-9 m foot error of the surface; `Undefined` at an open edge or a non-manifold or degenerate foot) or the foot is on the edge of the toleranced set; the unsigned distance and the sign status are always given. `max_approx_error` is `None` when no point is projected.
+- `on_boundary` for an interior foot uses GEO.CAD.TOPO.TRIM `classify_uv` with a 1e-9 m band (edge and vertex feet are always on the boundary). Errors of the projection, sign or boundary test fail the whole call with the point index.
+- REQ-005 (ORS-PROJ cases) is not checked: the ORS-PROJ cases are not published. Cylinder faces (Test fixtures) are not in the fixtures; sphere, plane and a B-spline face are.
+- The performance budget (1 M points against 100 analytic faces under 1 s) is not measured.
 
 ## Children
 

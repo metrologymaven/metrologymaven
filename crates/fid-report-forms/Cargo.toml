@@ -1,6 +1,6 @@
 [package]
 name = "fid-report-forms"
-description = "Metrology Maven FAI and PPAP forms data model, header and accountability commands (spec node RPT.FORMS.HDR)"
+description = "Metrology Maven FAI and PPAP forms data model, header/accountability commands and locked form layout field-map machinery (spec nodes RPT.FORMS.HDR, RPT.FORMS.LAYOUT.MAP)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -18,10 +18,17 @@ fid-project = { path = "../fid-project" }
 fid-registry = { path = "../fid-registry" }
 # ReplayOutcome class (CORE.RPL.CLASS). Layer engine.
 fid-replay = { path = "../fid-replay" }
-# Untrusted<Text> and canonical model helpers (RPT.MODEL.DOC). Layer services.
+# Untrusted<Text>, templates, binding traits and formatting (RPT.MODEL.*). Layer services.
 fid-report = { path = "../fid-report" }
 # Shared sha256 Digest type (AGENTS.md rule 14). Layer num.
 fid-types = { path = "../fid-types" }
+
+[dev-dependencies]
+# IO principal & roots for AC-2 locked template save rejection test.
+fid-io-reg = { path = "../fid-io-reg" }
+# Kernel decision and unit formatting types for AC-4 RPT.MODEL.FMT integration tests only.
+fid-kdec = { path = "../fid-kdec" }
+fid-num = { path = "../fid-num" }
 
 [lints]
 workspace = true

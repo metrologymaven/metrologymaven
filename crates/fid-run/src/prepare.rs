@@ -28,6 +28,13 @@
 //!    SHA-256 (`input_unreadable` on failure).
 //! 5. **Record**: a new run ID from [`RunIds`], outcome `pending`, branch `null`.
 //!
+//! **Recorded default digests** ([`RunPlan::default_digests`], read by the re-target guard of
+//! `AUTO.RUN.EXEC.RETGT`) are always empty for now. A program stores a default's handle, not
+//! the digest of the dataset it was recorded on (`AUTO.PROG.FMT` has no such field), and the
+//! dataset a handle names today is not evidence of what was recorded. So no default digest is
+//! derived from it, and every run that binds a data input counts as re-targeted (REQ-AUTO.RUN.
+//! EXEC.RETGT-001, "no recorded default"). The map is filled once FMT stores recorded digests.
+//!
 //! D0 apart from the run ID: the same inputs give the same record but for `run_id`.
 
 use crate::record::{InputDigest, Outcome, RunRecord};
@@ -110,6 +117,9 @@ pub struct RunPlan {
     pub record: RunRecord,
     /// Every step ID in document order with whether it may run on re-targeted inputs.
     pub steps_retargetable: Vec<(Uuid7, bool)>,
+    /// The recorded default digest of each `data_handle` parameter, by name. Empty until
+    /// `AUTO.PROG.FMT` stores recorded digests (module docs): no stored program carries one.
+    pub default_digests: BTreeMap<String, Digest>,
 }
 
 /// Errors of `prepare_run`. [`RunError::code`] is the stable code.
@@ -322,5 +332,6 @@ pub fn prepare_run(
     // AUTO.PROG.FMT has no per-step `retargetable` field yet (AUTO.REC.LIFT open question),
     // so no stored program can mark a step `false`: every step is re-targetable.
     let steps_retargetable = program.step_ids().into_iter().map(|id| (id, true)).collect();
-    Ok(RunPlan { record, steps_retargetable })
+    // No recorded default digests until FMT stores them (module docs).
+    Ok(RunPlan { record, steps_retargetable, default_digests: BTreeMap::new() })
 }

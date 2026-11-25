@@ -1098,7 +1098,10 @@ checksum = "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
 name = "fid-accept"
 version = "0.0.1"
 dependencies = [
+ "fid-bus",
  "fid-canon",
+ "fid-registry",
+ "fid-registry-build",
  "fid-types",
  "sha2 0.10.9",
  "toml",
@@ -1190,6 +1193,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-capture"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-registry",
+ "fid-registry-build",
+ "fid-store",
+]
+
+[[package]]
 name = "fid-catalog"
 version = "0.0.1"
 dependencies = [
@@ -1208,6 +1221,7 @@ version = "0.0.1"
 dependencies = [
  "fid-journal",
  "fid-pkg",
+ "fid-registry",
  "fid-sign-core",
  "fid-trust-canon",
  "fid-types",
@@ -1226,7 +1240,9 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-ctrl",
+ "fid-registry-build",
  "fid-surface",
+ "fid-types",
 ]
 
 [[package]]
@@ -1287,9 +1303,14 @@ dependencies = [
 name = "fid-dep"
 version = "0.0.1"
 dependencies = [
+ "fid-bus",
  "fid-canon",
+ "fid-dep",
+ "fid-jobs",
+ "fid-journal",
  "fid-project",
  "fid-registry",
+ "fid-store",
  "fid-types",
  "fid-uuid",
 ]
@@ -1301,6 +1322,7 @@ dependencies = [
  "fid-canon",
  "fid-design-pkg",
  "fid-types",
+ "regex",
  "toml",
  "unicode-normalization",
 ]
@@ -1311,6 +1333,16 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "toml",
+]
+
+[[package]]
+name = "fid-doctor"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-gpu-policy",
+ "fid-gpu-select",
+ "sysinfo",
 ]
 
 [[package]]
@@ -1370,6 +1402,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-filter"
+version = "0.0.1"
+dependencies = [
+ "fid-fit",
+ "fid-kci",
+ "fid-num",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-fit"
 version = "0.0.1"
 dependencies = [
@@ -1410,6 +1452,7 @@ dependencies = [
 name = "fid-geo-cad"
 version = "0.0.1"
 dependencies = [
+ "fid-geo-frame",
  "fid-geo-nurbs",
  "fid-kci",
  "fid-num",
@@ -1422,6 +1465,9 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-dep",
+ "fid-geo-frame",
+ "fid-geo-index",
+ "fid-geo-sel",
  "fid-geo-types",
  "fid-project",
  "fid-registry",
@@ -1433,8 +1479,10 @@ dependencies = [
 name = "fid-geo-dist"
 version = "0.0.1"
 dependencies = [
+ "fid-geo-cad",
  "fid-geo-frame",
  "fid-geo-index",
+ "fid-geo-nurbs",
  "fid-geo-types",
  "fid-kci",
  "fid-num",
@@ -1510,7 +1558,12 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-fit",
+ "fid-geo-cad",
+ "fid-geo-dist",
  "fid-geo-frame",
+ "fid-geo-index",
+ "fid-geo-nurbs",
+ "fid-geo-types",
  "fid-num",
  "fid-types",
  "fid-uuid",
@@ -1533,6 +1586,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-guide-wasm"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-fit",
+ "fid-gps",
+ "fid-kdec",
+ "fid-kunc",
+ "fid-num",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-hal-idl"
 version = "0.0.1"
 dependencies = [
@@ -1545,9 +1611,14 @@ dependencies = [
 name = "fid-hal-runtime"
 version = "0.0.1"
 dependencies = [
+ "fid-bus",
+ "fid-canon",
  "fid-hal-idl",
  "fid-num",
+ "fid-registry",
  "fid-testkit",
+ "fid-types",
+ "fid-uuid",
 ]
 
 [[package]]
@@ -1613,6 +1684,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-io-mesh"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-geo-frame",
+ "fid-geo-types",
+ "fid-io-reg",
+ "fid-project",
+ "fid-registry",
+ "fid-replay",
+ "fid-types",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "fid-io-plugin"
 version = "0.0.1"
 dependencies = [
@@ -1620,6 +1706,13 @@ dependencies = [
  "fid-io-reg",
  "fid-project",
  "fid-types",
+]
+
+[[package]]
+name = "fid-io-pmi"
+version = "0.0.1"
+dependencies = [
+ "fid-io-step",
 ]
 
 [[package]]
@@ -1730,6 +1823,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-keystore"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-keystore",
+ "fid-sign-core",
+ "getrandom 0.2.17",
+ "zeroize",
+]
+
+[[package]]
 name = "fid-knp1-lint"
 version = "0.0.1"
 dependencies = [
@@ -1767,6 +1871,7 @@ dependencies = [
  "fid-registry-build",
  "fid-surface",
  "fid-types",
+ "toml",
 ]
 
 [[package]]
@@ -1778,6 +1883,7 @@ dependencies = [
  "fid-io-reg",
  "fid-registry",
  "fid-types",
+ "toml",
 ]
 
 [[package]]
@@ -1828,7 +1934,12 @@ dependencies = [
  "fid-canon",
  "fid-gdt",
  "fid-kdec",
+ "fid-project",
+ "fid-registry",
  "fid-render",
+ "fid-replay",
+ "fid-types",
+ "fid-uuid",
 ]
 
 [[package]]
@@ -1918,6 +2029,7 @@ version = "0.0.1"
 dependencies = [
  "fid-bus",
  "fid-canon",
+ "fid-journal",
  "fid-project",
  "fid-registry",
  "fid-store",
@@ -2016,6 +2128,7 @@ dependencies = [
  "fid-gdt",
  "fid-geo-cmd",
  "fid-geo-types",
+ "fid-hal-runtime",
  "fid-io-reg",
  "fid-jobs",
  "fid-journal",
@@ -2031,10 +2144,12 @@ dependencies = [
  "fid-registry",
  "fid-registry-build",
  "fid-report",
+ "fid-scan-mesh-cmd",
  "fid-sign-core",
  "fid-store",
  "fid-surface",
  "fid-unc",
+ "fid-unc-inst",
  "fid-uuid",
 ]
 
@@ -2051,6 +2166,7 @@ dependencies = [
 name = "fid-render"
 version = "0.0.1"
 dependencies = [
+ "fid-canon",
  "fid-geo-frame",
  "fid-geo-types",
  "fid-kci",
@@ -2090,6 +2206,7 @@ dependencies = [
  "fid-bus",
  "fid-canon",
  "fid-gdt",
+ "fid-io-draw",
  "fid-io-reg",
  "fid-io-res",
  "fid-kdec",
@@ -2099,6 +2216,7 @@ dependencies = [
  "fid-registry",
  "fid-replay",
  "fid-report",
+ "fid-store",
  "fid-types",
 ]
 
@@ -2108,6 +2226,9 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-gdt",
+ "fid-io-reg",
+ "fid-kdec",
+ "fid-num",
  "fid-project",
  "fid-registry",
  "fid-replay",
@@ -2153,11 +2274,27 @@ dependencies = [
 name = "fid-scan-mesh"
 version = "0.0.1"
 dependencies = [
+ "fid-geo-sel",
  "fid-geo-types",
  "fid-kci",
  "fid-num",
  "fid-testkit",
  "fid-types",
+]
+
+[[package]]
+name = "fid-scan-mesh-cmd"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-geo-cmd",
+ "fid-geo-sel",
+ "fid-geo-types",
+ "fid-registry",
+ "fid-scan-mesh",
+ "fid-testkit",
+ "fid-types",
+ "fid-uuid",
 ]
 
 [[package]]
@@ -2222,6 +2359,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-stats"
+version = "0.0.1"
+dependencies = [
+ "fid-num",
+ "fid-testkit",
+]
+
+[[package]]
 name = "fid-store"
 version = "0.0.1"
 dependencies = [
@@ -2252,6 +2397,7 @@ name = "fid-surface-gen"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-cli",
  "fid-mcp",
  "fid-surface",
  "fid-types",
@@ -2300,6 +2446,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-unc-inst"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-hal-idl",
+ "fid-kci",
+ "fid-kunc",
+ "fid-registry",
+ "fid-replay",
+ "fid-store",
+ "fid-types",
+ "fid-unc",
+]
+
+[[package]]
 name = "fid-uuid"
 version = "0.0.1"
 dependencies = [
@@ -2328,6 +2490,19 @@ dependencies = [
  "fid-replay",
  "fid-types",
  "fid-uuid",
+]
+
+[[package]]
+name = "fid-view-cmd"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-canon",
+ "fid-journal",
+ "fid-registry",
+ "fid-render",
+ "fid-types",
+ "wgpu",
 ]
 
 [[package]]
@@ -2998,6 +3173,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2bf50223579dc7cdcfb3bfcacf7069ff68243f8c363f62ffa99cf000a6b9c451"
 
 [[package]]
+name = "ntapi"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3b335231dfd352ffb0f8017f3b6027a4917f7df785ea2143d8af2adc66980ae"
+dependencies = [
+ "winapi",
+]
+
+[[package]]
 name = "num-traits"
 version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3098,6 +3282,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "objc2-core-foundation"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a180dd8642fa45cdb7dd721cd4c11b1cadd4929ce112ebd8b9f5803cc79d536"
+dependencies = [
+ "bitflags 2.13.2",
+]
+
+[[package]]
 name = "objc2-core-image"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3138,6 +3331,16 @@ dependencies = [
  "dispatch",
  "libc",
  "objc2",
+]
+
+[[package]]
+name = "objc2-io-kit"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33fafba39597d6dc1fb709123dfa8289d39406734be322956a69f0931c73bb15"
+dependencies = [
+ "libc",
+ "objc2-core-foundation",
 ]
 
 [[package]]
@@ -3921,6 +4124,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "sysinfo"
+version = "0.36.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "252800745060e7b9ffb7b2badbd8b31cfa4aa2e61af879d0a3bf2a317c20217d"
+dependencies = [
+ "libc",
+ "memchr",
+ "ntapi",
+ "objc2-core-foundation",
+ "objc2-io-kit",
+ "windows 0.61.3",
+]
+
+[[package]]
 name = "tempfile"
 version = "3.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4490,6 +4707,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "winapi"
+version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c839a674fcd7a98952e593242ea400abe93992746761e38641405d28b00f419"
+dependencies = [
+ "winapi-i686-pc-windows-gnu",
+ "winapi-x86_64-pc-windows-gnu",
+]
+
+[[package]]
+name = "winapi-i686-pc-windows-gnu"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
+
+[[package]]
 name = "winapi-util"
 version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4497,6 +4730,12 @@ checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
  "windows-sys 0.61.2",
 ]
+
+[[package]]
+name = "winapi-x86_64-pc-windows-gnu"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "windows"

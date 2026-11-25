@@ -1,0 +1,73 @@
+{
+  "schema": "mig-report-set@1",
+  "reports": [
+    {
+      "name": "mig-form-demo-1.fillreport.json",
+      "report": {
+        "schema": "mig-fillreport@1",
+        "template_version": "demo-form@1.0.0",
+        "form_map_digest": "sha256:848cb814f33c2e94d9bebdc5a1a365c8fc81ba4d6196b31be9f236415ab53402",
+        "source_workbook_sha256": "sha256:7f543884c7f2222c11810c77722088e9b910e5c062d5e58966012ad70ba96601",
+        "head": "demo-head-1",
+        "items": [
+          {
+            "binding_id": "b1",
+            "construct_id": "sheet.part_metadata",
+            "status": "MAPPED"
+          },
+          {
+            "binding_id": "b2",
+            "construct_id": "sheet.characteristic_table",
+            "status": "MAPPED"
+          },
+          {
+            "binding_id": "b3",
+            "construct_id": "cell.merged_header",
+            "status": "PARTIAL",
+            "reason": "unbound_required"
+          }
+        ],
+        "findings": [],
+        "summary": {
+          "MAPPED": 2,
+          "PARTIAL": 1,
+          "UNSUPPORTED": 0
+        }
+      }
+    },
+    {
+      "name": "mig-form-demo-2.fillreport.json",
+      "report": {
+        "schema": "mig-fillreport@1",
+        "template_version": "demo-form@1.0.0",
+        "form_map_digest": "sha256:848cb814f33c2e94d9bebdc5a1a365c8fc81ba4d6196b31be9f236415ab53402",
+        "source_workbook_sha256": "sha256:05ac7b31fc9abe75eacfb9d74220e1e581091ae836ce926542c2d3e0ecc063ba",
+        "head": "demo-head-1",
+        "items": [
+          {
+            "binding_id": "b1",
+            "construct_id": "sheet.part_metadata",
+            "status": "MAPPED"
+          },
+          {
+            "binding_id": "b2",
+            "construct_id": "sheet.characteristic_table",
+            "status": "MAPPED"
+          },
+          {
+            "binding_id": "b3",
+            "construct_id": "cell.formula_summary",
+            "status": "UNSUPPORTED",
+            "reason": "unsupported_construct"
+          }
+        ],
+        "findings": [],
+        "summary": {
+          "MAPPED": 2,
+          "PARTIAL": 0,
+          "UNSUPPORTED": 1
+        }
+      }
+    }
+  ]
+}

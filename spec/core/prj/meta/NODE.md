@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid project set-tags, fid project set-metadata, fid project find-elements-by-tag]
 mcp: [project_set_tags, project_set_metadata, project_find_elements_by_tag]
 journal: [project.set_tags@1, project.set_metadata@1, project.find_elements_by_tag@1]
-updated: 2026-11-16
+built_in: [fid-project, fid-project-cmd]
+updated: 2026-11-23
 ---
 
 # CORE.PRJ.META: Tags, keywords and metadata

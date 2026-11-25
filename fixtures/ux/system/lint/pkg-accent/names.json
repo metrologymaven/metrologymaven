@@ -1,0 +1,9 @@
+{
+  "format": "fid-design-names@1",
+  "names": [
+    {
+      "kind": "token",
+      "name": "sem.brand.accent"
+    }
+  ]
+}

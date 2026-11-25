@@ -1,0 +1,22 @@
+[package]
+name = "fid-filter"
+description = "Metrology Maven kernel point selection and outlier policies (KNP-1): outlier policy types, parameter validation, canonical parameter encoding, exclusion masks with their digest, the minimum-points and maximum-fraction guards, and the single entry point that reduces a fit's input set (spec node KRN.OUT.POL)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Kernel crate (KNP-1): no third-party dependencies. fid-num (typed numeric errors, NaN is an
+# error) and fid-fit (points view, fitted feature, primitive minimum point counts) are the
+# build prompt's two; fid-kci supplies the shared algorithm ID and the portable SHA-256 of the
+# excluded-set digest, fid-types the shared `sha256:` digest type (AGENTS.md rule 14). All are
+# num or kernel layer.
+[dependencies]
+fid-fit = { path = "../fid-fit" }
+fid-kci = { path = "../fid-kci" }
+fid-num = { path = "../fid-num" }
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true

@@ -17,7 +17,9 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+built_in: [fid-solv]
+built_pr: 485
+updated: 2026-11-22
 ---
 
 # KRN.SOLV.CONIC.XTEST: Frozen conic test set and cross-target bit-identity check

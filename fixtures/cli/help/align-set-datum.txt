@@ -1,0 +1,19 @@
+fid align set-datum
+Fixture align.set_datum@1
+
+Fixture definition of class W2 (µm, é).
+
+Command: align.set_datum@1
+Manifest: sha256:ab5b02bfd9ccc91fc95a6d58e93ebf920d4b1f2f19ac26a20d26b64b67b3381c
+Side-effect class: W2
+Determinism: D0
+Dry run: unsupported
+Majors: 1 (default: 1)
+
+Parameters:
+    --angle (number, quantity=angle, unit=deg, default=0.25)
+    --frame (#/$defs/frame_ref)
+    --mode (string, default="exact")
+    --note (null|string)
+    --offset (number, quantity=length, unit=mm, required, default=0)
+    --source (string, required)

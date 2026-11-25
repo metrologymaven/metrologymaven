@@ -5,6 +5,7 @@ level: 2
 parent: IND
 kind: subsystem
 status: split
+commercial_repo: metrologymaven-enterprise
 phase: P3
 size: XL
 owners: []
@@ -15,12 +16,14 @@ depends_on: [IND.CONTRACT, SCAN, ALN, GDT]
 cli: [fid pack *-sheet*]
 mcp: [pack_*_sheet*]
 journal: [pack.*_sheet*]
-updated: 2026-11-16
+updated: 2026-11-22
 ---
 
 # IND.SHEET: Sheet metal pack
 
 ## Purpose
+
+> **Commercial boundary (D-053):** Implemented commercially against the public `IND.CONTRACT` extension point in `metrologymaven/metrologymaven-enterprise`. Do not expand or build `IND.SHEET.*` in this public repository.
 
 Inspection elements that only make sense for thin formed parts: holes and slots measured on the sheet with thickness and material-side awareness, discrete trim and edge points with in-plane and out-of-plane components, springback assessment of formed panels, and hem geometry. These are what body-in-white and stamping users expect from scan inspection.
 

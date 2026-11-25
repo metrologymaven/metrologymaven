@@ -1,6 +1,6 @@
 [package]
 name = "fid-render"
-description = "Metrology Maven renderer core: render-ID allocation and entity lookup tables (VIZ.RENDER.SCENE.IDTAB), view-model projection and dirty-set re-projection (VIZ.RENDER.SCENE.PROJ), stale marking and the stale-first style resolver (VIZ.RENDER.SCENE.STALE), the wgpu frame graph with backend selection and ID and depth buffers (VIZ.RENDER.FRAME.GRAPH)"
+description = "Metrology Maven renderer core: render-ID allocation and entity lookup tables (VIZ.RENDER.SCENE.IDTAB), view-model projection and dirty-set re-projection (VIZ.RENDER.SCENE.PROJ), stale marking and the stale-first style resolver (VIZ.RENDER.SCENE.STALE), the wgpu frame graph with backend selection and ID and depth buffers (VIZ.RENDER.FRAME.GRAPH), and capability tiers and render-info snapshots (VIZ.RENDER.FRAME.TIER)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,6 +10,9 @@ publish = false
 
 # Viewer layer. No windowing or UI-toolkit crate (C2, checked by fid-shlint REQ-003).
 [dependencies]
+# RFC 8785 canonical JSON for RenderInfo (VIZ.RENDER.FRAME.TIER, CORE.JRN.CANON); model layer,
+# no UI-toolkit dependency.
+fid-canon = { path = "../fid-canon" }
 # Entity IDs are UUIDs (CONSTITUTION §5); `fid_uuid::Uuid` is the workspace's UUID value type,
 # the same one fid-project's ID service hands out. No third-party dependency is added.
 fid-uuid = { path = "../fid-uuid" }

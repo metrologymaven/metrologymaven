@@ -21,5 +21,9 @@ cap = { version = "0.1.2", features = ["stats"] }
 fid-kci = { path = "../fid-kci" }
 fid-num = { path = "../fid-num" }
 
+[[bench]]
+name = "index"
+harness = false
+
 [lints]
 workspace = true

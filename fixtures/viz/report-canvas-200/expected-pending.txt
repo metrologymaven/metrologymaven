@@ -1,0 +1,55 @@
+# VIZ.SHELL.SPKRPT results: report designer canvas
+
+Overall: **incomplete**
+
+## Environment
+
+- Hardware: -
+- GPU adapter: -
+- Profile: PLAT H1 reference machine
+- Versions: egui 0.33.3, wgpu 27.0.1, winit 0.30.13
+- Fonts: none recorded
+
+## Criteria
+
+| Criterion | Measured | Threshold | Result |
+|---|---|---|---|
+| REQ-001 content loaded | - | 5 pages, 200 blocks, tables, 1 3D frame | not run |
+| AC-1 drag a block for 10 s, p95 frame time | - | < 33 ms | not run |
+| AC-2 zoom 25 % to 400 %, p95 frame time | - | < 33 ms | not run |
+| AC-2 type 200 characters, p95 frame time | - | < 33 ms | not run |
+| AC-3 keyboard move and resize | - | all steps | not run |
+| AC-4 Japanese IME commit (manual) | see log | committed text in the block | not run |
+| REQ-005 screen-reader announcements (manual) | see log | type, name and position for 5 blocks | not run |
+
+## Recommendation
+
+Incomplete: 7 criteria not run. No recommendation until every criterion is measured.
+
+## Frame-time summary
+
+No frame times recorded.
+
+## Manual IME check (AC-4)
+
+On Windows with a Japanese IME, select a text block, press Enter, compose そくてい and commit it. Then compose again and press Escape before committing.
+
+- Input method and version:
+- Committed text shown in the block:
+- Escape during composition cancels the composition without ending the edit (yes or no):
+
+## Manual screen-reader check (REQ-005)
+
+Screen reader and version:
+
+| Block | Type announced | Name announced | Position announced |
+|---|---|---|---|
+| 1 | | | |
+| 2 | | | |
+| 3 | | | |
+| 4 | | | |
+| 5 | | | |
+
+## Limitations
+
+None recorded.

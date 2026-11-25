@@ -1,0 +1,48 @@
+# VIZ.SHELL.SPKTABLE results: characteristic table
+
+Overall: **incomplete**
+
+## Environment
+
+- Hardware: -
+- GPU adapter: -
+- Profile: PLAT H1 reference machine
+- Versions: egui 0.33.3, wgpu 27.0.1, winit 0.30.13
+
+## Criteria
+
+| Criterion | Measured | Threshold | Result |
+|---|---|---|---|
+| REQ-001 content loaded | - | 100000 rows, 14 columns, 2 frozen, chips with icon and text | not run |
+| AC-1 scroll end to end for 30 s, p95 frame time | - | < 33 ms | not run |
+| AC-2 sort by deviation: UI-thread frame time while the background sort is pending, p95 | - | < 33 ms | not run |
+| AC-2 type a 6-character filter: UI-thread frame time while the background filter is pending, p95 | - | < 33 ms | not run |
+| AC-3 exact decimal storage | - | stored "0.0500" | not run |
+| AC-4 keyboard sequence (model) | - | all steps | not run |
+| AC-5 screen-reader announcements (manual) | see log | table, headers, value and status for 5 cells | not run |
+
+## Recommendation
+
+Incomplete: 7 criteria not run. No recommendation until every criterion is measured.
+
+## Frame-time summary
+
+No frame times recorded.
+
+## Manual screen-reader check (AC-5)
+
+On Windows with NVDA or Narrator, focus a cell and move focus across one row with the arrow keys. Record what is announced for 5 cells; a missing table, header, value or status is a fail.
+
+Screen reader and version:
+
+| Cell | Table announced | Row header | Column header | Value | Status text |
+|---|---|---|---|---|---|
+| 1 | | | | | |
+| 2 | | | | | |
+| 3 | | | | | |
+| 4 | | | | | |
+| 5 | | | | | |
+
+## Limitations
+
+None recorded.

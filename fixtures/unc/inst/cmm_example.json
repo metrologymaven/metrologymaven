@@ -1,0 +1,50 @@
+{
+  "schema": "instrument-model/v1",
+  "id": "im:cmm-example@1.0.0",
+  "kind": "spec_derived",
+  "device_class": "cmm",
+  "params": [
+    {
+      "name": "length_error_const",
+      "unit": "um",
+      "value": "1.5",
+      "dist": {
+        "kind": "arcsine",
+        "params": {
+          "a": "-1.5",
+          "b": "1.5"
+        }
+      }
+    },
+    {
+      "name": "length_error_prop",
+      "unit": "ppm",
+      "value": "2"
+    },
+    {
+      "name": "probing_form",
+      "unit": "um",
+      "value": "2"
+    },
+    {
+      "name": "dwell",
+      "unit": "ms",
+      "value": "50"
+    }
+  ],
+  "range": [
+    {
+      "axis": "length",
+      "min": "0",
+      "max": "1",
+      "unit": "m"
+    },
+    {
+      "axis": "temperature",
+      "min": "291.15",
+      "max": "295.15",
+      "unit": "K"
+    }
+  ],
+  "source": "Invented example model for tests: the parameter values are made up and describe no real instrument (project fixture, D-038, CC-BY-4.0)"
+}

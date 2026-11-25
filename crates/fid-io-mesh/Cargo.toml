@@ -1,0 +1,26 @@
+[package]
+name = "fid-io-mesh"
+description = "Metrology Maven mesh format readers, writers and shared builder (spec node IO.MESH)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-geo-frame = { path = "../fid-geo-frame" }
+fid-geo-types = { path = "../fid-geo-types" }
+fid-io-reg = { path = "../fid-io-reg" }
+fid-registry = { path = "../fid-registry" }
+
+[dev-dependencies]
+fid-io-reg = { path = "../fid-io-reg", features = ["test-hooks"] }
+fid-project = { path = "../fid-project" }
+fid-replay = { path = "../fid-replay" }
+fid-types = { path = "../fid-types" }
+sha2 = "0.10"
+
+[lints]
+workspace = true

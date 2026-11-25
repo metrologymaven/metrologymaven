@@ -17,7 +17,9 @@ determinism: D0
 cli: [fid *]
 mcp: []
 journal: []
-updated: 2026-11-16
+built_in: [fid-cli, fid-surface-gen]
+built_pr: 454
+updated: 2026-11-22
 ---
 
 # AUTO.CLI.TREE: Generated command tree and help
@@ -75,7 +77,7 @@ The CLI emitter and the runtime command tree of `fid`. At build time it writes `
 
 ## Open questions
 
-- None.
+- AC-2 mentions class `W2` for `align.run_bestfit`, whereas the committed `fixtures/manifest/min-classes.json` declares `align.run_bestfit@1` and `@2` as class `R1` (and `align.set_datum@1` as `W2`). `fixtures/cli/help/align-run-bestfit.txt` faithfully reflects `min-classes.json` (`R1`), and `fixtures/cli/help/align-set-datum.txt` additionally checks a `W2` command.
 
 ## Children
 

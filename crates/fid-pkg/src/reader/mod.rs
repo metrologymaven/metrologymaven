@@ -448,6 +448,58 @@ impl<R: Read + Seek> PackageReader<R> {
         Ok(Some(()))
     }
 
+    /// Streams a verified member's bytes in chunks to `out` without buffering the whole member
+    /// in memory, preserving the invariant that a consumer never sees an unverified byte.
+    ///
+    /// Pass 1 checks length, manifest SHA-256 (for listed members), CRC-32 and ratio caps in
+    /// O(1) memory without calling `out`. Pass 2 streams chunks to `out` while re-checking
+    /// SHA-256 and CRC-32 so an underlying change between passes fails with `source_changed`.
+    ///
+    /// `Ok(None)` if the package has no such entry.
+    pub fn stream_verified_member(
+        &mut self,
+        path: &str,
+        out: &mut dyn FnMut(&[u8]) -> Result<(), ReadError>,
+    ) -> Result<Option<()>, ReadError> {
+        let Some(i) = self.find(path) else { return Ok(None) };
+        if path == MANIFEST_PATH {
+            let bytes = self.manifest_bytes.clone();
+            out(&bytes)?;
+            return Ok(Some(()));
+        }
+        let first_sha = self.decode_checked(i, &mut |_| Ok(()))?;
+        let second_sha = self.decode_checked(i, out)?;
+        if second_sha != first_sha {
+            return Err(malformed("source_changed", format!("{path} differs from the bytes verified in pass 1")));
+        }
+        Ok(Some(()))
+    }
+
+    /// Streams a member's bytes in a single pass while verifying length, manifest SHA-256 (for
+    /// listed members), CRC-32 and ratio caps.
+    ///
+    /// Unlike [`PackageReader::stream_verified_member`], chunks reach `out` during the single
+    /// decoding pass; if any integrity check fails at EOF, this method returns `Err` and the
+    /// caller must discard all state accumulated from `out`. Used by high-throughput streaming
+    /// verifiers (such as `TRUST.CHAIN.LINKS` on million-entry segments) that fail closed on
+    /// `Err`.
+    ///
+    /// `Ok(None)` if the package has no such entry.
+    pub fn stream_member_checked(
+        &mut self,
+        path: &str,
+        out: &mut dyn FnMut(&[u8]) -> Result<(), ReadError>,
+    ) -> Result<Option<()>, ReadError> {
+        let Some(i) = self.find(path) else { return Ok(None) };
+        if path == MANIFEST_PATH {
+            let bytes = self.manifest_bytes.clone();
+            out(&bytes)?;
+            return Ok(Some(()));
+        }
+        self.check_entry(i, out)?;
+        Ok(Some(()))
+    }
+
     /// The check result of every manifest member, in manifest order.
     pub fn member_results(&mut self) -> Vec<Result<(), ReadError>> {
         let paths: Vec<String> = self.manifest.members.iter().map(|m| m.path.as_str().to_string()).collect();

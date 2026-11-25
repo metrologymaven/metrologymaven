@@ -10,6 +10,7 @@
 //! A rejected registration changes nothing.
 
 use super::{FrameTargets, GraphError};
+use crate::frame::tier::FrameStats;
 use std::fmt;
 
 /// A pass's stable name.
@@ -47,6 +48,8 @@ pub struct PassContext<'a> {
     pub queue: &'a wgpu::Queue,
     pub encoder: &'a mut wgpu::CommandEncoder,
     pub targets: &'a FrameTargets,
+    /// Per-frame primitive counts accumulated across passes (`VIZ.RENDER.FRAME.TIER`).
+    pub stats: &'a mut FrameStats,
 }
 
 /// A pass of the frame. `record` adds its commands to the frame's encoder; an error stops

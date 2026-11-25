@@ -7,14 +7,26 @@
 //! - [`stamp`]: the frozen v0 provenance stamp, acquisition-batch envelope and external
 //!   claim schemas, their validator and canonical digests (`HAL.IDL.STAMP`).
 //! - [`base`]: the `Device@1` base package; so far [`base::config`], typed configuration and
-//!   the configuration digest (`HAL.IDL.BASE.CFG`), and [`base::error`], the closed device
-//!   error model (`HAL.IDL.BASE.ERR`).
+//!   the configuration digest (`HAL.IDL.BASE.CFG`), [`base::error`], the closed device
+//!   error model (`HAL.IDL.BASE.ERR`), and [`base::device`], the package's operations,
+//!   `DeviceInstance`, calibration-state references and `Device-core@1` (`HAL.IDL.BASE.DESC`).
 //! - [`package`]: the `capability-package/v1` language-neutral capability-package description
 //!   format, [`CapabilityPackage`] trait, validator and RFC 8785 canonical digest
 //!   (`HAL.IDL.GEN.FMT`).
+//! - [`profile`]: the `instrument-profile/v1` descriptor, its validator, the spec-sheet UEC
+//!   cap and the canonical digest that excludes the signature block (`HAL.IDL.PROFILE`).
+//! - [`negotiate`]: capability declarations, the runtime-support table, the fail-closed
+//!   negotiation function and the capability-package semver rules (`HAL.IDL.NEG`).
+//! - [`caps`]: the sensor capability packages; so far [`caps::stream`], the shared streaming
+//!   template, the vendor-extension rule and the `Stream-common@1` profile
+//!   (`HAL.IDL.SENS.STREAM`), and [`caps::linescan`], the `LineScan@1` package with its
+//!   columnar profile batches and `LineScan-core@1` (`HAL.IDL.SENS.LINE`).
 
 pub mod base;
+pub mod caps;
+pub mod negotiate;
 pub mod package;
+pub mod profile;
 pub mod stamp;
 pub mod units;
 
@@ -33,6 +45,11 @@ pub use base::config::{
     SettingSchema, SettingType, SettingValue,
 };
 
+pub use base::device::{
+    CalDate, CalibrationState, DeviceInstance, DevicePackage, DeviceRecordError, DriverId,
+    Operation as DeviceOperation, DEVICE_CORE,
+};
+
 pub use base::error::{
     Behaviour, DeviceError, DeviceErrorParseError, DeviceText, ErrorCode, OperatorHintId, ParseErrorKind, Severity,
 };
@@ -47,4 +64,21 @@ pub use package::{
     ConformanceItemDesc, ConformanceProfileDesc, OperationDesc, PackageDescription, PackageError, PackageManifest,
     SemanticsNote, ALLOWED_SCHEMA_KEYWORDS, ALLOWED_SCHEMA_TYPES, MAX_PACKAGE_BYTES, MAX_PACKAGE_DEPTH,
     MAX_SEMANTICS_BYTES, PACKAGE_SCHEMA_TAG,
+};
+
+pub use profile::{InstrumentProfile, ProfileError, ProfileErrorKind, SourceKind as ProfileSourceKind};
+
+pub use negotiate::{
+    negotiate, negotiate_json, negotiate_with_profile, CapabilityDeclaration, CapabilityOffer, NegError, NegErrorKind,
+    NegotiationResult, Outcome, RuntimeSupport, VersionRange,
+};
+
+pub use caps::stream::{
+    BatchRecord, BatchSummary, StreamError, StreamEvent, StreamOperation, StreamState, StreamStatus,
+    StreamingDescription, StreamingPackage, STREAM_COMMON,
+};
+
+pub use caps::linescan::{
+    EncodedArray, EncodedBatch, LineScanError, LineScanPackage, LineScanSettings, PoseColumn, PoseRef, ProfileBatch,
+    Trigger, TriggerMode, ValidityMask, LINESCAN_CORE,
 };

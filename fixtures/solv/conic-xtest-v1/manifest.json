@@ -1,0 +1,20 @@
+{
+  "constraint_range": {
+    "max": 5000,
+    "min": 3
+  },
+  "counts": {
+    "infeasible": 17,
+    "lp": 55,
+    "qp": 55,
+    "socp": 55,
+    "solved": 148,
+    "total": 165
+  },
+  "format": "fid-conic-xtest-manifest/1",
+  "license": "CC-BY-4.0",
+  "problems_digest": "sha256:280a4b44bf7f651f0a2c8ea6496e34b9cfc6e10d9b80b292c8872fefa528133c",
+  "problems_file": "problems.json",
+  "seed": 20261122,
+  "version": "conic-xtest-v1"
+}

@@ -1,0 +1,19 @@
+{
+  "schema": "mig-corpus@1",
+  "format_id": "qif",
+  "name": "QIF results demo corpus",
+  "entries": [
+    {
+      "catalogue_id": "mig-qif-demo-a",
+      "sha256": "sha256:c267263379a2443fcbb4a6f31571d69b8fc3d32a0efdc4ad4805bd76fc6b595f",
+      "format_id": "qif",
+      "visibility": "public"
+    },
+    {
+      "catalogue_id": "mig-qif-customer",
+      "sha256": "sha256:b540d0de742fcb62f6979deb1cb7834358349d43a6e3d79dd2e9429700caf6fa",
+      "format_id": "qif",
+      "visibility": "public"
+    }
+  ]
+}

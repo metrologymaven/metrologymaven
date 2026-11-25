@@ -1,0 +1,17 @@
+{
+  "sizes_ok.json": {
+    "pass": true,
+    "total": 100,
+    "within": 97,
+    "span_total_ns": "78375000001",
+    "contiguous": true
+  },
+  "sizes_bad.json": {
+    "pass": false,
+    "reason": "below_threshold",
+    "total": 100,
+    "within": 80,
+    "span_total_ns": "80035000005",
+    "contiguous": true
+  }
+}

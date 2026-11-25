@@ -1,0 +1,1 @@
+{"ignored_features":[],"per_capability":{"Device":{"deprecated":false,"features":["health_push"],"status":"negotiated","version":"1.1"},"Gauge":{"reason":"unknown_capability","status":"UNSUPPORTED"},"HeightMap":{"deprecated":false,"features":[],"status":"negotiated","version":"1.0"}}}

@@ -1,0 +1,14 @@
+fid align run-bestfit
+Fixture align.run_bestfit@2
+
+Fixture definition of class R1.
+
+Command: align.run_bestfit@2
+Manifest: sha256:ab5b02bfd9ccc91fc95a6d58e93ebf920d4b1f2f19ac26a20d26b64b67b3381c
+Side-effect class: R1
+Determinism: D0
+Dry run: unsupported
+Majors: 1, 2 (default: 2)
+
+Parameters:
+    (none)

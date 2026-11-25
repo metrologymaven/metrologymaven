@@ -1,0 +1,106 @@
+{
+  "dialect": "asme",
+  "editions": [
+    "y14.5-2018",
+    "y14.5.1-2019"
+  ],
+  "entries": [
+    {
+      "family": "SIZE",
+      "key": "dmt:asme/angle/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "SIZE",
+      "key": "dmt:asme/caliper/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "FORM",
+      "key": "dmt:asme/circularity/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "FORM",
+      "key": "dmt:asme/cylindricity/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "SIZE",
+      "key": "dmt:asme/diameter/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "SIZE",
+      "key": "dmt:asme/distance/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "DRF",
+      "key": "dmt:asme/drf_planar/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "FORM",
+      "key": "dmt:asme/flatness/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "SIZE",
+      "key": "dmt:asme/min_max/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "ORIENT",
+      "key": "dmt:asme/parallelism/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "ORIENT",
+      "key": "dmt:asme/perpendicularity/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "SIZE",
+      "key": "dmt:asme/point_deviation/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "POS",
+      "key": "dmt:asme/position/mmc@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "POS",
+      "key": "dmt:asme/position/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "SIZE",
+      "key": "dmt:asme/radius/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "SIZE",
+      "key": "dmt:asme/scalar/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "SIZE",
+      "key": "dmt:asme/size/envelope@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "SIZE",
+      "key": "dmt:asme/size/none@1",
+      "required_status": "supported_or_partial"
+    },
+    {
+      "family": "FORM",
+      "key": "dmt:asme/straightness/none@1",
+      "required_status": "supported_or_partial"
+    }
+  ],
+  "phase": "P1a",
+  "schema": "dmt-inventory/v1"
+}

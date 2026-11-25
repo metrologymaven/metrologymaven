@@ -302,7 +302,12 @@ fn opt_scalar(j: &Json) -> Option<f64> {
 }
 
 pub fn load(file: &str) -> Fixture {
-    let text = std::fs::read_to_string(format!("{FIX}{file}")).unwrap();
+    load_from(FIX, file)
+}
+
+/// [`load`] from another directory (same format).
+pub fn load_from(dir: &str, file: &str) -> Fixture {
+    let text = std::fs::read_to_string(format!("{dir}{file}")).unwrap();
     let doc = parse_json(&text);
     assert_eq!(doc.get("format").str(), "fid-face-ref/1");
     let queries = doc
@@ -544,4 +549,173 @@ pub fn reference(_: &Fixture, q: &Query) -> Hit {
         foot: q.answer.foot,
         distance: q.answer.distance,
     }
+}
+
+// ------------------------------------------------------------------ body builder
+
+/// Builds the fixture's body description (`fid-brep-builder/0`, see the oracle's docstring)
+/// with `fid_geo_cad::BodyBuilder`. Labels become the imported topology IDs. Pcurves: `line2`
+/// (parameter `[0, 1]` in the oracle) is re-parameterised onto the edge's range; `circle2` is
+/// left out, so GEO.CAD.TOPO.PCURVE derives it from the 3-D circle. A degenerate (pole) edge
+/// without a range gets `[0, 1]`. Only face `only` is built (all vertices and edges, its
+/// loops, one open shell): the fixture bodies give both coedges of a shared edge the sense
+/// "same" in places, which the GEO.CAD.TOPO.MODEL pairing check refuses, and this leaf
+/// projects one face at a time anyway.
+pub fn build_face_body(j: &Json, only: &str) -> fid_geo_cad::Body {
+    use fid_geo_cad::{BodyBuilder, Curve2, CurveDef, CurveParams, Frame, Sense, SurfaceDef, SurfaceParams};
+    use fid_geo_nurbs::{NurbsSurface, NurbsSurfaceParts};
+    let mut id = [0u8; 16];
+    for (k, b) in j.get("body_id").str().bytes().take(16).enumerate() {
+        id[k] = b;
+    }
+    let mut bb = BodyBuilder::new(id);
+    let face = j.get("faces").arr().iter().find(|f| f.get("label").str() == only).unwrap_or_else(|| panic!("{only}"));
+    // Edges used by the face (first use order), then their vertices.
+    let mut edge_labels: Vec<String> = Vec::new();
+    for l in face.get("loops").arr() {
+        for c in l.get("coedges").arr() {
+            let e = c.get("edge").str().to_string();
+            if !edge_labels.contains(&e) {
+                edge_labels.push(e);
+            }
+        }
+    }
+    let edge_json = |label: &str| -> &Json {
+        j.get("edges").arr().iter().find(|x| x.get("label").str() == label).unwrap_or_else(|| panic!("{label}"))
+    };
+    let mut vertex_labels: Vec<String> = Vec::new();
+    for e in &edge_labels {
+        for end in ["start", "end"] {
+            let v = edge_json(e).get(end).str().to_string();
+            if !vertex_labels.contains(&v) {
+                vertex_labels.push(v);
+            }
+        }
+    }
+    let frame =
+        |pl: &Json| Frame { origin: v3(pl.get("origin")), axis: v3(pl.get("axis")), ref_dir: v3(pl.get("ref_dir")) };
+    for vl in &vertex_labels {
+        let v = j.get("vertices").arr().iter().find(|x| x.get("label").str() == vl).unwrap();
+        bb.add_vertex(v3(v.get("point")), Some(vl));
+    }
+    let vix = |l: &str| vertex_labels.iter().position(|x| x == l).unwrap();
+    let eix = |l: &str| edge_labels.iter().position(|x| x == l).unwrap();
+    let mut ranges = Vec::new();
+    for el in &edge_labels {
+        let e = edge_json(el);
+        let c = e.get("curve");
+        let curve = if c.is_null() {
+            None
+        } else if c.get("type").str() == "nurbs" {
+            let nums = |x: &Json| x.arr().iter().map(Json::num).collect::<Vec<f64>>();
+            let weights = if c.get("weights").is_null() { None } else { Some(nums(c.get("weights"))) };
+            let n = fid_geo_nurbs::NurbsCurve::new(fid_geo_nurbs::NurbsCurveParts {
+                degree: c.get("degree").num() as usize,
+                knots: nums(c.get("knots")),
+                ctrl: c.get("ctrl").arr().iter().map(v3).collect(),
+                weights,
+                periodic: false,
+            })
+            .unwrap();
+            Some(CurveDef::nurbs(n).unwrap())
+        } else {
+            let params = match c.get("type").str() {
+                "line" => {
+                    let d = v3(c.get("direction"));
+                    let helper = if d[0].abs() < 0.9 { [1.0, 0.0, 0.0] } else { [0.0, 1.0, 0.0] };
+                    let a = cross(d, helper);
+                    let n = norm(a);
+                    let axis = [a[0] / n, a[1] / n, a[2] / n];
+                    CurveParams::Line { frame: Frame { origin: v3(c.get("origin")), axis, ref_dir: d } }
+                }
+                "circle" => CurveParams::Circle { frame: frame(c.get("placement")), radius: c.get("radius").num() },
+                "ellipse" => CurveParams::Ellipse {
+                    frame: frame(c.get("placement")),
+                    semi_axis_1: c.get("semi_axis_1").num(),
+                    semi_axis_2: c.get("semi_axis_2").num(),
+                },
+                t => panic!("edge curve type {t}"),
+            };
+            Some(CurveDef::analytic(params).unwrap())
+        };
+        let r = e.get("param_range");
+        let range = if r.is_null() { [0.0, 1.0] } else { [r.arr()[0].num(), r.arr()[1].num()] };
+        ranges.push(range);
+        bb.add_edge(curve, vix(e.get("start").str()), vix(e.get("end").str()), range, Some(el));
+    }
+    let sense = |s: &Json| if s.str() == "reversed" { Sense::Reversed } else { Sense::Same };
+    let mut face_ix = Vec::new();
+    {
+        let f = face;
+        let mut loops = Vec::new();
+        for l in f.get("loops").arr() {
+            let mut cos = Vec::new();
+            for c in l.get("coedges").arr() {
+                let ei = eix(c.get("edge").str());
+                let pc = c.get("pcurve");
+                let pcurve = if pc.is_null() {
+                    None
+                } else {
+                    match pc.get("type").str() {
+                        "line2" => {
+                            let (a, b) = (pc.get("from").arr(), pc.get("to").arr());
+                            let (a, b) = ([a[0].num(), a[1].num()], [b[0].num(), b[1].num()]);
+                            let [t0, t1] = ranges[ei];
+                            let d = [(b[0] - a[0]) / (t1 - t0), (b[1] - a[1]) / (t1 - t0)];
+                            let o = [a[0] - t0 * d[0], a[1] - t0 * d[1]];
+                            Some(Curve2::line(o, d).unwrap())
+                        }
+                        "circle2" => None,
+                        t => panic!("pcurve type {t}"),
+                    }
+                };
+                cos.push(bb.add_coedge(ei, sense(c.get("sense")), pcurve, Some(c.get("label").str())));
+            }
+            loops.push(bb.add_loop(cos, l.get("outer").truthy(), Some(l.get("label").str())));
+        }
+        let s = f.get("surface");
+        let surface = match s.get("type").str() {
+            "nurbs" => {
+                let nums = |x: &Json| x.arr().iter().map(Json::num).collect::<Vec<f64>>();
+                let weights = if s.get("weights").is_null() { None } else { Some(nums(s.get("weights"))) };
+                let parts = NurbsSurfaceParts {
+                    degree_u: s.get("degree_u").num() as usize,
+                    degree_v: s.get("degree_v").num() as usize,
+                    knots_u: nums(s.get("knots_u")),
+                    knots_v: nums(s.get("knots_v")),
+                    n_u: s.get("n_u").num() as usize,
+                    n_v: s.get("n_v").num() as usize,
+                    ctrl: s.get("ctrl").arr().iter().map(v3).collect(),
+                    weights,
+                    periodic_u: false,
+                    periodic_v: false,
+                };
+                SurfaceDef::nurbs(NurbsSurface::new(parts).unwrap()).unwrap()
+            }
+            t => {
+                let fr = frame(s.get("placement"));
+                let params = match t {
+                    "plane" => SurfaceParams::Plane { frame: fr },
+                    "cylinder" => SurfaceParams::Cylinder { frame: fr, radius: s.get("radius").num() },
+                    "cone" => SurfaceParams::Cone {
+                        frame: fr,
+                        radius: s.get("radius").num(),
+                        half_angle: s.get("half_angle").num(),
+                    },
+                    "sphere" => SurfaceParams::Sphere { frame: fr, radius: s.get("radius").num() },
+                    "torus" => SurfaceParams::Torus {
+                        frame: fr,
+                        major_radius: s.get("major_radius").num(),
+                        minor_radius: s.get("minor_radius").num(),
+                    },
+                    t => panic!("surface type {t}"),
+                };
+                SurfaceDef::analytic(params).unwrap()
+            }
+        };
+        face_ix.push(bb.add_face(surface, sense(f.get("sense")), loops, Some(only)));
+    }
+    assert_eq!(face_ix.len(), 1, "face {only}");
+    bb.add_shell(face_ix, false);
+    bb.build().unwrap_or_else(|e| panic!("body {}: {e}", j.get("body_id").str()))
 }

@@ -1,0 +1,11 @@
+{
+  "artefact": "components/TEMPLATE.md",
+  "author": "Claude Code (Claude Opus 5.5), agent author of UX.COMP.SCHEMA",
+  "date": "2026-11-24",
+  "references": [
+    "The UX.COMP.SCHEMA and UX.COMP spec nodes in this repository",
+    "The shipped design tokens (design/tokens/) in this repository",
+    "The role and state names of the WAI-ARIA 1.2 Recommendation, used as identifiers only"
+  ],
+  "statement_version": "originality-statement@1"
+}

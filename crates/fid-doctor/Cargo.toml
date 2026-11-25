@@ -1,0 +1,28 @@
+[package]
+name = "fid-doctor"
+description = "Metrology Maven environment diagnostics (PLAT.DOCTOR): bounded offline environment probes, snapshot schema and fake test harness"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[features]
+default = []
+# Enables live GPU probing through fid-gpu-select (PLAT.GPU.DETECT).
+# Without this feature (P0 / headless builds), RealEnv reports gpu as unknown(not_built).
+gpu = ["dep:fid-gpu-policy", "dep:fid-gpu-select"]
+
+[dependencies]
+fid-canon = { path = "../fid-canon" }
+fid-gpu-policy = { path = "../fid-gpu-policy", optional = true }
+fid-gpu-select = { path = "../fid-gpu-select", optional = true }
+
+# Windows RAM, physical-core and storage probes (leaf design: "RAM and storage via a
+# system-information crate"). Only the `system` and `disk` features; MIT; rust-version 1.75.
+[target.'cfg(windows)'.dependencies]
+sysinfo = { version = "0.36.1", default-features = false, features = ["system", "disk"] }
+
+[lints]
+workspace = true

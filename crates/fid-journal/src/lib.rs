@@ -43,6 +43,7 @@ pub mod entry;
 pub mod promote;
 pub mod stream;
 pub mod supersede;
+pub mod undo;
 pub mod verify;
 
 #[cfg(feature = "store")]

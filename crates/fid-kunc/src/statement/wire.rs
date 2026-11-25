@@ -16,7 +16,8 @@
 //! `expanded` `{U, k}`, `interval` `{low, high, p, kind}`, `model` `{id, semver, digest}`,
 //! `sources` `[{kind, id, digest, unverified}]` (`unverified` only when `"true"`), `contributors` `[{input_id, sensitivity, u_contrib,
 //! variance_share}]`, `lpu_validated_by_mc`, `nonlinearity` `{version, outcome, v1, v2,
-//! ratio, probed_inputs, probed_pairs, cross_terms_truncated, reason}`, `selection_rule`,
+//! ratio, probed_inputs, probed_pairs, cross_terms_truncated, reason}`, `samples_digest`
+//! (`MCM` only, omitted when absent), `selection_rule`,
 //! `estimate_convention`, `provenance` `{rule_sets, principal, principal_kind, proposal,
 //! adopted_by, supersedes}`.
 
@@ -126,6 +127,7 @@ pub(crate) fn to_canonical(p: &StatementParts) -> Result<Vec<u8>, StmtError> {
         put_opt(&mut o, "reason", n.reason.as_deref(), s);
         Json::Obj(o)
     });
+    put_opt(&mut m, "samples_digest", p.samples_digest, |d| s(d.as_str()));
     put_opt(&mut m, "selection_rule", p.selection_rule.as_deref(), s);
     put_opt(&mut m, "estimate_convention", p.estimate_convention.as_deref(), s);
     let pv = &p.provenance;
@@ -321,6 +323,7 @@ pub(crate) fn from_json(j: Json) -> Result<StatementParts, StmtError> {
         e.finish()?;
         Ok(n)
     })?;
+    p.samples_digest = opt(o.take("samples_digest"), |x| digest_of(x, "samples_digest"))?;
     p.selection_rule = opt(o.take("selection_rule"), string)?;
     p.estimate_convention = opt(o.take("estimate_convention"), string)?;
     let mut e = Obj::of(o.need("provenance")?)?;

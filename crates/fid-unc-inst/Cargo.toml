@@ -1,0 +1,37 @@
+[package]
+name = "fid-unc-inst"
+description = "Metrology Maven instrument uncertainty models: the instrument-model/v1 format, import, show and bind commands, and the range check (spec node UNC.INST.SCHEMA)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Bus-derived principals and the D-031 class check (CORE.BUS.PRIN, CORE.BUS.POL.CLASS). Layer
+# engine, the same layer as this crate.
+fid-bus = { path = "../fid-bus" }
+# Canonical JSON (RFC 8785) and bounded parsing (CORE.JRN.CANON). Layer model.
+fid-canon = { path = "../fid-canon" }
+# `instrument-profile/v1` validation and descriptor digest (HAL.IDL.PROFILE), `DeviceInstance`
+# (HAL.IDL.BASE.DESC). Layer model.
+fid-hal-idl = { path = "../fid-hal-idl" }
+# SHA-256 (`kci::sha256_digest`). Layer kernel.
+fid-kci = { path = "../fid-kci" }
+# `Distribution` (UNC.MODEL.DIST) and the model name and semver rules. Layer kernel.
+fid-kunc = { path = "../fid-kunc" }
+# Command declarations through the registry macros (CORE.REG.DEF.MACRO). Layer model.
+fid-registry = { path = "../fid-registry" }
+# Exact-replay outcome classes (CORE.RPL). Layer engine.
+fid-replay = { path = "../fid-replay" }
+# The agent-branch predicate (CORE.BUS.ROUTE). Layer model; already in the lock through fid-bus.
+fid-store = { path = "../fid-store" }
+# Shared `sha256:` digests and the forbidden-character table (AGENTS.md rule 14). Layer num.
+fid-types = { path = "../fid-types" }
+# The author kind, the blob and import-handle seams and the recorded-entry shape shared with
+# the Uncertainty Model store (UNC.MODEL.GRAPH.STORE), reused instead of redefined. Layer
+# engine, the same layer as this crate.
+fid-unc = { path = "../fid-unc" }
+
+[lints]
+workspace = true

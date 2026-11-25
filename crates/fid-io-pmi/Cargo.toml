@@ -1,0 +1,16 @@
+[package]
+name = "fid-io-pmi"
+description = "Metrology Maven AP242 PMI entity graph extraction and semantic, graphic-only or unsupported classification (spec node IO.CAD.PMI.READ)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# The parsed exchange structure (IO.CAD.STEP.P21) and the resolved unit contexts
+# (IO.CAD.STEP.HDR) this reader walks. Same layer (services).
+fid-io-step = { path = "../fid-io-step" }
+
+[lints]
+workspace = true

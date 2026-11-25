@@ -2,6 +2,7 @@
 //! `fid-design pkg-diff --from <dir> --to <dir> [--json]`,
 //! `fid-design tokens-check --root <dir> [--json]`,
 //! `fid-design status-check --root <dir> [--json]`,
+//! `fid-design space-check --root <dir> [--json]`,
 //! `fid-design palettes-check --root <dir> [--baseline <digests>] [--json]`,
 //! `fid-design color-check --root <dir> [--baseline <digests>] [--out <file>] [--json]`,
 //! `fid-design princ-check [--file <md>] [--json]` and
@@ -10,24 +11,55 @@
 //! [--deny-names <file>] [--json]` or `review-check --all --root <design dir> [--base <repo>] ..`,
 //! `fid-design icons-prov --root <design dir> --attribution <file> [--json]`,
 //! `fid-design icons-registry --manifest <file> --root <design dir> [--json]`,
-//! `fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]` and
-//! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]`.
-//! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage.
+//! `fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]`,
+//! `fid-design screens-gate --spec <spec dir> --root <design dir> [--json]`,
+//! `fid-design icons-lint --root <icons dir> [--json]`,
+//! `fid-design glyph-distinct --root <icons dir> [--threshold <0..1>] [--json]`,
+//! `fid-design fonts-check --root <design dir> --allowlist <file> [--json]`,
+//! `fid-design comp-check --root <components dir | spec file> --package <design dir> [--json]`,
+//! `fid-design page-check (--root <design dir> | --file <pages.json>) [--json]`,
+//! `fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]`,
+//! `fid-design research-check --root <dir> [--key <private csv>] [--json]` and
+//! `fid-design sources-check --root <design dir> [--spec <spec dir>] [--json]`.
+//! Exit codes: 0 no findings, 1 findings, 2 unreadable package or bad usage (`icons-lint` also
+//! exits 2 for a root holding no SVG).
 
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 const USAGE: &str =
-    "usage: fid-design pkg-check --root <dir> [--json]\n       fid-design pkg-diff --from <dir> --to <dir> [--json]\n       fid-design tokens-check --root <design dir> [--json]\n       fid-design status-check --root <design dir> [--json]\n       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]\n       fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]\n       fid-design princ-check [--file <md>] [--json]\n       fid-design words-check --copy <jsonl> [--words <json>] [--json]\n       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]\n       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]
+    "usage: fid-design pkg-check --root <dir> [--json]
+       fid-design pkg-diff --from <dir> --to <dir> [--json]
+       fid-design tokens-check --root <design dir> [--json]
+       fid-design status-check --root <design dir> [--json]
+       fid-design space-check --root <design dir> [--json]
+       fid-design palettes-check --root <design dir> [--baseline <digests>] [--json]
+       fid-design color-check --root <design dir> [--baseline <digests>] [--out <file>] [--json]
+       fid-design princ-check [--file <md>] [--json]
+       fid-design words-check --copy <jsonl> [--words <json>] [--json]
+       fid-design review-check --changed <file> --root <design dir> [--base <repo>] [--pr <N>] [--deny-names <file>] [--json]
+       fid-design review-check --all --root <design dir> [--base <repo>] [--deny-names <file>] [--json]
        fid-design icons-prov --root <design dir> --attribution <file> [--json]
        fid-design icons-registry --manifest <file> --root <design dir> [--json]
        fid-design screens-check --root <design dir> --journeys <dir> [--ga <app>] [--json]
-       fid-design screens-gate --spec <spec dir> --root <design dir> [--json]";
+       fid-design screens-gate --spec <spec dir> --root <design dir> [--json]
+       fid-design icons-lint --root <icons dir> [--json]
+       fid-design glyph-distinct --root <icons dir> [--threshold <0..1>] [--json]
+       fid-design fonts-check --root <design dir> --allowlist <file> [--json]
+       fid-design comp-check --root <components dir | spec file> --package <design dir> [--json]
+       fid-design page-check (--root <design dir> | --file <pages.json>) [--json]
+       fid-design lint-literals --root <dir> [--rules <toml>] [--package <dir>] [--allowlist <file>] [--json]
+       fid-design research-check --root <dir> [--key <private csv>] [--json]
+       fid-design sources-check --root <design dir> [--spec <spec dir>] [--json]";
 
 #[derive(Default)]
 struct Args {
     root: Option<PathBuf>,
+    key: Option<PathBuf>,
+    rules: Option<PathBuf>,
+    package: Option<PathBuf>,
+    allowlist: Option<PathBuf>,
     from: Option<PathBuf>,
     to: Option<PathBuf>,
     file: Option<PathBuf>,
@@ -44,6 +76,7 @@ struct Args {
     ga: Option<String>,
     spec: Option<PathBuf>,
     pr: Option<u64>,
+    threshold: Option<String>,
     all: bool,
     json: bool,
 }
@@ -55,6 +88,10 @@ fn parse_args(args: &[String]) -> Option<Args> {
         match a.as_str() {
             "--json" => out.json = true,
             "--root" => out.root = Some(PathBuf::from(it.next()?)),
+            "--key" => out.key = Some(PathBuf::from(it.next()?)),
+            "--rules" => out.rules = Some(PathBuf::from(it.next()?)),
+            "--package" => out.package = Some(PathBuf::from(it.next()?)),
+            "--allowlist" => out.allowlist = Some(PathBuf::from(it.next()?)),
             "--from" => out.from = Some(PathBuf::from(it.next()?)),
             "--to" => out.to = Some(PathBuf::from(it.next()?)),
             "--file" => out.file = Some(PathBuf::from(it.next()?)),
@@ -77,6 +114,7 @@ fn parse_args(args: &[String]) -> Option<Args> {
                 }
                 out.pr = Some(n);
             }
+            "--threshold" => out.threshold = Some(it.next()?.clone()),
             "--all" => out.all = true,
             _ => return None,
         }
@@ -125,9 +163,204 @@ fn main() -> ExitCode {
     let Some(args) = parse_args(&all[1..]) else {
         return usage();
     };
+    if cmd == "glyph-distinct" {
+        let others = args.key.is_some()
+            || args.rules.is_some()
+            || args.package.is_some()
+            || args.allowlist.is_some()
+            || args.from.is_some()
+            || args.to.is_some()
+            || args.file.is_some()
+            || args.copy.is_some()
+            || args.words.is_some()
+            || args.changed.is_some()
+            || args.deny_names.is_some()
+            || args.base.is_some()
+            || args.baseline.is_some()
+            || args.out.is_some()
+            || args.attribution.is_some()
+            || args.manifest.is_some()
+            || args.journeys.is_some()
+            || args.ga.is_some()
+            || args.spec.is_some()
+            || args.pr.is_some()
+            || args.all;
+        let Some(root) = &args.root else {
+            return usage();
+        };
+        if others {
+            return usage();
+        }
+        let threshold = match &args.threshold {
+            None => fid_design::glyph::Threshold::default_value(),
+            Some(t) => match fid_design::glyph::Threshold::parse(t) {
+                Ok(t) => t,
+                Err(e) => return fail(e),
+            },
+        };
+        return match fid_design::glyph::check(root, &threshold) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        };
+    }
+    if args.threshold.is_some() {
+        return usage();
+    }
     let pkg_flags = args.root.is_some() || args.from.is_some() || args.to.is_some();
     let princ_flags = args.file.is_some() || args.copy.is_some() || args.words.is_some();
     let screen_flags = args.journeys.is_some() || args.ga.is_some() || args.spec.is_some();
+    if cmd == "fonts-check" {
+        let others = princ_flags
+            || screen_flags
+            || args.from.is_some()
+            || args.to.is_some()
+            || args.baseline.is_some()
+            || args.out.is_some()
+            || args.changed.is_some()
+            || args.deny_names.is_some()
+            || args.base.is_some()
+            || args.pr.is_some()
+            || args.all
+            || args.attribution.is_some()
+            || args.manifest.is_some()
+            || args.rules.is_some()
+            || args.package.is_some()
+            || args.key.is_some();
+        let (Some(root), Some(allowlist)) = (&args.root, &args.allowlist) else {
+            return usage();
+        };
+        if others {
+            return usage();
+        }
+        return match fid_design::fonts::check(root, allowlist) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        };
+    }
+    if cmd == "comp-check" {
+        let others = princ_flags
+            || screen_flags
+            || args.from.is_some()
+            || args.to.is_some()
+            || args.baseline.is_some()
+            || args.out.is_some()
+            || args.changed.is_some()
+            || args.deny_names.is_some()
+            || args.base.is_some()
+            || args.pr.is_some()
+            || args.all
+            || args.attribution.is_some()
+            || args.manifest.is_some()
+            || args.rules.is_some()
+            || args.allowlist.is_some()
+            || args.key.is_some();
+        let (Some(root), Some(package)) = (&args.root, &args.package) else {
+            return usage();
+        };
+        if others {
+            return usage();
+        }
+        return match fid_design::comp::check(root, package) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        };
+    }
+    if cmd == "lint-literals" {
+        let others = princ_flags
+            || screen_flags
+            || args.from.is_some()
+            || args.to.is_some()
+            || args.baseline.is_some()
+            || args.out.is_some()
+            || args.changed.is_some()
+            || args.deny_names.is_some()
+            || args.base.is_some()
+            || args.pr.is_some()
+            || args.all
+            || args.attribution.is_some()
+            || args.manifest.is_some()
+            || args.key.is_some();
+        let Some(root) = &args.root else {
+            return usage();
+        };
+        if others {
+            return usage();
+        }
+        let o = fid_design::lint::Options {
+            root,
+            rules: args.rules.as_deref(),
+            package: args.package.as_deref(),
+            allowlist: args.allowlist.as_deref(),
+        };
+        return match fid_design::lint::check(&o) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        };
+    }
+    if cmd == "research-check" {
+        let others = princ_flags
+            || screen_flags
+            || args.from.is_some()
+            || args.to.is_some()
+            || args.baseline.is_some()
+            || args.out.is_some()
+            || args.changed.is_some()
+            || args.deny_names.is_some()
+            || args.base.is_some()
+            || args.pr.is_some()
+            || args.all
+            || args.attribution.is_some()
+            || args.manifest.is_some()
+            || args.rules.is_some()
+            || args.package.is_some()
+            || args.allowlist.is_some();
+        let Some(root) = &args.root else {
+            return usage();
+        };
+        if others {
+            return usage();
+        }
+        return match fid_design::research::check(root, args.key.as_deref()) {
+            Ok(r) => {
+                // Without `--key` names cannot be checked; say so even when stdout is JSON (the
+                // text report carries the same notice, and the JSON has `names_checked: false`).
+                if !r.names_checked && args.json {
+                    let _ = writeln!(std::io::stderr(), "{}", fid_design::research::NO_KEY_NOTICE);
+                }
+                finish(r.to_json(), r.to_text(), args.json, r.exit_code())
+            }
+            Err(e) => fail(e),
+        };
+    }
+    if args.rules.is_some() || args.package.is_some() || args.allowlist.is_some() || args.key.is_some() {
+        return usage();
+    }
+    if cmd == "sources-check" {
+        let others = princ_flags
+            || args.from.is_some()
+            || args.to.is_some()
+            || args.baseline.is_some()
+            || args.out.is_some()
+            || args.changed.is_some()
+            || args.deny_names.is_some()
+            || args.base.is_some()
+            || args.pr.is_some()
+            || args.all
+            || args.attribution.is_some()
+            || args.manifest.is_some()
+            || args.journeys.is_some()
+            || args.ga.is_some();
+        let Some(root) = args.root.clone() else {
+            return usage();
+        };
+        if others {
+            return usage();
+        }
+        return match fid_design::sources::check(&root, args.spec.as_deref()) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        };
+    }
     if cmd == "screens-check" || cmd == "screens-gate" {
         let others = princ_flags
             || args.from.is_some()
@@ -234,6 +467,19 @@ fn main() -> ExitCode {
         return usage();
     }
     match cmd.as_str() {
+        "page-check" if args.from.is_none() && args.to.is_none() && args.copy.is_none() && args.words.is_none() => {
+            return match (&args.root, &args.file) {
+                (Some(root), None) => match fid_design::page::check(root) {
+                    Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+                    Err(e) => fail(e),
+                },
+                (None, Some(file)) => match fid_design::page::check_file(file) {
+                    Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+                    Err(e) => fail(e),
+                },
+                _ => usage(),
+            };
+        }
         "princ-check" if !pkg_flags && args.copy.is_none() && args.words.is_none() => {
             let file = args.file.clone().unwrap_or_else(|| PathBuf::from(fid_design::princ::DEFAULT_FILE));
             return match fid_design::princ::check(&file) {
@@ -271,6 +517,10 @@ fn main() -> ExitCode {
             Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
             Err(e) => fail(e),
         },
+        ("space-check", Some(root), None, None) => match fid_design::space::check(root) {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        },
         ("color-check", Some(root), None, None) => match fid_design::color::check(root, args.baseline.as_deref()) {
             Ok(r) => {
                 if let Some(out) = &args.out {
@@ -289,6 +539,10 @@ fn main() -> ExitCode {
         },
         ("palettes-check", Some(root), None, None) => match fid_design::palettes::check(root, args.baseline.as_deref())
         {
+            Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
+            Err(e) => fail(e),
+        },
+        ("icons-lint", Some(root), None, None) => match fid_design::icons_lint::check(root) {
             Ok(r) => finish(r.to_json(), r.to_text(), args.json, r.exit_code()),
             Err(e) => fail(e),
         },

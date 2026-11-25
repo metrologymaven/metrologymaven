@@ -7,17 +7,23 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[[bin]]
+name = "fid-mcp"
+path = "src/main.rs"
+
 # A surface crate (lint-allowlist.toml `[surfaces]`): it never links the bus or any other CORE
 # crate. The tool-call adapter reaches the bus through the `McpBus` trait, which the session
 # layer (AUTO.MCP.SESS) implements.
 [dependencies]
-# RFC 8785 values and bytes of `mcp-tools.json`. Layer model.
+# RFC 8785 values and bytes of `mcp-tools.json` and `mcp-profiles.json`. Layer model.
 fid-canon = { path = "../fid-canon" }
 # The command-surface projection (AUTO.SURF.PROJ) and the result envelope (AUTO.SURF.ENV).
 # Layer services, as this crate.
 fid-surface = { path = "../fid-surface" }
 # Shared command ID and side-effect class types. Layer num.
 fid-types = { path = "../fid-types" }
+# Bounded TOML profile parser (AUTO.MCP.SRV).
+toml = { version = "0.8", default-features = false, features = ["parse"] }
 
 # Dev-only (ignored by the crate-graph lint): the tests check that the projection agrees with
 # the bus's own decision (CORE.BUS.POL.PROJ) for every command of the workspace registry and

@@ -1,0 +1,50 @@
+{
+ "comment": "HAL.ACQ.INGEST.CREDIT AC-2: a fifth batch with no batch credit left",
+ "window": {
+  "bytes": 8388608,
+  "batches": 4
+ },
+ "events": [
+  [
+   "grant"
+  ],
+  [
+   "admit",
+   1048576,
+   0,
+   99
+  ],
+  [
+   "admit",
+   1048576,
+   100,
+   199
+  ],
+  [
+   "admit",
+   1048576,
+   200,
+   299
+  ],
+  [
+   "admit",
+   1048576,
+   300,
+   399
+  ],
+  [
+   "admit",
+   1048576,
+   400,
+   499
+  ]
+ ],
+ "expected": [
+  "grant granted=8388608/4 active out=8388608/4 fly=0/0",
+  "admit accepted active out=7340032/3 fly=1048576/1",
+  "admit accepted active out=6291456/2 fly=2097152/2",
+  "admit accepted active out=5242880/1 fly=3145728/3",
+  "admit accepted active out=4194304/0 fly=4194304/4",
+  "admit refused credit_exceeded gap=400-499:CREDIT_EXHAUSTED active out=4194304/0 fly=4194304/4"
+ ]
+}

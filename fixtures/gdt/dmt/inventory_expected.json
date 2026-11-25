@@ -1,0 +1,21 @@
+{
+  "ac1_findings": [
+    {
+      "key": "dmt:asme/caliper/none@1",
+      "kind": "missing_row"
+    },
+    {
+      "key": "dmt:asme/concentricity/none@1",
+      "kind": "status_below_required",
+      "required_status": "supported_or_partial",
+      "status": "unsupported"
+    },
+    {
+      "key": "dmt:asme/drf_planar/none@1",
+      "kind": "missing_row"
+    }
+  ],
+  "ac2_findings": [],
+  "all_supported_digest": "sha256:cd36f65c8f1abcd421a00527d3af3e07243ffd181c59770a122386157d37e741",
+  "synthetic_digest": "sha256:63136bf23e7fe808680f1cdffc1a15e3e71707c90f83109d1f2950c089841bb0"
+}

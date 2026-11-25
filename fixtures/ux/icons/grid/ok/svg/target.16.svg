@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Synthetic original fixture, CC-BY-4.0 -->
+  <circle cx="8" cy="8" r="5" data-role="sem.icon.primary"/>
+  <circle cx="8" cy="8" r="1" fill="currentColor" stroke="none" data-role="sem.icon.accent"/>
+  <path d="M8 1.5v2.5M8 12v2.5M1.5 8h2.5M12 8h2.5" data-role="sem.icon.primary"/>
+</svg>

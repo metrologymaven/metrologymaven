@@ -28,7 +28,7 @@ fn tmp(name: &str) -> PathBuf {
 #[test]
 fn mcp_emitter_is_registered() {
     let surfaces: Vec<&str> = registered().iter().map(|e| e.surface()).collect();
-    assert_eq!(surfaces, ["mcp", "docs"]);
+    assert_eq!(surfaces, ["mcp", "docs", "cli"]);
 }
 
 /// AC-1: `mcp/mcp-tools.json` for min-classes equals the golden, byte for byte.

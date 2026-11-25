@@ -1,0 +1,117 @@
+{
+  "schema": "mig-report-set@1",
+  "reports": [
+    {
+      "name": "mig-dmis-prog-a.mapreport.json",
+      "report": {
+        "schema": "mig-mapreport@1",
+        "header": {
+          "profile_id": "demo-csv-profile",
+          "profile_version": "1.0.0",
+          "source_sha256": "sha256:44d9160cb5826ddf8cec7333e4787fc81b858d5fd78ea3f7b35ee5180fcc87b0",
+          "format_id": "dmis-prog",
+          "importer_version": "0.1.0"
+        },
+        "items": [
+          {
+            "locator": "line 2",
+            "construct_id": "stmt.dmismn",
+            "status": "MAPPED"
+          },
+          {
+            "locator": "line 3",
+            "construct_id": "stmt.goto",
+            "status": "MAPPED"
+          },
+          {
+            "locator": "line 4",
+            "construct_id": "stmt.goto",
+            "status": "MAPPED"
+          },
+          {
+            "locator": "line 5",
+            "construct_id": "stmt.feat",
+            "status": "MAPPED"
+          }
+        ],
+        "summary": {
+          "MAPPED": 4,
+          "PARTIAL": 0,
+          "UNSUPPORTED": 0
+        }
+      }
+    },
+    {
+      "name": "mig-dmis-prog-b.mapreport.json",
+      "report": {
+        "schema": "mig-mapreport@1",
+        "header": {
+          "profile_id": "demo-csv-profile",
+          "profile_version": "1.0.0",
+          "source_sha256": "sha256:20dcee78ff493b974c20bbbb167c71330d0c65e4c544dce5b291056e4cc6eea7",
+          "format_id": "dmis-prog",
+          "importer_version": "0.1.0"
+        },
+        "items": [
+          {
+            "locator": "line 2",
+            "construct_id": "stmt.dmismn",
+            "status": "MAPPED"
+          },
+          {
+            "locator": "line 3",
+            "construct_id": "stmt.goto",
+            "status": "PARTIAL",
+            "reason": "missing_field"
+          }
+        ],
+        "summary": {
+          "MAPPED": 1,
+          "PARTIAL": 1,
+          "UNSUPPORTED": 0
+        }
+      }
+    },
+    {
+      "name": "mig-dmis-prog-a.equivalence.json",
+      "report": {
+        "schema": "mig-equivalence@1",
+        "header": {
+          "source_sha256": "sha256:44d9160cb5826ddf8cec7333e4787fc81b858d5fd78ea3f7b35ee5180fcc87b0",
+          "format_id": "dmis-prog"
+        },
+        "verdict": "EQUIVALENT",
+        "items": [
+          {
+            "line": 1,
+            "construct_id": "stmt.dmismn",
+            "status": "MAPPED"
+          }
+        ]
+      }
+    },
+    {
+      "name": "mig-dmis-prog-c.equivalence.json",
+      "report": {
+        "schema": "mig-equivalence@1",
+        "header": {
+          "source_sha256": "sha256:75779f89a447f2e8bebd262c2282d1903cb256df827da735a1d3639758b6d813",
+          "format_id": "dmis-prog"
+        },
+        "verdict": "EQUIVALENT",
+        "items": [
+          {
+            "line": 1,
+            "construct_id": "stmt.dmismn",
+            "status": "MAPPED"
+          },
+          {
+            "line": 2,
+            "construct_id": "stmt.feat",
+            "status": "MAPPED"
+          }
+        ]
+      }
+    }
+  ]
+}

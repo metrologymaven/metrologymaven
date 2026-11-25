@@ -538,6 +538,11 @@ impl Element {
         &self.body
     }
 
+    pub(crate) fn set_meta(&mut self, meta: CValue) {
+        self.meta = meta;
+        self.rebuild_body();
+    }
+
     fn rebuild_body(&mut self) {
         let slots = self.slots.iter().map(|(s, slot)| (s.to_string(), slot.to_value())).collect();
         self.body = obj([
@@ -956,6 +961,10 @@ impl Tree {
 
     pub fn element(&self, id: &Uuid) -> Option<&Element> {
         self.elements.get(id)
+    }
+
+    pub(crate) fn element_mut(&mut self, id: &Uuid) -> Option<&mut Element> {
+        self.elements.get_mut(id)
     }
 
     pub fn group(&self, id: &Uuid) -> Option<&Group> {

@@ -13,6 +13,14 @@
 //! closure, attestation and breaking-change checks run by `cargo xtask mig taxonomy-check`
 //! (spec node `MIG.COVER.TAXO`).
 //!
+//! [`cover::corpus`]: migration corpus manifests (`mig-corpus@1`), their dataset-catalogue,
+//! visibility and source-register admission checks and the corpus digest, run by
+//! `cargo xtask mig corpus-check` (spec node `MIG.COVER.CORPUS`).
+//!
+//! [`cover::gen`]: per-format coverage tables (`mig-coverage@1`) generated from the corpus,
+//! the taxonomy and producer reports, with the drift check, as `migrate.generate_coverage@1`
+//! (spec node `MIG.COVER.GEN`).
+//!
 //! [`explain::cat`]: closed factor catalogue (`mig-factors@1`) and typed probe candidates
 //! (spec node `MIG.EXPLAIN.CAT`).
 
@@ -20,3 +28,11 @@ pub mod cover;
 pub mod explain;
 pub mod ladder;
 pub mod src;
+
+/// Every command this crate declares (for `fid-registry-build`): `migrate.list_sources@1`
+/// (MIG.SRC.REG) and `migrate.generate_coverage@1` (MIG.COVER.GEN).
+pub fn command_defs() -> Result<Vec<fid_registry::CommandDef>, fid_registry::DefError> {
+    let mut defs = src::reg::command_defs()?;
+    defs.push(cover::gen::command_def()?);
+    Ok(defs)
+}

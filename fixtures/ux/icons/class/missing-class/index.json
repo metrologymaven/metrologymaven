@@ -1,0 +1,110 @@
+{
+  "format": "icon-index@1",
+  "icons": [
+    {
+      "a11y_id": "icon.class.r0",
+      "labelless": true,
+      "name": "class.r0"
+    },
+    {
+      "a11y_id": "icon.class.r1",
+      "labelless": true,
+      "name": "class.r1"
+    },
+    {
+      "a11y_id": "icon.class.w1",
+      "labelless": true,
+      "name": "class.w1"
+    },
+    {
+      "a11y_id": "icon.class.w2",
+      "labelless": true,
+      "name": "class.w2"
+    },
+    {
+      "a11y_id": "icon.class.w3",
+      "labelless": true,
+      "name": "class.w3"
+    },
+    {
+      "a11y_id": "icon.class.x1",
+      "labelless": true,
+      "name": "class.x1"
+    },
+    {
+      "a11y_id": "icon.class.d1",
+      "labelless": true,
+      "name": "class.d1"
+    },
+    {
+      "a11y_id": "icon.class.m1",
+      "labelless": true,
+      "name": "class.m1"
+    },
+    {
+      "a11y_id": "icon.class.s1",
+      "labelless": true,
+      "name": "class.s1"
+    },
+    {
+      "a11y_id": "icon.class.a0",
+      "labelless": true,
+      "name": "class.a0"
+    },
+    {
+      "a11y_id": "icon.state.conforms",
+      "labelless": true,
+      "name": "state.conforms"
+    },
+    {
+      "a11y_id": "icon.state.nonconforms",
+      "labelless": true,
+      "name": "state.nonconforms"
+    },
+    {
+      "a11y_id": "icon.state.indeterminate",
+      "labelless": true,
+      "name": "state.indeterminate"
+    },
+    {
+      "a11y_id": "icon.state.not-decidable",
+      "labelless": true,
+      "name": "state.not-decidable"
+    },
+    {
+      "a11y_id": "icon.state.not-evaluated",
+      "labelless": true,
+      "name": "state.not-evaluated"
+    },
+    {
+      "a11y_id": "icon.state.stale",
+      "labelless": true,
+      "name": "state.stale"
+    },
+    {
+      "a11y_id": "icon.prov.computed",
+      "labelless": true,
+      "name": "prov.computed"
+    },
+    {
+      "a11y_id": "icon.prov.measured",
+      "labelless": true,
+      "name": "prov.measured"
+    },
+    {
+      "a11y_id": "icon.prov.entered",
+      "labelless": true,
+      "name": "prov.entered"
+    },
+    {
+      "a11y_id": "icon.prov.reported",
+      "labelless": true,
+      "name": "prov.reported"
+    },
+    {
+      "a11y_id": "icon.prov.suggested",
+      "labelless": true,
+      "name": "prov.suggested"
+    }
+  ]
+}

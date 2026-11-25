@@ -1,0 +1,15 @@
+# Spec card (KRN.CONS.ELEM.PRIM). Cite designators and clause numbers only; never paste standards text.
+id = "construct.build_sphere.four_points@1.0.0"
+title = "Sphere through four points"
+method = "Computes the unique circumsphere via a 3x3 perpendicular-bisector Householder QR solve in fid_num::la."
+applicability = "Four non-coplanar points whose pairwise distances and tetrahedron altitude meet thresholds.distance."
+references = [
+  "Golub, G. H. and Van Loan, C. F. (2013). Matrix Computations, 4th ed., section 5.3 (Householder QR least squares).",
+  "Metrology Maven spec node KRN.CONS.ELEM.PRIM (definitional primitive constructions).",
+]
+determinism = "D0"
+input_arity = "4"
+failure_modes = [
+  "Coincident, collinear or coplanar points fail with Undefined; small altitude fails with IllConditioned.",
+]
+validation = "500 seeded closed-form cases per variant in fixtures/cons/prim-defs-v1 against 60-digit Decimal reference, checked on x86-64, ARM64 and wasm32."

@@ -18,18 +18,23 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # and fid-types, below CORE so fid-replay (engine) and the WASM verifier can use it.
 "fid-rep" = "kernel"
 "fid-solv" = "kernel"
+# Statistics kernel (RPT.STATS.CAP.INDEX first): KNP-1 pure functions over fid-num only.
+"fid-stats" = "kernel"
 # Vendored conic solver (KRN.SOLV.CONIC.PATCH): Clarabel 0.11.1 patched to KNP-1, only fid-num;
 # lives in vendor/fid-clarabel/crate and is audited by `cargo xtask conic-audit`.
 "fid-clarabel" = "kernel"
 "fid-fit" = "kernel"
 # Construction contract (KRN.CONS.DECL): KNP-1, only fid-fit, fid-kci, fid-num, fid-types.
 "fid-construct" = "kernel"
+# Outlier policies and point selection (KRN.OUT.POL first): KNP-1, only fid-fit, fid-kci, fid-num, fid-types.
+"fid-filter" = "kernel"
 "fid-scan-cmp" = "kernel"
-# Mesh quality report (SCAN.POLY.QUAL) and mesh-operation contract (SCAN.MESHOP.PROV): KNP-1,
-# only fid-geo-types, fid-kci, fid-num and fid-types.
+# Mesh quality report (SCAN.POLY.QUAL), mesh-operation contract (SCAN.MESHOP.PROV) and normal
+# inversion (SCAN.MESHOP.CUT.INVERT): KNP-1, only fid-geo-sel, fid-geo-types, fid-kci, fid-num
+# and fid-types.
 "fid-scan-mesh" = "kernel"
-# B-rep model (GEO.CAD.TOPO.MODEL, ADJ, PCURVE): L0 library code, KNP-1; only fid-geo-nurbs, fid-num,
-# fid-kci, fid-types.
+# B-rep model (GEO.CAD.TOPO.MODEL, ADJ, PCURVE) and assembly instances (GEO.CAD.ASSY.MODEL): L0
+# library code, KNP-1; only fid-geo-frame, fid-geo-nurbs, fid-num, fid-kci, fid-types.
 "fid-geo-cad" = "kernel"
 # Alignment kernel (ALN.QA.REPORT first): residual report, fixed-order statistics, digest;
 # ALN.BFIT.CONSTR locks and weights (adds fid-geo-frame, kernel).
@@ -84,10 +89,16 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # GEO command adapter (GEO.TYPES.REG): element registration and geo.describe_element@1; needs
 # fid-dep (engine), so engine, outside the kernel graph.
 "fid-geo-cmd" = "engine"
+# SCAN mesh-operation command adapter (SCAN.MESHOP.CUT.INVERT): registry definition, CLI and MCP
+# of mesh.invert_normals@1 over fid-scan-mesh (kernel), fid-geo-cmd (engine) and fid-registry.
+"fid-scan-mesh-cmd" = "engine"
 "fid-hal-runtime" = "engine"
 # Uncertainty commands (UNC.MODEL.GRAPH.STORE first): model store, journal and surfaces over the
 # fid-kunc kernel types; needs fid-bus and fid-replay (engine), so engine, outside the kernel graph.
 "fid-unc" = "engine"
+# Instrument uncertainty models (UNC.INST.SCHEMA): instrument-model/v1, import/show/bind commands
+# and the range check; needs fid-bus, fid-replay and fid-unc (engine), so engine.
+"fid-unc-inst" = "engine"
 "fid-surface" = "services"
 # MCP surface (AUTO.MCP.PROJ): tool projection over fid-surface (services) and the tool-call adapter;
 # a [surfaces] crate in lint-allowlist.toml, so it never links the bus.
@@ -116,7 +127,10 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-io-dmis" = "services"
 "fid-io-e57" = "services"
 "fid-io-las" = "services"
+"fid-io-mesh" = "services"
 "fid-io-step" = "services"
+# AP242 PMI entity graph extraction and classification (IO.CAD.PMI.READ): needs fid-io-step (services).
+"fid-io-pmi" = "services"
 "fid-cad-proto" = "services"
 "fid-io-res" = "services"
 "fid-xml" = "services"
@@ -124,6 +138,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-ctrl" = "services"
 # Windows ACL shim for the control-channel token file (AUTO.CTRL.AUTH): the named `unsafe` exception.
 "fid-ctrl-acl" = "services"
+# Key store contract (TRUST.SIGN.KEYSTORE.TRAIT): KeyStore trait, test backend and conformance suite
+# over fid-sign-core and fid-canon (model).
+"fid-keystore" = "services"
 "fid-gdt" = "services"
 "fid-mig" = "services"
 # RDL record format (UNC.RDL.FORMAT): needs fid-surface (services) and fid-replay (engine).
@@ -176,10 +193,19 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-overlay" = "viewer"
 # Proposal Inbox governance gates (VIZ.INBOX.GATES.PLAN): pure over fid-profile, fid-journal, fid-canon, fid-types.
 "fid-inbox" = "viewer"
+# Capture (VIZ.CAPTURE.REC.POLICY first): recording-policy keys and fail-closed evaluation over fid-store
+# settings (model); viewer because screenshots and video will need fid-render.
+"fid-capture" = "viewer"
 # View state model (VIZ.VIEW.STATE): ViewState, its canonical form and digest.
 "fid-view" = "viewer"
+# View and render commands on the bus (VIZ.RENDER.FRAME.TIER: view.get_render_info@1).
+"fid-view-cmd" = "viewer"
 "fid-eval-harness" = "tool"
 "fid-eval-redteam" = "tool"
+# Environment diagnostics (PLAT.DOCTOR.PROBE): app layer, above fid-gpu-select (viewer) and below fid-cli (app).
+"fid-doctor" = "app"
 "fid-testkit" = "test-support"
 # VIZ.SHELL.SPKTREE throwaway toolkit spike; never a dependency of product crates.
 "fid-spike-ui" = "viewer"
+# OUTR.DOCS.GUIDE.WASM: safe-Rust WASM/CLI Field Guide runner linking pure L0/model crates only.
+"fid-guide-wasm" = "tool"

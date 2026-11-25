@@ -27,8 +27,8 @@ fn fx(p: &str) -> String {
     format!("{FX}/{p}")
 }
 
-/// AC-1: the shipped package and ATTRIBUTION.md pass (the package ships no icon yet, so the
-/// report lists none; the check still runs over `icons/` and `gdt/`).
+/// AC-1: the shipped package and ATTRIBUTION.md pass (the package ships the UX.ICONS.CLASS
+/// glyphs, each with an originality declaration and a provenance file beside it).
 #[test]
 fn ac1_shipped_icons_pass() {
     let o = run(&["icons-prov", "--root", "design", "--attribution", "ATTRIBUTION.md", "--json"]);
@@ -36,8 +36,11 @@ fn ac1_shipped_icons_pass() {
     assert!(out(&o).contains("\"ok\":true"), "{}", out(&o));
     let r = check_prov(&root().join("design"), &root().join("ATTRIBUTION.md")).unwrap();
     assert!(r.findings.is_empty(), "{:?}", r.findings);
-    // No icon ships yet: this changes visibly when UX.ICONS.CORESET, CLASS or GDT add one.
-    assert_eq!(r.icons, Vec::<String>::new(), "icons now ship: update AC-1's expectations");
+    // UX.ICONS.CLASS ships 23 glyphs (22 meaning-carrying glyphs and the stripe pattern) as 16
+    // and 24 px masters, all in the index; this changes visibly when CORESET or GDT add icons.
+    assert_eq!(r.icons.len(), 46, "{:?}", r.icons);
+    assert!(r.icons.contains(&"icons/svg/class.a0.16.svg".to_string()), "{:?}", r.icons);
+    assert_eq!(r.index_entries, 23);
 }
 
 /// A complete set: beside and central declarations, a listed third-party icon, a labelless

@@ -30,8 +30,12 @@ concurrency:
 
 jobs:
   config-and-mock-test:
-    name: TraCIM public-test config check and loopback mock tests
-    runs-on: ubuntu-latest
+    name: TraCIM public-test config check and loopback mock tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -39,13 +43,11 @@ jobs:
         with:
           python-version: "3.12"
       - name: Verify workflow never exposes paid-order secrets
-        run: |
-          python3 -m tools.rdl.tracim_public check-config \
-            --workflow .github/workflows/tracim-public.yml
+        run: python -m tools.rdl.tracim_public check-config --workflow .github/workflows/tracim-public.yml
       - name: Verify loopback mock fixtures are up to date
-        run: python3 fixtures/rdl/tracim/mock/make_fixtures.py --check
+        run: python fixtures/rdl/tracim/mock/make_fixtures.py --check
       - name: Run loopback mock acceptance tests (AC-1..AC-3)
-        run: python3 -m unittest discover -s tools/rdl/tests -v
+        run: python -m unittest discover -s tools/rdl/tests -v
 
   nightly-public-test:
     name: Nightly TraCIM public test
@@ -61,18 +63,102 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Build release-candidate fid binary
         run: cargo build --release --locked -p fid-cli
+      - name: Preflight check for TRACIM_PUBLIC_KEY and fid rdl submit-tracim dispatch
+        id: preflight
+        shell: bash
+        env:
+          TRACIM_PUBLIC_KEY: ${{ secrets.TRACIM_PUBLIC_KEY }}
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+          from pathlib import Path
+
+          reasons = []
+          if not os.environ.get("TRACIM_PUBLIC_KEY", "").strip():
+              reasons.append("TRACIM_PUBLIC_KEY secret is unset")
+
+          help_proc = subprocess.run(
+              ["target/release/fid", "rdl", "submit-tracim", "--help"],
+              capture_output=True,
+              text=True,
+              check=False,
+          )
+          if help_proc.returncode != 0:
+              reasons.append("fid lacks `rdl submit-tracim` (requires M4 AUTO.CLI.DISPATCH + UNC.RDL.TRACIM)")
+          else:
+              probe_env = {k: v for k, v in os.environ.items() if k != "TRACIM_PUBLIC_KEY"}
+              probe_proc = subprocess.run(
+                  [
+                      "target/release/fid",
+                      "rdl",
+                      "submit-tracim",
+                      "--test-kind",
+                      "public",
+                      "--key-ci-secret",
+                      "--json",
+                  ],
+                  env=probe_env,
+                  capture_output=True,
+                  text=True,
+                  check=False,
+              )
+              combined = probe_proc.stdout + "\n" + probe_proc.stderr
+              if (
+                  "AUTO.CLI.DISPATCH" in combined
+                  or "PreconditionFailed" in combined
+                  or "usage_error" in combined
+              ):
+                  reasons.append("fid `rdl submit-tracim` dispatch is unimplemented (requires M4 AUTO.CLI.DISPATCH + UNC.RDL.TRACIM)")
+
+          configured = "false" if reasons else "true"
+          reason_text = "; ".join(reasons) if reasons else "configured"
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as fh:
+              fh.write(f"configured={configured}\n")
+              fh.write(f"reason={reason_text}\n")
+          print(f"preflight: configured={configured} ({reason_text})")
+          PY
       - name: Run public test against configured tracim destination (--test-kind public)
+        if: steps.preflight.outputs.configured == 'true'
         env:
           TRACIM_PUBLIC_KEY: ${{ secrets.TRACIM_PUBLIC_KEY }}
         run: |
           # Passes --test-kind public via tools/rdl/tracim_public.py; fails on non-passed verdict
           # or unreachable service and writes tracim-public-latest.json without key or raw data.
-          python3 -m tools.rdl.tracim_public run \
+          python -m tools.rdl.tracim_public run \
             --workflow .github/workflows/tracim-public.yml \
             --out tracim-public-latest.json \
             -- target/release/fid
+      - name: Record skipped status on unconfigured scheduled run
+        if: steps.preflight.outputs.configured != 'true' && github.event_name == 'schedule'
+        shell: bash
+        env:
+          PREFLIGHT_REASON: ${{ steps.preflight.outputs.reason }}
+        run: |
+          echo "::notice::Skipping nightly TraCIM public test: ${PREFLIGHT_REASON}"
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from tools.rdl.tracim_public import build_artifact, write_artifact
+
+          artifact = build_artifact(
+              verdict="skipped",
+              kernel_semver=None,
+              manifest_digest=None,
+              reason=f"unconfigured: {os.environ['PREFLIGHT_REASON']}",
+          )
+          write_artifact(Path("tracim-public-latest.json"), artifact)
+          PY
+      - name: Fail loudly on unconfigured manual workflow_dispatch
+        if: steps.preflight.outputs.configured != 'true' && github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          PREFLIGHT_REASON: ${{ steps.preflight.outputs.reason }}
+        run: |
+          echo "::error::TraCIM public test cannot run: ${PREFLIGHT_REASON}"
+          exit 1
       - name: Upload tracim-public-latest.json artifact
-        if: always()
+        if: always() && (steps.preflight.outputs.configured == 'true' || github.event_name == 'schedule')
         uses: actions/upload-artifact@v4
         with:
           name: tracim-public-latest

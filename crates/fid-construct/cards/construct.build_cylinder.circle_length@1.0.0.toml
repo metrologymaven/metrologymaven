@@ -1,0 +1,14 @@
+# Spec card (KRN.CONS.ELEM.SHAPE). Cite designators and clause numbers only; never paste standards text.
+id = "construct.build_cylinder.circle_length@1.0.0"
+title = "Cylinder from circle and signed length"
+method = "Extrudes a circle along its sign-normalised normal by signed length, locating the midpoint on the axis."
+applicability = "One 3D circle and non-zero finite signed length meeting thresholds.distance."
+references = [
+  "Metrology Maven spec node KRN.CONS.ELEM.SHAPE (definitional compound and axial primitive constructions).",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "Zero length fails with Undefined; magnitude below distance threshold fails with IllConditioned.",
+]
+validation = "300 seeded closed-form cases per variant in fixtures/cons/shape-defs-v1, checked on x86-64, ARM64 and wasm32."

@@ -1,0 +1,32 @@
+{
+  "schema": "mig-taxonomy@1",
+  "format_id": "form-xlsx",
+  "version": "1.0.0",
+  "reviewer_attestation": {
+    "date": "2026-11-24",
+    "reviewer": "Metrology Maven maintainers",
+    "statement": "Construct descriptions authored in original project wording for this fixture."
+  },
+  "constructs": [
+    {
+      "id": "sheet.part_metadata",
+      "kind": "field",
+      "description": "Header fields with part number and lot."
+    },
+    {
+      "id": "sheet.characteristic_table",
+      "kind": "layout",
+      "description": "Repeating rows of results."
+    },
+    {
+      "id": "cell.merged_header",
+      "kind": "layout",
+      "description": "Merged header cells over several columns."
+    },
+    {
+      "id": "cell.formula_summary",
+      "kind": "field",
+      "description": "Summary cell computed by a formula."
+    }
+  ]
+}

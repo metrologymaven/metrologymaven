@@ -3,9 +3,11 @@
 //!
 //! - [`edge`]: dependency edges, cycle rejection and dependency queries (`CORE.DEP.EDGE`).
 //! - [`prop`]: change propagation and recompute mode (`CORE.DEP.PROP`).
+//! - [`recompute`]: deterministic recompute with failure isolation and single-entry commit (`CORE.DEP.RECOMP`).
 
 pub mod edge;
 pub mod prop;
+pub mod recompute;
 
 pub use edge::{
     command_def, show_dependencies, Dependencies, EdgeError, EdgeIndex, EdgesSet, EntityId, Op, Output,
@@ -17,4 +19,11 @@ pub use prop::{
     ElementStates, ElementsMarked, Marking, PropError, Propagation, RecomputeMode, RecomputeModeSet,
     RecomputeSubmission, SetRecomputeMode, ELEMENTS_MARKED_EVENT, MAX_CHANGED, MAX_PASS_EDGES, MAX_PASS_ELEMENTS,
     RECOMPUTE_DEPENDENTS, RECOMPUTE_MODE_SET_EVENT, SET_RECOMPUTE_MODE,
+};
+pub use recompute::{
+    command_def as recompute_command_def, execute_recompute, order_induced_subgraph, plan_recompute, replay_exact,
+    CancelCheck, ElementOutcome, ElementRunOutput, FailedEntry, NeverCancel, NullProgress, OverlayEntity, OverlayEvent,
+    OverlayView, ProgressReport, RecompError, RecomputeCommitted, RecomputeExecution, RecomputePlan, RecomputeRunner,
+    RecomputeScope, RecomputedEntry, RecordedCommand, ReplayOutcome, ELEMENT_STATE_CHANGED_EVENT,
+    RECOMPUTE_COMMAND_NAME, RECOMPUTE_COMMITTED_EVENT,
 };

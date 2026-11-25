@@ -2,24 +2,42 @@
 //! registry command. Each UX leaf adds its check as a module and a subcommand.
 //!
 //! - [`pkg`]: `pkg-check` and `pkg-diff` (`UX.SYSTEM.PKG`).
+//! - [`lint`]: `lint-literals` (`UX.SYSTEM.LINT`).
 //! - [`princ`]: `princ-check` (`UX.SYSTEM.PRINC`).
 //! - [`words`]: `words-check` (`UX.SYSTEM.PRINC`).
 //! - [`review`]: `review-check` (`UX.SYSTEM.REVIEW`).
 //! - [`screens`]: `screens-check` and `screens-gate` (`UX.SCREENS.INV`).
+//! - [`sources`]: `sources-check` (`UX.SYSTEM.TOOL`).
+//! - [`research`]: `research-check` (`UX.RESEARCH.PROTO`).
 //! - [`tokens`]: `tokens-check` (`UX.TOKENS.COLOR`).
+//! - [`fonts`]: `fonts-check` (`UX.TOKENS.TYPE`).
 //! - [`status`]: `status-check` (`UX.TOKENS.STATUS`).
 //! - [`palettes`]: `palettes-check` (`UX.TOKENS.DATAPAL`).
 //! - [`color`]: `color-check`, the release gate over all of them (`UX.TOKENS.CHECK`).
+//! - [`icons_lint`]: `icons-lint` (`UX.ICONS.GRID`).
+//! - [`space`]: `space-check` (`UX.TOKENS.SPACE`).
 //! - [`icons_prov`]: `icons-prov` and `icons-registry` (`UX.ICONS.PROV`).
+//! - [`page`]: `page-check` (`UX.REPORT.PAGE`).
+//! - [`glyph`]: `glyph-distinct` (`UX.ICONS.CLASS`).
+//! - [`comp`]: `comp-check` (`UX.COMP.SCHEMA`).
 
 pub mod color;
+pub mod comp;
 pub mod finding;
+pub mod fonts;
+pub mod glyph;
+pub mod icons_lint;
 pub mod icons_prov;
+pub mod lint;
+pub mod page;
 pub mod palettes;
 pub mod pkg;
 pub mod princ;
+pub mod research;
 pub mod review;
 pub mod screens;
+pub mod sources;
+pub mod space;
 pub mod status;
 pub mod tokens;
 pub mod words;

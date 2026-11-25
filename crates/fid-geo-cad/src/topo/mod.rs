@@ -19,7 +19,7 @@ pub mod geom;
 pub mod model;
 pub mod pcurve;
 pub mod trim;
-mod uuid;
+pub(crate) mod uuid;
 
 pub use adj::{AdjError, Adjacency};
 pub use encode::{body_digest, decode, encode, DecodeError, MAX_ENCODED_BYTES, VERSION};

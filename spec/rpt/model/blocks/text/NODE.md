@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid report set-text-block, fid report set-image-block]
 mcp: [report_set_text_block, report_set_image_block]
 journal: [report.set_text_block@1, report.set_image_block@1]
-updated: 2026-11-19
+built_in: [fid-report]
+updated: 2026-11-22
 ---
 
 # RPT.MODEL.BLOCKS.TEXT: Text, image, header and footer blocks

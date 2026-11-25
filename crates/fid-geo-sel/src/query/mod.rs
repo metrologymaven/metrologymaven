@@ -3,6 +3,7 @@
 
 pub mod ast;
 pub mod canon;
+pub mod eval;
 pub mod parse;
 
 pub use ast::{
@@ -14,4 +15,5 @@ pub use canon::{
     canonicalize, canonicalize_expr, digest_canonical_bytes, format_jcs_number, parse_and_canonicalize, query_digest,
     to_canonical_bytes, to_opaque_query,
 };
+pub use eval::{evaluate, evaluate_selection, CadEvaluator, CadPred, EvalContext, EvalError, NearEvaluator, NearPred};
 pub use parse::{parse_opaque_query, parse_query};

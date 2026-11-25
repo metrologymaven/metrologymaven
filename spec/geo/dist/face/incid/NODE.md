@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-geo-dist]
+built_pr: 599
 satisfies: [REQ-GEO.DIST.FACE-001, REQ-GEO.DIST.FACE-006]
 covers: []
 depends_on: [GEO.CAD.TOPO.MODEL, GEO.CAD.TOPO.ADJ, GEO.CAD.TOPO.PCURVE, GEO.NURBS.EVAL, GEO.DIST.SIGN]
@@ -49,8 +51,8 @@ GEO.DIST.SIGN defines one pseudo-normal rule for meshes and CAD; for CAD the cal
 
 ## Acceptance criteria
 
-- **AC-1** Given the cube from fixture `fixtures/geo/cad/topo/cube_labelled.json`, when query points outside and inside near every edge and corner are signed (seed 29, 10 000 points), then all outside points are positive and all inside points negative.
-- **AC-2** Given the cylinder-with-hole from `fixtures/geo/cad/tess/analytic_set`, then points inside the hole (outside the material) are positive at the hole's edge rim.
+- **AC-1** Given the cube from fixture `fixtures/geo/cad/topo/cube_labelled.json`, when query points outside and inside near every edge and corner are signed (seed 29, 10 000 points), then all outside points are positive and all inside points negative. (The fixture gives each line's direction in `axis`, while a GEO.NURBS.ANALYTIC line runs along `ref_dir`; the test reads the cube's lines with the two vectors swapped, see Open questions.)
+- **AC-2** Given the cylinder-with-hole `fixtures/geo/dist/face/incid/tube.json` (invented, written by `make_incid_cases.py`; to be re-pointed to the cylinder-with-hole of `fixtures/geo/cad/tess/analytic_set` when GEO.CAD.TESS lands), then points inside the hole (outside the material) are positive at the hole's edge rim.
 - **AC-3** Given fixture `fixtures/geo/dist/face/open_sheet.json` (a single face with free edges), then a foot on a free edge gives `sign_defined = false`.
 - **AC-4** Given a sphere apex foot, then the fallback normal is used and the sign is correct.
 
@@ -74,7 +76,12 @@ GEO.DIST.SIGN defines one pseudo-normal rule for meshes and CAD; for CAD the cal
 
 ## Open questions
 
-- None.
+- **Built in `fid-geo-dist` `face::incid`.** The prepared form is `Incid::new(&Body)` (or `Incid::from_parts(Adjacency, Pcurves)`, to share GEO.CAD.TOPO.PCURVE's pcurves with GEO.DIST.FACE.ONE) with `incident_at(&FaceHit) -> Result<Vec<Incident>, Undefined>` and `signed(p, &FaceHit) -> Result<Signed, IncidError>`: the Design's free functions need the pcurves as well as the body and adjacency (the trim curves of the edge rule), and computation failures (an uncertified inversion, an evaluation error) are errors, never a guessed sign. `Undefined` is either the sign flag of REQ-004 (`Sign { reason, entity }`) or such an error. `Incident` also records whether the degenerate-normal fallback was used.
+- Judgement calls, stated in the module documentation: an interior foot has weight 2 pi; an edge "with exactly two faces" is read as an edge with exactly two coedges, so a seam (one face used twice) is a smooth edge, not a free one; a vertex is also undefined when an edge at it has one or more than two coedges (`Boundary`, `NonManifold`) or when its corners do not link its edges into one fan (`NonManifoldVertex`, as in GEO.DIST.SIGN); pole coedges (no 3-D curve, both ends one vertex, image within 1e-8 m of it) are passed over. A `uv` is used only when its surface point is within `MAP_TOL_M` = 1e-6 m [unverified] of the foot; otherwise the foot is inverted onto the face (certified only) and refused if still off. A corner angle within 2^-30 rad of 0 or 2 pi is `Degenerate`.
+- Degenerate normals (review of #599): a point is near-degenerate when `|Su x Sv| <= 1e-6 Lu Lv` (face derivative scales). There the normal is sampled on a ring of 17 parameters of the collapsing direction, 1e-9 of the domain off the singular point, on the face's own sheet only (the side where its trim curves lie). Agreeing ring normals (a sphere or NURBS pole) give their mean; disagreeing ones (a cone apex) give `SignUndefined::Degenerate`. A foot at a cone apex is therefore unsigned by rule, never guessed (tests `cone_apex_r0_0_half_angle_30`, `cone_apex_r0_3_half_angle_20_beyond_the_tip`, oracle sections `cone C30` and `cone C20`). The Design's "fixed small inward parameter offset" with one normal is replaced by this rule.
+- NURBS seams: an interior foot of a NURBS face on a seam edge (within 1e-8 m) is signed by the two-coedge edge rule, because the surface may be only C0 there. A seam that cannot be tested exactly gives `Degenerate`. Concave edges and corners are covered by the oracle's `lblock` section (`lblock.json`).
+- AC-2 uses `fixtures/geo/dist/face/incid/tube.json` (an invented solid cylinder with a coaxial through hole, written by `make_incid_cases.py` with the oracle) because the GEO.CAD.TESS `analytic_set` fixtures do not exist yet; re-point the test when they land.
+- `fixtures/geo/cad/topo/cube_labelled.json` gives each line's direction in `axis` (its `ref_dir` is a perpendicular), while a GEO.NURBS.ANALYTIC line runs along the reference direction, so read literally its edge curves miss their far vertices. The AC-1 test reads them with the two vectors swapped; read literally, a corner foot is refused (`Mapping`), not signed with a guessed angle (test `inconsistent_edge_curves_fail_closed`). Raised for GEO.CAD.TOPO.MODEL.
 
 ## Children
 

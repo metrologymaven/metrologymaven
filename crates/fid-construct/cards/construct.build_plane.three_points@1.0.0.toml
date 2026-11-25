@@ -1,0 +1,15 @@
+# Spec card (KRN.CONS.ELEM.PRIM). Cite designators and clause numbers only; never paste standards text.
+id = "construct.build_plane.three_points@1.0.0"
+title = "Plane through three points"
+method = "Constructs the plane containing three points via cross product and centroid with sign-normalised normal."
+applicability = "Three non-collinear points whose minimum edge and altitude meet thresholds.distance."
+references = [
+  "Golub, G. H. and Van Loan, C. F. (2013). Matrix Computations, 4th ed., section 5.3 (Householder QR least squares).",
+  "Metrology Maven spec node KRN.CONS.ELEM.PRIM (definitional primitive constructions).",
+]
+determinism = "D0"
+input_arity = "3"
+failure_modes = [
+  "Coincident or collinear points fail with Undefined; small altitude fails with IllConditioned.",
+]
+validation = "500 seeded closed-form cases per variant in fixtures/cons/prim-defs-v1 against 60-digit Decimal reference, checked on x86-64, ARM64 and wasm32."

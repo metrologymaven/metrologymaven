@@ -22,12 +22,18 @@ fid-esig = { path = "../fid-esig" }
 # `geo.describe_element@1` (GEO.TYPES.REG), read through `fid_geo_cmd::command_defs()`.
 # Layer engine.
 fid-geo-cmd = { path = "../fid-geo-cmd" }
+# `device.show_devices@1` (HAL.ACQ.SESS.REG), read through
+# `fid_hal_runtime::registry::command_defs()`. Layer engine; already in the lock.
+fid-hal-runtime = { path = "../fid-hal-runtime" }
 fid-jobs = { path = "../fid-jobs" }
 # `sign.set_profile@1` and `sign.show_profile@1` (TRUST.PROFILE.SELECT), read through
 # `fid_profile_cmd::command_defs()`. Layer engine.
 fid-profile-cmd = { path = "../fid-profile-cmd" }
 fid-project-cmd = { path = "../fid-project-cmd" }
 fid-report = { path = "../fid-report" }
+# `mesh.invert_normals@1` (SCAN.MESHOP.CUT.INVERT), read through
+# `fid_scan_mesh_cmd::command_defs()`. Layer engine.
+fid-scan-mesh-cmd = { path = "../fid-scan-mesh-cmd" }
 # The adoption commands of AUTO.REC.ADOPT and the lifecycle commands of AUTO.REC.LIFE, read
 # through `fid_program_rec::{adopt,life}::declarations()`.
 # Layer services, as this crate.
@@ -38,6 +44,10 @@ fid-store = { path = "../fid-store" }
 # The model commands of UNC.MODEL.GRAPH.STORE (unc.create_model@1, unc.validate_model@1,
 # unc.show_model@1), read through `fid_unc::model_store::declarations()`. Layer engine.
 fid-unc = { path = "../fid-unc" }
+# The instrument-model commands of UNC.INST.SCHEMA (unc.import_instrument_model@1,
+# unc.show_instrument_model@1, unc.bind_instrument_model@1), `fid_unc_inst::command_defs`.
+# Layer engine.
+fid-unc-inst = { path = "../fid-unc-inst" }
 # The settings each crate declares with `fid_settings!` (CORE.STO.SET), collected into the
 # workspace settings manifest: `fid_bus::policy::fs::fs_settings` (`bus.fs_roots`); and the
 # request commands of CORE.BUS.POL.PROJ (`fid_bus::policy::projection::command_defs`). Layer
@@ -51,7 +61,8 @@ fid-catalog = { path = "../fid-catalog" }
 # (CORE.JRN.BR.NAME) and the branch diff `fid_journal::diff::command_defs` (CORE.JRN.BR.DIFF). Feature `store` because the declaration uses fid-store's macro. Layer
 # model; already in the lock.
 fid-journal = { path = "../fid-journal", features = ["store"] }
-# `migrate.list_sources@1` (MIG.SRC.REG), `fid_mig::src::reg::command_defs`. Layer services.
+# `migrate.list_sources@1` (MIG.SRC.REG) and `migrate.generate_coverage@1` (MIG.COVER.GEN),
+# `fid_mig::command_defs`. Layer services.
 fid-mig = { path = "../fid-mig" }
 # `rdl.check_suite@1` (R1) and `rdl.list_suite@1` (R0) of UNC.ORS.TRACE. Layer services, the
 # same layer as this crate; adds no crate outside the lock.

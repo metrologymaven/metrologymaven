@@ -73,7 +73,14 @@ New `fixtures/program/retarget/manual-pick.json` (four steps, `s4` not re-target
 
 ## Open questions
 
-- `RunPlan` must carry the recorded default digest of each input parameter; `AUTO.RUN.BIND` hashes bound inputs already, and the defaults come from the program's parameter declarations (`AUTO.PROG.FAMILY`). If the program stores only handles, BIND hashes the default handles too.
+- Partial build (maintainer decision, PR 586): `fid-run` module `exec::retarget` implements the guard and the `StepGate` hook, but the leaf is not marked built. The open items are:
+  - AC-1 waits on `AUTO.PROG.FMT` storing a recorded digest with a default (below). Today the recorded scan also re-targets the run, and `s4` stops. The tests check AC-1 with the fixture's digest put into the plan.
+  - AC-2, and the stop clause of AC-3, wait on the per-step `retargetable` mark from `AUTO.REC.LIFT` / `AUTO.PROG.FMT` (below). The tests apply the fixture's mark of `s4` to the plan. On a real plan, every step is allowed.
+  - REQ-002 end to end, from a stored mark and a stored digest through `prepare_run` to a stop.
+- Recorded default digests (obligation on `AUTO.PROG.FMT` and `AUTO.REC.LIFT`, not edited from here): a program stores only a default's handle. The dataset a handle names at run time is not evidence of what was recorded, so `prepare_run` derives no digest from it, and `RunPlan.default_digests` stays empty. Under REQ-001's "no recorded default" clause, every run that binds a data input is therefore re-targeted. This fails closed: a marked step can never run on unverified data, and it stops even on the recorded dataset. FMT must store the recorded input's SHA-256 with the default, and `prepare_run` must copy it into `default_digests`.
+- Marking (owned by `AUTO.REC.LIFT`, needs an additive `AUTO.PROG.FMT` field): no stored program can mark a step `retargetable: false` yet, so `prepare_run` lists every step as re-targetable. The fixture `fixtures/program/retarget/manual-pick.json` is a valid FMT program. Its mark of `s4` lives in `fixtures/program/retarget/expected.json` (`not_retargetable`).
+- Step types (provisional until `AUTO.PROG.INTERP.ENGINE` is built): `exec::retarget` defines `StepKey { step_id, iteration_path }`, `StepInfo { command, class }` and `StepResult { command, output }`. ENGINE's `StepKey` should be this type, or convert to it one-to-one. `GateDecision` is `Allow | Stop(code, detail) | Hold(reason)`. The `not_retargetable` detail is `{"iteration_path", "params", "step_id"}` (`NotRetargetable`).
+- Authority: the guard emits no journal event and decides nothing that a fold replays, so REQ-CORE.RPL.RECON.FOLD-008 has nothing to bind here. `AUTO.RUN.EXEC.CMD` journals the stop and finalises the run as `failed`. That entry falls under `AUTO.RUN.EXEC.BRANCH`'s obligation for the Run entity fold.
 
 ## Children
 

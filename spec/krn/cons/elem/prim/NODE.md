@@ -17,7 +17,8 @@ determinism: D0
 cli: [fid construct build-point, fid construct build-line, fid construct build-plane, fid construct build-circle, fid construct build-sphere]
 mcp: [construct_build_point, construct_build_line, construct_build_plane, construct_build_circle, construct_build_sphere]
 journal: [construct.build_point@1, construct.build_line@1, construct.build_plane@1, construct.build_circle@1, construct.build_sphere@1]
-updated: 2026-11-17
+built_in: [fid-construct]
+updated: 2026-11-23
 ---
 
 # KRN.CONS.ELEM.PRIM: Definitional point, line, plane, circle and sphere builds

@@ -1,0 +1,15 @@
+# Spec card (KRN.CONS.ELEM.PRIM). Cite designators and clause numbers only; never paste standards text.
+id = "construct.build_point.apex_of@1.0.0"
+title = "Apex point of cone"
+method = "Extracts the apex point of a cone feature."
+applicability = "One valid cone feature."
+references = [
+  "Golub, G. H. and Van Loan, C. F. (2013). Matrix Computations, 4th ed., section 5.3 (Householder QR least squares).",
+  "Metrology Maven spec node KRN.CONS.ELEM.PRIM (definitional primitive constructions).",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "Non-cone inputs fail with WrongInputKind.",
+]
+validation = "500 seeded closed-form cases per variant in fixtures/cons/prim-defs-v1 against 60-digit Decimal reference, checked on x86-64, ARM64 and wasm32."

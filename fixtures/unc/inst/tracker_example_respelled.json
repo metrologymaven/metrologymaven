@@ -1,0 +1,71 @@
+{
+  "source": "Invented example model for tests: the parameter values are made up and describe no real instrument (project fixture, D-038, CC-BY-4.0)",
+  "range": [
+    {
+      "unit": "mK",
+      "axis": "temperature",
+      "min": "283150",
+      "max": "313150"
+    },
+    {
+      "unit": "mm",
+      "axis": "range",
+      "min": "500",
+      "max": "40000"
+    }
+  ],
+  "params": [
+    {
+      "name": "probing_noise",
+      "unit": "mm",
+      "value": "0.01",
+      "dist": {
+        "kind": "rect",
+        "params": {
+          "a": "-0.01",
+          "b": "1e-2"
+        }
+      }
+    },
+    {
+      "name": "angle_sigma",
+      "unit": "mrad",
+      "value": "0.005",
+      "dist": {
+        "kind": "normal",
+        "params": {
+          "mu": "-0",
+          "sigma": "5e-3"
+        }
+      }
+    },
+    {
+      "name": "range_prop_sigma",
+      "unit": "ppm",
+      "value": "6.0",
+      "dist": {
+        "kind": "normal",
+        "params": {
+          "mu": "0",
+          "sigma": "6"
+        }
+      }
+    },
+    {
+      "name": "range_const_sigma",
+      "unit": "mm",
+      "value": "0.015",
+      "dist": {
+        "kind": "normal",
+        "params": {
+          "mu": "0",
+          "sigma": "0.015"
+        }
+      }
+    }
+  ],
+  "device_class": "tracker",
+  "kind": "observation",
+  "id": "im:tracker-example@1.0.0",
+  "schema": "instrument-model/v1"
+}

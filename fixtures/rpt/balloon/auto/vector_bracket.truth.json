@@ -1,0 +1,207 @@
+{
+  "callout_count": 15,
+  "frame_boxes": [
+    {
+      "x0": 4300,
+      "x1": 9530,
+      "y0": 20720,
+      "y1": 21470
+    },
+    {
+      "x0": 18300,
+      "x1": 21220,
+      "y0": 20720,
+      "y1": 21470
+    },
+    {
+      "x0": 29300,
+      "x1": 31380,
+      "y0": 20720,
+      "y1": 21470
+    }
+  ],
+  "runs": [
+    {
+      "angle_mdeg": 0,
+      "bbox": {
+        "x0": 4500,
+        "x1": 6600,
+        "y0": 4920,
+        "y1": 5270
+      },
+      "font_h_cmm": 350,
+      "kind": "dimension",
+      "text": "120.0 ±0.1"
+    },
+    {
+      "angle_mdeg": 0,
+      "bbox": {
+        "x0": 14000,
+        "x1": 16310,
+        "y0": 4920,
+        "y1": 5270
+      },
+      "font_h_cmm": 350,
+      "kind": "dimension",
+      "text": "60.00 ±0.05"
+    },
+    {
+      "angle_mdeg": 0,
+      "bbox": {
+        "x0": 23500,
+        "x1": 26020,
+        "y0": 4920,
+        "y1": 5270
+      },
+      "font_h_cmm": 350,
+      "kind": "dimension",
+      "text": "Ø12.00 ±0.05"
+    },
+    {
+      "angle_mdeg": 0,
+      "bbox": {
+        "x0": 33000,
+        "x1": 35310,
+        "y0": 4920,
+        "y1": 5270
+      },
+      "font_h_cmm": 350,
+      "kind": "dimension",
+      "text": "2X Ø6.50 H7"
+    },
+    {
+      "angle_mdeg": 0,
+      "bbox": {
+        "x0": 4500,
+        "x1": 8070,
+        "y0": 9920,
+        "y1": 10270
+      },
+      "font_h_cmm": 350,
+      "kind": "dimension",
+      "text": "45.00 +0.02/-0.01"
+    },
+    {
+      "angle_mdeg": 0,
+      "bbox": {
+        "x0": 14000,
+        "x1": 15050,
+        "y0": 9920,
+        "y1": 10270
+      },
+      "font_h_cmm": 350,
+      "kind": "dimension",
+      "text": "30.00"
+    },
+    {
+      "angle_mdeg": 0,
+      "bbox": {
+        "x0": 23500,
+        "x1": 25810,
+        "y0": 9920,
+        "y1": 10270
+      },
+      "font_h_cmm": 350,
+      "kind": "dimension",
+      "text": "18.50 ±0.05"
+    },
+    {
+      "angle_mdeg": 0,
+      "bbox": {
+        "x0": 33000,
+        "x1": 35100,
+        "y0": 9920,
+        "y1": 10270
+      },
+      "font_h_cmm": 350,
+      "kind": "dimension",
+      "text": "8.00 ±0.02"
+    },
+    {
+      "angle_mdeg": 0,
+      "bbox": {
+        "x0": 4500,
+        "x1": 5340,
+        "y0": 14920,
+        "y1": 15270
+      },
+      "font_h_cmm": 350,
+      "kind": "dimension",
+      "text": "R4.0"
+    },
+    {
+      "angle_mdeg": 0,
+      "bbox": {
+        "x0": 14000,
+        "x1": 15890,
+        "y0": 14920,
+        "y1": 15270
+      },
+      "font_h_cmm": 350,
+      "kind": "dimension",
+      "text": "M6x1.0-6H"
+    },
+    {
+      "angle_mdeg": 0,
+      "bbox": {
+        "x0": 23500,
+        "x1": 24550,
+        "y0": 14920,
+        "y1": 15270
+      },
+      "font_h_cmm": 350,
+      "kind": "dimension",
+      "text": "2x45°"
+    },
+    {
+      "angle_mdeg": 0,
+      "bbox": {
+        "x0": 33000,
+        "x1": 34260,
+        "y0": 14920,
+        "y1": 15270
+      },
+      "font_h_cmm": 350,
+      "kind": "dimension",
+      "text": "Ra 1.6"
+    },
+    {
+      "angle_mdeg": 0,
+      "bbox": {
+        "x0": 4500,
+        "x1": 9330,
+        "y0": 20920,
+        "y1": 21270
+      },
+      "font_h_cmm": 350,
+      "kind": "gdt",
+      "text": "⌖ | Ø0.05 M | A | B | C"
+    },
+    {
+      "angle_mdeg": 0,
+      "bbox": {
+        "x0": 18500,
+        "x1": 21020,
+        "y0": 20920,
+        "y1": 21270
+      },
+      "font_h_cmm": 350,
+      "kind": "gdt",
+      "text": "⊥ | 0.02 | A"
+    },
+    {
+      "angle_mdeg": 0,
+      "bbox": {
+        "x0": 29500,
+        "x1": 31180,
+        "y0": 20920,
+        "y1": 21270
+      },
+      "font_h_cmm": 350,
+      "kind": "gdt",
+      "text": "⏥ | 0.01"
+    }
+  ],
+  "sheet_height_cmm": 29700,
+  "sheet_width_cmm": 42000
+}

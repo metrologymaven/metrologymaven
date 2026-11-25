@@ -1,0 +1,665 @@
+{
+ "cases": [
+  {
+   "binding": {},
+   "name": "ac1_recorded_scan_by_default",
+   "recorded": {
+    "decisions": [
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s1"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s2"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s3"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s4"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s4"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s1"
+     }
+    ],
+    "differing": [],
+    "retargeted": false
+   },
+   "today": {
+    "decisions": [
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s1"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s2"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s3"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [],
+        "params": [
+         "scan"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [],
+      "step": "s4"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [
+         2,
+         1
+        ],
+        "params": [
+         "scan"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s4"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s1"
+     }
+    ],
+    "differing": [
+     "scan"
+    ],
+    "retargeted": true
+   }
+  },
+  {
+   "binding": {
+    "scan": "input:scans/bracket-120.ply"
+   },
+   "name": "ac1_recorded_scan_bound",
+   "recorded": {
+    "decisions": [
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s1"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s2"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s3"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s4"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s4"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s1"
+     }
+    ],
+    "differing": [],
+    "retargeted": false
+   },
+   "today": {
+    "decisions": [
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s1"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s2"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s3"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [],
+        "params": [
+         "scan"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [],
+      "step": "s4"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [
+         2,
+         1
+        ],
+        "params": [
+         "scan"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s4"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s1"
+     }
+    ],
+    "differing": [
+     "scan"
+    ],
+    "retargeted": true
+   }
+  },
+  {
+   "binding": {
+    "scan": "input:scans/bracket-120-shifted.ply"
+   },
+   "name": "ac2_shifted_scan",
+   "recorded": {
+    "decisions": [
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s1"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s2"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s3"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [],
+        "params": [
+         "scan"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [],
+      "step": "s4"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [
+         2,
+         1
+        ],
+        "params": [
+         "scan"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s4"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s1"
+     }
+    ],
+    "differing": [
+     "scan"
+    ],
+    "retargeted": true
+   },
+   "today": {
+    "decisions": [
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s1"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s2"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s3"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [],
+        "params": [
+         "scan"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [],
+      "step": "s4"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [
+         2,
+         1
+        ],
+        "params": [
+         "scan"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s4"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s1"
+     }
+    ],
+    "differing": [
+     "scan"
+    ],
+    "retargeted": true
+   }
+  },
+  {
+   "binding": {
+    "reference": "input:scans/bracket-120.ply",
+    "scan": "input:scans/bracket-120.ply"
+   },
+   "name": "ac3_reference_has_no_default",
+   "recorded": {
+    "decisions": [
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s1"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s2"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s3"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [],
+        "params": [
+         "reference"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [],
+      "step": "s4"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [
+         2,
+         1
+        ],
+        "params": [
+         "reference"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s4"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s1"
+     }
+    ],
+    "differing": [
+     "reference"
+    ],
+    "retargeted": true
+   },
+   "today": {
+    "decisions": [
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s1"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s2"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s3"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [],
+        "params": [
+         "reference",
+         "scan"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [],
+      "step": "s4"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [
+         2,
+         1
+        ],
+        "params": [
+         "reference",
+         "scan"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s4"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s1"
+     }
+    ],
+    "differing": [
+     "reference",
+     "scan"
+    ],
+    "retargeted": true
+   }
+  },
+  {
+   "binding": {
+    "reference": "input:scans/bracket-120.ply",
+    "scan": "input:scans/bracket-120-shifted.ply"
+   },
+   "name": "ac3_shifted_and_no_default",
+   "recorded": {
+    "decisions": [
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s1"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s2"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s3"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [],
+        "params": [
+         "reference",
+         "scan"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [],
+      "step": "s4"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [
+         2,
+         1
+        ],
+        "params": [
+         "reference",
+         "scan"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s4"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s1"
+     }
+    ],
+    "differing": [
+     "reference",
+     "scan"
+    ],
+    "retargeted": true
+   },
+   "today": {
+    "decisions": [
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s1"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s2"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [],
+      "step": "s3"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [],
+        "params": [
+         "reference",
+         "scan"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [],
+      "step": "s4"
+     },
+     {
+      "decision": {
+       "code": "not_retargetable",
+       "detail": {
+        "iteration_path": [
+         2,
+         1
+        ],
+        "params": [
+         "reference",
+         "scan"
+        ],
+        "step_id": "018f0000-0000-7000-8000-000000000304"
+       }
+      },
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s4"
+     },
+     {
+      "decision": "allow",
+      "iteration_path": [
+       2,
+       1
+      ],
+      "step": "s1"
+     }
+    ],
+    "differing": [
+     "reference",
+     "scan"
+    ],
+    "retargeted": true
+   }
+  }
+ ],
+ "not_retargetable": [
+  "s4"
+ ],
+ "program_digest": "sha256:8218c75faeb481b42d67ddb310296e86c3996af1aebca03d217d58f08bc6a251",
+ "program_id": "018f0000-0000-7000-8000-000000000300",
+ "recorded_defaults": {
+  "scan": "sha256:a6e83f66f967de73eae5015658bd90e3d45de0f770400eeb7250aac69414fb43"
+ },
+ "scan_sha256": {
+  "bracket-120": "sha256:a6e83f66f967de73eae5015658bd90e3d45de0f770400eeb7250aac69414fb43",
+  "bracket-120-shifted": "sha256:f4bae23b4305f7d4f9ba484db10def9f90aa26279bc23798d63415393397bcc5"
+ },
+ "steps": {
+  "s1": "018f0000-0000-7000-8000-000000000301",
+  "s2": "018f0000-0000-7000-8000-000000000302",
+  "s3": "018f0000-0000-7000-8000-000000000303",
+  "s4": "018f0000-0000-7000-8000-000000000304"
+ }
+}

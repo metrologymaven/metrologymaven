@@ -3,14 +3,18 @@
 //! kernel layer, KNP-1.
 //!
 //! Implemented leaves: `SCAN.POLY.QUAL` (the [`MeshQualityReport`] of a GEO.TYPES
-//! [`Mesh`](fid_geo_types::Mesh) and [`mesh_quality`] that computes it, see [`quality`]) and
+//! [`Mesh`](fid_geo_types::Mesh) and [`mesh_quality`] that computes it, see [`quality`]),
 //! `SCAN.MESHOP.PROV` (the [`MeshOp`] contract, its [`MeshOpBuilder`], the per-triangle
-//! [`Synthesized`] flag and the [`MeshOpOutput`] provenance record, see [`op`]).
+//! [`Synthesized`] flag and the [`MeshOpOutput`] provenance record, see [`op`]) and
+//! `SCAN.MESHOP.CUT.INVERT` (the [`InvertNormals`] operation of `mesh.invert_normals@1`, see
+//! [`cut::invert`]).
 
+pub mod cut;
 mod number;
 pub mod op;
 pub mod quality;
 
+pub use cut::invert::{invert_normals, InvertNormals, InvertParams, InvertPlan};
 pub use op::{
     check_determinism, check_input_intact, derived_digest, MeshOp, MeshOpBuilder, MeshOpError, MeshOpLimits,
     MeshOpOutput, MeshView, OpParams, ParamsWriter, Registered, RunOptions, Synthesized, TriRef, VerifiedMeshView,

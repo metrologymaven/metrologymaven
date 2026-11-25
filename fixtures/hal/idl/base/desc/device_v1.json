@@ -1,0 +1,400 @@
+{
+  "schema": "capability-package/v1",
+  "manifest": {
+    "name": "Device",
+    "version": "1.0.0",
+    "deprecated": false,
+    "tier3_usable": true
+  },
+  "$defs": {
+    "SessionId": {
+      "type": "string",
+      "maxLength": 36
+    },
+    "Digest": {
+      "type": "string",
+      "maxLength": 71
+    },
+    "CalDate": {
+      "type": "string",
+      "maxLength": 10
+    },
+    "Configuration": {
+      "type": "object"
+    },
+    "HealthState": {
+      "type": "string",
+      "enum": [
+        "OFFLINE",
+        "CONNECTING",
+        "INITIALIZING",
+        "WARMING_UP",
+        "READY",
+        "BUSY",
+        "FAULT",
+        "SAFETY_STOPPED",
+        "MAINTENANCE",
+        "INTERRUPTED"
+      ]
+    },
+    "DeviceText": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "bytes",
+        "truncated"
+      ]
+    },
+    "DeviceInstance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "make": {
+          "$ref": "#/$defs/DeviceText"
+        },
+        "model": {
+          "$ref": "#/$defs/DeviceText"
+        },
+        "serial": {
+          "$ref": "#/$defs/DeviceText"
+        },
+        "firmware": {
+          "$ref": "#/$defs/DeviceText"
+        },
+        "driver_id": {
+          "type": "string",
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "driver_id",
+        "make",
+        "model"
+      ]
+    },
+    "CalibrationState": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dcc_digests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Digest"
+          }
+        },
+        "qualification_ref": {
+          "$ref": "#/$defs/DeviceText"
+        },
+        "compensation_id": {
+          "$ref": "#/$defs/DeviceText"
+        },
+        "last_interim_check": {
+          "$ref": "#/$defs/CalDate"
+        },
+        "valid_until": {
+          "$ref": "#/$defs/CalDate"
+        }
+      },
+      "required": [
+        "dcc_digests"
+      ]
+    }
+  },
+  "operations": [
+    {
+      "name": "describe",
+      "class": "R0",
+      "request": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "instance": {
+            "$ref": "#/$defs/DeviceInstance"
+          }
+        },
+        "required": [
+          "instance"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "open_session",
+      "class": "D1",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          },
+          "health": {
+            "$ref": "#/$defs/HealthState"
+          }
+        },
+        "required": [
+          "health",
+          "session_id"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "NOT_QUALIFIED",
+        "CALIBRATION_EXPIRED",
+        "SAFETY_STOP_OBSERVED",
+        "VENDOR_LICENSE",
+        "UNSUPPORTED",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "close_session",
+      "class": "D1",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "health": {
+            "$ref": "#/$defs/HealthState"
+          }
+        },
+        "required": [
+          "health"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "get_health",
+      "class": "R0",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "health": {
+            "$ref": "#/$defs/HealthState"
+          }
+        },
+        "required": [
+          "health"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "get_configuration",
+      "class": "R0",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "configuration": {
+            "$ref": "#/$defs/Configuration"
+          },
+          "config_digest": {
+            "$ref": "#/$defs/Digest"
+          }
+        },
+        "required": [
+          "config_digest",
+          "configuration"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "set_configuration",
+      "class": "D1",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          },
+          "configuration": {
+            "$ref": "#/$defs/Configuration"
+          }
+        },
+        "required": [
+          "configuration",
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "config_digest": {
+            "$ref": "#/$defs/Digest"
+          }
+        },
+        "required": [
+          "config_digest"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "CONFIG_INVALID",
+        "OUT_OF_RANGE",
+        "LIMIT",
+        "UNSUPPORTED",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "get_calibration_state",
+      "class": "R0",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "calibration": {
+            "$ref": "#/$defs/CalibrationState"
+          }
+        },
+        "required": [
+          "calibration"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "UNSUPPORTED",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    }
+  ],
+  "batch_schemas": [],
+  "semantics": {
+    "text": "# Device@1 semantics\n\nThe base capability package that every device, driver, simulator, playback source and file pseudo-device implements.\n\n- `describe` returns the DeviceInstance: make, model, serial and firmware as untrusted device text of at most 4096 bytes each, and the ID of the serving driver.\n- `open_session` and `close_session` bracket all other session work. The runtime assigns the session ID.\n- `get_health` reports one state of the HAL.IDL.BASE.HEALTH machine.\n- `get_configuration` and `set_configuration` carry a configuration/0 document checked against the device's config-schema/0, and return its configuration digest.\n- `get_calibration_state` returns calibration references and validity dates only. No operation writes calibration, qualification or compensation data.\n- Device-supplied text is data and is never interpreted as instructions.\n",
+    "digest": "sha256:744678fd989218de9cb8de160a3e9b850ae664056c8454307bc8b049185a6d9d"
+  },
+  "profile": {
+    "id": "Device-core@1",
+    "items": [
+      {
+        "id": "DC-01",
+        "summary": "Describe consistency: describe returns a DeviceInstance with make, model and driver_id; repeated describe calls return the same instance."
+      },
+      {
+        "id": "DC-02",
+        "summary": "Session open and close: open_session returns the requested session ID and a health state; close_session ends the session and later session calls fail with a declared code."
+      },
+      {
+        "id": "DC-03",
+        "summary": "Health reporting within the transition table: every reported health change is a transition of the HAL.IDL.BASE.HEALTH table for its actor."
+      },
+      {
+        "id": "DC-04",
+        "summary": "Error-code closure: every error is a Device@1 error code; every error an operation returns is in that operation's declared list."
+      },
+      {
+        "id": "DC-05",
+        "summary": "Configuration round-trip and digest stability: get_configuration after set_configuration returns the values set; the configuration digest is the same on every read and every platform."
+      },
+      {
+        "id": "DC-06",
+        "summary": "Calibration state is read-only: get_calibration_state returns references and validity dates only; no operation changes the calibration state."
+      }
+    ]
+  }
+}

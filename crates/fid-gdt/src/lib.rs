@@ -36,7 +36,9 @@
 //!   `gdt.build_drf@1` and `gdt.get_drf@1`, the provisional label of D-045 and exact replay;
 //! - [`dim::radial`] (`GDT.DIM.RADIAL`): the diameter and radius checks `check.eval_diameter@1`
 //!   and `check.eval_radius@1` over `fid-gps`'s pure evaluation, their ResultRecord, journal
-//!   event and exact replay.
+//!   event and exact replay;
+//! - [`dmt_inventory`] (`GDT.RES.ROWASME.INV`): the `dmt-inventory/v1` key inventory
+//!   loader and deterministic [`dmt_inventory::coverage`] check over a [`fid_gps::dmt::DmtTable`].
 //!
 //! Nothing here panics on any input: every outcome is a returned `Result`.
 
@@ -44,5 +46,6 @@ pub mod chars;
 pub use chars::interp::{requires_provisional_label, requires_provisional_label_bytes};
 pub mod dim;
 pub mod dmt_flow;
+pub mod dmt_inventory;
 pub mod drf;
 pub mod resolve;

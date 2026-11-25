@@ -1,6 +1,6 @@
 [package]
 name = "fid-spike-ui"
-description = "Metrology Maven throwaway UI toolkit spike: element tree with 10k items beside a wgpu viewport (spec node VIZ.SHELL.SPKTREE). Never a dependency of product crates."
+description = "Metrology Maven throwaway UI toolkit spikes: element tree with 10k items beside a wgpu viewport (spec node VIZ.SHELL.SPKTREE), report designer canvas (VIZ.SHELL.SPKRPT) and characteristic table (VIZ.SHELL.SPKTABLE). Never a dependency of product crates."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,15 +8,16 @@ license.workspace = true
 repository.workspace = true
 publish = false
 
-# The library (tree model, keyboard rules, accessibility facts, statistics, report) is pure
-# Rust so CI tests it without a GPU. Its one dependency is fid-hal-idl for `UntrustedText`
-# (CONSTITUTION C6): item names are file data and are only ever shown escaped.
+# The library (tree and canvas models, keyboard rules, accessibility facts, statistics,
+# reports) is pure Rust so CI tests it without a GPU. Its one dependency is fid-hal-idl for
+# `UntrustedText` (CONSTITUTION C6): item and block names are file data and are only ever
+# shown escaped.
 [dependencies]
 fid-hal-idl = { path = "../fid-hal-idl" }
 
-# The `tree10k` example is the egui + winit + wgpu prototype that D-005 names. The toolkit
-# crates are dev-dependencies so the library never carries them. Default features are off
-# on purpose (deny.toml licence and advisory gates):
+# The `tree10k`, `rptcanvas` and `chartable` examples are the egui + winit + wgpu prototypes
+# that D-005 names. The toolkit crates are dev-dependencies so the library never carries
+# them. Default features are off on purpose (deny.toml licence and advisory gates):
 # - egui `default_fonts` pulls `epaint_default_fonts` (OFL-1.1 AND Ubuntu-font-1.0, not in
 #   deny.toml's allow list): the example loads a system font at run time instead.
 # - wgpu `metal` pulls `metal`, which depends on `paste` (RUSTSEC-2024-0436, unmaintained):
@@ -35,6 +36,12 @@ pollster = "0.4"
 
 [[example]]
 name = "tree10k"
+
+[[example]]
+name = "rptcanvas"
+
+[[example]]
+name = "chartable"
 
 [lints]
 workspace = true

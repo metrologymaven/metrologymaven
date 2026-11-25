@@ -41,7 +41,7 @@ pub const SIGNATURES_DIR: &str = "signatures";
 /// Media type of `manifest.json` and `statement.json`.
 pub const JSON_MEDIA_TYPE: &str = "application/json";
 /// The reserved top-level folders a manifest member may live in, sorted.
-pub const MEMBER_DIRS: [&str; 5] = ["journal", "kernel", "points", "profile", "results"];
+pub const MEMBER_DIRS: [&str; 6] = ["interp", "journal", "kernel", "points", "profile", "results"];
 
 const MAX_MEDIA_TYPE_BYTES: usize = 255;
 

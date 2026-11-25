@@ -28,8 +28,10 @@ pub mod diagnostics;
 pub mod element;
 mod error;
 pub mod hier;
+pub mod matrix;
 pub mod model;
 pub mod residuals;
+pub mod rps321;
 pub mod solver;
 
 pub use command::{
@@ -54,12 +56,22 @@ pub use hier::{
     SetParentResult, TransformUpdated, CLI_SET_PARENT, MAX_EVENT_BYTES, MAX_HIERARCHY_DEPTH, MCP_SET_PARENT,
     SET_PARENT,
 };
+pub use matrix::{
+    invoke_set_matrix_cli, invoke_set_matrix_mcp, replay_set_matrix, set_matrix, set_matrix_command_def,
+    ConversionRecord, SetMatrixCommit, SetMatrixError, SetMatrixEvent, SetMatrixForm, SetMatrixParams, TrsRotationSpec,
+    CLI_SET_MATRIX, MAX_MATRIX_EVENT_BYTES, MAX_SOURCE_CHARS, MCP_SET_MATRIX, SET_MATRIX,
+};
 pub use model::{
     AlignmentModel, CreateRequest, Created, ElementLookup, RecomputeEntry, RecomputeItem, MAX_ALIGNMENTS,
     MAX_RECOMPUTE_NODES,
 };
 pub use residuals::{
     get_residuals, ResidualStore, ResidualsParams, CLI_RESIDUALS, DEFAULT_PAGE, GET_RESIDUALS, MAX_PAGE, MCP_RESIDUALS,
+};
+pub use rps321::{
+    invoke_321_cli, invoke_321_mcp, replay_321, run_321, run_321_command_def, Rps321Elements, Run321Commit,
+    Run321Error, Run321Event, Run321Mode, Run321Params, CLI_RUN_321, MAX_321_EVENT_BYTES, MAX_RPS_ELEMENTS,
+    MCP_RUN_321, RUN_321,
 };
 pub use solver::{AlignmentSolver, SolveStatus, SolverError, SolverOutput, SolverRegistry, MAX_SOLVERS};
 

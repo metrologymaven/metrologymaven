@@ -1,0 +1,529 @@
+{
+ "description": "invented tube: solid cylinder r 2^-6 m, height 2^-7 m, coaxial through hole r 2^-7 m (GEO.DIST.FACE.INCID AC-2; lines are origin + t direction, normal perpendicular)",
+ "license": "CC-BY-4.0",
+ "generator": "fixtures/geo/dist/face/incid/make_incid_cases.py",
+ "body_id": "54554245494e434944000000000000aa",
+ "vertices": [
+  {
+   "point": [
+    0.015625,
+    0.0,
+    0.0
+   ],
+   "label": "T-V1"
+  },
+  {
+   "point": [
+    0.015625,
+    0.0,
+    0.0078125
+   ],
+   "label": "T-V2"
+  },
+  {
+   "point": [
+    0.0078125,
+    0.0,
+    0.0
+   ],
+   "label": "T-V3"
+  },
+  {
+   "point": [
+    0.0078125,
+    0.0,
+    0.0078125
+   ],
+   "label": "T-V4"
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.015625
+   },
+   "label": "T-E1"
+  },
+  {
+   "start": 1,
+   "end": 1,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "origin": [
+     0.0,
+     0.0,
+     0.0078125
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.015625
+   },
+   "label": "T-E2"
+  },
+  {
+   "start": 2,
+   "end": 2,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.0078125
+   },
+   "label": "T-E3"
+  },
+  {
+   "start": 3,
+   "end": 3,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "origin": [
+     0.0,
+     0.0,
+     0.0078125
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.0078125
+   },
+   "label": "T-E4"
+  },
+  {
+   "start": 0,
+   "end": 1,
+   "range": [
+    0.0,
+    0.0078125
+   ],
+   "curve": {
+    "type": "line",
+    "origin": [
+     0.015625,
+     0.0,
+     0.0
+    ],
+    "direction": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "normal": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "T-E5"
+  },
+  {
+   "start": 2,
+   "end": 3,
+   "range": [
+    0.0,
+    0.0078125
+   ],
+   "curve": {
+    "type": "line",
+    "origin": [
+     0.0078125,
+     0.0,
+     0.0
+    ],
+    "direction": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "normal": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "T-E6"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.0
+    ],
+    "dir": [
+     1.0,
+     0.0
+    ]
+   },
+   "label": "T-C01"
+  },
+  {
+   "edge": 4,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     6.283185307179586,
+     0.0
+    ],
+    "dir": [
+     0.0,
+     1.0
+    ]
+   },
+   "label": "T-C02"
+  },
+  {
+   "edge": 1,
+   "sense": "reversed",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.0078125
+    ],
+    "dir": [
+     1.0,
+     0.0
+    ]
+   },
+   "label": "T-C03"
+  },
+  {
+   "edge": 4,
+   "sense": "reversed",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.0
+    ],
+    "dir": [
+     0.0,
+     1.0
+    ]
+   },
+   "label": "T-C04"
+  },
+  {
+   "edge": 5,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.0
+    ],
+    "dir": [
+     0.0,
+     1.0
+    ]
+   },
+   "label": "T-C05"
+  },
+  {
+   "edge": 3,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.0078125
+    ],
+    "dir": [
+     1.0,
+     0.0
+    ]
+   },
+   "label": "T-C06"
+  },
+  {
+   "edge": 5,
+   "sense": "reversed",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     6.283185307179586,
+     0.0
+    ],
+    "dir": [
+     0.0,
+     1.0
+    ]
+   },
+   "label": "T-C07"
+  },
+  {
+   "edge": 2,
+   "sense": "reversed",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.0
+    ],
+    "dir": [
+     1.0,
+     0.0
+    ]
+   },
+   "label": "T-C08"
+  },
+  {
+   "edge": 1,
+   "sense": "same",
+   "pcurve": null,
+   "label": "T-C09"
+  },
+  {
+   "edge": 3,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "T-C10"
+  },
+  {
+   "edge": 0,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "T-C11"
+  },
+  {
+   "edge": 2,
+   "sense": "same",
+   "pcurve": null,
+   "label": "T-C12"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "outer": true,
+   "label": "T-L1"
+  },
+  {
+   "coedges": [
+    4,
+    5,
+    6,
+    7
+   ],
+   "outer": true,
+   "label": "T-L2"
+  },
+  {
+   "coedges": [
+    8
+   ],
+   "outer": true,
+   "label": "T-L3"
+  },
+  {
+   "coedges": [
+    9
+   ],
+   "outer": false,
+   "label": "T-L4"
+  },
+  {
+   "coedges": [
+    10
+   ],
+   "outer": true,
+   "label": "T-L5"
+  },
+  {
+   "coedges": [
+    11
+   ],
+   "outer": false,
+   "label": "T-L6"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "cylinder",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.015625
+   },
+   "sense": "same",
+   "loops": [
+    0
+   ],
+   "label": "T-F1"
+  },
+  {
+   "surface": {
+    "type": "cylinder",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.0078125
+   },
+   "sense": "reversed",
+   "loops": [
+    1
+   ],
+   "label": "T-F2"
+  },
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     0.0078125
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    2,
+    3
+   ],
+   "label": "T-F3"
+  },
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    4,
+    5
+   ],
+   "label": "T-F4"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "closed": true
+  }
+ ]
+}

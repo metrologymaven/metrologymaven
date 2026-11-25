@@ -1,6 +1,6 @@
 [package]
 name = "fid-gps"
-description = "Metrology Maven GD&T evaluation library; today the Dialect Mapping Table schema (GDT.RES.SCHEMA), the pure interpretation resolver (GDT.RES.RESOLVE), the tolerance-zone shapes with fixed-pose usage (GDT.ZONE.ZTYPE), shared-pose group identity and pose digests (GDT.ZONE.GROUP.IDS), DRF construction with its measured planar and cylindrical paths (GDT.DRF.BUILD) and the diameter and radius checks (GDT.DIM.RADIAL)"
+description = "Metrology Maven GD&T evaluation library; today the Dialect Mapping Table schema (GDT.RES.SCHEMA), the pure interpretation resolver (GDT.RES.RESOLVE), the tolerance-zone shapes with fixed-pose usage (GDT.ZONE.ZTYPE), shared-pose group identity and pose digests (GDT.ZONE.GROUP.IDS), DRF construction with its measured planar and cylindrical paths (GDT.DRF.BUILD), the datum target coverage check (GDT.DRF.COMMON.COVER), the diameter and radius checks (GDT.DIM.RADIAL) the profile deviations from nominal (GDT.PROF.DEV), the constant-width profile zone definitions (GDT.PROF.ZDEF.UNIF) and the line-profile section bands (GDT.PROF.LINE.SECT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -27,6 +27,17 @@ fid-geo-frame = { path = "../fid-geo-frame" }
 # KNP-1, no third-party deps). GDT.DIM.RADIAL: the least-squares circle, sphere (KRN.LSQ.RND)
 # and cylinder (KRN.LSQ.AXIS.CYL) fits whose radius it reports.
 fid-fit = { path = "../fid-fit" }
+# GDT.DRF.COMMON.COVER: the measured points (GEO.TYPES.POINTS `PointBuffer`) and the
+# deterministic k-d tree whose exact nearest-point query gives each coverage distance
+# (GEO.INDEX.KDTREE). Both kernel layer, KNP-1, no third-party deps.
+fid-geo-index = { path = "../fid-geo-index" }
+fid-geo-types = { path = "../fid-geo-types" }
+# GDT.PROF.DEV: the B-rep body and trim classification (GEO.CAD.TOPO.MODEL, TRIM), the
+# face-set closest point and CAD sign (GEO.DIST.FACE.BODY, INCID) and the analytic surface
+# kinds (GEO.NURBS.ANALYTIC, to refuse torus faces). All kernel layer, KNP-1, no third-party deps.
+fid-geo-cad = { path = "../fid-geo-cad" }
+fid-geo-dist = { path = "../fid-geo-dist" }
+fid-geo-nurbs = { path = "../fid-geo-nurbs" }
 
 [lints]
 workspace = true

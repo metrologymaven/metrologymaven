@@ -23,6 +23,8 @@
 mod casefold;
 mod casefold_table;
 pub mod container;
+#[cfg(feature = "export")]
+pub mod content;
 mod error;
 pub mod manifest;
 mod path;

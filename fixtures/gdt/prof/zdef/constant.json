@@ -1,0 +1,1315 @@
+{
+ "schema": "fid.test.gdt.prof.zdef.constant/1",
+ "table": "rows.json",
+ "note": "Invented values, metres as IEEE-754 hex bits; mm annotations are for readers only.",
+ "cases": [
+  {
+   "name": "ac1_decimal_bilateral",
+   "def": {
+    "kind": "bilateral",
+    "t": "0x3f3a36e2eb1c432d"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "lower": "0xbf2a36e2eb1c432d",
+    "upper": "0x3f2a36e2eb1c432d",
+    "width": "0x3f3a36e2eb1c432d",
+    "shift": "0x0000000000000000",
+    "mm": [
+     "-0.200000",
+     "0.200000"
+    ],
+    "record": {
+     "kind": "bilateral",
+     "lower": "0xbf2a36e2eb1c432d",
+     "share": null,
+     "share_side": null,
+     "shift": "0x0000000000000000",
+     "side": null,
+     "t": "0x3f3a36e2eb1c432d",
+     "upper": "0x3f2a36e2eb1c432d"
+    },
+    "probes": [
+     {
+      "d": "0xbf2a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf2a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf2a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432e",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "ac1_decimal_unilateral_outward",
+   "def": {
+    "kind": "unilateral",
+    "t": "0x3f3a36e2eb1c432d",
+    "side": "outward"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "lower": "0x0000000000000000",
+    "upper": "0x3f3a36e2eb1c432d",
+    "width": "0x3f3a36e2eb1c432d",
+    "shift": "0x3f2a36e2eb1c432d",
+    "mm": [
+     "0.000000",
+     "0.400000"
+    ],
+    "record": {
+     "kind": "unilateral",
+     "lower": "0x0000000000000000",
+     "share": null,
+     "share_side": null,
+     "shift": "0x3f2a36e2eb1c432d",
+     "side": "outward",
+     "t": "0x3f3a36e2eb1c432d",
+     "upper": "0x3f3a36e2eb1c432d"
+    },
+    "probes": [
+     {
+      "d": "0x8000000000000001",
+      "inside": false
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432e",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "ac1_decimal_unilateral_inward",
+   "def": {
+    "kind": "unilateral",
+    "t": "0x3f3a36e2eb1c432d",
+    "side": "inward"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "lower": "0xbf3a36e2eb1c432d",
+    "upper": "0x0000000000000000",
+    "width": "0x3f3a36e2eb1c432d",
+    "shift": "0xbf2a36e2eb1c432d",
+    "mm": [
+     "-0.400000",
+     "0.000000"
+    ],
+    "record": {
+     "kind": "unilateral",
+     "lower": "0xbf3a36e2eb1c432d",
+     "share": null,
+     "share_side": null,
+     "shift": "0xbf2a36e2eb1c432d",
+     "side": "inward",
+     "t": "0x3f3a36e2eb1c432d",
+     "upper": "0x0000000000000000"
+    },
+    "probes": [
+     {
+      "d": "0xbf3a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x8000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "ac1_decimal_unequal_outward",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x3f1a36e2eb1c432d"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "lower": "0xbf33a92a30553262",
+    "upper": "0x3f1a36e2eb1c432d",
+    "width": "0x3f3a36e2eb1c432d",
+    "shift": "0xbf1a36e2eb1c432e",
+    "mm": [
+     "-0.300000",
+     "0.100000"
+    ],
+    "record": {
+     "kind": "unequal",
+     "lower": "0xbf33a92a30553262",
+     "share": "0x3f1a36e2eb1c432d",
+     "share_side": "outward",
+     "shift": "0xbf1a36e2eb1c432e",
+     "side": null,
+     "t": "0x3f3a36e2eb1c432d",
+     "upper": "0x3f1a36e2eb1c432d"
+    },
+    "probes": [
+     {
+      "d": "0xbf33a92a30553263",
+      "inside": false
+     },
+     {
+      "d": "0xbf33a92a30553262",
+      "inside": false
+     },
+     {
+      "d": "0xbf33a92a30553261",
+      "inside": true
+     },
+     {
+      "d": "0x3f1a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f1a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f1a36e2eb1c432e",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "ac1_decimal_unequal_inward",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x3f1a36e2eb1c432d"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_inward",
+   "expect": {
+    "lower": "0xbf1a36e2eb1c432d",
+    "upper": "0x3f33a92a30553262",
+    "width": "0x3f3a36e2eb1c432d",
+    "shift": "0x3f1a36e2eb1c432e",
+    "mm": [
+     "-0.100000",
+     "0.300000"
+    ],
+    "record": {
+     "kind": "unequal",
+     "lower": "0xbf1a36e2eb1c432d",
+     "share": "0x3f1a36e2eb1c432d",
+     "share_side": "inward",
+     "shift": "0x3f1a36e2eb1c432e",
+     "side": null,
+     "t": "0x3f3a36e2eb1c432d",
+     "upper": "0x3f33a92a30553262"
+    },
+    "probes": [
+     {
+      "d": "0xbf1a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf1a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf1a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f33a92a30553261",
+      "inside": true
+     },
+     {
+      "d": "0x3f33a92a30553262",
+      "inside": false
+     },
+     {
+      "d": "0x3f33a92a30553263",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "ac1_dyadic_bilateral",
+   "def": {
+    "kind": "bilateral",
+    "t": "0x3f3a400000000000"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "lower": "0xbf2a400000000000",
+    "upper": "0x3f2a400000000000",
+    "width": "0x3f3a400000000000",
+    "shift": "0x0000000000000000",
+    "mm": [
+     "-0.200272",
+     "0.200272"
+    ],
+    "record": {
+     "kind": "bilateral",
+     "lower": "0xbf2a400000000000",
+     "share": null,
+     "share_side": null,
+     "shift": "0x0000000000000000",
+     "side": null,
+     "t": "0x3f3a400000000000",
+     "upper": "0x3f2a400000000000"
+    },
+    "probes": [
+     {
+      "d": "0xbf2a400000000001",
+      "inside": false
+     },
+     {
+      "d": "0xbf2a400000000000",
+      "inside": true
+     },
+     {
+      "d": "0xbf2a3fffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a3fffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a400000000000",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a400000000001",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "ac1_dyadic_unilateral_outward",
+   "def": {
+    "kind": "unilateral",
+    "t": "0x3f3a400000000000",
+    "side": "outward"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "lower": "0x0000000000000000",
+    "upper": "0x3f3a400000000000",
+    "width": "0x3f3a400000000000",
+    "shift": "0x3f2a400000000000",
+    "mm": [
+     "0.000000",
+     "0.400543"
+    ],
+    "record": {
+     "kind": "unilateral",
+     "lower": "0x0000000000000000",
+     "share": null,
+     "share_side": null,
+     "shift": "0x3f2a400000000000",
+     "side": "outward",
+     "t": "0x3f3a400000000000",
+     "upper": "0x3f3a400000000000"
+    },
+    "probes": [
+     {
+      "d": "0x8000000000000001",
+      "inside": false
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a3fffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a400000000000",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a400000000001",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "ac1_dyadic_unilateral_inward",
+   "def": {
+    "kind": "unilateral",
+    "t": "0x3f3a400000000000",
+    "side": "inward"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "lower": "0xbf3a400000000000",
+    "upper": "0x0000000000000000",
+    "width": "0x3f3a400000000000",
+    "shift": "0xbf2a400000000000",
+    "mm": [
+     "-0.400543",
+     "0.000000"
+    ],
+    "record": {
+     "kind": "unilateral",
+     "lower": "0xbf3a400000000000",
+     "share": null,
+     "share_side": null,
+     "shift": "0xbf2a400000000000",
+     "side": "inward",
+     "t": "0x3f3a400000000000",
+     "upper": "0x0000000000000000"
+    },
+    "probes": [
+     {
+      "d": "0xbf3a400000000001",
+      "inside": false
+     },
+     {
+      "d": "0xbf3a400000000000",
+      "inside": true
+     },
+     {
+      "d": "0xbf3a3fffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x8000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "ac1_dyadic_unequal_outward",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a400000000000",
+    "share": "0x3f1a000000000000"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "lower": "0xbf33c00000000000",
+    "upper": "0x3f1a000000000000",
+    "width": "0x3f3a400000000000",
+    "shift": "0xbf1a800000000000",
+    "mm": [
+     "-0.301361",
+     "0.099182"
+    ],
+    "record": {
+     "kind": "unequal",
+     "lower": "0xbf33c00000000000",
+     "share": "0x3f1a000000000000",
+     "share_side": "outward",
+     "shift": "0xbf1a800000000000",
+     "side": null,
+     "t": "0x3f3a400000000000",
+     "upper": "0x3f1a000000000000"
+    },
+    "probes": [
+     {
+      "d": "0xbf33c00000000001",
+      "inside": false
+     },
+     {
+      "d": "0xbf33c00000000000",
+      "inside": true
+     },
+     {
+      "d": "0xbf33bfffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x3f19ffffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x3f1a000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x3f1a000000000001",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "ac1_dyadic_unequal_inward",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a400000000000",
+    "share": "0x3f1a000000000000"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_inward",
+   "expect": {
+    "lower": "0xbf1a000000000000",
+    "upper": "0x3f33c00000000000",
+    "width": "0x3f3a400000000000",
+    "shift": "0x3f1a800000000000",
+    "mm": [
+     "-0.099182",
+     "0.301361"
+    ],
+    "record": {
+     "kind": "unequal",
+     "lower": "0xbf1a000000000000",
+     "share": "0x3f1a000000000000",
+     "share_side": "inward",
+     "shift": "0x3f1a800000000000",
+     "side": null,
+     "t": "0x3f3a400000000000",
+     "upper": "0x3f33c00000000000"
+    },
+    "probes": [
+     {
+      "d": "0xbf1a000000000001",
+      "inside": false
+     },
+     {
+      "d": "0xbf1a000000000000",
+      "inside": true
+     },
+     {
+      "d": "0xbf19ffffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x3f33bfffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x3f33c00000000000",
+      "inside": true
+     },
+     {
+      "d": "0x3f33c00000000001",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "edge_share_zero_outward",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x0000000000000000"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "lower": "0xbf3a36e2eb1c432d",
+    "upper": "0x0000000000000000",
+    "width": "0x3f3a36e2eb1c432d",
+    "shift": "0xbf2a36e2eb1c432d",
+    "mm": [
+     "-0.400000",
+     "0.000000"
+    ],
+    "record": {
+     "kind": "unequal",
+     "lower": "0xbf3a36e2eb1c432d",
+     "share": "0x0000000000000000",
+     "share_side": "outward",
+     "shift": "0xbf2a36e2eb1c432d",
+     "side": null,
+     "t": "0x3f3a36e2eb1c432d",
+     "upper": "0x0000000000000000"
+    },
+    "probes": [
+     {
+      "d": "0xbf3a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x8000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "edge_share_zero_inward",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x0000000000000000"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_inward",
+   "expect": {
+    "lower": "0x0000000000000000",
+    "upper": "0x3f3a36e2eb1c432d",
+    "width": "0x3f3a36e2eb1c432d",
+    "shift": "0x3f2a36e2eb1c432d",
+    "mm": [
+     "0.000000",
+     "0.400000"
+    ],
+    "record": {
+     "kind": "unequal",
+     "lower": "0x0000000000000000",
+     "share": "0x0000000000000000",
+     "share_side": "inward",
+     "shift": "0x3f2a36e2eb1c432d",
+     "side": null,
+     "t": "0x3f3a36e2eb1c432d",
+     "upper": "0x3f3a36e2eb1c432d"
+    },
+    "probes": [
+     {
+      "d": "0x8000000000000001",
+      "inside": false
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432e",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "edge_share_full_outward",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x3f3a36e2eb1c432d"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "lower": "0x0000000000000000",
+    "upper": "0x3f3a36e2eb1c432d",
+    "width": "0x3f3a36e2eb1c432d",
+    "shift": "0x3f2a36e2eb1c432d",
+    "mm": [
+     "0.000000",
+     "0.400000"
+    ],
+    "record": {
+     "kind": "unequal",
+     "lower": "0x0000000000000000",
+     "share": "0x3f3a36e2eb1c432d",
+     "share_side": "outward",
+     "shift": "0x3f2a36e2eb1c432d",
+     "side": null,
+     "t": "0x3f3a36e2eb1c432d",
+     "upper": "0x3f3a36e2eb1c432d"
+    },
+    "probes": [
+     {
+      "d": "0x8000000000000001",
+      "inside": false
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432e",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "edge_share_full_inward",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x3f3a36e2eb1c432d"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_inward",
+   "expect": {
+    "lower": "0xbf3a36e2eb1c432d",
+    "upper": "0x0000000000000000",
+    "width": "0x3f3a36e2eb1c432d",
+    "shift": "0xbf2a36e2eb1c432d",
+    "mm": [
+     "-0.400000",
+     "0.000000"
+    ],
+    "record": {
+     "kind": "unequal",
+     "lower": "0xbf3a36e2eb1c432d",
+     "share": "0x3f3a36e2eb1c432d",
+     "share_side": "inward",
+     "shift": "0xbf2a36e2eb1c432d",
+     "side": null,
+     "t": "0x3f3a36e2eb1c432d",
+     "upper": "0x0000000000000000"
+    },
+    "probes": [
+     {
+      "d": "0xbf3a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x8000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "edge_share_negative_zero_inward",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x8000000000000000"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_inward",
+   "expect": {
+    "lower": "0x0000000000000000",
+    "upper": "0x3f3a36e2eb1c432d",
+    "width": "0x3f3a36e2eb1c432d",
+    "shift": "0x3f2a36e2eb1c432d",
+    "mm": [
+     "0.000000",
+     "0.400000"
+    ],
+    "record": {
+     "kind": "unequal",
+     "lower": "0x0000000000000000",
+     "share": "0x0000000000000000",
+     "share_side": "inward",
+     "shift": "0x3f2a36e2eb1c432d",
+     "side": null,
+     "t": "0x3f3a36e2eb1c432d",
+     "upper": "0x3f3a36e2eb1c432d"
+    },
+    "probes": [
+     {
+      "d": "0x8000000000000001",
+      "inside": false
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432e",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "edge_share_negative_zero_outward",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x8000000000000000"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "lower": "0xbf3a36e2eb1c432d",
+    "upper": "0x0000000000000000",
+    "width": "0x3f3a36e2eb1c432d",
+    "shift": "0xbf2a36e2eb1c432d",
+    "mm": [
+     "-0.400000",
+     "0.000000"
+    ],
+    "record": {
+     "kind": "unequal",
+     "lower": "0xbf3a36e2eb1c432d",
+     "share": "0x0000000000000000",
+     "share_side": "outward",
+     "shift": "0xbf2a36e2eb1c432d",
+     "side": null,
+     "t": "0x3f3a36e2eb1c432d",
+     "upper": "0x0000000000000000"
+    },
+    "probes": [
+     {
+      "d": "0xbf3a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x8000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "line_row_bilateral_supported",
+   "def": {
+    "kind": "bilateral",
+    "t": "0x3f3a36e2eb1c432d"
+   },
+   "row": "dmt:asme/profile_of_a_line/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "lower": "0xbf2a36e2eb1c432d",
+    "upper": "0x3f2a36e2eb1c432d",
+    "width": "0x3f3a36e2eb1c432d",
+    "shift": "0x0000000000000000",
+    "mm": [
+     "-0.200000",
+     "0.200000"
+    ],
+    "record": {
+     "kind": "bilateral",
+     "lower": "0xbf2a36e2eb1c432d",
+     "share": null,
+     "share_side": null,
+     "shift": "0x0000000000000000",
+     "side": null,
+     "t": "0x3f3a36e2eb1c432d",
+     "upper": "0x3f2a36e2eb1c432d"
+    },
+    "probes": [
+     {
+      "d": "0xbf2a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf2a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf2a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432e",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "ac3_share_above_t",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x3f40624dd2f1a9fc"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "error": {
+     "code": "bad_zone_parameter",
+     "name": "share"
+    }
+   }
+  },
+  {
+   "name": "ac3_t_nan",
+   "def": {
+    "kind": "bilateral",
+    "t": "0x7ff8000000000000"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "error": {
+     "code": "bad_zone_parameter",
+     "name": "t"
+    }
+   }
+  },
+  {
+   "name": "t_nan_unequal",
+   "def": {
+    "kind": "unequal",
+    "t": "0x7ff8000000000000",
+    "share": "0x3f1a36e2eb1c432d"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "error": {
+     "code": "bad_zone_parameter",
+     "name": "t"
+    }
+   }
+  },
+  {
+   "name": "t_zero",
+   "def": {
+    "kind": "bilateral",
+    "t": "0x0000000000000000"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "error": {
+     "code": "bad_zone_parameter",
+     "name": "t"
+    }
+   }
+  },
+  {
+   "name": "t_negative_zero",
+   "def": {
+    "kind": "unilateral",
+    "t": "0x8000000000000000",
+    "side": "outward"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "error": {
+     "code": "bad_zone_parameter",
+     "name": "t"
+    }
+   }
+  },
+  {
+   "name": "t_negative",
+   "def": {
+    "kind": "unilateral",
+    "t": "0xbf3a36e2eb1c432d",
+    "side": "inward"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "error": {
+     "code": "bad_zone_parameter",
+     "name": "t"
+    }
+   }
+  },
+  {
+   "name": "t_infinite",
+   "def": {
+    "kind": "bilateral",
+    "t": "0x7ff0000000000000"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "error": {
+     "code": "bad_zone_parameter",
+     "name": "t"
+    }
+   }
+  },
+  {
+   "name": "t_subnormal",
+   "def": {
+    "kind": "bilateral",
+    "t": "0x0000000000000001"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "error": {
+     "code": "bad_zone_parameter",
+     "name": "t"
+    }
+   }
+  },
+  {
+   "name": "share_negative",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0xbf1a36e2eb1c432d"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "error": {
+     "code": "bad_zone_parameter",
+     "name": "share"
+    }
+   }
+  },
+  {
+   "name": "share_nan",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x7ff8000000000000"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "error": {
+     "code": "bad_zone_parameter",
+     "name": "share"
+    }
+   }
+  },
+  {
+   "name": "share_next_above_t",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x3f3a36e2eb1c432e"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "error": {
+     "code": "bad_zone_parameter",
+     "name": "share"
+    }
+   }
+  },
+  {
+   "name": "chain_share_bad_kind",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x3f1a36e2eb1c432d"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_bad_kind",
+   "expect": {
+    "error": {
+     "code": "bad_zone_parameter",
+     "name": "share_side"
+    }
+   }
+  },
+  {
+   "name": "chain_share_bad_token",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x3f1a36e2eb1c432d"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_bad_token",
+   "expect": {
+    "error": {
+     "code": "bad_zone_parameter",
+     "name": "share_side"
+    }
+   }
+  },
+  {
+   "name": "chain_share_conflict",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x3f1a36e2eb1c432d"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_conflict",
+   "expect": {
+    "error": {
+     "code": "bad_zone_parameter",
+     "name": "share_side"
+    }
+   }
+  },
+  {
+   "name": "chain_share_missing",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x3f1a36e2eb1c432d"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_missing",
+   "expect": {
+    "error": {
+     "code": "bad_zone_parameter",
+     "name": "share_side"
+    }
+   }
+  },
+  {
+   "name": "chain_share_missing_bilateral",
+   "def": {
+    "kind": "bilateral",
+    "t": "0x3f3a36e2eb1c432d"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_missing",
+   "expect": {
+    "lower": "0xbf2a36e2eb1c432d",
+    "upper": "0x3f2a36e2eb1c432d",
+    "width": "0x3f3a36e2eb1c432d",
+    "shift": "0x0000000000000000",
+    "mm": [
+     "-0.200000",
+     "0.200000"
+    ],
+    "record": {
+     "kind": "bilateral",
+     "lower": "0xbf2a36e2eb1c432d",
+     "share": null,
+     "share_side": null,
+     "shift": "0x0000000000000000",
+     "side": null,
+     "t": "0x3f3a36e2eb1c432d",
+     "upper": "0x3f2a36e2eb1c432d"
+    },
+    "probes": [
+     {
+      "d": "0xbf2a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf2a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf2a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432e",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "ac4_unequal_unsupported",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x3f1a36e2eb1c432d"
+   },
+   "row": "dmt:asme/profile_of_a_line/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "error": {
+     "code": "UNSUPPORTED",
+     "kind": "unequal"
+    }
+   }
+  },
+  {
+   "name": "ac4_unsupported_before_params",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x3f40624dd2f1a9fc"
+   },
+   "row": "dmt:asme/profile_of_a_line/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "error": {
+     "code": "UNSUPPORTED",
+     "kind": "unequal"
+    }
+   }
+  },
+  {
+   "name": "ac5_non_uniform_unlinked",
+   "def": {
+    "kind": "non_uniform",
+    "widths": [
+     "0x3f3a36e2eb1c432d",
+     "0x3f4a36e2eb1c432d"
+    ]
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "error": {
+     "code": "UNSUPPORTED",
+     "kind": "non_uniform"
+    }
+   }
+  },
+  {
+   "name": "ac5_non_uniform_row_limited",
+   "def": {
+    "kind": "non_uniform",
+    "widths": [
+     "0x3f3a36e2eb1c432d",
+     "0x3f4a36e2eb1c432d"
+    ]
+   },
+   "row": "dmt:asme/profile_of_a_line/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "error": {
+     "code": "UNSUPPORTED",
+     "kind": "non_uniform"
+    }
+   }
+  }
+ ]
+}

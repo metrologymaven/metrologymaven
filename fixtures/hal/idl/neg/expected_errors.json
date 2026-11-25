@@ -1,0 +1,20 @@
+{
+  "decl_no_device.json": {
+    "code": "UNSUPPORTED",
+    "entry": "Device",
+    "reason": "device_unsupported",
+    "support": "support_v1.json"
+  },
+  "decl_duplicate.json": {
+    "code": "declaration_invalid",
+    "entry": "LineScan",
+    "reason": "duplicate_capability",
+    "support": "support_v1.json"
+  },
+  "decl_bad_range.json": {
+    "code": "declaration_invalid",
+    "entry": "LineScan",
+    "reason": "version_range_invalid",
+    "support": "support_v1.json"
+  }
+}

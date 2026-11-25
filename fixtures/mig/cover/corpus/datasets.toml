@@ -1,0 +1,73 @@
+# MIG.COVER.CORPUS fixture: a dataset catalogue extract (ECO.DATA.CAT schema).
+# Synthetic entries only; nothing here is fetched. CC0-1.0.
+[policy]
+redistributable = ["CC0-1.0", "CC-BY-4.0", "MIT", "Apache-2.0"]
+
+[[dataset]]
+id = "mig-qif-demo-a"
+title = "Synthetic migration corpus file mig-qif-demo-a"
+source = "https://example.org/datasets/mig-qif-demo-a"
+licence = "CC0-1.0"
+size_bytes = 2048
+sha256 = "c267263379a2443fcbb4a6f31571d69b8fc3d32a0efdc4ad4805bd76fc6b595f"
+owner = "MIG"
+redistribution = "mirror"
+urls = ["https://example.org/files/mig-qif-demo-a.zip"]
+
+[[dataset]]
+id = "mig-qif-demo-b"
+title = "Synthetic migration corpus file mig-qif-demo-b"
+source = "https://example.org/datasets/mig-qif-demo-b"
+licence = "CC0-1.0"
+size_bytes = 2048
+sha256 = "52b19b297ddfe02f180591460089f3a9211e6adbd183db954ab7ef293ee90019"
+owner = "MIG"
+redistribution = "mirror"
+urls = ["https://example.org/files/mig-qif-demo-b.zip"]
+
+[[dataset]]
+id = "mig-qif-demo-c"
+title = "Synthetic migration corpus file mig-qif-demo-c"
+source = "https://example.org/datasets/mig-qif-demo-c"
+licence = "CC-BY-4.0"
+size_bytes = 2048
+sha256 = "4601b97b0281ee53802898623afdf70b057e432d96303f8fa1e59ca8fd7bd689"
+owner = "MIG"
+redistribution = "mirror"
+urls = ["https://example.org/files/mig-qif-demo-c.zip"]
+
+[[dataset]]
+id = "mig-qif-fetchonly"
+title = "Synthetic migration corpus file mig-qif-fetchonly"
+source = "https://example.org/datasets/mig-qif-fetchonly"
+licence = "LicenseRef-Demo-Terms"
+terms_url = "https://example.org/terms"
+size_bytes = 2048
+sha256 = "f6eb914f8d2f5e631009da41723d35dabaeb79d79f64714d65199d552c74d583"
+owner = "MIG"
+redistribution = "fetch-only"
+urls = ["https://example.org/files/mig-qif-fetchonly.zip"]
+
+[[dataset]]
+id = "mig-qif-customer"
+title = "Synthetic migration corpus file mig-qif-customer"
+source = "https://example.org/datasets/mig-qif-customer"
+licence = "CC0-1.0"
+size_bytes = 2048
+sha256 = "b540d0de742fcb62f6979deb1cb7834358349d43a6e3d79dd2e9429700caf6fa"
+owner = "MIG"
+redistribution = "mirror"
+urls = ["https://example.org/files/mig-qif-customer.zip"]
+contains_customer_data = true
+release_ref = "decisions/D-999-example-release.md"
+
+[[dataset]]
+id = "mig-csv-demo"
+title = "Synthetic migration corpus file mig-csv-demo"
+source = "https://example.org/datasets/mig-csv-demo"
+licence = "CC0-1.0"
+size_bytes = 2048
+sha256 = "5c12818136483de82201bff988785967b56cca993f96c4e5affaeba749ffb0dd"
+owner = "MIG"
+redistribution = "mirror"
+urls = ["https://example.org/files/mig-csv-demo.zip"]

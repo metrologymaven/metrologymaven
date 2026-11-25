@@ -9,6 +9,8 @@ fixtures/knp1/flags/**/*.wasm binary
 fixtures/hal/idl/base/cfg/** -text
 # HAL.IDL.BASE.ERR fixtures: records are compared byte for byte after a round trip.
 fixtures/hal/idl/base/err/** -text
+# HAL.IDL.PROFILE fixtures: digested and compared byte for byte by make_fixtures.py --check.
+fixtures/hal/idl/profile/** -text
 schemas/hal/** -text
 # CORE.JOB.CMD fixtures: hand-labelled status documents compared byte for byte.
 fixtures/core/job/cmd/** -text
@@ -89,6 +91,8 @@ fixtures/gdt/rowflow/** -text
 fixtures/flow/journey/** -text
 # OUTR.LAUNCH.GATE fixtures: hand-labelled inputs read byte for byte; never convert line endings.
 fixtures/outr/launch/gate/** -text
+# MIG.COVER.CORPUS fixtures: compared byte for byte by make_fixtures.py --check.
+fixtures/mig/cover/corpus/** -text
 # MIG.LADDER.DEF fixtures: written by make_fixtures.py, which --check compares byte for byte.
 fixtures/mig/ladder/def/** -text
 # ECO.COMM.CLAIM fixtures: hand-labelled PR JSON, spec tree and expected output compared byte for byte.
@@ -222,3 +226,6 @@ fixtures/replay/select/** -text
 fixtures/pkg/golden/** -text
 # IO.REG.PLUGIN.DRAW fixtures: PDF, PNG and TIFF drawing fixtures and SHA-256 digests compared byte for byte.
 fixtures/io/reg/plugin/draw/** -text
+fixtures/rpt/balloon/auto/** -text
+# HAL.IDL.SENS.LINE fixtures: a binary payload and canonical headers compared byte for byte by --check.
+fixtures/hal/idl/sens/line/** -text

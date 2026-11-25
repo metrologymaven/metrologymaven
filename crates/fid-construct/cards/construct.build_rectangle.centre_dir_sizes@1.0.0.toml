@@ -1,0 +1,14 @@
+# Spec card (KRN.CONS.ELEM.SHAPE). Cite designators and clause numbers only; never paste standards text.
+id = "construct.build_rectangle.centre_dir_sizes@1.0.0"
+title = "Rectangle from centre, plane, direction and sizes"
+method = "Builds a rectangle at a centre point on a plane oriented along an in-plane line with length >= width > 0."
+applicability = "One point on a plane, one plane, one in-plane line and sizes satisfying length >= width > 0."
+references = [
+  "Metrology Maven spec node KRN.CONS.ELEM.SHAPE (definitional compound and axial primitive constructions).",
+]
+determinism = "D0"
+input_arity = "3"
+failure_modes = [
+  "Off-plane centre or non-parallel direction fails with IllConditioned; invalid sizes fail with InvalidParams.",
+]
+validation = "300 seeded closed-form cases per variant in fixtures/cons/shape-defs-v1, checked on x86-64, ARM64 and wasm32."

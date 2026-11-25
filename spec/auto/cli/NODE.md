@@ -15,7 +15,7 @@ depends_on: [CORE, AUTO.SURF]
 cli: [fid *]
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-24
 ---
 
 # AUTO.CLI: The `fid` command-line interface
@@ -90,3 +90,4 @@ Alternatives considered:
 | AUTO.CLI.JOB | Terminal progress and interrupt-to-cancel (leaf) | 006 | none |
 | AUTO.CLI.TARGET | Session targeting: headless project or running app | 001 006 | none |
 | AUTO.CLI.COMP | Generated shell completions (leaf) | 001 009 | none |
+| AUTO.CLI.DISPATCH | Registry command dispatch onto the bus (leaf) | 001 002 005 | none |

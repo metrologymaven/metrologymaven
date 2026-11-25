@@ -5,6 +5,7 @@ fid-align-solve
 fid-canon
 fid-clarabel
 fid-construct
+fid-filter
 fid-fit
 fid-geo-cad
 fid-geo-cmd
@@ -19,6 +20,7 @@ fid-geo-nurbs --test invert -- ac5
 fid-geo-ooc --no-default-features --test layout --test format
 fid-geo-sel --test model
 fid-geo-types --test digest
+fid-gps --test prof_zdef
 fid-gps --test zone_shape
 fid-kci
 fid-kdec
@@ -36,6 +38,7 @@ fid-scan-cmp --lib
 fid-scan-mesh
 fid-sign-core
 fid-solv
+fid-stats
 fid-surface
 fid-types
 fid-view

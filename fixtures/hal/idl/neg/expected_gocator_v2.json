@@ -1,0 +1,1 @@
+{"ignored_features":[{"capability":"LineScan","feature":"raw_profiles"}],"per_capability":{"Device":{"deprecated":false,"features":["health_push"],"status":"negotiated","version":"1.1"},"LineScan":{"deprecated":true,"features":["encoder_trigger","intensity"],"status":"negotiated","version":"1.3"}}}

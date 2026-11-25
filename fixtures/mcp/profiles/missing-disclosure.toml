@@ -1,0 +1,13 @@
+# Fixture profile omitting tools.search_tools@1 from front_door (AC-3).
+format = "fid.mcp-profile"
+version = 1
+name = "missing_disc"
+title = "Missing Disclosure Command"
+domains = ["tools", "project"]
+commands = []
+front_door = [
+  "tools.describe_tool@1",
+  "tools.list_domains@1",
+  "tools.get_workflow@1",
+  "project.list_features@1",
+]

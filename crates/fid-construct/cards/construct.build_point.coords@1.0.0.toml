@@ -1,0 +1,15 @@
+# Spec card (KRN.CONS.ELEM.PRIM). Cite designators and clause numbers only; never paste standards text.
+id = "construct.build_point.coords@1.0.0"
+title = "Point from coordinates"
+method = "Constructs a 3D point directly from finite SI metre parameters x, y and z."
+applicability = "Any finite x, y and z in metres."
+references = [
+  "Golub, G. H. and Van Loan, C. F. (2013). Matrix Computations, 4th ed., section 5.3 (Householder QR least squares).",
+  "Metrology Maven spec node KRN.CONS.ELEM.PRIM (definitional primitive constructions).",
+]
+determinism = "D0"
+input_arity = "0"
+failure_modes = [
+  "Non-finite coordinates fail with Num.",
+]
+validation = "500 seeded closed-form cases per variant in fixtures/cons/prim-defs-v1 against 60-digit Decimal reference, checked on x86-64, ARM64 and wasm32."

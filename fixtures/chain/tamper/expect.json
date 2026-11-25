@@ -1,0 +1,75 @@
+{
+  "cases": {
+    "anchored-ckpt.zip": {
+      "entries_verified": 19,
+      "expected_kinds": [],
+      "first_failing_index": null,
+      "unlinked_count": 0,
+      "verdict": "VALID"
+    },
+    "base.zip": {
+      "entries_verified": 24,
+      "expected_kinds": [],
+      "first_failing_index": null,
+      "unlinked_count": 0,
+      "verdict": "VALID"
+    },
+    "inserted.zip": {
+      "entries_verified": 17,
+      "expected_kinds": [
+        "SEQUENCE_REPEAT"
+      ],
+      "first_failing_index": 17,
+      "unlinked_count": 7,
+      "verdict": "BROKEN"
+    },
+    "modified.zip": {
+      "entries_verified": 17,
+      "expected_kinds": [
+        "HASH_MISMATCH"
+      ],
+      "first_failing_index": 17,
+      "unlinked_count": 7,
+      "verdict": "BROKEN"
+    },
+    "removed.zip": {
+      "entries_verified": 17,
+      "expected_kinds": [
+        "LINK_MISMATCH",
+        "SEQUENCE_GAP"
+      ],
+      "first_failing_index": 17,
+      "unlinked_count": 7,
+      "verdict": "BROKEN"
+    },
+    "reordered.zip": {
+      "entries_verified": 17,
+      "expected_kinds": [
+        "LINK_MISMATCH",
+        "SEQUENCE_GAP"
+      ],
+      "first_failing_index": 17,
+      "unlinked_count": 7,
+      "verdict": "BROKEN"
+    },
+    "truncated.zip": {
+      "entries_verified": 17,
+      "expected_kinds": [
+        "TRUNCATED"
+      ],
+      "first_failing_index": 17,
+      "unlinked_count": 7,
+      "verdict": "BROKEN"
+    },
+    "unanchored.zip": {
+      "entries_verified": 0,
+      "expected_kinds": [
+        "UNANCHORED"
+      ],
+      "first_failing_index": 0,
+      "unlinked_count": 11,
+      "verdict": "BROKEN"
+    }
+  },
+  "schema": "trust-chain-links-tamper-expect/v1"
+}

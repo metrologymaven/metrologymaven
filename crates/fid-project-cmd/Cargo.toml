@@ -14,7 +14,10 @@ repository.workspace = true
 fid-bus = { path = "../fid-bus" }
 # Canonical JSON values for parameters and schemas (CORE.JRN.CANON). Layer model.
 fid-canon = { path = "../fid-canon" }
-# Container types, the hierarchy checks and the ID service (CORE.PRJ.CONT.HIER, .ID). Layer model.
+# Journal session headers, checkpoints, chain verification and borrowed-store appends
+# (CORE.PRJ.CONT.LIFE). Layer model, below fid-project-cmd (engine).
+fid-journal = { path = "../fid-journal", features = ["store"] }
+# Container types, the hierarchy checks and the ID service (CORE.PRJ.CONT.HIER, .ID, .LIFE). Layer model.
 fid-project = { path = "../fid-project" }
 # The four commands' registry definitions (CORE.REG.DEF). Layer model.
 fid-registry = { path = "../fid-registry" }

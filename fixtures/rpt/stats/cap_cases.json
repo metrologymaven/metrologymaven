@@ -1,0 +1,920 @@
+{
+ "fixture": "RPT.STATS.CAP.INDEX capability index cases",
+ "licence": "CC-BY-4.0",
+ "generator": "fixtures/rpt/stats/make_cap_cases.py",
+ "algorithm": "stats.cap.index@1.0.0",
+ "default_min_n": 25,
+ "cases": [
+  {
+   "id": "centred",
+   "note": "both limits, mean on the midpoint: 0.2/0.12 and 0.1/0.06",
+   "mean": "10.0",
+   "sigma": "0.02",
+   "lsl": "9.9",
+   "usl": "10.1",
+   "n": 50,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "value": {
+      "expected": "3ffaaaaaaaaaaa90",
+      "pinned": "3ffaaaaaaaaaaa90",
+      "tolerance_ulp": 0,
+      "exact": "9607679205057024/5764607523034235",
+      "decimal": "1.6666666666666607",
+      "hand": "5/3"
+     }
+    },
+    "centred": {
+     "value": {
+      "expected": "3ffaaaaaaaaaaa90",
+      "pinned": "3ffaaaaaaaaaaa90",
+      "tolerance_ulp": 0,
+      "exact": "9607679205057024/5764607523034235",
+      "decimal": "1.6666666666666607",
+      "hand": "5/3"
+     }
+    }
+   }
+  },
+  {
+   "id": "off_centre",
+   "note": "both limits, mean nearer USL: 12/6 and min(5, 7)/3",
+   "mean": "7",
+   "sigma": "1",
+   "lsl": "0",
+   "usl": "12",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "value": {
+      "expected": "4000000000000000",
+      "pinned": "4000000000000000",
+      "tolerance_ulp": 0,
+      "exact": "2/1",
+      "decimal": "2.0",
+      "hand": "2"
+     }
+    },
+    "centred": {
+     "value": {
+      "expected": "3ffaaaaaaaaaaaab",
+      "pinned": "3ffaaaaaaaaaaaab",
+      "tolerance_ulp": 0,
+      "exact": "5/3",
+      "decimal": "1.6666666666666667",
+      "hand": "5/3"
+     }
+    }
+   }
+  },
+  {
+   "id": "mean_outside",
+   "note": "mean above USL gives a negative centred index: 10/3 and min(-1, 11)/1.5",
+   "mean": "11",
+   "sigma": "0.5",
+   "lsl": "0",
+   "usl": "10",
+   "n": 40,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "value": {
+      "expected": "400aaaaaaaaaaaab",
+      "pinned": "400aaaaaaaaaaaab",
+      "tolerance_ulp": 0,
+      "exact": "10/3",
+      "decimal": "3.3333333333333335",
+      "hand": "10/3"
+     }
+    },
+    "centred": {
+     "value": {
+      "expected": "bfe5555555555555",
+      "pinned": "bfe5555555555555",
+      "tolerance_ulp": 0,
+      "exact": "-2/3",
+      "decimal": "-0.6666666666666666",
+      "hand": "-2/3"
+     }
+    }
+   }
+  },
+  {
+   "id": "upper_only",
+   "note": "AC-2: USL 10, mu 7, sigma 1, n 30: (10 - 7)/3",
+   "mean": "7",
+   "sigma": "1",
+   "lsl": null,
+   "usl": "10",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "UPPER_ONLY",
+    "potential": {
+     "status": "NOT_APPLICABLE"
+    },
+    "centred": {
+     "value": {
+      "expected": "3ff0000000000000",
+      "pinned": "3ff0000000000000",
+      "tolerance_ulp": 0,
+      "exact": "1/1",
+      "decimal": "1.0",
+      "hand": "1"
+     }
+    }
+   }
+  },
+  {
+   "id": "lower_only",
+   "note": "lower limit only: (5 - 2)/1.5",
+   "mean": "5",
+   "sigma": "0.5",
+   "lsl": "2",
+   "usl": null,
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "LOWER_ONLY",
+    "potential": {
+     "status": "NOT_APPLICABLE"
+    },
+    "centred": {
+     "value": {
+      "expected": "4000000000000000",
+      "pinned": "4000000000000000",
+      "tolerance_ulp": 0,
+      "exact": "2/1",
+      "decimal": "2.0",
+      "hand": "2"
+     }
+    }
+   }
+  },
+  {
+   "id": "metric_c_family",
+   "note": "metres, within-subgroup sigma (C family): 0.00006/0.0000486 and 0.000026/0.0000243",
+   "mean": "0.025004",
+   "sigma": "0.0000081",
+   "lsl": "0.02497",
+   "usl": "0.02503",
+   "n": 125,
+   "min_n": 25,
+   "family": "C",
+   "estimator": "rbar_d2@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "value": {
+      "expected": "3ff3c0ca4587e716",
+      "pinned": "3ff3c0ca4587e716",
+      "tolerance_ulp": 0,
+      "exact": "4427218577690368/3586047047929137",
+      "decimal": "1.234567901234589",
+      "hand": "1.2345679012345678"
+     }
+    },
+    "centred": {
+     "value": {
+      "expected": "3ff11e8d2b3184ee",
+      "pinned": "3ff11e8d2b3184ee",
+      "tolerance_ulp": 0,
+      "exact": "1278974255777280/1195349015976379",
+      "decimal": "1.0699588477366961",
+      "hand": "1.0699588477366255"
+     }
+    }
+   }
+  },
+  {
+   "id": "mean_on_usl",
+   "note": "mean exactly on USL: centred index 0, potential 4/1.5",
+   "mean": "4",
+   "sigma": "0.25",
+   "lsl": "0",
+   "usl": "4",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "value": {
+      "expected": "4005555555555555",
+      "pinned": "4005555555555555",
+      "tolerance_ulp": 0,
+      "exact": "8/3",
+      "decimal": "2.6666666666666665",
+      "hand": "8/3"
+     }
+    },
+    "centred": {
+     "value": {
+      "expected": "0000000000000000",
+      "pinned": "0000000000000000",
+      "tolerance_ulp": 0,
+      "exact": "0/1",
+      "decimal": "0.0",
+      "hand": "0"
+     }
+    }
+   }
+  },
+  {
+   "id": "n_equals_min",
+   "note": "n equal to the minimum gives numbers: 2/0.6 and 1/0.3",
+   "mean": "1",
+   "sigma": "0.1",
+   "lsl": "0",
+   "usl": "2",
+   "n": 25,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "value": {
+      "expected": "400aaaaaaaaaaaaa",
+      "pinned": "400aaaaaaaaaaaaa",
+      "tolerance_ulp": 0,
+      "exact": "36028797018963968/10808639105689191",
+      "decimal": "3.333333333333333",
+      "hand": "10/3"
+     }
+    },
+    "centred": {
+     "value": {
+      "expected": "400aaaaaaaaaaaaa",
+      "pinned": "400aaaaaaaaaaaaa",
+      "tolerance_ulp": 0,
+      "exact": "36028797018963968/10808639105689191",
+      "decimal": "3.333333333333333",
+      "hand": "10/3"
+     }
+    }
+   }
+  },
+  {
+   "id": "lower_only_negative",
+   "note": "mean below LSL, lower limit only: (4 - 5)/3",
+   "mean": "4",
+   "sigma": "1",
+   "lsl": "5",
+   "usl": null,
+   "n": 30,
+   "min_n": 25,
+   "family": "C",
+   "estimator": "mrbar_d2@1",
+   "expect": {
+    "side": "LOWER_ONLY",
+    "potential": {
+     "status": "NOT_APPLICABLE"
+    },
+    "centred": {
+     "value": {
+      "expected": "bfd5555555555555",
+      "pinned": "bfd5555555555555",
+      "tolerance_ulp": 0,
+      "exact": "-1/3",
+      "decimal": "-0.3333333333333333",
+      "hand": "-1/3"
+     }
+    }
+   }
+  },
+  {
+   "id": "tiny_sigma",
+   "note": "very small but representable spread: 2/6e-300 and 1/3e-300",
+   "mean": "0",
+   "sigma": "1e-300",
+   "lsl": "-1",
+   "usl": "1",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "value": {
+      "expected": "7e1fdafb60009ccf",
+      "pinned": "7e1fdafb60009ccf",
+      "tolerance_ulp": 0,
+      "exact": "6032057205060440848842124543157735677050252251748505781796615064961622344493727293370973578138265743708225425014400837164813540499979063179105919597766951022193355091707896034850684039059079180396788349106095584290087446076413771468940477241550670753145517602931224392424029547429993824129889235158145614364972941312/18096171615181323",
+      "decimal": "3.333333333333333e+299",
+      "hand": "1/3e-300"
+     }
+    },
+    "centred": {
+     "value": {
+      "expected": "7e1fdafb60009ccf",
+      "pinned": "7e1fdafb60009ccf",
+      "tolerance_ulp": 0,
+      "exact": "6032057205060440848842124543157735677050252251748505781796615064961622344493727293370973578138265743708225425014400837164813540499979063179105919597766951022193355091707896034850684039059079180396788349106095584290087446076413771468940477241550670753145517602931224392424029547429993824129889235158145614364972941312/18096171615181323",
+      "decimal": "3.333333333333333e+299",
+      "hand": "1/3e-300"
+     }
+    }
+   }
+  },
+  {
+   "id": "one_ulp_off_centre",
+   "note": "three roundings leave the centred index 1 ulp from the correctly rounded value: 5.2/0.0186 and min(2.97, 2.23)/0.0093",
+   "mean": "2.93",
+   "sigma": "0.0031",
+   "lsl": "0.7",
+   "usl": "5.9",
+   "n": 60,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "value": {
+      "expected": "4071791e4791e47a",
+      "pinned": "4071791e4791e47a",
+      "tolerance_ulp": 0,
+      "exact": "5995191823955604736/21444339985687353",
+      "decimal": "279.56989247311833",
+      "hand": "5.2/0.0186"
+     }
+    },
+    "centred": {
+     "value": {
+      "expected": "406df91e4791e47a",
+      "pinned": "406df91e4791e47b",
+      "tolerance_ulp": 1,
+      "exact": "1714009970182179328/7148113328562451",
+      "decimal": "239.7849462365592",
+      "hand": "2.23/0.0093"
+     }
+    }
+   }
+  },
+  {
+   "id": "signed_zero_lower",
+   "note": "mu -0.0 on LSL +0.0: (-0.0 - 0.0)/3 is -0.0 before the + 0.0, so the index is +0.0",
+   "mean": "-0.0",
+   "sigma": "1",
+   "lsl": "0",
+   "usl": null,
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "LOWER_ONLY",
+    "potential": {
+     "status": "NOT_APPLICABLE"
+    },
+    "centred": {
+     "value": {
+      "expected": "0000000000000000",
+      "pinned": "0000000000000000",
+      "tolerance_ulp": 0,
+      "exact": "0/1",
+      "decimal": "0.0",
+      "hand": "0"
+     }
+    }
+   }
+  },
+  {
+   "id": "signed_zero_upper",
+   "note": "USL -0.0 with mu +0.0: (-0.0 - 0.0)/3 is -0.0 before the + 0.0",
+   "mean": "0",
+   "sigma": "1",
+   "lsl": null,
+   "usl": "-0.0",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "UPPER_ONLY",
+    "potential": {
+     "status": "NOT_APPLICABLE"
+    },
+    "centred": {
+     "value": {
+      "expected": "0000000000000000",
+      "pinned": "0000000000000000",
+      "tolerance_ulp": 0,
+      "exact": "0/1",
+      "decimal": "0.0",
+      "hand": "0"
+     }
+    }
+   }
+  },
+  {
+   "id": "signed_zero_both",
+   "note": "USL -0.0, mu +0.0, LSL -3: total_min(-0.0, 3) is -0.0 before the + 0.0",
+   "mean": "0",
+   "sigma": "0.5",
+   "lsl": "-3",
+   "usl": "-0.0",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "value": {
+      "expected": "3ff0000000000000",
+      "pinned": "3ff0000000000000",
+      "tolerance_ulp": 0,
+      "exact": "1/1",
+      "decimal": "1.0",
+      "hand": "1"
+     }
+    },
+    "centred": {
+     "value": {
+      "expected": "0000000000000000",
+      "pinned": "0000000000000000",
+      "tolerance_ulp": 0,
+      "exact": "0/1",
+      "decimal": "0.0",
+      "hand": "0"
+     }
+    }
+   }
+  },
+  {
+   "id": "custom_min_n",
+   "note": "a caller-configured minimum of 5 with n 6",
+   "mean": "0.5",
+   "sigma": "0.125",
+   "lsl": "0",
+   "usl": "1",
+   "n": 6,
+   "min_n": 5,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "value": {
+      "expected": "3ff5555555555555",
+      "pinned": "3ff5555555555555",
+      "tolerance_ulp": 0,
+      "exact": "4/3",
+      "decimal": "1.3333333333333333",
+      "hand": "4/3"
+     }
+    },
+    "centred": {
+     "value": {
+      "expected": "3ff5555555555555",
+      "pinned": "3ff5555555555555",
+      "tolerance_ulp": 0,
+      "exact": "4/3",
+      "decimal": "1.3333333333333333",
+      "hand": "4/3"
+     }
+    }
+   }
+  },
+  {
+   "id": "ac3_insufficient",
+   "note": "AC-3: n 24 below the default 25, sigma 0: insufficient data wins",
+   "mean": "5",
+   "sigma": "0",
+   "lsl": "0",
+   "usl": "10",
+   "n": 24,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "status": "INSUFFICIENT_DATA"
+    },
+    "centred": {
+     "status": "INSUFFICIENT_DATA"
+    }
+   }
+  },
+  {
+   "id": "ac3_zero_spread",
+   "note": "AC-3: n 30, sigma 0",
+   "mean": "5",
+   "sigma": "0",
+   "lsl": "0",
+   "usl": "10",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "status": "UNDEFINED_ZERO_SPREAD"
+    },
+    "centred": {
+     "status": "UNDEFINED_ZERO_SPREAD"
+    }
+   }
+  },
+  {
+   "id": "insufficient_nonzero",
+   "note": "n 24 with a spread: still no number",
+   "mean": "5",
+   "sigma": "1",
+   "lsl": "0",
+   "usl": "10",
+   "n": 24,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "status": "INSUFFICIENT_DATA"
+    },
+    "centred": {
+     "status": "INSUFFICIENT_DATA"
+    }
+   }
+  },
+  {
+   "id": "n_zero",
+   "note": "no values at all",
+   "mean": "5",
+   "sigma": "1",
+   "lsl": "0",
+   "usl": "10",
+   "n": 0,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "status": "INSUFFICIENT_DATA"
+    },
+    "centred": {
+     "status": "INSUFFICIENT_DATA"
+    }
+   }
+  },
+  {
+   "id": "upper_insufficient",
+   "note": "one-sided and too few values: potential stays not applicable",
+   "mean": "7",
+   "sigma": "1",
+   "lsl": null,
+   "usl": "10",
+   "n": 10,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "UPPER_ONLY",
+    "potential": {
+     "status": "NOT_APPLICABLE"
+    },
+    "centred": {
+     "status": "INSUFFICIENT_DATA"
+    }
+   }
+  },
+  {
+   "id": "lower_zero_spread",
+   "note": "one-sided and zero spread",
+   "mean": "3",
+   "sigma": "0",
+   "lsl": "2",
+   "usl": null,
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "LOWER_ONLY",
+    "potential": {
+     "status": "NOT_APPLICABLE"
+    },
+    "centred": {
+     "status": "UNDEFINED_ZERO_SPREAD"
+    }
+   }
+  },
+  {
+   "id": "negative_zero_sigma",
+   "note": "sigma -0.0 is a zero spread, not a negative one",
+   "mean": "5",
+   "sigma": "-0.0",
+   "lsl": "0",
+   "usl": "10",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "side": "BOTH",
+    "potential": {
+     "status": "UNDEFINED_ZERO_SPREAD"
+    },
+    "centred": {
+     "status": "UNDEFINED_ZERO_SPREAD"
+    }
+   }
+  },
+  {
+   "id": "ac4_limits_reversed",
+   "note": "AC-4: USL 1, LSL 2",
+   "mean": "1.5",
+   "sigma": "0.1",
+   "lsl": "2",
+   "usl": "1",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "error": "limits_not_ordered"
+   }
+  },
+  {
+   "id": "limits_equal",
+   "note": "USL equal to LSL",
+   "mean": "2",
+   "sigma": "0.1",
+   "lsl": "2",
+   "usl": "2",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "error": "limits_not_ordered"
+   }
+  },
+  {
+   "id": "error_before_status",
+   "note": "a bad input fails even when n is too small",
+   "mean": "1.5",
+   "sigma": "0",
+   "lsl": "2",
+   "usl": "1",
+   "n": 3,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "error": "limits_not_ordered"
+   }
+  },
+  {
+   "id": "nan_mean",
+   "note": "non-finite mean",
+   "mean": "nan",
+   "sigma": "1",
+   "lsl": "0",
+   "usl": "10",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "error": "non_finite_mean"
+   }
+  },
+  {
+   "id": "inf_sigma",
+   "note": "non-finite sigma",
+   "mean": "5",
+   "sigma": "inf",
+   "lsl": "0",
+   "usl": "10",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "error": "non_finite_sigma"
+   }
+  },
+  {
+   "id": "neg_inf_lsl",
+   "note": "non-finite lower limit",
+   "mean": "5",
+   "sigma": "1",
+   "lsl": "-inf",
+   "usl": "10",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "error": "non_finite_lsl"
+   }
+  },
+  {
+   "id": "inf_usl_upper_only",
+   "note": "non-finite upper limit",
+   "mean": "5",
+   "sigma": "1",
+   "lsl": null,
+   "usl": "inf",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "error": "non_finite_usl"
+   }
+  },
+  {
+   "id": "negative_sigma",
+   "note": "negative spread",
+   "mean": "5",
+   "sigma": "-0.5",
+   "lsl": "0",
+   "usl": "10",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "error": "negative_sigma"
+   }
+  },
+  {
+   "id": "no_limits",
+   "note": "neither limit: no index is defined",
+   "mean": "5",
+   "sigma": "1",
+   "lsl": null,
+   "usl": null,
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "error": "no_limits"
+   }
+  },
+  {
+   "id": "min_n_one",
+   "note": "a minimum below 2 cannot support a spread",
+   "mean": "5",
+   "sigma": "1",
+   "lsl": "0",
+   "usl": "10",
+   "n": 30,
+   "min_n": 1,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "error": "min_n_too_small"
+   }
+  },
+  {
+   "id": "overflow_tolerance",
+   "note": "USL - LSL overflows to infinity",
+   "mean": "0",
+   "sigma": "1",
+   "lsl": "-1.5e308",
+   "usl": "1.5e308",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "error": "result_not_finite"
+   }
+  },
+  {
+   "id": "overflow_upper_only",
+   "note": "one-sided: USL - mu overflows to infinity",
+   "mean": "-1.5e308",
+   "sigma": "1",
+   "lsl": null,
+   "usl": "1.5e308",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "error": "result_not_finite"
+   }
+  },
+  {
+   "id": "overflow_subnormal_sigma",
+   "note": "a subnormal sigma makes the quotient overflow",
+   "mean": "0",
+   "sigma": "5e-324",
+   "lsl": "-1",
+   "usl": "1",
+   "n": 30,
+   "min_n": 25,
+   "family": "P",
+   "estimator": "overall_sd@1",
+   "expect": {
+    "error": "result_not_finite"
+   }
+  }
+ ],
+ "estimator_ids": [
+  {
+   "id": "rbar_d2@1",
+   "valid": true
+  },
+  {
+   "id": "mrbar_d2@1",
+   "valid": true
+  },
+  {
+   "id": "overall_sd@1",
+   "valid": true
+  },
+  {
+   "id": "sbar_c4@12",
+   "valid": true
+  },
+  {
+   "id": "stats.sd.pooled@3",
+   "valid": true
+  },
+  {
+   "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@1",
+   "valid": true
+  },
+  {
+   "id": "",
+   "valid": false
+  },
+  {
+   "id": "RBAR@1",
+   "valid": false
+  },
+  {
+   "id": "rbar",
+   "valid": false
+  },
+  {
+   "id": "rbar@",
+   "valid": false
+  },
+  {
+   "id": "rbar@0",
+   "valid": false
+  },
+  {
+   "id": "rbar@01",
+   "valid": false
+  },
+  {
+   "id": "rbar@1 ",
+   "valid": false
+  },
+  {
+   "id": "rb\u00e4r@1",
+   "valid": false
+  },
+  {
+   "id": "_rbar@1",
+   "valid": false
+  },
+  {
+   "id": "1rbar@1",
+   "valid": false
+  },
+  {
+   "id": "rbar@12345",
+   "valid": false
+  },
+  {
+   "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@1",
+   "valid": false
+  },
+  {
+   "id": "rbar@1@2",
+   "valid": false
+  }
+ ],
+ "digest": "18add6b4d2285fe8e8544f6c9ce7d069320dc225c2f16b938097a523b3636782"
+}

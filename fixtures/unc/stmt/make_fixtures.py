@@ -141,6 +141,19 @@ VALID = {
                     "principal_kind": "agent", "proposal": "true", "adopted_by": "person:qa-lead",
                     "supersedes": d("statement:previous")},
     ),
+    # MCM statement that retained its samples: samples_digest is the SHA-256 of the encoded
+    # mcm-samples@1 set (here a labelled digest; the type never reads the samples).
+    "uec1_mcm_samples": stmt(
+        "UEC-1",
+        method="MCM",
+        unit=UNIT,
+        u_std=h(1.3e-6),
+        interval={"low": h(0.0249974), "high": h(0.0250026), "p": h(0.95), "kind": "shortest"},
+        model=MODEL,
+        sources=[src("instrument_model", "inst:probe-a"), src("type_a", "ta:run-0042")],
+        samples_digest=d("mcm-samples:run-0042"),
+        selection_rule="unc-select@1",
+    ),
     "uec2_lpu": stmt(
         "UEC-2",
         method="LPU",
@@ -211,6 +224,17 @@ V = VALID
 # name -> (bytes, code, field)
 INVALID = {
     "uec0_with_U": (canon(withv(V["uec0_u_missing"], expanded={"U": h(2e-6), "k": h(2.0)})), "uec0_has_value", "expanded"),
+    "uec0_with_samples_digest": (canon(withv(V["uec0_u_missing"], samples_digest=d("mcm-samples:x"))),
+                                 "uec0_has_value", "samples_digest"),
+    # samples_digest only with MCM: never on another method, and never on a claim (D-045).
+    "samples_digest_lpu": (canon(withv(V["uec1_lpu"], samples_digest=d("mcm-samples:x"))), "class_mismatch",
+                           "samples_digest"),
+    "samples_digest_declared": (canon(withv(V["uec1_declared"], samples_digest=d("mcm-samples:x"))), "class_mismatch",
+                                "samples_digest"),
+    "samples_digest_spec_derived": (canon(withv(V["uec1_spec_derived"], samples_digest=d("mcm-samples:x"))),
+                                    "class_mismatch", "samples_digest"),
+    "samples_digest_bad": (canon(withv(V["uec1_mcm_samples"], samples_digest="sha256:" + "AB" * 32)),
+                           "invalid_field", "samples_digest"),
     "uec0_with_method": (canon(withv(V["uec0_model_missing"], method="LPU")), "uec0_has_value", "method"),
     "incomplete_method": (canon(without(V["uec1_lpu"], "method")), "statement_incomplete", "method"),
     "incomplete_unit": (canon(without(V["uec1_lpu"], "unit")), "statement_incomplete", "unit"),

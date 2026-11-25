@@ -1,0 +1,38 @@
+{
+  "format": "design-sources@1",
+  "tools": [
+    {
+      "id": "penpot",
+      "name": "Penpot",
+      "open_source": true,
+      "requires_paid_account": false,
+      "export_extensions": [
+        "penpot"
+      ]
+    },
+    {
+      "id": "inkscape",
+      "name": "Inkscape",
+      "open_source": true,
+      "requires_paid_account": false,
+      "export_extensions": [
+        "svg"
+      ]
+    },
+    {
+      "id": "paid-suite",
+      "name": "Proprietary Paid Suite (synthetic)",
+      "open_source": false,
+      "requires_paid_account": true
+    }
+  ],
+  "sources": [
+    {
+      "id": "screen-inspect-v1",
+      "node": "UX.SCREENS.INSPECT",
+      "tool": "penpot",
+      "location": "https://design.penpot.app/#/view/synthetic-screen-inspect",
+      "exports": []
+    }
+  ]
+}

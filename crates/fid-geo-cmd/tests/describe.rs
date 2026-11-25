@@ -544,7 +544,7 @@ fn replacement_refusals_change_nothing() {
 
 #[test]
 fn ac6_the_tool_is_in_the_manifest_with_projection_exposed() {
-    let defs = command_defs().unwrap();
+    let defs = fid_geo_cmd::describe::command_defs().unwrap();
     assert_eq!(defs.len(), 1);
     let decls: Vec<CommandDecl> = defs.iter().map(CommandDecl::from_def).collect();
     let export = fid_registry::export_with(&decls, &Catalogue::geo_frame().unwrap()).unwrap();

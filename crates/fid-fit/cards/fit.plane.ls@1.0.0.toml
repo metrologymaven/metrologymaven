@@ -1,7 +1,7 @@
 # Spec card (KRN.LSQ.LIN). Cite designators and clause numbers only; never paste standards text.
 id = "fit.plane.ls@1.0.0"
 title = "Least-squares plane"
-method = "The plane passes through the centroid with the eigenvector of the smallest eigenvalue of the 3 x 3 centred scatter matrix as normal (cyclic Jacobi on centred, scaled data). With a fixed normal the plane passes through the centroid with that normal. Residuals are signed distances, positive on the normal side."
+method = "The plane passes through the centroid with the eigenvector of the smallest eigenvalue of the 3 x 3 centred scatter matrix as normal (cyclic Jacobi of fid_num::la::sym_eig, KRN.NUM.LA.EIG, on centred, scaled data). With a fixed normal the plane passes through the centroid with that normal. Residuals are signed distances, positive on the normal side."
 applicability = "At least 3 points not collinear; the ratio of the smallest to the middle scatter eigenvalue must be at most thresholds.eig_ratio_max. Default 0.9: a perturbation of the scatter matrix of relative size eps turns the direction by at most eps / (1 - ratio) radians (Davis-Kahan bound), so the amplification is at most 10."
 references = [
   "Shakarji, C. M. (1998). Least-squares fitting algorithms of the NIST algorithm testing system. Journal of Research of the National Institute of Standards and Technology 103(6).",

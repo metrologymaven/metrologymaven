@@ -209,6 +209,66 @@ class ScopeFixtureTest(unittest.TestCase):
         self.assertGreaterEqual(len(nodes), 2000)
         self.assertLess(elapsed, 10.0, f"validation of {len(nodes)} nodes took {elapsed:.2f}s (> 10s)")
 
+    def test_d053_commercial_repo_guardrails(self) -> None:
+        # 1. open skips nodes whose ancestor sets commercial_repo, unless --include-commercial is set.
+        tree = self.copy_fixture("claimed")
+        parent_a = tree / "spec" / "a" / "NODE.md"
+        parent_a.write_text(
+            parent_a.read_text(encoding="utf-8").replace(
+                "status: split", "status: split\ncommercial_repo: metrologymaven-enterprise"
+            ),
+            encoding="utf-8",
+            newline="\n",
+        )
+        code, out, err = run_scope("open", "--level", "2", "--root", str(tree))
+        self.assertEqual(code, 0, err)
+        self.assertEqual([line for line in out.splitlines() if line.strip()], [])
+
+        code_inc, out_inc, err_inc = run_scope("open", "--level", "2", "--include-commercial", "--root", str(tree))
+        self.assertEqual(code_inc, 0, err_inc)
+        self.assertEqual(
+            [line for line in out_inc.splitlines() if line.strip()],
+            ["spec/a/aa/NODE.md", "spec/a/cc/NODE.md"],
+        )
+
+        # 2. check rejects built_in on any descendant of a commercial_repo node, and rejects bad slugs.
+        vtree = self.copy_fixture("valid")
+        alpha = vtree / "spec" / "alpha" / "NODE.md"
+        alpha.write_text(
+            alpha.read_text(encoding="utf-8").replace(
+                "status: split", "status: split\ncommercial_repo: metrologymaven-enterprise"
+            ),
+            encoding="utf-8",
+            newline="\n",
+        )
+        code_ok, out_ok, err_ok = run_scope("check", "--root", str(vtree))
+        self.assertEqual(code_ok, 0, out_ok + err_ok)
+        self.assertIn("(commercial: metrologymaven-enterprise)", (vtree / "generated" / "INDEX.md").read_text(encoding="utf-8"))
+        self.assertIn("commercial leaves live in private repositories under D-053", (vtree / "generated" / "BUILT.md").read_text(encoding="utf-8"))
+
+        # Setting built_in on a commercial descendant must fail with an error.
+        (vtree / "crates" / "mm-fake").mkdir(parents=True, exist_ok=True)
+        (vtree / "crates" / "mm-fake" / "Cargo.toml").write_text("[package]\nname = 'mm-fake'\n", encoding="utf-8")
+        a1 = vtree / "spec" / "alpha" / "one" / "NODE.md"
+        a1.write_text(
+            a1.read_text(encoding="utf-8").replace("status: leaf", "status: leaf\nbuilt_in: [mm-fake]"),
+            encoding="utf-8",
+            newline="\n",
+        )
+        code_bad, out_bad, _ = run_scope("check", "--root", str(vtree))
+        self.assertEqual(code_bad, 1, out_bad)
+        self.assertIn("built_in is forbidden in the public repository", out_bad)
+
+        # Invalid commercial_repo slug must fail with an error.
+        alpha.write_text(
+            alpha.read_text(encoding="utf-8").replace("commercial_repo: metrologymaven-enterprise", "commercial_repo: BAD/SLUG"),
+            encoding="utf-8",
+            newline="\n",
+        )
+        code_slug, out_slug, _ = run_scope("check", "--root", str(vtree))
+        self.assertEqual(code_slug, 1, out_slug)
+        self.assertIn("commercial_repo must be a repository slug", out_slug)
+
 
 if __name__ == "__main__":
     unittest.main()

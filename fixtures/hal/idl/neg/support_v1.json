@@ -1,0 +1,35 @@
+{
+  "schema": "runtime-support/v1",
+  "capabilities": {
+    "Device": [
+      {
+        "major": 1,
+        "highest_minor": 1,
+        "features": [
+          "health_push"
+        ],
+        "deprecated": false
+      }
+    ],
+    "HeightMap": [
+      {
+        "major": 1,
+        "highest_minor": 0,
+        "features": [],
+        "deprecated": false
+      }
+    ],
+    "LineScan": [
+      {
+        "major": 1,
+        "highest_minor": 3,
+        "features": [
+          "encoder_trigger",
+          "intensity",
+          "multi_exposure"
+        ],
+        "deprecated": false
+      }
+    ]
+  }
+}

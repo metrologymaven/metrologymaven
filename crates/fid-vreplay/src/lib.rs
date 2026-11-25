@@ -4,7 +4,13 @@
 //! - [`compare`]: replay outcome classification and package aggregation
 //!   (`TRUST.REPLAY.COMPARE`);
 //! - [`select`]: replayable-set selection, the replay plan and `NOT_REPLAYABLE` reasons
-//!   (`TRUST.REPLAY.SELECT`).
+//!   (`TRUST.REPLAY.SELECT`);
+//! - [`kart`]: offline kernel artifact lookup chain (`package -> bundled -> cache`,
+//!   `TRUST.REPLAY.KART.LOOKUP`);
+//! - [`sandbox`]: the WASM kernel sandbox with digest check, import allowlist, fuel, memory and
+//!   wall-clock limits (`TRUST.REPLAY.SANDBOX`).
 
 pub mod compare;
+pub mod kart;
+pub mod sandbox;
 pub mod select;
