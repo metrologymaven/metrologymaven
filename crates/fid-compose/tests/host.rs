@@ -234,8 +234,7 @@ fn demo_def(major: u32, state: &str) -> CommandDef {
 fn d035_hidden_commands_read_as_unknown_end_to_end() {
     let base = temp_dir("d035");
     new_project(&base);
-    let mut defs: Vec<CommandDef> =
-        fid_registry_build::declarations(&fid_registry_build::SOURCES).unwrap().into_iter().map(|d| d.def).collect();
+    let mut defs: Vec<CommandDef> = fid_compose::workspace_defs().unwrap();
     defs.push(demo_def(1, "hidden"));
     defs.push(demo_def(2, "active"));
     let catalogue = fid_registry_build::workspace_catalogue().unwrap();

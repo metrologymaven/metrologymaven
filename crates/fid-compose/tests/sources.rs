@@ -21,7 +21,7 @@ fn demo_def(id: &str, major: u32) -> CommandDef {
 }
 
 fn workspace_defs() -> Vec<CommandDef> {
-    fid_registry_build::declarations(&fid_registry_build::SOURCES).unwrap().into_iter().map(|d| d.def).collect()
+    fid_compose::workspace_defs().unwrap()
 }
 
 fn composition(defs: Vec<CommandDef>, unwired: Vec<(String, String)>) -> Composition {

@@ -87,6 +87,16 @@ fn storage(e: impl fmt::Display) -> BusError {
     BusError::Internal(InternalReason::Storage, Detail::new(&e.to_string()))
 }
 
+/// Every command definition of `fid_registry_build::SOURCES`, in source order: the commands of
+/// the manifest in force.
+pub fn workspace_defs() -> Result<Vec<CommandDef>, BusError> {
+    let mut defs = Vec::new();
+    for source in &fid_registry_build::SOURCES {
+        defs.extend((source.defs)().map_err(|e| invariant(&format!("{}: {e}", source.krate)))?);
+    }
+    Ok(defs)
+}
+
 /// The kernel manifest digest every entry records until a kernel manifest is in force: the
 /// SHA-256 of the empty string, a value no kernel manifest can have.
 pub fn no_kernel_manifest() -> Digest {
@@ -185,8 +195,7 @@ impl Composition {
         let build = |e: fid_registry_build::BuildError| invariant(&format!("registry build: {e}"));
         let catalogue = fid_registry_build::workspace_catalogue().map_err(build)?;
         let manifest = fid_registry_build::manifest_in_force(catalogue.clone()).map_err(build)?;
-        let decls = fid_registry_build::declarations(&fid_registry_build::SOURCES).map_err(build)?;
-        let defs = decls.into_iter().map(|d| d.def).collect();
+        let defs = workspace_defs()?;
         Composition::new(
             Digest(manifest.digest().to_bytes()),
             defs,
