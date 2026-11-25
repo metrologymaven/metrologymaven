@@ -229,3 +229,5 @@ fixtures/io/reg/plugin/draw/** -text
 fixtures/rpt/balloon/auto/** -text
 # HAL.IDL.SENS.LINE fixtures: a binary payload and canonical headers compared byte for byte by --check.
 fixtures/hal/idl/sens/line/** -text
+# HAL.IDL.SENS.GAUENV fixtures: canonical readings compared byte for byte by --check and the tests.
+fixtures/hal/idl/sens/gauenv/** -text

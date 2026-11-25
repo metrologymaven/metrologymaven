@@ -1,0 +1,668 @@
+[
+  {
+    "name": "g_ok_caliper",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "ok",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_ok_negative",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "ok",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0xbf8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_ok_zero",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "ok",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x0000000000000000\"}}"
+  },
+  {
+    "name": "g_ok_negative_zero",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "ok",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x8000000000000000\"}}"
+  },
+  {
+    "name": "g_ok_protractor_rad",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "ok",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"rad\",\"value\":\"0x3f1a36e2eb1c432d\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"rad\",\"value\":\"0x3fe0c154c985f06f\"}}"
+  },
+  {
+    "name": "g_ok_t_dev",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "ok",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_dev\":\"-42\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_ok_no_calibration_ref",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "ok",
+    "json": "{\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_ok_many_steps",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "ok",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3e45798ee2308c3a\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3ff3c0ca4283de1b\"}}"
+  },
+  {
+    "name": "g_ok_identity_non_ascii",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "ok",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Jauge exemple é n° EX-0003 (inventée)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_ok_identity_256_bytes",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "ok",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_not_quantised",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_not_quantised",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894855da272863\"}}"
+  },
+  {
+    "name": "g_not_quantised_by_1e-5_step",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_not_quantised",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c6e5a7f1\"}}"
+  },
+  {
+    "name": "g_resolution_zero",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "value_out_of_range",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x0000000000000000\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_resolution_negative",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "value_out_of_range",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0xbee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_too_many_steps",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "value_out_of_range",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x01a56e1fc2f8f359\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3ff0000000000000\"}}"
+  },
+  {
+    "name": "g_value_nan",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "value_out_of_range",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x7ff8000000000000\"}}"
+  },
+  {
+    "name": "g_value_infinite",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "value_out_of_range",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x7ff0000000000000\"}}"
+  },
+  {
+    "name": "g_value_unit_s",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "unit_unsupported",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"s\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"s\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_value_unit_mm",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "unit_unsupported",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"mm\",\"value\":\"0x4028ae147ae147ae\"}}"
+  },
+  {
+    "name": "g_resolution_unit_rad",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "unit_unsupported",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"rad\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_origin_device",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"origin\":\"device\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_origin_simulated",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"origin\":\"simulated\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_schema_unknown",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/2\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_t_host_missing",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_t_host_leading_zero",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"01764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_t_dev_minus_zero",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_dev\":\"-0\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_identity_empty",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_identity_257_bytes",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_calibration_ref_upper",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"calibration_ref\":\"sha256:A530DA48381CDA6F0C28A8406196AE1E463C04ADCB815E3BF1D07D7BC3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_value_hex_upper",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3F8945B6C3760BF6\"}}"
+  },
+  {
+    "name": "g_quantity_extra_key",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"u\":\"0\",\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_resolution_missing",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_whitespace",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"calibration_ref\": \"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "g_key_order",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"},\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\"}"
+  },
+  {
+    "name": "g_trailing_newline",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}\n"
+  },
+  {
+    "name": "g_duplicate_key",
+    "form": "reading",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}"
+  },
+  {
+    "name": "e_ok_room",
+    "form": "reading",
+    "kind": "env",
+    "expect": "ok",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_ok_minimal",
+    "form": "reading",
+    "kind": "env",
+    "expect": "ok",
+    "json": "{\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_ok_humidity_0",
+    "form": "reading",
+    "kind": "env",
+    "expect": "ok",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x0000000000000000\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_ok_humidity_1",
+    "form": "reading",
+    "kind": "env",
+    "expect": "ok",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3ff0000000000000\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_humidity_1_3",
+    "form": "reading",
+    "kind": "env",
+    "expect": "value_out_of_range",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3ff4cccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_humidity_negative",
+    "form": "reading",
+    "kind": "env",
+    "expect": "value_out_of_range",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0xbf847ae147ae147b\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_temperature_zero",
+    "form": "reading",
+    "kind": "env",
+    "expect": "value_out_of_range",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x0000000000000000\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_uncertainty_zero",
+    "form": "reading",
+    "kind": "env",
+    "expect": "value_out_of_range",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x0000000000000000\"}}"
+  },
+  {
+    "name": "e_uncertainty_negative",
+    "form": "reading",
+    "kind": "env",
+    "expect": "value_out_of_range",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0xbfa999999999999a\"}}"
+  },
+  {
+    "name": "e_pressure_negative",
+    "form": "reading",
+    "kind": "env",
+    "expect": "value_out_of_range",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0xbff0000000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_sampling_time_zero",
+    "form": "reading",
+    "kind": "env",
+    "expect": "value_out_of_range",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x0000000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_humidity_unit_pa",
+    "form": "reading",
+    "kind": "env",
+    "expect": "unit_unsupported",
+    "json": "{\"humidity\":{\"unit\":\"Pa\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_temperature_unit_m",
+    "form": "reading",
+    "kind": "env",
+    "expect": "unit_unsupported",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"m\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_temperature_degc",
+    "form": "reading",
+    "kind": "env",
+    "expect": "unit_unsupported",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"degC\",\"value\":\"0x4034000000000000\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_uncertainty_unit_1",
+    "form": "reading",
+    "kind": "env",
+    "expect": "unit_unsupported",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"1\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_pressure_unit_k",
+    "form": "reading",
+    "kind": "env",
+    "expect": "unit_unsupported",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"K\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_sampling_time_unit_k",
+    "form": "reading",
+    "kind": "env",
+    "expect": "unit_unsupported",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"K\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_uncertainty_missing",
+    "form": "reading",
+    "kind": "env",
+    "expect": "reading_invalid",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"}}"
+  },
+  {
+    "name": "e_sampling_time_missing",
+    "form": "reading",
+    "kind": "env",
+    "expect": "reading_invalid",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_origin_device",
+    "form": "reading",
+    "kind": "env",
+    "expect": "reading_invalid",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"origin\":\"device\",\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_schema_gauge",
+    "form": "reading",
+    "kind": "env",
+    "expect": "reading_invalid",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"gauge-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}"
+  },
+  {
+    "name": "e_trailing_space",
+    "form": "reading",
+    "kind": "env",
+    "expect": "reading_invalid",
+    "json": "{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}} "
+  },
+  {
+    "name": "gb_ok",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "ok",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}",
+    "summary": {
+      "first_seq": "100",
+      "last_seq": "102",
+      "bytes": "1094",
+      "span_ns": null
+    }
+  },
+  {
+    "name": "gb_ok_t_dev",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "ok",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_dev\":\"2000000000\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_dev\":\"2100000000\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_dev\":\"2200000000\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}",
+    "summary": {
+      "first_seq": "100",
+      "last_seq": "102",
+      "bytes": "1157",
+      "span_ns": "200000000"
+    }
+  },
+  {
+    "name": "gb_ok_shared_t_host",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "ok",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}",
+    "summary": {
+      "first_seq": "100",
+      "last_seq": "102",
+      "bytes": "1094",
+      "span_ns": null
+    }
+  },
+  {
+    "name": "gb_ok_one_reading",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "ok",
+    "json": "{\"first_seq\":\"0\",\"last_seq\":\"0\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}}],\"schema\":\"gauge-batch/1\"}",
+    "summary": {
+      "first_seq": "0",
+      "last_seq": "0",
+      "bytes": "410",
+      "span_ns": null
+    }
+  },
+  {
+    "name": "gb_t_host_decreasing",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "timestamps_not_monotonic",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000050000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_t_dev_equal",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "timestamps_not_monotonic",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_dev\":\"2000000000\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_dev\":\"2100000000\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_dev\":\"2100000000\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_t_dev_partial",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_inconsistent",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_dev\":\"2000000000\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_dev\":\"2200000000\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_identity_changed",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_inconsistent",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0009 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_resolution_changed",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_inconsistent",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3eb0c6f7a0b5ed8d\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_unit_changed",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_inconsistent",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"rad\",\"value\":\"0x3f1a36e2eb1c432d\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"rad\",\"value\":\"0x3f8930be0ded288d\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_calibration_changed",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_inconsistent",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:e7756e3aec74d7a520822d73ff0d28bce92adf4f48148e3f960761eda98b4b53\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_repeat_no_t_dev",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_duplicate",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_repeat_with_t_dev",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "timestamps_not_monotonic",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_dev\":\"2000000000\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_dev\":\"2100000000\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_dev\":\"2100000000\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_not_quantised",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_not_quantised",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894855da272863\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_seq_range_mismatch",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"103\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_range_reversed",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"99\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_empty",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"100\",\"readings\":[],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_first_seq_leading_zero",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"first_seq\":\"0100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_origin_device",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"origin\":\"device\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_reading_origin_device",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"origin\":\"device\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_env_tag",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"env-batch/1\"}"
+  },
+  {
+    "name": "gb_whitespace",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"first_seq\":\"100\", \"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}"
+  },
+  {
+    "name": "gb_trailing_newline",
+    "form": "batch",
+    "kind": "gauge",
+    "expect": "reading_invalid",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000000000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8945b6c3760bf6\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000100000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f894af4f0d844d1\"}},{\"calibration_ref\":\"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708\",\"gauge_identity\":\"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)\",\"resolution\":{\"unit\":\"m\",\"value\":\"0x3ee4f8b588e368f1\"},\"schema\":\"gauge-reading/1\",\"t_host\":\"1764000000200000000\",\"value\":{\"unit\":\"m\",\"value\":\"0x3f8950331e3a7dab\"}}],\"schema\":\"gauge-batch/1\"}\n"
+  },
+  {
+    "name": "eb_ok",
+    "form": "batch",
+    "kind": "env",
+    "expect": "ok",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"6000000000\",\"t_host\":\"1764000001000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072528f5c28f5c2\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"7000000000\",\"t_host\":\"1764000002000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x407252b851eb851e\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}],\"schema\":\"env-batch/1\"}",
+    "summary": {
+      "first_seq": "100",
+      "last_seq": "102",
+      "bytes": "1410",
+      "span_ns": "2000000000"
+    }
+  },
+  {
+    "name": "eb_ok_no_t_dev",
+    "form": "batch",
+    "kind": "env",
+    "expect": "ok",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_host\":\"1764000001000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072528f5c28f5c2\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_host\":\"1764000002000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x407252b851eb851e\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}],\"schema\":\"env-batch/1\"}",
+    "summary": {
+      "first_seq": "100",
+      "last_seq": "102",
+      "bytes": "1347",
+      "span_ns": null
+    }
+  },
+  {
+    "name": "eb_sampling_time_changed",
+    "form": "batch",
+    "kind": "env",
+    "expect": "reading_inconsistent",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x4000000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"6000000000\",\"t_host\":\"1764000001000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072528f5c28f5c2\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"7000000000\",\"t_host\":\"1764000002000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x407252b851eb851e\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}],\"schema\":\"env-batch/1\"}"
+  },
+  {
+    "name": "eb_humidity_dropped",
+    "form": "batch",
+    "kind": "env",
+    "expect": "reading_inconsistent",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"6000000000\",\"t_host\":\"1764000001000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072528f5c28f5c2\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"7000000000\",\"t_host\":\"1764000002000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x407252b851eb851e\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}],\"schema\":\"env-batch/1\"}"
+  },
+  {
+    "name": "eb_identity_changed",
+    "form": "batch",
+    "kind": "env",
+    "expect": "reading_inconsistent",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0008 (invented, D-038)\",\"t_dev\":\"6000000000\",\"t_host\":\"1764000001000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072528f5c28f5c2\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"7000000000\",\"t_host\":\"1764000002000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x407252b851eb851e\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}],\"schema\":\"env-batch/1\"}"
+  },
+  {
+    "name": "eb_t_dev_decreasing",
+    "form": "batch",
+    "kind": "env",
+    "expect": "timestamps_not_monotonic",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"6000000000\",\"t_host\":\"1764000001000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072528f5c28f5c2\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5500000000\",\"t_host\":\"1764000002000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x407252b851eb851e\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}],\"schema\":\"env-batch/1\"}"
+  },
+  {
+    "name": "eb_humidity_out_of_range",
+    "form": "batch",
+    "kind": "env",
+    "expect": "value_out_of_range",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3ff4cccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"6000000000\",\"t_host\":\"1764000001000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072528f5c28f5c2\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"7000000000\",\"t_host\":\"1764000002000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x407252b851eb851e\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}],\"schema\":\"env-batch/1\"}"
+  },
+  {
+    "name": "eb_repeat_no_t_dev",
+    "form": "batch",
+    "kind": "env",
+    "expect": "reading_duplicate",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_host\":\"1764000001000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072528f5c28f5c2\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_host\":\"1764000001000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072528f5c28f5c2\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}],\"schema\":\"env-batch/1\"}"
+  },
+  {
+    "name": "eb_gauge_tag",
+    "form": "batch",
+    "kind": "env",
+    "expect": "reading_invalid",
+    "json": "{\"first_seq\":\"100\",\"last_seq\":\"102\",\"readings\":[{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"5000000000\",\"t_host\":\"1764000000000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072526666666666\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"6000000000\",\"t_host\":\"1764000001000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x4072528f5c28f5c2\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}},{\"humidity\":{\"unit\":\"1\",\"value\":\"0x3fdccccccccccccd\"},\"pressure\":{\"unit\":\"Pa\",\"value\":\"0x40f8bcd000000000\"},\"sampling_time\":{\"unit\":\"s\",\"value\":\"0x3ff0000000000000\"},\"schema\":\"env-reading/1\",\"sensor_identity\":\"Example Sensors RT-20 room sensor, serial EX-0002 (invented, D-038)\",\"t_dev\":\"7000000000\",\"t_host\":\"1764000002000000000\",\"temperature\":{\"unit\":\"K\",\"value\":\"0x407252b851eb851e\"},\"temperature_u\":{\"unit\":\"K\",\"value\":\"0x3fa999999999999a\"}}],\"schema\":\"gauge-batch/1\"}"
+  }
+]

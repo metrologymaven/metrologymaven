@@ -1,0 +1,1 @@
+{"calibration_ref":"sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708","gauge_identity":"Example Gauges EC-150 caliper, serial EX-0001 (invented, D-038)","resolution":{"unit":"m","value":"0x3ee4f8b588e368f1"},"schema":"gauge-reading/1","t_host":"1764000000000000000","value":{"unit":"m","value":"0x3f8945b6c3760bf6"}}

@@ -9,6 +9,8 @@ phase: P2
 size: M
 owners: []
 claimed_by:
+built_in: [fid-hal-idl]
+built_pr: 618
 satisfies: [REQ-HAL.IDL.SENS-001, REQ-HAL.IDL.SENS-004, REQ-HAL.IDL.SENS-005]
 covers: []
 depends_on: [HAL.IDL.SENS.STREAM, HAL.IDL.BASE, HAL.IDL.UNITS, HAL.IDL.GEN.FMT]
@@ -75,6 +77,8 @@ Project-authored JSON under `fixtures/hal/idl/sens/gauenv/` (CC-BY-4.0).
 ## Open questions
 
 - Linking a reading to a register entry in `UNC.INST.LIB` happens at runtime; the package carries only the device-declared identity, because L0 types may not depend on UNC's register.
+- Inventory: `GaugePackage` and `EnvironmentPackage` implement `CapabilityPackage`; adding them to `inventory::packages()` waits for `HAL.IDL.GEN.EXPORT`, which owns the inventory and is not built yet.
+- Sampling time is read as the time over which the sensor sampled one reading. `Environment-core@1` (EN-03) checks it is positive, the same in every reading of a stream, and equal to the optional core setting `sampling_time` when the device has one. It does not check it against the spacing of the timestamps, because averaging windows may overlap.
 
 ## Children
 

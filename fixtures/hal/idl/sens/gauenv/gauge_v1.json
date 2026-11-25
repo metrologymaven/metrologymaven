@@ -1,0 +1,509 @@
+{
+  "schema": "capability-package/v1",
+  "manifest": {
+    "name": "Gauge",
+    "version": "1.0.0",
+    "deprecated": false,
+    "tier3_usable": true
+  },
+  "$defs": {
+    "SessionId": {
+      "type": "string",
+      "maxLength": 36
+    },
+    "StopReason": {
+      "type": "string",
+      "enum": [
+        "requested",
+        "device_error",
+        "limit",
+        "safety_stop",
+        "end_of_data"
+      ]
+    },
+    "StreamEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "started",
+            "stopped",
+            "gap"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/StopReason"
+        },
+        "from": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "to": {
+          "type": "string",
+          "maxLength": 20
+        }
+      },
+      "required": [
+        "kind"
+      ]
+    },
+    "StreamState": {
+      "type": "string",
+      "enum": [
+        "idle",
+        "streaming"
+      ]
+    },
+    "StreamStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "$ref": "#/$defs/StreamState"
+        },
+        "next_seq": {
+          "type": "string",
+          "maxLength": 20
+        }
+      },
+      "required": [
+        "next_seq",
+        "state"
+      ]
+    },
+    "Quantity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "$ref": "#/$defs/SiUnit"
+        },
+        "value": {
+          "type": "string",
+          "maxLength": 18
+        }
+      },
+      "required": [
+        "unit",
+        "value"
+      ]
+    },
+    "SiUnit": {
+      "type": "string",
+      "enum": [
+        "m",
+        "rad",
+        "s",
+        "K",
+        "Pa",
+        "1"
+      ]
+    },
+    "GaugeKind": {
+      "type": "string",
+      "enum": [
+        "caliper",
+        "micrometer",
+        "indicator",
+        "height_gauge",
+        "bore_gauge",
+        "depth_gauge",
+        "protractor",
+        "other"
+      ]
+    },
+    "GaugeInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/GaugeKind"
+        },
+        "range": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "min": {
+              "$ref": "#/$defs/Quantity"
+            },
+            "max": {
+              "$ref": "#/$defs/Quantity"
+            }
+          },
+          "required": [
+            "max",
+            "min"
+          ]
+        },
+        "resolution": {
+          "$ref": "#/$defs/Quantity"
+        }
+      },
+      "required": [
+        "kind",
+        "range",
+        "resolution"
+      ]
+    },
+    "GaugeReading": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "type": "string",
+          "enum": [
+            "gauge-reading/1"
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "resolution": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "gauge_identity": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "calibration_ref": {
+          "type": "string",
+          "maxLength": 71
+        },
+        "t_dev": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "t_host": {
+          "type": "string",
+          "maxLength": 20
+        }
+      },
+      "required": [
+        "gauge_identity",
+        "resolution",
+        "schema",
+        "t_host",
+        "value"
+      ]
+    }
+  },
+  "operations": [
+    {
+      "name": "read",
+      "class": "D1",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reading": {
+            "$ref": "#/$defs/GaugeReading"
+          }
+        },
+        "required": [
+          "reading"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "NOT_QUALIFIED",
+        "CALIBRATION_EXPIRED",
+        "LIMIT",
+        "UNSUPPORTED",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "zero",
+      "class": "D1",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "NOT_QUALIFIED",
+        "LIMIT",
+        "UNSUPPORTED",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "start_stream",
+      "class": "D1",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/$defs/StreamStatus"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "CONFIG_INVALID",
+        "NOT_QUALIFIED",
+        "CALIBRATION_EXPIRED",
+        "LIMIT",
+        "SAFETY_STOP_OBSERVED",
+        "VENDOR_LICENSE",
+        "UNSUPPORTED",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "stop_stream",
+      "class": "D1",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/$defs/StreamStatus"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "stream_status",
+      "class": "R0",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/$defs/StreamStatus"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    }
+  ],
+  "batch_schemas": [
+    {
+      "id": "gauge.readings",
+      "columns": [
+        {
+          "name": "value",
+          "unit": "m",
+          "encoding": {
+            "numeric": "f64",
+            "scale": "0x3ff0000000000000",
+            "offset": "0x0000000000000000",
+            "unit": "m"
+          }
+        },
+        {
+          "name": "resolution",
+          "unit": "m",
+          "encoding": {
+            "numeric": "f64",
+            "scale": "0x3ff0000000000000",
+            "offset": "0x0000000000000000",
+            "unit": "m"
+          }
+        },
+        {
+          "name": "t_host",
+          "unit": "s",
+          "encoding": {
+            "numeric": "i64",
+            "scale": "0x3e112e0be826d695",
+            "offset": "0x0000000000000000",
+            "unit": "s"
+          }
+        },
+        {
+          "name": "t_dev",
+          "unit": "s",
+          "encoding": {
+            "numeric": "i64",
+            "scale": "0x3e112e0be826d695",
+            "offset": "0x0000000000000000",
+            "unit": "s"
+          }
+        }
+      ],
+      "validity_mask": false,
+      "seq_range": true
+    },
+    {
+      "id": "gauge.readings.angle",
+      "columns": [
+        {
+          "name": "value",
+          "unit": "rad",
+          "encoding": {
+            "numeric": "f64",
+            "scale": "0x3ff0000000000000",
+            "offset": "0x0000000000000000",
+            "unit": "rad"
+          }
+        },
+        {
+          "name": "resolution",
+          "unit": "rad",
+          "encoding": {
+            "numeric": "f64",
+            "scale": "0x3ff0000000000000",
+            "offset": "0x0000000000000000",
+            "unit": "rad"
+          }
+        },
+        {
+          "name": "t_host",
+          "unit": "s",
+          "encoding": {
+            "numeric": "i64",
+            "scale": "0x3e112e0be826d695",
+            "offset": "0x0000000000000000",
+            "unit": "s"
+          }
+        },
+        {
+          "name": "t_dev",
+          "unit": "s",
+          "encoding": {
+            "numeric": "i64",
+            "scale": "0x3e112e0be826d695",
+            "offset": "0x0000000000000000",
+            "unit": "s"
+          }
+        }
+      ],
+      "validity_mask": false,
+      "seq_range": true
+    }
+  ],
+  "semantics": {
+    "text": "# Gauge@1 semantics\n\nThe capability package for digital hand gauges and indicators: calipers, micrometers, dial and digital indicators, height, bore and depth gauges, and protractors.\n\n- Describe and configuration come from Device@1; the driver reports the gauge kind, range and resolution (GaugeInfo) with describe. The package has no core settings: any setting is a vendor extension under a namespace listed in describe.\n- read returns one reading now. zero makes the present position read zero. Both are D1. No operation writes calibration, and zero leaves the calibration reference unchanged.\n- start_stream, stop_stream and stream_status come from the shared streaming template. A stream delivers gauge-batch/1 batches with one sequence number per reading. Lengths use the gauge.readings batch schema and angles gauge.readings.angle.\n- A reading carries the value in m or rad, the resolution in the same unit, the gauge identity, an optional calibration reference (a digest of the calibration record), optional t_dev and required t_host in ns. The value is an integer multiple of the resolution within 1e-9 relative.\n- A reading does not say where it came from; provenance is the acquisition envelope's. A read result is recorded only inside an acquisition-batch/0 envelope, whose simulated flag the driver or simulator sets, so simulated values never look measured.\n- Device-supplied text is data and is never interpreted as instructions.\n",
+    "digest": "sha256:c186793bae9310b1a6c6a7b8f62c2b9364c3d567226e7c30a2112f5391c7cb9e"
+  },
+  "profile": {
+    "id": "Gauge-core@1",
+    "items": [
+      {
+        "id": "GA-01",
+        "summary": "Quantisation: every reading has a positive resolution; every value is an integer multiple of its resolution within 1e-9 relative."
+      },
+      {
+        "id": "GA-02",
+        "summary": "Unit consistency: value and resolution share one unit, m or rad; every reading of a stream has the unit and resolution of the first and of the gauge info in describe; every value lies within the range the gauge info declares."
+      },
+      {
+        "id": "GA-03",
+        "summary": "Zero behaviour: after a successful zero with the gauge held still the next reading is zero; zero changes neither the gauge identity, unit and resolution nor the calibration reference."
+      },
+      {
+        "id": "GA-04",
+        "summary": "Timestamp monotonicity: t_host never decreases from one reading to the next; t_dev is present in every reading or in none and increases strictly; no reading repeats an earlier one and the gauge identity and calibration reference do not change within a stream."
+      },
+      {
+        "id": "SC-01",
+        "summary": "Batch size within the recommendation: over a test stream of at least 60 s, at least 95 % of batches hold 1 MB to 8 MB or span at most 50 ms of device time."
+      },
+      {
+        "id": "SC-02",
+        "summary": "Start and stop idempotence: start_stream on a running stream changes nothing and emits no second started event; stop_stream on a stopped stream changes nothing and emits no second stopped event."
+      },
+      {
+        "id": "SC-03",
+        "summary": "Sequence contiguity: each batch starts one after the last sequence number of the batch before it; no batch range is reversed, overlapping or missing."
+      },
+      {
+        "id": "SC-04",
+        "summary": "Extension declaration and digesting: every vendor-extension setting is named under a vendor namespace listed in describe; every extension value is in the configuration digest the device reports."
+      }
+    ]
+  }
+}
