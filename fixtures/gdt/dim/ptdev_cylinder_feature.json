@@ -1,22 +1,54 @@
 {
-  "schema": "fid-gdt-dim-ptdev-cylinder-fixture/1",
-  "license": "CC0-1.0",
-  "frame_id": "world",
-  "nominal": {
-    "kind": "cylinder",
-    "axis_point": [0.0, 0.0, 0.0],
-    "axis_dir": [0.0, 0.0, 1.0],
-    "radius": 0.01
-  },
-  "actual": {
-    "kind": "cylinder",
-    "axis_point": [0.00001, 0.0, 0.0],
-    "axis_dir": [0.0, 0.00009999999983333334, 0.999999995],
-    "radius": 0.010003
-  },
-  "expected": {
-    "location_si": [0.00001, 0.0, 0.0],
-    "direction_rad": 0.0001,
-    "size_si": 0.000003
-  }
+ "ac": "GDT.DIM.PTDEV AC-2",
+ "actual": {
+  "axis_dir": [
+   "0.0",
+   "9.999999983333333e-05",
+   "0.999999995"
+  ],
+  "axis_point": [
+   "1e-05",
+   "1.9999999966666665e-06",
+   "0.0199999999"
+  ],
+  "kind": "cylinder",
+  "radius": "0.010003"
+ },
+ "expected": {
+  "direction_rad": "9.999999999999999e-05",
+  "location_si": [
+   "1e-05",
+   "5.101171221417807e-23",
+   "-5.101171238421711e-27"
+  ],
+  "size_si": "2.999999999999531e-06"
+ },
+ "frame": {
+  "id": "world"
+ },
+ "license": "CC0-1.0",
+ "nominal": {
+  "axis_dir": [
+   "0.0",
+   "0.0",
+   "1.0"
+  ],
+  "axis_point": [
+   "0.0",
+   "0.0",
+   "0.0"
+  ],
+  "kind": "cylinder",
+  "radius": "0.01"
+ },
+ "planted": {
+  "direction_rad": "0.0001",
+  "location_si": [
+   "1e-05",
+   "0.0",
+   "0.0"
+  ],
+  "size_si": "3e-06"
+ },
+ "schema": "fid-gdt-dim-ptdev-cylinder-fixture/2"
 }

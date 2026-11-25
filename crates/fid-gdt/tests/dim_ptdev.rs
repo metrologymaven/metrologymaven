@@ -1,21 +1,25 @@
 //! Acceptance tests for `GDT.DIM.PTDEV` through the command layer (`check.eval_deviation@1`):
-//! AC-1..AC-5.
+//! AC-1..AC-5. Expected values come from `fixtures/gdt/dim/make_ptdev.py` (independent Python
+//! reference); none are computed here.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+use fid_bus::error::{BusError, Detail, ValidationReason};
+use fid_bus::unit::Normalised;
+use fid_bus::validate::{Compiled, Hooks, RefLookup};
 use fid_canon::CValue;
 use fid_gdt::chars::dprof::{DprofState, KeyVocabulary};
 use fid_gdt::chars::interp::{RegisterSources, RegisterStore, RegisterView};
 use fid_gdt::chars::record::ResultStore;
 use fid_gdt::chars::spec::{load_project, SpecState};
 use fid_gdt::dim::ptdev::{
-    commit, deviation_command_def, invoke_cli, invoke_mcp, replay, EvalInputs, PtDevStore, EVAL_DEVIATION_CLI,
-    EVAL_DEVIATION_COMMAND, EVAL_DEVIATION_MCP, RESULT_SCHEMA,
+    commit, deviation_command_def, invoke_cli, invoke_mcp, replay, EvalError, EvalInputs, PtDevStore,
+    EVAL_DEVIATION_CLI, EVAL_DEVIATION_COMMAND, EVAL_DEVIATION_MCP, RESULT_SCHEMA,
 };
 use fid_gdt::dmt_flow::roster::Roster;
 use fid_gdt::dmt_flow::status::{CoiInputs, JournalExtract, Published, JOURNAL_SCHEMA};
 use fid_gdt::drf::build::ReplayRegisters;
-use fid_gps::dim::ptdev::{DevFeature, NominalPoint, Rigid, COLUMNAR_FORMAT, SIGN_CONVENTION};
+use fid_gps::dim::ptdev::{DevFeature, NominalPoint, PtDevError, Rigid, COLUMNAR_FORMAT, SIGN_CONVENTION};
 use fid_gps::dmt::DmtTable;
 use fid_io_reg::Principal;
 use fid_replay::ReplayOutcome;
@@ -62,9 +66,15 @@ fn num(v: &CValue) -> f64 {
     }
 }
 
+/// Fixture numbers are written as `repr` strings by `fixtures/gdt/dim/make_ptdev.py`.
+fn fnum(v: &CValue) -> f64 {
+    st(v).parse().unwrap()
+}
+
 fn vec3(v: &CValue) -> [f64; 3] {
     let a = arr(v);
-    [num(&a[0]), num(&a[1]), num(&a[2])]
+    assert_eq!(a.len(), 3);
+    [fnum(&a[0]), fnum(&a[1]), fnum(&a[2])]
 }
 
 fn unhex(v: &CValue) -> f64 {
@@ -73,11 +83,37 @@ fn unhex(v: &CValue) -> f64 {
     f64::from_bits(u64::from_str_radix(&s[2..], 16).unwrap())
 }
 
-fn rot_z(deg: f64) -> Rigid {
-    let rad = deg.to_radians();
-    let c = rad.cos();
-    let s = rad.sin();
-    Rigid::new([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]], [0.0, 0.0, 0.0]).unwrap()
+fn close(got: f64, want: f64, what: &str) {
+    assert!((got - want).abs() <= TOL, "{what}: {got:e} vs {want:e}");
+}
+
+/// The fixture frame's frame-to-world rigid motion.
+fn frame_rigid(v: &CValue) -> Rigid {
+    let o = obj(v);
+    let rows = arr(&o["r"]);
+    Rigid::new([vec3(&rows[0]), vec3(&rows[1]), vec3(&rows[2])], vec3(&o["t"])).unwrap()
+}
+
+fn plane_inputs(o: &BTreeMap<String, CValue>) -> (Vec<[f64; 3]>, Vec<NominalPoint>) {
+    let rows = arr(&o["points"]);
+    let pts = rows.iter().map(|r| vec3(&obj(r)["point"])).collect();
+    let noms = rows
+        .iter()
+        .map(|r| {
+            let n = obj(&obj(r)["nominal"]);
+            NominalPoint { point: vec3(&n["point"]), normal: vec3(&n["normal"]) }
+        })
+        .collect();
+    (pts, noms)
+}
+
+fn cylinder(v: &CValue) -> DevFeature {
+    let m = obj(v);
+    DevFeature::Cylinder {
+        axis_point: vec3(&m["axis_point"]),
+        axis_dir: vec3(&m["axis_dir"]),
+        radius: fnum(&m["radius"]),
+    }
 }
 
 fn test_vocab() -> KeyVocabulary {
@@ -165,63 +201,53 @@ fn entry_digest(tag: &str, payload: &[u8]) -> Digest {
     Digest::from_bytes(fid_canon::digest_bytes(&buf).0)
 }
 
+const PLANE_ARGS: [&str; 12] = [
+    EVAL_DEVIATION_CLI,
+    "--run",
+    "run-1",
+    "--char",
+    "ch-plane-pts",
+    "--points",
+    "plane-pts",
+    "--nominals",
+    "plane-noms",
+    "--frame",
+    "rot30_z",
+    "--json",
+];
+
+/// A world holding the AC-1 plane points and the AC-2 cylinders, with `points` as the measured
+/// point set stored under `plane-pts`.
+fn plane_world(points: Option<Vec<[f64; 3]>>) -> World {
+    let plane_doc = fid_canon::parse(&read("dim/ptdev_plane.json")).unwrap();
+    let po = obj(&plane_doc);
+    let (pts, noms) = plane_inputs(po);
+    let cyl_doc = fid_canon::parse(&read("dim/ptdev_cylinder_feature.json")).unwrap();
+    let co = obj(&cyl_doc);
+
+    let mut world = World::new(&["ch-plane-pts", "ch-cyl-feat", "ch-dry"]);
+    world.store.insert_frame(st(&obj(&po["frame"])["id"]), frame_rigid(&po["frame"])).unwrap();
+    world.store.insert_frame("world", Rigid::IDENTITY).unwrap();
+    world.store.insert_point_set("plane-pts", points.unwrap_or(pts)).unwrap();
+    world.store.insert_nominal_set("plane-noms", noms).unwrap();
+    world.store.insert_feature("cyl-actual", cylinder(&co["actual"])).unwrap();
+    world.store.insert_feature("cyl-nominal", cylinder(&co["nominal"])).unwrap();
+    world
+}
+
 #[test]
 fn ac1_ac2_ac5_plane_points_cylinder_feature_and_exact_replay() {
     let plane_doc = fid_canon::parse(&read("dim/ptdev_plane.json")).unwrap();
     let po = obj(&plane_doc);
-    let deg = num(&po["frame_rotation_z_deg"]);
-    let pts: Vec<[f64; 3]> = arr(&po["points"]).iter().map(vec3).collect();
-    let noms: Vec<NominalPoint> = arr(&po["nominals"])
-        .iter()
-        .map(|n| {
-            let no = obj(n);
-            NominalPoint { point: vec3(&no["point"]), normal: vec3(&no["normal"]) }
-        })
-        .collect();
-
     let cyl_doc = fid_canon::parse(&read("dim/ptdev_cylinder_feature.json")).unwrap();
     let co = obj(&cyl_doc);
-    let parse_cyl = |v: &CValue| {
-        let m = obj(v);
-        DevFeature::Cylinder {
-            axis_point: vec3(&m["axis_point"]),
-            axis_dir: vec3(&m["axis_dir"]),
-            radius: num(&m["radius"]),
-        }
-    };
-
-    let mut world = World::new(&["ch-plane-pts", "ch-cyl-feat", "ch-dry"]);
-    world.store.insert_frame("rot30_z", rot_z(deg)).unwrap();
-    world.store.insert_frame("world", Rigid::IDENTITY).unwrap();
-    world.store.insert_point_set("plane-pts", pts).unwrap();
-    world.store.insert_nominal_set("plane-noms", noms).unwrap();
-    world.store.insert_feature("cyl-actual", parse_cyl(&co["actual"])).unwrap();
-    world.store.insert_feature("cyl-nominal", parse_cyl(&co["nominal"])).unwrap();
+    let world = plane_world(None);
 
     let mut results = ResultStore::new();
     let mut journal: Vec<(Digest, Principal, Vec<u8>)> = Vec::new();
 
-    // AC-1: plane points in 30 deg rotated frame + CLI/MCP parity.
-    let ev_pts = invoke_cli(
-        &results,
-        &world.inputs(),
-        H,
-        &[
-            EVAL_DEVIATION_CLI,
-            "--run",
-            "run-1",
-            "--char",
-            "ch-plane-pts",
-            "--points",
-            "plane-pts",
-            "--nominals",
-            "plane-noms",
-            "--frame",
-            "rot30_z",
-            "--json",
-        ],
-    )
-    .unwrap();
+    // AC-1: plane points in the 30 degree rotated frame, CLI and MCP give the same bytes.
+    let ev_pts = invoke_cli(&results, &world.inputs(), H, &PLANE_ARGS).unwrap();
     let ev_pts_mcp = invoke_mcp(
         &results,
         &world.inputs(),
@@ -238,24 +264,35 @@ fn ac1_ac2_ac5_plane_points_cylinder_feature_and_exact_replay() {
     assert_eq!(st(&pm["command"]), EVAL_DEVIATION_COMMAND);
     assert_eq!(st(&pm["sign_convention"]), SIGN_CONVENTION);
     assert_eq!(st(&pm["frame"]), "rot30_z");
+    assert_eq!(st(&pm["evaluation_basis"]), "POINTS");
     assert_eq!(pm["attachment"], CValue::Null);
     let items = arr(&pm["items"]);
+    let rows = arr(&po["points"]);
     assert_eq!(items.len(), 2);
-    let c = deg.to_radians().cos();
-    let s = deg.to_radians().sin();
-    let i0 = obj(&items[0]);
-    assert!((unhex(&i0["dn"]) - 0.00005).abs() <= TOL);
-    assert!((unhex(&i0["dx"]) - 0.00005 * c).abs() <= TOL);
-    assert!((unhex(&i0["dy"]) - (-0.00005 * s)).abs() <= TOL);
-    let i1 = obj(&items[1]);
-    assert!((unhex(&i1["dn"]) - (-0.00002)).abs() <= TOL);
+    assert_eq!(rows.len(), 2);
+    for (i, (item, row)) in items.iter().zip(rows).enumerate() {
+        let got = obj(item);
+        let row = obj(row);
+        let want = obj(&row["expected"]);
+        for k in ["dn", "dx", "dy", "dz"] {
+            close(unhex(&got[k]), fnum(&want[k]), &format!("pt {i} {k}"));
+        }
+        // AC-1 names the planted offsets themselves: +0.05 mm and -0.02 mm.
+        close(unhex(&got["dn"]), fnum(&row["planted_dn"]), &format!("pt {i} planted dn"));
+    }
+    let sum = obj(&pm["summary"]);
+    let want_sum = obj(&po["expected_summary"]);
+    for k in ["max_abs_dn_si", "max_dn_si", "min_dn_si"] {
+        close(unhex(&sum[k]), fnum(&want_sum[k]), k);
+    }
+    close(unhex(&pm["value_si"]), fnum(&want_sum["max_abs_dn_si"]), "value_si");
 
     let b1 = ev_pts.event().unwrap().to_canonical_bytes().unwrap();
     let h1 = entry_digest("ch-plane-pts", &b1);
     commit(&mut results, H, &ev_pts, h1).unwrap();
     journal.push((h1, H, b1));
 
-    // AC-2: cylinder feature vs nominal.
+    // AC-2: cylinder feature versus nominal.
     let ev_cyl = invoke_cli(
         &results,
         &world.inputs(),
@@ -280,19 +317,24 @@ fn ac1_ac2_ac5_plane_points_cylinder_feature_and_exact_replay() {
     let fm = obj(&fv);
     assert_eq!(st(&fm["evaluation_basis"]), "FEATURES");
     let feat = obj(&fm["feature"]);
+    assert_eq!(st(&feat["feature_kind"]), "cylinder");
     let loc = arr(&feat["location"]);
-    assert!((unhex(&loc[0]) - 0.00001).abs() <= TOL);
-    assert!(unhex(&loc[1]).abs() <= TOL);
-    assert!(unhex(&loc[2]).abs() <= TOL);
-    assert!((unhex(&feat["direction_rad"]) - 0.0001).abs() <= TOL);
-    assert!((unhex(&feat["size"]) - 0.000003).abs() <= TOL);
+    for key in ["expected", "planted"] {
+        let want = obj(&co[key]);
+        let want_loc = vec3(&want["location_si"]);
+        for (i, w) in want_loc.iter().enumerate() {
+            close(unhex(&loc[i]), *w, &format!("{key} location[{i}]"));
+        }
+        close(unhex(&feat["direction_rad"]), fnum(&want["direction_rad"]), &format!("{key} direction"));
+        close(unhex(&feat["size"]), fnum(&want["size_si"]), &format!("{key} size"));
+    }
 
     let b2 = ev_cyl.event().unwrap().to_canonical_bytes().unwrap();
     let h2 = entry_digest("ch-cyl-feat", &b2);
     commit(&mut results, H, &ev_cyl, h2).unwrap();
     journal.push((h2, H, b2));
 
-    // Dry-run emits no event.
+    // A dry run emits no event.
     let ev_dry = invoke_cli(
         &results,
         &world.inputs(),
@@ -315,6 +357,7 @@ fn ac1_ac2_ac5_plane_points_cylinder_feature_and_exact_replay() {
     )
     .unwrap();
     assert!(ev_dry.event().is_none());
+    assert!(ev_dry.record(Digest::TOMBSTONE).is_err());
 
     // AC-5: exact replay gives IDENTICAL.
     let reg_store = RegisterStore::new();
@@ -326,7 +369,19 @@ fn ac1_ac2_ac5_plane_points_cylinder_feature_and_exact_replay() {
     assert_eq!(rep.outcome, ReplayOutcome::Identical);
     assert_eq!(rep.steps, 2);
 
-    // CommandDef validates cleanly.
+    // Replay over a store whose measured points changed under the same ID is not IDENTICAL.
+    let mut moved = plane_inputs(po).0;
+    moved[0][2] += 1e-6;
+    let changed = plane_world(Some(moved));
+    let rep = replay(&changed.inputs(), &regs, &entries);
+    assert_eq!(rep.outcome, ReplayOutcome::Divergent);
+    assert_eq!(rep.steps, 0);
+
+    // A truncated event does not decode, so it is not replayable.
+    let truncated: Vec<(Digest, Principal, &[u8])> = vec![(h1, H, &journal[0].2[..journal[0].2.len() - 1])];
+    assert_eq!(replay(&world.inputs(), &regs, &truncated).outcome, ReplayOutcome::NotReplayable);
+
+    // The CommandDef validates cleanly.
     assert_eq!(deviation_command_def().unwrap().id, "check.eval_deviation");
 }
 
@@ -347,7 +402,8 @@ fn ac3_non_unit_normal_and_unknown_frame_journal_nothing() {
         .unwrap();
     let results = ResultStore::new();
 
-    // AC-3: nominal normal of length 1.1 -> nominal_normal_not_unit naming point index 1.
+    // AC-3: a nominal normal of length 1.1 fails with nominal_normal_not_unit naming index 1.
+    // The command returns no evaluation, so there is no event to journal.
     let err = invoke_cli(
         &results,
         &world.inputs(),
@@ -368,8 +424,9 @@ fn ac3_non_unit_normal_and_unknown_frame_journal_nothing() {
         ],
     )
     .unwrap_err();
+    assert_eq!(err, EvalError::PtDev(PtDevError::NominalNormalNotUnit { index: 1 }));
     assert_eq!(err.code(), "nominal_normal_not_unit");
-    assert!(err.to_string().contains('1'), "error must name index 1: {err}");
+    assert_eq!(err.to_string(), "nominal_normal_not_unit{1}");
 
     let err_frame = invoke_cli(
         &results,
@@ -391,6 +448,18 @@ fn ac3_non_unit_normal_and_unknown_frame_journal_nothing() {
     )
     .unwrap_err();
     assert_eq!(err_frame.code(), "frame_unknown");
+
+    // Mixing the point and feature modes is refused before any evaluation.
+    let err_mode = invoke_mcp(
+        &results,
+        &world.inputs(),
+        H,
+        EVAL_DEVIATION_MCP,
+        br#"{"char":"ch-bad-norm","feature":"f","frame":"world","nominals":"bad-noms","points":"pts","run":"run-1"}"#,
+    )
+    .unwrap_err();
+    assert_eq!(err_mode.code(), "bad_params");
+    assert!(results.is_empty());
 }
 
 #[test]
@@ -426,11 +495,12 @@ fn ac4_one_million_points_uses_columnar_attachment_in_record_inputs() {
     )
     .unwrap();
 
-    // Payload is NOT inline JSON; columnar attachment digest is in ResultRecord inputs.
+    // The payload is not inline JSON; the columnar attachment digest is in the record inputs.
     let att = ev.attachment().expect("1M points must emit columnar attachment");
     assert_eq!(att.format, COLUMNAR_FORMAT);
     assert_eq!(att.count, n);
     assert_eq!(att.bytes.len(), 9 + 8 + n * 32);
+    assert_eq!(att.digest, Digest::from_bytes(fid_canon::digest_bytes(&att.bytes).0));
 
     let v = ev.to_value();
     let m = obj(&v);
@@ -447,4 +517,50 @@ fn ac4_one_million_points_uses_columnar_attachment_in_record_inputs() {
         "ResultRecord input_digests must contain columnar attachment digest"
     );
     commit(&mut results, H, &ev, entry_hash).unwrap();
+}
+
+struct NoHooks;
+
+impl Hooks for NoHooks {
+    fn literal(&self, _: &str, _: &CValue) -> Result<Normalised, BusError> {
+        Err(BusError::Validation(ValidationReason::UnitMismatch, Detail::new("no quantities here")))
+    }
+    fn entity(&self, _: &str) -> RefLookup {
+        RefLookup::Missing
+    }
+}
+
+#[test]
+fn definition_and_results_conform_to_the_published_schemas() {
+    let def = deviation_command_def().unwrap();
+    let params = Compiled::compile(&def.params_schema).unwrap();
+    let result = Compiled::compile(&def.result_schema).unwrap();
+    let world = plane_world(None);
+    let store = ResultStore::new();
+    for raw in [
+        r#"{"char":"ch-plane-pts","frame":"rot30_z","nominals":"plane-noms","points":"plane-pts","run":"run-1"}"#,
+        r#"{"char":"ch-cyl-feat","feature":"cyl-actual","frame":"world","nominal":"cyl-nominal","run":"run-1"}"#,
+        r#"{"char":"ch-dry","dry_run":true,"feature":"cyl-actual","frame":"world","nominal":"cyl-nominal","run":"r"}"#,
+    ] {
+        let p = fid_canon::parse(raw.as_bytes()).unwrap();
+        assert!(params.evaluate(&p, &NoHooks).is_ok(), "{raw}");
+        let ev = invoke_mcp(&store, &world.inputs(), H, EVAL_DEVIATION_MCP, raw.as_bytes()).unwrap();
+        if let Err(f) = result.evaluate(&ev.to_value(), &NoHooks) {
+            panic!("{raw}: {} at {} ({})", f.keyword, f.pointer, f.message);
+        }
+    }
+    for bad in [
+        r#"{"char":"ch-dry","frame":"world"}"#,
+        r#"{"char":"ch-dry","frame":"world","run":"r","extra":true}"#,
+        r#"{"char":"ch-dry","frame":"world","run":"r","dry_run":"yes"}"#,
+    ] {
+        assert!(params.evaluate(&fid_canon::parse(bad.as_bytes()).unwrap(), &NoHooks).is_err(), "{bad}");
+    }
+    // The result schema is not vacuous: another sign convention is refused.
+    let ev = invoke_cli(&store, &world.inputs(), H, &PLANE_ARGS).unwrap();
+    let mut v = ev.to_value();
+    if let CValue::Obj(o) = &mut v {
+        o.insert("sign_convention".to_owned(), CValue::Str("material_side_negative".to_owned()));
+    }
+    assert!(result.evaluate(&v, &NoHooks).is_err());
 }
