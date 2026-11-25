@@ -1,6 +1,6 @@
 [package]
 name = "fid-doctor"
-description = "Metrology Maven environment diagnostics (PLAT.DOCTOR): bounded offline environment probes, snapshot schema and fake test harness"
+description = "Metrology Maven environment diagnostics (PLAT.DOCTOR): bounded offline environment probes, snapshot schema and fake test harness; tier and hardware-profile verdicts"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -16,6 +16,9 @@ gpu = ["dep:fid-gpu-policy", "dep:fid-gpu-select"]
 
 [dependencies]
 fid-canon = { path = "../fid-canon" }
+# PLAT.DOCTOR.LOOKUP: the support matrix and hardware profile types and the tier lookup
+# (model layer; fid-platform itself is a tool crate, which no crate may depend on).
+fid-platform-core = { path = "../fid-platform-core" }
 fid-gpu-policy = { path = "../fid-gpu-policy", optional = true }
 fid-gpu-select = { path = "../fid-gpu-select", optional = true }
 

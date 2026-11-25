@@ -1363,6 +1363,7 @@ dependencies = [
  "fid-canon",
  "fid-gpu-policy",
  "fid-gpu-select",
+ "fid-platform-core",
  "sysinfo",
 ]
 
@@ -1981,8 +1982,17 @@ dependencies = [
  "fid-canon",
  "fid-gpu-policy",
  "fid-io-reg",
+ "fid-platform-core",
  "fid-types",
  "sha2 0.10.9",
+ "toml",
+]
+
+[[package]]
+name = "fid-platform-core"
+version = "0.0.1"
+dependencies = [
+ "fid-gpu-policy",
  "toml",
 ]
 
