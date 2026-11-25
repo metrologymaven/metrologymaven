@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-report]
+built_pr: 631
 satisfies: [REQ-RPT.DESIGN-001, REQ-RPT.DESIGN-003]
 covers: []
 depends_on: [RPT.MODEL.DOC]

@@ -12,6 +12,7 @@
 //!   the slot language (`RPT.MODEL.TMPL.SLOT`), and template versions and commands
 //! - [`balloon`]: 2D drawing revision import, sheet coordinates and ballooning
 //!   (`RPT.BALLOON`).
+//! - [`layout`]: report layout edited by the designer; page setup (`RPT.DESIGN.PAGE`).
 
 pub mod balloon;
 pub mod bind;
@@ -19,4 +20,5 @@ pub mod blocks;
 pub mod doc;
 pub mod fmt;
 mod json_num;
+pub mod layout;
 pub mod tmpl;
