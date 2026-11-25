@@ -512,10 +512,12 @@ pub fn prepare(
     let ResolveOutcome::Invoke { command_id, json, rest, .. } = outcome else {
         return Prepared::Render { outcome, tree: view };
     };
-    let found =
-        view.domains.values().flatten().find_map(|c| {
-            c.majors.iter().find(|m| m.command_id == command_id).map(|m| (c.path[1..].join(" "), m.clone()))
-        });
+    let found = view.domains.values().flatten().find_map(|c| {
+        c.majors
+            .iter()
+            .find(|m| m.command_id == command_id)
+            .map(|m| (c.path.iter().skip(1).cloned().collect::<Vec<_>>().join(" "), m.clone()))
+    });
     let Some((path, major)) = found else {
         let msg = "resolved command major is not in the tree";
         return Prepared::Refused {
@@ -533,7 +535,13 @@ pub fn prepare(
     let table = match FlagTable::build(&major) {
         Ok(t) => t,
         Err(c) => {
-            return refused(Envelope::failed(command_id.as_str(), ErrorCode::InternalError, &c.to_string(), None))
+            let details = CValue::Obj(BTreeMap::from([
+                ("cli_error".to_string(), CValue::Str(c.code().to_string())),
+                ("flag".to_string(), CValue::Str(c.flag.clone())),
+                ("property".to_string(), CValue::Str(c.property.clone())),
+            ]));
+            let msg = c.to_string();
+            return refused(Envelope::failed(command_id.as_str(), ErrorCode::InternalError, &msg, Some(details)));
         }
     };
     let (reserved, mut values) = match map_flags(&major, &table, &rest, parser, &path) {
@@ -563,13 +571,25 @@ pub fn prepare(
             return refused(usage(&command_id, format!("missing required flag `{flag}` for `{path}`")));
         }
     }
+    // The tracker's `BusRequest` has no mode field, so a dry run cannot be sent as one. Refuse
+    // it here, whatever the gate decided, rather than send a normal invocation.
+    if dry_run {
+        let msg = "dry_run_unsupported: this build cannot send a dry-run invocation to the bus";
+        return refused(Envelope::failed(command_id.as_str(), ErrorCode::DryRunUnsupported, msg, None));
+    }
     Prepared::Send { invocation: Invocation { command_id, params, dry_run }, reserved, json, view }
 }
 
 // ------------------------------------------------------------------ send and finish
 
-/// Whether `env` is a failure the bus raised as a hidden or unknown command (REQ-012). Keys
-/// on `bus_code` and `bus_reason` in the error details, as the transport carries them.
+/// The `bus_origin` value a transport sets when the bus pipeline (resolution and VALID) raised
+/// the error, as opposed to a command handler.
+pub const PIPELINE_ORIGIN: &str = "pipeline";
+
+/// Whether `env` is a failure the bus pipeline raised as a hidden or unknown command
+/// (REQ-012). Keys on `bus_code`, `bus_reason` and `bus_origin` in the error details, as the
+/// transport carries them. Only `bus_origin: "pipeline"` counts: a handler that answers
+/// `not_found/unknown_command` about some other command passes through unchanged.
 pub fn is_absent_answer(env: &Envelope) -> bool {
     let Some(CValue::Obj(d)) = env.error.as_ref().and_then(|e| e.details.as_ref()) else {
         return false;
@@ -581,6 +601,9 @@ pub fn is_absent_answer(env: &Envelope) -> bool {
     let (Some(code), reason) = (text("bus_code"), text("bus_reason")) else {
         return false;
     };
+    if text("bus_origin") != Some(PIPELINE_ORIGIN) {
+        return false;
+    }
     ABSENT_BUS_ERRORS.iter().any(|(c, r)| {
         *c == code
             && match r {

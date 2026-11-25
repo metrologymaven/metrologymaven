@@ -423,7 +423,8 @@ fn ac4_bus_hidden_or_unknown_answers_become_the_absent_refusal() {
 fn ac10_other_not_found_and_validation_errors_pass_through() {
     let tree = dispatch_tree();
     let CValue::Arr(cases) = &outcomes()["passthrough"] else { panic!("passthrough") };
-    assert_eq!(cases.len(), 4);
+    // Includes a handler-origin `not_found/unknown_command`, which is not an absent answer.
+    assert_eq!(cases.len(), 5);
     for case in cases {
         let c = obj(case);
         let name = text(&c["name"]);
@@ -651,4 +652,51 @@ fn gate_refusals_send_nothing_and_come_before_flag_errors() {
     assert_eq!(r.exit, ExitCode::Usage, "{r:?}");
     assert_eq!(one_envelope(&r).error.unwrap().code, ErrorCode::DryRunUnsupported);
     assert!(bus.sent.is_empty());
+}
+
+/// A gate that lets everything through (as GATE would for a projection declaring dry-run).
+struct OpenGate;
+
+impl Gate for OpenGate {
+    fn class_and_dry_run(&self, _major: &CliMajor, _dry_run: bool) -> Result<(), Box<Envelope>> {
+        Ok(())
+    }
+
+    fn raw_paths(&self, _kind: PrincipalKind, _major: &CliMajor, _params: &CValue) -> Result<(), Box<Envelope>> {
+        Ok(())
+    }
+}
+
+/// The tracker cannot carry a dry-run mode, so a dry run the gate allowed is still refused
+/// with `dry_run_unsupported` and nothing is sent.
+#[test]
+fn dry_run_is_never_sent_as_a_normal_invocation() {
+    let tree = dispatch_tree();
+    let mut bus = FakeTarget::new(PrincipalKind::Script);
+    let (mut out, mut err) = (Vec::new(), Vec::new());
+    let mut args = TestArgs::new();
+    let d =
+        Dispatch { tree: &tree, version: "0.0.1", args: &mut args, gate: &OpenGate, timeout: Duration::from_secs(5) };
+    let clock = bus.clock.clone();
+    let a = argv(&["demo", "show-thing", "--dry-run", "--json"]);
+    let exit = run(d, &a, &mut bus, clock, CountingKeySource::new(0x0190_0000_0000), &mut (), &mut out, &mut err);
+    assert_eq!(exit, ExitCode::Usage);
+    let env = Envelope::decode(String::from_utf8(out).unwrap().trim_end().as_bytes()).unwrap();
+    assert_eq!(env.error.unwrap().code, ErrorCode::DryRunUnsupported);
+    assert!(bus.sent.is_empty());
+}
+
+/// A major whose flag table collides is refused with details naming the property and flag.
+#[test]
+fn flag_collision_refusal_carries_details() {
+    let tree = tree_of("fixtures/manifest/cli-dispatch-collision.json");
+    let mut bus = FakeTarget::new(PrincipalKind::Script);
+    let r = run_on(&tree, &["demo", "bad-flags", "--json"], &mut bus);
+    assert_eq!(r.exit, ExitCode::Internal, "{r:?}");
+    assert!(bus.sent.is_empty());
+    let details = one_envelope(&r).error.unwrap().details.unwrap();
+    let d = obj(&details);
+    assert_eq!(text(&d["cli_error"]), "flag_collision");
+    assert_eq!(text(&d["property"]), "dry_run");
+    assert_eq!(text(&d["flag"]), "--dry-run");
 }

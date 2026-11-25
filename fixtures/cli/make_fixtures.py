@@ -168,7 +168,7 @@ def build_tree_object(manifest_bytes: bytes) -> tuple[str, dict]:
         cmd_obj["majors"].sort(key=lambda m: m["major"])
         domains.setdefault(domain, []).append(cmd_obj)
 
-    tree = {"domains": domains, "manifest_digest": manifest_digest, "schema": "cli-tree-v1"}
+    tree = {"domains": domains, "manifest_digest": manifest_digest, "schema": "cli-tree-v2"}
     return manifest_digest, tree
 
 

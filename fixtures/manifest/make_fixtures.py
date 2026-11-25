@@ -524,10 +524,10 @@ def env(outcome, **extra):
     return e
 
 
-def failed(code, bus_code=None, bus_reason=None):
+def failed(code, bus_code=None, bus_reason=None, origin="pipeline"):
     err = {"code": code, "message": f"scripted {code}"}
     if bus_code is not None:
-        err["details"] = {"bus_code": bus_code, "bus_reason": bus_reason}
+        err["details"] = {"bus_code": bus_code, "bus_origin": origin, "bus_reason": bus_reason}
     return env("failed", error=err)
 
 
@@ -541,8 +541,10 @@ def cli_outcomes():
     - `absent` (AC-4): failures the bus raised as `hidden_command`, or `not_found` with reason
       `unknown_command`, `unknown_major` or `removed_major`; the CLI must replace each by the
       absent-major refusal.
-    - `passthrough` (AC-10): other `not_found` reasons and a validation error; stdout is the
-      scripted envelope unchanged.
+    - `passthrough` (AC-10): other `not_found` reasons, a validation error, and a
+      `not_found/unknown_command` whose `bus_origin` is a handler; stdout is the scripted
+      envelope unchanged. Every scripted bus error carries `bus_origin` (`pipeline` unless
+      stated).
     """
     outcomes = [
         {"name": "computed", "finish": env("computed", result={"thing": "x"}), "exit": 0},
@@ -569,6 +571,10 @@ def cli_outcomes():
         {"name": "not_found/unknown_branch", "finish": failed("not_found", "not_found", "unknown_branch"), "exit": 4},
         {"name": "not_found/unknown_job", "finish": failed("not_found", "not_found", "unknown_job"), "exit": 4},
         {"name": "validation/schema", "finish": failed("validation_error", "validation", "schema"), "exit": 4},
+        # A handler (not the pipeline) answering `not_found/unknown_command`, e.g. about a
+        # command named in its parameters: not an absent-major answer.
+        {"name": "handler/not_found/unknown_command",
+         "finish": failed("not_found", "not_found", "unknown_command", origin="handler"), "exit": 4},
     ]
     return canon({"absent": absent, "command_id": SHOW, "outcomes": outcomes, "passthrough": passthrough}) + b"\n"
 

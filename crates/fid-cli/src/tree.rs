@@ -22,7 +22,8 @@ pub const SURFACE: &str = "cli";
 /// Emitted tree filename inside the `cli` surface directory.
 pub const TREE_FILE: &str = "cli-tree.json";
 /// Schema tag carried inside `cli-tree.json`.
-pub const TREE_SCHEMA: &str = "cli-tree-v1";
+/// v2 (AUTO.CLI.DISPATCH) added the required per-major `lifecycle` and `root_config` fields.
+pub const TREE_SCHEMA: &str = "cli-tree-v2";
 /// Maximum accepted size of `cli-tree.json`, in bytes.
 pub const MAX_TREE_BYTES: usize = 32 * 1024 * 1024;
 /// Maximum JSON nesting depth accepted in `cli-tree.json`.
