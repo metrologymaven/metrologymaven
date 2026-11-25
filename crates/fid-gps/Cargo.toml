@@ -1,6 +1,6 @@
 [package]
 name = "fid-gps"
-description = "Metrology Maven GD&T evaluation library; today the Dialect Mapping Table schema (GDT.RES.SCHEMA), the pure interpretation resolver (GDT.RES.RESOLVE), the tolerance-zone shapes with fixed-pose usage (GDT.ZONE.ZTYPE), shared-pose group identity and pose digests (GDT.ZONE.GROUP.IDS), DRF construction with its measured planar and cylindrical paths (GDT.DRF.BUILD), the datum target coverage check (GDT.DRF.COMMON.COVER), the diameter and radius checks (GDT.DIM.RADIAL) and the profile deviations from nominal (GDT.PROF.DEV)"
+description = "Metrology Maven GD&T evaluation library; today the Dialect Mapping Table schema (GDT.RES.SCHEMA), the pure interpretation resolver (GDT.RES.RESOLVE), the tolerance-zone shapes with fixed-pose usage (GDT.ZONE.ZTYPE), shared-pose group identity and pose digests (GDT.ZONE.GROUP.IDS), DRF construction with its measured planar and cylindrical paths (GDT.DRF.BUILD), the datum target coverage check (GDT.DRF.COMMON.COVER), the diameter and radius checks (GDT.DIM.RADIAL) the profile deviations from nominal (GDT.PROF.DEV) and the constant-width profile zone definitions (GDT.PROF.ZDEF.UNIF)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

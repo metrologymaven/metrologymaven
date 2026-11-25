@@ -1,0 +1,391 @@
+{
+ "schema": "fid.dmt-table/1",
+ "version": "1.0.0",
+ "rows": [
+  {
+   "key": "dmt:asme/profile_of_a_line/none@1",
+   "dialect": "asme",
+   "editions": [
+    "y14.5-2018"
+   ],
+   "characteristic": "profile_of_a_line",
+   "modifiers": [],
+   "clauses": [
+    {
+     "designator": "asme-y14.5",
+     "edition": "2018",
+     "clause": "90.9"
+    }
+   ],
+   "variants": [
+    {
+     "variant": "share_inward",
+     "steps": [
+      {
+       "kind": "partition",
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "params": {}
+      },
+      {
+       "kind": "extraction",
+       "alg": "syn.extract.all_points@0.1.0",
+       "params": {
+        "min_points": "4"
+       }
+      },
+      {
+       "kind": "association",
+       "alg": "syn.assoc.min_zone@0.1.0",
+       "params": {
+        "constrained": true,
+        "scale": "0x3ff0000000000000"
+       }
+      },
+      {
+       "kind": "construction",
+       "alg": "syn.construct.surface@0.1.0",
+       "params": {
+        "fraction": "0x3fe0000000000000",
+        "share_side": "inward"
+       }
+      },
+      {
+       "kind": "evaluation",
+       "alg": "syn.eval.max_deviation@0.1.0",
+       "params": {
+        "sign": "-1"
+       }
+      }
+     ]
+    },
+    {
+     "variant": "share_outward",
+     "steps": [
+      {
+       "kind": "partition",
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "params": {}
+      },
+      {
+       "kind": "extraction",
+       "alg": "syn.extract.all_points@0.1.0",
+       "params": {
+        "min_points": "4"
+       }
+      },
+      {
+       "kind": "association",
+       "alg": "syn.assoc.min_zone@0.1.0",
+       "params": {
+        "constrained": true,
+        "scale": "0x3ff0000000000000"
+       }
+      },
+      {
+       "kind": "construction",
+       "alg": "syn.construct.surface@0.1.0",
+       "params": {
+        "fraction": "0x3fe0000000000000",
+        "share_side": "outward"
+       }
+      },
+      {
+       "kind": "evaluation",
+       "alg": "syn.eval.max_deviation@0.1.0",
+       "params": {
+        "sign": "-1",
+        "share_side": "outward"
+       }
+      }
+     ]
+    }
+   ],
+   "default_variant": "share_outward",
+   "actual_value": "av.synthetic.profile_of_a_line@1",
+   "decision_rule_hint": "dr.synthetic.default@1",
+   "ors_cases": [],
+   "status": "partial",
+   "limitations": [
+    "zone_def_unsupported:nonuniform",
+    "zone_def_unsupported:unequal"
+   ],
+   "review": {
+    "state": "draft"
+   },
+   "notes": "Synthetic test row derived from synthetic_table_v1.json for GDT.PROF.ZDEF.UNIF tests; not an interpretation of any standard.",
+   "synthetic": true
+  },
+  {
+   "key": "dmt:asme/profile_of_a_surface/none@1",
+   "dialect": "asme",
+   "editions": [
+    "y14.5-2018"
+   ],
+   "characteristic": "profile_of_a_surface",
+   "modifiers": [],
+   "clauses": [
+    {
+     "designator": "asme-y14.5",
+     "edition": "2018",
+     "clause": "90.3"
+    }
+   ],
+   "variants": [
+    {
+     "variant": "share_bad_kind",
+     "steps": [
+      {
+       "kind": "partition",
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "params": {}
+      },
+      {
+       "kind": "extraction",
+       "alg": "syn.extract.all_points@0.1.0",
+       "params": {
+        "min_points": "4"
+       }
+      },
+      {
+       "kind": "association",
+       "alg": "syn.assoc.min_zone@0.1.0",
+       "params": {
+        "constrained": true,
+        "scale": "0x3ff0000000000000"
+       }
+      },
+      {
+       "kind": "construction",
+       "alg": "syn.construct.surface@0.1.0",
+       "params": {
+        "fraction": "0x3fe0000000000000",
+        "share_side": true
+       }
+      },
+      {
+       "kind": "evaluation",
+       "alg": "syn.eval.max_deviation@0.1.0",
+       "params": {
+        "sign": "-1"
+       }
+      }
+     ]
+    },
+    {
+     "variant": "share_bad_token",
+     "steps": [
+      {
+       "kind": "partition",
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "params": {}
+      },
+      {
+       "kind": "extraction",
+       "alg": "syn.extract.all_points@0.1.0",
+       "params": {
+        "min_points": "4"
+       }
+      },
+      {
+       "kind": "association",
+       "alg": "syn.assoc.min_zone@0.1.0",
+       "params": {
+        "constrained": true,
+        "scale": "0x3ff0000000000000"
+       }
+      },
+      {
+       "kind": "construction",
+       "alg": "syn.construct.surface@0.1.0",
+       "params": {
+        "fraction": "0x3fe0000000000000",
+        "share_side": "sideways"
+       }
+      },
+      {
+       "kind": "evaluation",
+       "alg": "syn.eval.max_deviation@0.1.0",
+       "params": {
+        "sign": "-1"
+       }
+      }
+     ]
+    },
+    {
+     "variant": "share_conflict",
+     "steps": [
+      {
+       "kind": "partition",
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "params": {}
+      },
+      {
+       "kind": "extraction",
+       "alg": "syn.extract.all_points@0.1.0",
+       "params": {
+        "min_points": "4"
+       }
+      },
+      {
+       "kind": "association",
+       "alg": "syn.assoc.min_zone@0.1.0",
+       "params": {
+        "constrained": true,
+        "scale": "0x3ff0000000000000"
+       }
+      },
+      {
+       "kind": "construction",
+       "alg": "syn.construct.surface@0.1.0",
+       "params": {
+        "fraction": "0x3fe0000000000000",
+        "share_side": "outward"
+       }
+      },
+      {
+       "kind": "evaluation",
+       "alg": "syn.eval.max_deviation@0.1.0",
+       "params": {
+        "sign": "-1",
+        "share_side": "inward"
+       }
+      }
+     ]
+    },
+    {
+     "variant": "share_inward",
+     "steps": [
+      {
+       "kind": "partition",
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "params": {}
+      },
+      {
+       "kind": "extraction",
+       "alg": "syn.extract.all_points@0.1.0",
+       "params": {
+        "min_points": "4"
+       }
+      },
+      {
+       "kind": "association",
+       "alg": "syn.assoc.min_zone@0.1.0",
+       "params": {
+        "constrained": true,
+        "scale": "0x3ff0000000000000"
+       }
+      },
+      {
+       "kind": "construction",
+       "alg": "syn.construct.surface@0.1.0",
+       "params": {
+        "fraction": "0x3fe0000000000000",
+        "share_side": "inward"
+       }
+      },
+      {
+       "kind": "evaluation",
+       "alg": "syn.eval.max_deviation@0.1.0",
+       "params": {
+        "sign": "-1"
+       }
+      }
+     ]
+    },
+    {
+     "variant": "share_missing",
+     "steps": [
+      {
+       "kind": "partition",
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "params": {}
+      },
+      {
+       "kind": "extraction",
+       "alg": "syn.extract.all_points@0.1.0",
+       "params": {
+        "min_points": "4"
+       }
+      },
+      {
+       "kind": "association",
+       "alg": "syn.assoc.min_zone@0.1.0",
+       "params": {
+        "constrained": true,
+        "scale": "0x3ff0000000000000"
+       }
+      },
+      {
+       "kind": "construction",
+       "alg": "syn.construct.surface@0.1.0",
+       "params": {
+        "fraction": "0x3fe0000000000000"
+       }
+      },
+      {
+       "kind": "evaluation",
+       "alg": "syn.eval.max_deviation@0.1.0",
+       "params": {
+        "sign": "-1"
+       }
+      }
+     ]
+    },
+    {
+     "variant": "share_outward",
+     "steps": [
+      {
+       "kind": "partition",
+       "alg": "syn.partition.whole_feature@0.1.0",
+       "params": {}
+      },
+      {
+       "kind": "extraction",
+       "alg": "syn.extract.all_points@0.1.0",
+       "params": {
+        "min_points": "4"
+       }
+      },
+      {
+       "kind": "association",
+       "alg": "syn.assoc.min_zone@0.1.0",
+       "params": {
+        "constrained": true,
+        "scale": "0x3ff0000000000000"
+       }
+      },
+      {
+       "kind": "construction",
+       "alg": "syn.construct.surface@0.1.0",
+       "params": {
+        "fraction": "0x3fe0000000000000",
+        "share_side": "outward"
+       }
+      },
+      {
+       "kind": "evaluation",
+       "alg": "syn.eval.max_deviation@0.1.0",
+       "params": {
+        "sign": "-1",
+        "share_side": "outward"
+       }
+      }
+     ]
+    }
+   ],
+   "default_variant": "share_outward",
+   "actual_value": "av.synthetic.profile_of_a_surface@1",
+   "decision_rule_hint": "dr.synthetic.default@1",
+   "ors_cases": [
+    "ors:synthetic/profile_of_a_surface.001"
+   ],
+   "status": "supported",
+   "limitations": [],
+   "review": {
+    "state": "draft"
+   },
+   "notes": "Synthetic test row derived from synthetic_table_v1.json for GDT.PROF.ZDEF.UNIF tests; not an interpretation of any standard.",
+   "synthetic": true
+  }
+ ]
+}
