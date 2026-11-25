@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-gps]
+built_pr: 617
 satisfies: [REQ-GDT.DIM.SIZEISO-003, REQ-GDT.DIM.SIZEISO-004]
 covers: []
 depends_on: [KRN.NUM]
