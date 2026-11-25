@@ -1,0 +1,1 @@
+{"format":"fid-program","format_version":1,"main":[{"cond":"true","kind":"jump","label":"nowhere","step_id":"018f0000-0000-7000-8000-000000004c02"},{"kind":"comment","step_id":"018f0000-0000-7000-8000-000000004c03","text":"fall through"}],"meta":{"title":"AUTO.PROG.FLOW fixture"},"params":[],"program_id":"018f0000-0000-7000-8000-000000004c01","subroutines":[],"variables":[]}
