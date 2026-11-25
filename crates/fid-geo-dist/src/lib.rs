@@ -17,6 +17,10 @@
 //! - [`face::incid`] (GEO.DIST.FACE.INCID): the incident faces at a CAD foot (interior, edge,
 //!   vertex), their outward normals and angles from the B-rep topology, and the signed
 //!   distance through [`cad_sign`]; undefined at free and non-manifold edges.
+//! - [`face::body`] (GEO.DIST.FACE.BODY): [`ProjectionTarget`]s for one face, a face set, a
+//!   whole body and a placed instance, from face bounds built on exact geometry, a pruned
+//!   search over a `fid-geo-index` hierarchy of those bounds (bit-identical to testing every
+//!   face), the lowest-face-ID tie rule, the INCID sign and projection along a direction.
 //! - [`batch`] (GEO.DIST.BATCH): the [`ProjectionTarget`] trait (implemented for meshes by
 //!   [`SignTarget`]), projection options (maximum distance, subset, direction), deterministic
 //!   multi-threaded [`project_batch`] with cancellation, and fixed-order [`summary`]
@@ -39,6 +43,7 @@ pub use batch::{
     ProjectionHit, ProjectionOptions, ProjectionTarget,
 };
 
+pub use face::body::{BodyError, BodyTarget, FaceBounds, FaceSetTarget, FaceTarget, InstanceTarget};
 pub use face::incid::{Incid, IncidError, Incident, Undefined, FOOT_ERROR_M, MAP_TOL_M};
 pub use face::one::{
     project_face, FaceError, FaceFeature, FaceHit, FaceProjection, FaceProjector, FaceQueryOptions, Unsupported,

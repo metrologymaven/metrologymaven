@@ -1,0 +1,56 @@
+{
+  "schema": "instrument-profile/v1",
+  "profile_id": "sim-tracker-standin@1.0.0",
+  "device_class": [
+    "PortablePose"
+  ],
+  "make": "Example Tracker Works (invented stand-in)",
+  "model": "StandIn Tracker 1",
+  "mpe_terms": [],
+  "frame_chain": [
+    {
+      "name": "reflector",
+      "kind": "sensor"
+    },
+    {
+      "name": "tracker-head",
+      "kind": "device"
+    }
+  ],
+  "validity": {
+    "range": {
+      "lower": {
+        "unit": "m",
+        "value": "0x3fe0000000000000"
+      },
+      "upper": {
+        "unit": "m",
+        "value": "0x4044000000000000"
+      }
+    },
+    "temperature": {
+      "lower": {
+        "unit": "K",
+        "value": "0x4071b26666666666"
+      },
+      "upper": {
+        "unit": "K",
+        "value": "0x4073926666666666"
+      }
+    }
+  },
+  "source": {
+    "kind": "spec-sheet",
+    "digest": "sha256:759ff45a2ab21a3dede083c02dd056c4d018814e9f0351486d13d165bdd46bb7",
+    "citation": "Stand-in descriptor written for UNC.INST.SCHEMA tests until HAL.SIM ships; invented values, not a real product (CC-BY-4.0)"
+  },
+  "um_model": {
+    "id": "im:tracker-example@1.0.0",
+    "digest": "sha256:42b5cda7cd67157f27dd285f838f144d02a382f39bb6d15dc8de5c9b5221a646"
+  },
+  "uec_max": 1,
+  "signature": {
+    "keyid": "key:fixture-profile-signer-2026",
+    "sig": "Zml4dHVyZSBzaWduYXR1cmUgYnl0ZXMsIG5vdCBhIHJlYWwgc2lnbmF0dXJl"
+  }
+}

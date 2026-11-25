@@ -123,6 +123,7 @@ python fixtures/geo/cad/topo/make_adj_fixtures.py --check
 python fixtures/geo/cad/topo/make_pcurve_fixtures.py --check
 python fixtures/geo/cad/topo/make_topo_fixtures.py --check
 python fixtures/geo/cad/topo/make_trim_fixtures.py --check
+python fixtures/geo/dist/face/body/make_body_cases.py --check
 python fixtures/geo/dist/face/incid/make_incid_cases.py --check
 python fixtures/geo/dist/face/one/make_curve_edges.py --check
 python fixtures/geo/index/make_bvh_fixtures.py --check
@@ -295,6 +296,7 @@ python fixtures/unc/dec/eval/make_cases.py --check
 python fixtures/unc/dec/risk/make_cases.py --check
 python fixtures/unc/dec/type/make_fixtures.py --check
 python fixtures/unc/dist/make_fixtures.py --check
+python fixtures/unc/inst/make_fixtures.py --check
 python fixtures/unc/mcm/adapt/make_fixtures.py --check
 python fixtures/unc/mcm/block/make_fixtures.py --check
 python fixtures/unc/mcm/intvl/make_fixtures.py --check

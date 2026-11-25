@@ -1,0 +1,49 @@
+{
+  "schema": "instrument-model/v1",
+  "id": "im:scanner-example@1.0.0",
+  "kind": "observation",
+  "device_class": "scanner",
+  "params": [
+    {
+      "name": "point_noise",
+      "unit": "um",
+      "value": "25",
+      "dist": {
+        "kind": "scaled_t",
+        "params": {
+          "mu": "0",
+          "s": "25",
+          "nu": "10"
+        }
+      }
+    },
+    {
+      "name": "incidence_gain",
+      "unit": "1",
+      "value": "0.5",
+      "dist": {
+        "kind": "trap",
+        "params": {
+          "a": "0",
+          "b": "1",
+          "beta": "0.5"
+        }
+      }
+    }
+  ],
+  "range": [
+    {
+      "axis": "standoff",
+      "min": "100",
+      "max": "300",
+      "unit": "mm"
+    },
+    {
+      "axis": "incidence",
+      "min": "0",
+      "max": "1",
+      "unit": "rad"
+    }
+  ],
+  "source": "Invented example model for tests: the parameter values are made up and describe no real instrument (project fixture, D-038, CC-BY-4.0)"
+}

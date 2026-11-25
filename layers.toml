@@ -96,6 +96,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # Uncertainty commands (UNC.MODEL.GRAPH.STORE first): model store, journal and surfaces over the
 # fid-kunc kernel types; needs fid-bus and fid-replay (engine), so engine, outside the kernel graph.
 "fid-unc" = "engine"
+# Instrument uncertainty models (UNC.INST.SCHEMA): instrument-model/v1, import/show/bind commands
+# and the range check; needs fid-bus, fid-replay and fid-unc (engine), so engine.
+"fid-unc-inst" = "engine"
 "fid-surface" = "services"
 # MCP surface (AUTO.MCP.PROJ): tool projection over fid-surface (services) and the tool-call adapter;
 # a [surfaces] crate in lint-allowlist.toml, so it never links the bus.

@@ -1,0 +1,15 @@
+{
+  "driver_id": "standin-tracker-driver",
+  "make": {
+    "bytes": "Example Tracker Works (invented stand-in)",
+    "truncated": false
+  },
+  "model": {
+    "bytes": "StandIn Tracker 1",
+    "truncated": false
+  },
+  "serial": {
+    "bytes": "EXAMPLE-0001",
+    "truncated": false
+  }
+}
