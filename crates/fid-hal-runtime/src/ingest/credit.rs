@@ -11,12 +11,15 @@
 //! The ledger keeps two amounts, each in bytes and in batches:
 //!
 //! - `outstanding`: credit the source holds and may spend;
-//! - `in_flight`: credit spent on admitted batches not yet acknowledged.
+//! - `in_flight`: credit spent on admitted batches not yet acknowledged. Each such batch is
+//!   kept individually, keyed by its admitted [`SeqRange`] with its byte size, in admission
+//!   order; there are never more of them than `window.batches`.
 //!
-//! Invariant after every call: `outstanding + in_flight <= window` in both units, so
-//! `outstanding` never exceeds the window (REQ-003) and nothing downstream ever holds more than
-//! the window. All arithmetic is on unsigned integers, saturating where it could overflow and
-//! capped by the window; nothing can go negative.
+//! Invariant after every call: `outstanding + in_flight <= window` in both units, where
+//! `in_flight` is exactly the sum over the batches still held downstream. So `outstanding`
+//! never exceeds the window (REQ-003) and the bytes and batches held downstream never exceed
+//! it either: credit returns only for a batch that was admitted and is still in flight, and
+//! only once. All arithmetic is on unsigned integers; nothing can go negative.
 //!
 //! - [`CreditLedger::grant`] refills `outstanding` to `window - in_flight` while
 //!   [`StreamState::Active`]; it grants nothing while stopping or stopped (REQ-004).
@@ -26,18 +29,23 @@
 //!   [`GapReason::CreditExhausted`], changing nothing (REQ-002). While stopping, credit the
 //!   source already holds can still be spent, so batches already sent under credit drain
 //!   instead of being dropped.
-//! - [`CreditLedger::ack`] releases one batch from `in_flight` (floored at zero, so a duplicate
-//!   or spurious acknowledgement cannot underflow) and, while active, returns its credit to
-//!   `outstanding`, capped at `window - in_flight` (REQ-003). While stopping or stopped an
-//!   acknowledgement returns nothing (REQ-004).
+//! - [`CreditLedger::ack`] names the batch by its admitted sequence range and byte size. It
+//!   must match a batch in flight exactly; a duplicate acknowledgement, one for a batch never
+//!   admitted (including any acknowledgement before the first admission), or one with a
+//!   different byte size is refused with `credit_unknown_ack` and changes nothing. A matching
+//!   acknowledgement releases that batch and, while active, returns its credit to
+//!   `outstanding`, capped at `window - in_flight` (REQ-003). While stopping or stopped it
+//!   releases the batch but returns nothing (REQ-004).
 //! - [`CreditLedger::begin_stop`] moves `Active` to `Stopping`; [`CreditLedger::finish_stop`]
 //!   moves to `Stopped` and withdraws all outstanding credit, so a stopped stream admits
 //!   nothing.
 //!
 //! # Determinism (REQ-005, D0)
 //!
-//! A pure integer state machine with no clock reads, no allocation and no floating point: the
-//! same sequence of calls gives the same states and outputs on every platform.
+//! A pure integer state machine with no clock reads, no hashing and no floating point; the
+//! in-flight batches live in a `Vec` in admission order and an acknowledgement releases the
+//! first exact match. The same sequence of calls gives the same states and outputs on every
+//! platform.
 
 use fid_hal_idl::stamp::{Gap, GapReason, SeqRange};
 use std::fmt;
@@ -139,6 +147,10 @@ pub enum CreditError {
     /// A sequence range whose first number is after its last (`credit_invalid_range`); the
     /// ledger cannot report it as a gap.
     InvalidRange { range: SeqRange },
+    /// An acknowledgement that matches no batch in flight by sequence range and byte size
+    /// (`credit_unknown_ack`): a duplicate, a batch never admitted, or a wrong size. Nothing
+    /// changes.
+    UnknownAck { range: SeqRange, bytes: u64 },
 }
 
 impl CreditError {
@@ -147,8 +159,19 @@ impl CreditError {
         match self {
             CreditError::InvalidWindow { .. } => "credit_invalid_window",
             CreditError::InvalidRange { .. } => "credit_invalid_range",
+            CreditError::UnknownAck { .. } => CREDIT_UNKNOWN_ACK,
         }
     }
+}
+
+/// The error code of an acknowledgement that matches no batch in flight.
+pub const CREDIT_UNKNOWN_ACK: &str = "credit_unknown_ack";
+
+/// A batch admitted and not yet acknowledged: its sequence range and byte size.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct InFlightBatch {
+    pub range: SeqRange,
+    pub bytes: u64,
 }
 
 impl fmt::Display for CreditError {
@@ -159,6 +182,9 @@ impl fmt::Display for CreditError {
             }
             CreditError::InvalidRange { range } => {
                 write!(f, "{}: range {}..={}", self.code(), range.first, range.last)
+            }
+            CreditError::UnknownAck { range, bytes } => {
+                write!(f, "{}: no batch {}..={} of {} bytes in flight", self.code(), range.first, range.last, bytes)
             }
         }
     }
@@ -175,6 +201,8 @@ pub struct CreditLedger {
     window: CreditWindow,
     outstanding: Credit,
     in_flight: Credit,
+    /// The batches behind `in_flight`, in admission order; at most `window.batches` of them.
+    held: Vec<InFlightBatch>,
     state: StreamState,
 }
 
@@ -184,7 +212,13 @@ impl CreditLedger {
         if window.bytes == 0 || window.batches == 0 {
             return Err(CreditError::InvalidWindow { window });
         }
-        Ok(CreditLedger { window, outstanding: Credit::ZERO, in_flight: Credit::ZERO, state: StreamState::Active })
+        Ok(CreditLedger {
+            window,
+            outstanding: Credit::ZERO,
+            in_flight: Credit::ZERO,
+            held: Vec::new(),
+            state: StreamState::Active,
+        })
     }
 
     /// The configured window.
@@ -200,6 +234,11 @@ impl CreditLedger {
     /// Credit spent on admitted batches not yet acknowledged.
     pub fn in_flight(&self) -> Credit {
         self.in_flight
+    }
+
+    /// The batches admitted and not yet acknowledged, in admission order.
+    pub fn held(&self) -> &[InFlightBatch] {
+        &self.held
     }
 
     /// The stream state.
@@ -249,19 +288,28 @@ impl CreditLedger {
         // Cannot saturate: outstanding + in_flight <= window, and the amounts only moved.
         self.in_flight.bytes = self.in_flight.bytes.saturating_add(batch_bytes);
         self.in_flight.batches = self.in_flight.batches.saturating_add(1);
+        // At most window.batches entries: each one holds a batch credit.
+        self.held.push(InFlightBatch { range: seq, bytes: batch_bytes });
         Ok(Admit::Accepted)
     }
 
-    /// Acknowledges one batch of `batch_bytes` bytes as stamped or rejected downstream. Releases
-    /// it from in flight (floored at zero) and, while active, returns its credit, capped so
-    /// that outstanding never exceeds the window less what is in flight (REQ-003). Returns the
-    /// credit actually given back to the source; [`Credit::ZERO`] while stopping or stopped
-    /// (REQ-004).
-    pub fn ack(&mut self, batch_bytes: u64) -> Credit {
+    /// Acknowledges the batch admitted as `seq` with `batch_bytes` bytes as stamped or rejected
+    /// downstream. It must match a batch in flight exactly; otherwise `credit_unknown_ack` and
+    /// nothing changes (a duplicate, a batch never admitted, or a different byte size). A match
+    /// releases the batch and, while active, returns its credit, capped so that outstanding
+    /// never exceeds the window less what is in flight (REQ-003). Returns the credit given back
+    /// to the source; [`Credit::ZERO`] while stopping or stopped (REQ-004).
+    pub fn ack(&mut self, batch_bytes: u64, seq: SeqRange) -> Result<Credit, CreditError> {
+        let wanted = InFlightBatch { range: seq, bytes: batch_bytes };
+        let Some(pos) = self.held.iter().position(|b| *b == wanted) else {
+            return Err(CreditError::UnknownAck { range: seq, bytes: batch_bytes });
+        };
+        self.held.remove(pos);
+        // Cannot saturate: in_flight is exactly the sum over `held`, which contained this batch.
         self.in_flight.bytes = self.in_flight.bytes.saturating_sub(batch_bytes);
         self.in_flight.batches = self.in_flight.batches.saturating_sub(1);
         if self.state != StreamState::Active {
-            return Credit::ZERO;
+            return Ok(Credit::ZERO);
         }
         let cap = self.cap();
         let bytes = self.outstanding.bytes.saturating_add(batch_bytes).min(cap.bytes);
@@ -274,7 +322,7 @@ impl CreditLedger {
             bytes: self.outstanding.bytes.saturating_add(returned.bytes),
             batches: self.outstanding.batches.saturating_add(returned.batches),
         };
-        returned
+        Ok(returned)
     }
 
     /// Requests a stop: `Active` becomes `Stopping`. Idempotent; a stopped stream stays stopped.

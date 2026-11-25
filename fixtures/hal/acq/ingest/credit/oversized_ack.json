@@ -1,0 +1,61 @@
+{
+ "comment": "HAL.ACQ.INGEST.CREDIT review case: an oversized acknowledgement is refused with credit_unknown_ack",
+ "window": {
+  "bytes": 8388608,
+  "batches": 4
+ },
+ "events": [
+  [
+   "grant"
+  ],
+  [
+   "admit",
+   1048576,
+   0,
+   0
+  ],
+  [
+   "admit",
+   6291456,
+   1,
+   1
+  ],
+  [
+   "ack",
+   7340032,
+   0,
+   0
+  ],
+  [
+   "grant"
+  ],
+  [
+   "admit",
+   2097152,
+   2,
+   2
+  ],
+  [
+   "ack",
+   1048576,
+   0,
+   0
+  ],
+  [
+   "admit",
+   2097152,
+   3,
+   3
+  ]
+ ],
+ "expected": [
+  "grant granted=8388608/4 active out=8388608/4 fly=0/0",
+  "admit accepted active out=7340032/3 fly=1048576/1",
+  "admit accepted active out=1048576/2 fly=7340032/2",
+  "ack refused credit_unknown_ack range=0-0 bytes=7340032 active out=1048576/2 fly=7340032/2",
+  "grant granted=0/0 active out=1048576/2 fly=7340032/2",
+  "admit refused credit_exceeded gap=2-2:CREDIT_EXHAUSTED active out=1048576/2 fly=7340032/2",
+  "ack returned=1048576/1 active out=2097152/3 fly=6291456/1",
+  "admit accepted active out=0/2 fly=8388608/2"
+ ]
+}

@@ -1,10 +1,16 @@
 {
- "comment": "HAL.ACQ.INGEST.CREDIT AC-3: acknowledgements that would exceed the window",
+ "comment": "HAL.ACQ.INGEST.CREDIT AC-3: duplicate and oversized acknowledgements are refused; outstanding ends exactly at the window",
  "window": {
   "bytes": 8388608,
   "batches": 4
  },
  "events": [
+  [
+   "ack",
+   1048576,
+   0,
+   1
+  ],
   [
    "grant"
   ],
@@ -22,37 +28,55 @@
   ],
   [
    "ack",
-   2097152
+   2097152,
+   0,
+   1
   ],
   [
    "ack",
-   2097152
+   2097152,
+   0,
+   1
   ],
   [
    "ack",
-   2097152
+   5242880,
+   2,
+   3
   ],
   [
    "ack",
-   5242880
+   9007199254740992,
+   2,
+   3
+  ],
+  [
+   "ack",
+   2097152,
+   2,
+   3
   ],
   [
    "grant"
   ],
   [
    "ack",
-   9007199254740992
+   2097152,
+   2,
+   3
   ]
  ],
  "expected": [
+  "ack refused credit_unknown_ack range=0-1 bytes=1048576 active out=0/0 fly=0/0",
   "grant granted=8388608/4 active out=8388608/4 fly=0/0",
   "admit accepted active out=6291456/3 fly=2097152/1",
   "admit accepted active out=4194304/2 fly=4194304/2",
   "ack returned=2097152/1 active out=6291456/3 fly=2097152/1",
+  "ack refused credit_unknown_ack range=0-1 bytes=2097152 active out=6291456/3 fly=2097152/1",
+  "ack refused credit_unknown_ack range=2-3 bytes=5242880 active out=6291456/3 fly=2097152/1",
+  "ack refused credit_unknown_ack range=2-3 bytes=9007199254740992 active out=6291456/3 fly=2097152/1",
   "ack returned=2097152/1 active out=8388608/4 fly=0/0",
-  "ack returned=0/0 active out=8388608/4 fly=0/0",
-  "ack returned=0/0 active out=8388608/4 fly=0/0",
   "grant granted=0/0 active out=8388608/4 fly=0/0",
-  "ack returned=0/0 active out=8388608/4 fly=0/0"
+  "ack refused credit_unknown_ack range=2-3 bytes=2097152 active out=8388608/4 fly=0/0"
  ]
 }
