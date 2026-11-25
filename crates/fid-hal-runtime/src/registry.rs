@@ -279,7 +279,7 @@ impl DeviceEvent {
             ("source_id", CValue::Str(self.source_id.to_string())),
             ("source_kind", s(self.source_kind.as_str())),
             ("claimed_kind", s(self.claimed_kind.as_str())),
-            ("at", CValue::U64(self.at)),
+            ("at", CValue::Str(self.at.to_string())),
         ])
     }
 }
@@ -500,7 +500,7 @@ fn view(r: &SourceRecord, sessions: &dyn SessionLookup) -> CValue {
         ("source_id", CValue::Str(r.source_id.to_string())),
         ("source_kind", s(r.source_kind.as_str())),
         ("registered_by", s(&r.registered_by)),
-        ("registered_at", CValue::U64(r.registered_at)),
+        ("registered_at", CValue::Str(r.registered_at.to_string())),
         ("session_state", s(sessions.session_state(&r.source_id).as_str())),
         ("driver_id", s(d.device.driver_id.as_str())),
         ("driver_version", s(&d.driver_version)),
