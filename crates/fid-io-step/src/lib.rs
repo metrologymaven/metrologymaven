@@ -21,8 +21,13 @@
 //! The [`header`] module (spec node `IO.CAD.STEP.HDR`) reads the header of a parsed file:
 //! schema acceptance, `FILE_NAME`/`FILE_DESCRIPTION` as untrusted text, and the length
 //! unit, plane-angle unit and uncertainty of every geometric representation context.
+//!
+//! The [`geom`] module (spec node `IO.CAD.STEP.GEOM`) maps the geometric entities (points,
+//! placements, curves, surfaces, pcurves) to GEO analytic and NURBS types in metres, and
+//! approximates offset surfaces by NURBS with a recorded sampled error.
 
 mod error;
+pub mod geom;
 pub mod header;
 mod parse;
 mod print;
@@ -30,6 +35,7 @@ mod real;
 mod text;
 
 pub use error::{Bound, StepError};
+pub use geom::{map_geometry, GeomError, GeomMap, GeomOptions};
 pub use header::{
     resolve_header, AngleUnit, HeaderError, HeaderOptions, HeaderWarning, StepHeaderInfo, StepLengthUnit, StepSchema,
     Uncertainty, UnitContext, WarningDetail,
