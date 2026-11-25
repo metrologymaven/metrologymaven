@@ -22,6 +22,9 @@ fid-esig = { path = "../fid-esig" }
 # `geo.describe_element@1` (GEO.TYPES.REG), read through `fid_geo_cmd::command_defs()`.
 # Layer engine.
 fid-geo-cmd = { path = "../fid-geo-cmd" }
+# `device.show_devices@1` (HAL.ACQ.SESS.REG), read through
+# `fid_hal_runtime::registry::command_defs()`. Layer engine; already in the lock.
+fid-hal-runtime = { path = "../fid-hal-runtime" }
 fid-jobs = { path = "../fid-jobs" }
 # `sign.set_profile@1` and `sign.show_profile@1` (TRUST.PROFILE.SELECT), read through
 # `fid_profile_cmd::command_defs()`. Layer engine.
