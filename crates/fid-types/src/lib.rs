@@ -2,6 +2,7 @@
 //! redefining them, so the wire strings stay identical everywhere.
 //!
 //! - [`Determinism`] and [`SideEffect`]: the closed classes of CONSTITUTION §4 and §3;
+//! - [`PrincipalKind`]: the six principal kinds a bus session runs as (CORE.BUS.PRIN);
 //! - [`Digest`]: `sha256:` followed by 64 lowercase hex digits;
 //! - [`CommandName`] and [`CommandId`]: registry command IDs `name@major` (CONSTITUTION §3);
 //! - [`text`]: the code points untrusted display text may not hold (one table for the bus and
@@ -16,7 +17,7 @@ mod digest;
 mod error;
 pub mod text;
 
-pub use class::{Determinism, SideEffect};
+pub use class::{Determinism, PrincipalKind, SideEffect};
 pub use command::{CommandId, CommandName};
 pub use digest::Digest;
 pub use error::TypesError;

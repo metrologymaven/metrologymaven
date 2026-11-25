@@ -1,4 +1,5 @@
-//! Determinism classes (CONSTITUTION §4) and side-effect classes (CONSTITUTION §3).
+//! Determinism classes (CONSTITUTION §4), side-effect classes (CONSTITUTION §3) and principal
+//! kinds (CONSTITUTION §3, CORE.BUS.PRIN).
 
 use crate::error::{kept, TypesError};
 use std::fmt;
@@ -91,6 +92,25 @@ class_enum!(
     }
 );
 
+class_enum!(
+    /// The kind of principal a bus session runs as (CONSTITUTION §3; REQ-CORE.BUS.PRIN-001).
+    /// Only the bus derives it; holding a value of this type grants nothing (CORE.BUS.API).
+    PrincipalKind, BadPrincipalKind {
+        /// A person whose presence the bus has confirmed.
+        Human => "human",
+        /// An AI agent.
+        Agent => "agent",
+        /// A headless local caller with no confirmed person (REQ-CORE.BUS.PRIN-003).
+        Script => "script",
+        /// A service.
+        Service => "service",
+        /// A device.
+        Device => "device",
+        /// The application itself.
+        System => "system",
+    }
+);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,6 +132,19 @@ mod tests {
         assert_eq!(wire, ["R0", "R1", "W1", "W2", "W3", "X1", "I1", "D1", "M1", "S1", "A0"]);
         for c in SideEffect::ALL {
             assert_eq!(SideEffect::parse(c.as_str()), Ok(*c));
+        }
+    }
+
+    #[test]
+    fn principal_kind_round_trips() {
+        let wire: Vec<&str> = PrincipalKind::ALL.iter().map(|k| k.as_str()).collect();
+        assert_eq!(wire, ["human", "agent", "script", "service", "device", "system"]);
+        for k in PrincipalKind::ALL {
+            assert_eq!(PrincipalKind::parse(k.as_str()), Ok(*k));
+            assert_eq!(k.to_string().parse::<PrincipalKind>(), Ok(*k));
+        }
+        for bad in ["", "Human", "HUMAN", "user", " human", "human "] {
+            assert_eq!(PrincipalKind::parse(bad).map_err(|e| e.code()), Err("bad_principal_kind"), "{bad:?}");
         }
     }
 

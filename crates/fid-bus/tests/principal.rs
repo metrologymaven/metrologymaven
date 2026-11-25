@@ -402,6 +402,18 @@ fn req001_exactly_six_principal_kinds() {
 }
 
 #[test]
+fn principal_kind_is_the_one_shared_type() {
+    // fid-bus, fid-journal and fid-types name one type, so no conversion between copies exists
+    // that could map a script (or any other kind) to `human`.
+    let id = std::any::TypeId::of::<PrincipalKind>();
+    assert_eq!(id, std::any::TypeId::of::<fid_types::PrincipalKind>());
+    assert_eq!(id, std::any::TypeId::of::<fid_journal::PrincipalKind>());
+    for &k in PrincipalKind::ALL {
+        assert_eq!(PrincipalKind::parse(k.as_str()), Ok(k));
+    }
+}
+
+#[test]
 fn acting_for_is_ignored_outside_server_session_and_internal() {
     let fx = fixture("channels.json");
     let mut table = SessionTable::new();

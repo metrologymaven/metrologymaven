@@ -14,6 +14,7 @@ pub enum TypesError {
     BadDigest(String),
     BadCommandName(String),
     BadCommandId(String),
+    BadPrincipalKind(String),
 }
 
 impl TypesError {
@@ -25,6 +26,7 @@ impl TypesError {
             TypesError::BadDigest(_) => "bad_digest",
             TypesError::BadCommandName(_) => "bad_command_name",
             TypesError::BadCommandId(_) => "bad_command_id",
+            TypesError::BadPrincipalKind(_) => "bad_principal_kind",
         }
     }
 
@@ -35,7 +37,8 @@ impl TypesError {
             | TypesError::BadSideEffect(s)
             | TypesError::BadDigest(s)
             | TypesError::BadCommandName(s)
-            | TypesError::BadCommandId(s) => s,
+            | TypesError::BadCommandId(s)
+            | TypesError::BadPrincipalKind(s) => s,
         }
     }
 }
@@ -72,6 +75,7 @@ mod tests {
             (TypesError::BadDigest("x".into()), "bad_digest"),
             (TypesError::BadCommandName("x".into()), "bad_command_name"),
             (TypesError::BadCommandId("x".into()), "bad_command_id"),
+            (TypesError::BadPrincipalKind("x".into()), "bad_principal_kind"),
         ];
         for (e, code) in all {
             assert_eq!(e.code(), code);
