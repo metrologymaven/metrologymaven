@@ -16,7 +16,8 @@ computes three things, none of them with the Rust code:
   pinned    the result of the leaf's pinned operation order evaluated with Python floats, which
             are IEEE 754 binary64 with each +, -, *, / rounded to nearest-even and never fused:
             potential = (usl - lsl) / (6.0 * sigma), centred = min(usl - mean, mean - lsl) /
-            (3.0 * sigma) (one-sided: the one difference). D0 means every target must give these
+            (3.0 * sigma) (one-sided: the one difference), then + 0.0 on each index so a
+            signed-zero input never gives -0.0 (min is IEEE totalOrder, -0.0 below +0.0). D0 means every target must give these
             bits exactly.
 
 `tolerance_ulp` is the ulp distance between `pinned` and `expected` (0 or 1; the script refuses
@@ -88,7 +89,7 @@ def py_capability(c):
     if side == "BOTH":
         fl, fu = Fraction(lsl), Fraction(usl)
         pot = ("v", (usl - lsl) / (6.0 * sigma), (fu - fl) / (6 * fs))
-        cen = ("v", min(usl - mean, mean - lsl) / (3.0 * sigma), min(fu - fm, fm - fl) / (3 * fs))
+        cen = ("v", total_min(usl - mean, mean - lsl) / (3.0 * sigma), min(fu - fm, fm - fl) / (3 * fs))
     elif side == "UPPER_ONLY":
         pot = NA
         cen = ("v", (usl - mean) / (3.0 * sigma), (Fraction(usl) - fm) / (3 * fs))
@@ -98,7 +99,15 @@ def py_capability(c):
     for ix in (pot, cen):
         if ix != NA and not math.isfinite(ix[1]):
             return ("error", "result_not_finite")
+    pot, cen = (ix if ix == NA else ("v", ix[1] + 0.0, ix[2]) for ix in (pot, cen))
     return ("ok", side, pot, cen)
+
+
+def total_min(a, b):
+    """IEEE totalOrder minimum of two non-NaN doubles: -0.0 is below +0.0."""
+    if a == b:
+        return a if math.copysign(1.0, a) < 0 else b
+    return a if a < b else b
 
 
 def case(id_, note, mean, sigma, lsl, usl, n, label, min_n=25, family="P", estimator="overall_sd@1", hand=None):
@@ -134,6 +143,12 @@ CASES = [
     case("one_ulp_off_centre", "three roundings leave the centred index 1 ulp from the correctly rounded value: "
          "5.2/0.0186 and min(2.97, 2.23)/0.0093", "2.93", "0.0031", "0.7", "5.9", 60, "value",
          hand={"potential": "5.2/0.0186", "centred": "2.23/0.0093"}),
+    case("signed_zero_lower", "mu -0.0 on LSL +0.0: (-0.0 - 0.0)/3 is -0.0 before the + 0.0, so the index is +0.0",
+         "-0.0", "1", "0", None, 30, "value", hand={"centred": "0"}),
+    case("signed_zero_upper", "USL -0.0 with mu +0.0: (-0.0 - 0.0)/3 is -0.0 before the + 0.0", "0", "1", None,
+         "-0.0", 30, "value", hand={"centred": "0"}),
+    case("signed_zero_both", "USL -0.0, mu +0.0, LSL -3: total_min(-0.0, 3) is -0.0 before the + 0.0", "0", "0.5",
+         "-3", "-0.0", 30, "value", hand={"potential": "1", "centred": "0"}),
     case("custom_min_n", "a caller-configured minimum of 5 with n 6", "0.5", "0.125", "0", "1", 6, "value", min_n=5,
          hand={"potential": "4/3", "centred": "4/3"}),
     # AC-3 and the typed statuses.
@@ -161,6 +176,8 @@ CASES = [
     case("min_n_one", "a minimum below 2 cannot support a spread", "5", "1", "0", "10", 30, "error:min_n_too_small",
          min_n=1),
     case("overflow_tolerance", "USL - LSL overflows to infinity", "0", "1", "-1.5e308", "1.5e308", 30,
+         "error:result_not_finite"),
+    case("overflow_upper_only", "one-sided: USL - mu overflows to infinity", "-1.5e308", "1", None, "1.5e308", 30,
          "error:result_not_finite"),
     case("overflow_subnormal_sigma", "a subnormal sigma makes the quotient overflow", "0", "5e-324", "-1", "1", 30,
          "error:result_not_finite"),
