@@ -193,6 +193,7 @@ python fixtures/man/repro/make_fixtures.py --check
 python fixtures/man/val-toy-v1/make_fixtures.py --check
 python fixtures/man/wasm/make_fixtures.py --check
 python fixtures/man/xart-calls-v1/make_fixtures.py --check
+python fixtures/manifest/make_app_fixtures.py --check
 python fixtures/manifest/make_fixtures.py --check
 python fixtures/mcp/make_fixtures.py --check
 python fixtures/mcp/profiles/make_fixtures.py --check

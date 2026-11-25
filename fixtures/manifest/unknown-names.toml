@@ -1,0 +1,25 @@
+# AC-2: one unknown namespace (sketch), one unknown panel (report.chart), one unknown
+# setting (report.page_size). Expected: exactly three findings, sorted by code.
+schema = 1
+id = "report"
+status = "alpha"
+status_scope = "Report authoring and preview for single-stage FAI; no SPC yet"
+known_gaps = [
+  { seed = "PW.RPT.01" },
+  { text = "SPC charts are not available yet", node = "RPT.MODEL" },
+]
+namespaces = ["project", "report", "sketch"]
+forbidden_classes = ["M1", "S1"]
+panels = ["report.chart", "report.preview"]
+layout = "report.default"
+templates = ["0193a5b0-7c1e-7d2a-9f00-3b5c6d7e8f90"]
+
+[defaults]
+"report.page_size" = "A4"
+"ui.show_tips" = false
+
+[branding]
+name = "placeholder-report"
+icon = "placeholder-report-icon"
+colours = ["placeholder-accent"]
+internal = true

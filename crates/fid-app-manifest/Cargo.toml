@@ -1,0 +1,29 @@
+[package]
+name = "fid-app-manifest"
+description = "Metrology Maven app manifest: the app.toml v1 schema, its validation against the registry and catalogues, the start-up loader and the `fid-app-manifest check` binary (spec node ECO.APPS.MANIFEST.SCHEMA)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# Viewer layer: shared app machinery below the `app` crates (ECO.APPS.MANIFEST.SCHEMA Design).
+[dependencies]
+# Bounded JSON parser that rejects duplicate keys, and the RFC 8785 writer used to check each
+# registry definition_digest (CORE.JRN.CANON, model layer).
+fid-canon = { path = "../fid-canon" }
+# The registry definition reader (`CommandDef`) and the quantity catalogue (CORE.REG, model layer).
+fid-registry = { path = "../fid-registry" }
+# Setting declarations, `settings-manifest.json` reader and the setting value validator
+# (CORE.STO.SET, model layer). Brings fid-store's bundled SQLite into this crate's build, as for
+# fid-capture; no new crate in the lock.
+fid-store = { path = "../fid-store" }
+# Shared side-effect classes and command IDs (AGENTS.md rule 14).
+fid-types = { path = "../fid-types" }
+# Reads app.toml and apps.toml as untyped tables (duplicate keys are a parse error), like
+# fid-accept and fid-vocab; already in the lock.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+[lints]
+workspace = true

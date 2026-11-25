@@ -1,0 +1,21 @@
+# REQ-009: several problems in one file, all reported in one pass.
+schema = 1
+id = "suite"
+status = "gamma"
+known_gaps = [{ seed = "PW.RPT.01", text = "both" }]
+namespaces = ["cmm", "sketch", "cmm"]
+forbidden_classes = ["M1", "Z9"]
+panels = ["report.chart"]
+layout = "report.wide"
+templates = ["0193a5b0-7c1e-7d2a-9f00-3b5c6d7e8f99"]
+mcp_projection = "exposed"
+
+[defaults]
+"report.decimal_places" = "three"
+"report.when" = 2026-11-25
+
+[branding]
+name = "Metrology Maven"
+icon = "placeholder-icon"
+internal = true
+side_effect = "R0"
