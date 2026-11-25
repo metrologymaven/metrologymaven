@@ -9,6 +9,8 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-program]
+built_pr: 626
 satisfies: [REQ-AUTO.PROG-006]
 covers: [PCD.PRG.03, PCD.PRG.04, PCD.PRG.05]
 depends_on: [AUTO.PROG.FMT, AUTO.PROG.EXPR.TYPES]
@@ -83,6 +85,9 @@ Project-authored programs under `fixtures/program/flow/` with expected CFGs and 
 
 - The target's recursion question is answered: recursion is allowed and bounded at run time by the call-depth limit (REQ-AUTO.PROG-007); the analysis only informs.
 - Error-handling edges (`on_error: goto`) are not in FMT yet; if FMT adds them (see `AUTO.PROG.INTERP.CALL`), add an `error` edge kind here.
+- **Unbounded backward-jump loops BLOCK `AUTO.PROG.INTERP.ENGINE`.** `Analysis::resolve` (crates/fid-program/src/flow.rs:678) accepts a jump to a label at or before the jump, so `label; ...; jump` forms a cycle with no iteration limit (the `duplicate-label` fixture is one). Maintainer decision on the direction: a future REQ-AUTO.PROG.FLOW-010 makes a jump whose label is at or before the jump in document order a `backward_jump` error. Then every cycle inside a unit goes through a `loop_back` edge, bounded by the iteration limits, and recursion is bounded by the call depth of 64. It lands in a spec PR before ENGINE is built.
+- **Definite assignment** (follow-up from #418, AUTO.PROG.EXPR.TYPES): whether every use of a variable is preceded by an assignment on every path is a control-flow question for this node, but no REQ or AC here covers it and it is not built. It needs a REQ, here or in `AUTO.PROG.CHECK`.
+- **Obligation on `AUTO.PROG.CHECK`:** when `Program::parse` returns `schema_invalid`, call `iteration_limits` on the raw bytes, and report `bad_iteration_limit` only once per loop. Today a limit above 1 000 000 is reported by both `analyse_flow` (flow.rs:591) and `iteration_limits` (flow.rs:983).
 
 ## Children
 
