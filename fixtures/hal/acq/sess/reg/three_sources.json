@@ -1,0 +1,171 @@
+{
+  "registrations": [
+    {
+      "entry_point": "simulator",
+      "source_id": "0193f0a0-0000-7000-8000-0000000000c3",
+      "claimed_kind": "driver",
+      "registered_by": "hal.sim.launcher",
+      "registered_at": "2000000",
+      "declaration": {
+        "schema": "capability-declaration/v1",
+        "driver_version": "0.2.0",
+        "device": {
+          "driver_id": "sim.example.gauge",
+          "make": {
+            "bytes": "Example Gauges (invented)",
+            "truncated": false
+          },
+          "model": {
+            "bytes": "EG-SIM 1 (invented)",
+            "truncated": false
+          },
+          "serial": {
+            "bytes": "INVENTED-SIM-0003",
+            "truncated": false
+          }
+        },
+        "capabilities": [
+          {
+            "name": "Gauge",
+            "versions": ">=1.0 <2",
+            "features": [
+              "zero",
+              "hold"
+            ],
+            "limits": {}
+          },
+          {
+            "name": "Device",
+            "versions": ">=1.0 <2",
+            "features": [
+              "health_push"
+            ],
+            "limits": {}
+          }
+        ],
+        "time_sources": [
+          "HOST_RECEIVE"
+        ],
+        "tested_firmware": {
+          "lowest": {
+            "bytes": "fw 1.0 (invented)",
+            "truncated": false
+          },
+          "highest": {
+            "bytes": "fw 1.4 (invented)",
+            "truncated": false
+          }
+        },
+        "conformance_report": "sha256:0000000000000000000000000000000000000000000000000000000000000002"
+      }
+    },
+    {
+      "entry_point": "file",
+      "file_digest": "sha256:dbb106966d408c5e431684818b92a2e952cf836083e1c0eb56225e3a6b5b417b",
+      "claimed_kind": null,
+      "registered_by": "hal.acq.filedev",
+      "registered_at": "3000000",
+      "declaration": {
+        "schema": "capability-declaration/v1",
+        "driver_version": "0.2.0",
+        "device": {
+          "driver_id": "file.example.points",
+          "make": {
+            "bytes": "Example Metrology (invented)",
+            "truncated": false
+          },
+          "model": {
+            "bytes": "EM-CMM 700 (invented)",
+            "truncated": false
+          }
+        },
+        "capabilities": [
+          {
+            "name": "Device",
+            "versions": ">=1.0 <2",
+            "features": [],
+            "limits": {}
+          }
+        ],
+        "time_sources": [
+          "HOST_RECEIVE"
+        ],
+        "tested_firmware": {
+          "lowest": {
+            "bytes": "fw 1.0 (invented)",
+            "truncated": false
+          },
+          "highest": {
+            "bytes": "fw 1.4 (invented)",
+            "truncated": false
+          }
+        },
+        "conformance_report": "sha256:0000000000000000000000000000000000000000000000000000000000000002"
+      }
+    },
+    {
+      "entry_point": "driver",
+      "source_id": "0193f0a0-0000-7000-8000-0000000000a1",
+      "claimed_kind": "driver",
+      "registered_by": "hal.host.driver",
+      "registered_at": "1000000",
+      "declaration": {
+        "schema": "capability-declaration/v1",
+        "driver_version": "0.2.0",
+        "device": {
+          "driver_id": "drv.example.linescan",
+          "make": {
+            "bytes": "Example Optics (invented)",
+            "truncated": false
+          },
+          "model": {
+            "bytes": "EX-LS 100 (invented)",
+            "truncated": false
+          },
+          "serial": {
+            "bytes": "INVENTED-SN-0001",
+            "truncated": false
+          },
+          "firmware": {
+            "bytes": "ex-fw 4.2 (invented)",
+            "truncated": false
+          }
+        },
+        "capabilities": [
+          {
+            "name": "LineScan",
+            "versions": ">=1.2 <2",
+            "features": [
+              "raw_profiles",
+              "intensity",
+              "encoder_trigger"
+            ],
+            "limits": {}
+          },
+          {
+            "name": "Device",
+            "versions": ">=1.0 <2",
+            "features": [
+              "health_push"
+            ],
+            "limits": {}
+          }
+        ],
+        "time_sources": [
+          "HOST_RECEIVE"
+        ],
+        "tested_firmware": {
+          "lowest": {
+            "bytes": "fw 1.0 (invented)",
+            "truncated": false
+          },
+          "highest": {
+            "bytes": "fw 1.4 (invented)",
+            "truncated": false
+          }
+        },
+        "conformance_report": "sha256:0000000000000000000000000000000000000000000000000000000000000002"
+      }
+    }
+  ]
+}

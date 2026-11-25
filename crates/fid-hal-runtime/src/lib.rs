@@ -5,8 +5,11 @@
 //!   (`HAL.ACQ.CONV`).
 //! - [`time`]: session timebase, clock offset and drift estimation, and the
 //!   `time_sync_insufficient` fusion rule (`HAL.ACQ.TIME`).
+//! - [`registry`]: the device registry of serving sources and their kinds, and
+//!   `device.show_devices@1` (`HAL.ACQ.SESS.REG`).
 
 pub mod conv;
+pub mod registry;
 pub mod time;
 
 pub use conv::{decode, ConvError, Decoded, RawArray, ValidityMask, MAX_EXACT_INT};

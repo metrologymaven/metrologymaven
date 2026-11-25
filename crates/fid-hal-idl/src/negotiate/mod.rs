@@ -284,6 +284,28 @@ impl CapabilityDeclaration {
     pub fn from_json(bytes: &[u8]) -> Result<CapabilityDeclaration, NegError> {
         wire::declaration(bytes)
     }
+
+    /// Checks a declaration however it was built, with the rules [`Self::from_json`] and
+    /// [`negotiate`] apply between them: the driver version is SemVer; there is at least one
+    /// time source and none repeats; there are at most [`MAX_CAPABILITIES`] offers, each with
+    /// a valid capability name, at most [`MAX_FEATURES`] valid and distinct features and at
+    /// most [`MAX_LIMITS`] valid limit names; and no capability is named twice. Every failure
+    /// is `declaration_invalid` naming the entry, never device-supplied text.
+    pub fn check(&self) -> Result<(), NegError> {
+        if !crate::package::is_semver(&self.driver_version) {
+            return Err(NegError::decl("/driver_version", "driver_version_invalid"));
+        }
+        if self.time_sources.is_empty() {
+            return Err(NegError::decl("/time_sources", "time_sources_empty"));
+        }
+        let mut seen = BTreeSet::new();
+        for (i, t) in self.time_sources.iter().enumerate() {
+            if !seen.insert(*t) {
+                return Err(NegError::decl(format!("/time_sources/{i}"), "duplicate_time_source"));
+            }
+        }
+        check_offers(&self.capabilities)
+    }
 }
 
 /// Checks one offer's name, features and limits.
