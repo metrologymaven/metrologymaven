@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-bus-api, fid-types]
+built_pr: 616
 satisfies: [REQ-CORE.BUS-001, REQ-CORE.BUS-016]
 covers: []
 depends_on: []
