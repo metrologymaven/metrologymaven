@@ -179,7 +179,7 @@ fn unknown_member_names_are_cut_or_replaced_in_the_field() {
     assert_eq!(with_key("notes").field(), "/notes");
     let long = "z".repeat(300);
     assert_eq!(with_key(&long).field(), format!("/{}", "z".repeat(MAX_TOKEN_BYTES)));
-    for bad in ["Notes", "a/b", "a~b", r"zz‮bidi", "9lives", r"été"] {
+    for bad in ["Notes", "a/b", "a~b", "zz\\u202ebidi", "9lives", "\\u00e9t\\u00e9"] {
         assert_eq!(with_key(bad).field(), format!("/{UNSHOWN_NAME}"), "{bad}");
     }
     assert_eq!(shown_name("ok_name"), "ok_name");
