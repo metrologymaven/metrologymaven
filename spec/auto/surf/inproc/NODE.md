@@ -76,6 +76,7 @@ The `BusTransport` (`AUTO.SURF.JOBS`) that every surface uses when the bus runs 
 | `validation` | any other | `validation_error` |
 | `policy` | `raw_path_refused` | `raw_path_refused` |
 | `policy` | `outside_root` | `root_escape` |
+| `policy` | `bad_handle` | `validation_error` |
 | `policy` | any other | `policy_refused` |
 | `precondition` | any | `precondition_failed` |
 | `conflict` | any | `conflict` |
@@ -88,7 +89,7 @@ The `BusTransport` (`AUTO.SURF.JOBS`) that every surface uses when the bus runs 
 | `internal` | any | `internal_error` |
 | `cancelled` | any | outcome `cancelled`, no error |
 
-  The `policy` rows agree with `fid_surface::roots::ERROR_MAP`. `hidden_command` becomes `not_found`, so a surface that does not filter (MCP for an `agent`) does not confirm that a hidden major exists (D-035); `AUTO.CLI.DISPATCH` keys on `bus_code` and is unaffected.
+  The `policy` rows agree with `fid_surface::roots::ERROR_MAP` and `RootError::error_code` (`bad_handle` is `validation_error` there too). `hidden_command` becomes `not_found`, so a surface that does not filter (MCP for an `agent`) does not confirm that a hidden major exists (D-035); `AUTO.CLI.DISPATCH` keys on `bus_code` and is unaffected.
 - **Dry run:** `BusRequest` has no mode, so every `Submit` sends `dry_run` false. When `AUTO.SURF.JOBS` adds a mode, the transport maps it onto `BusCall::dry_run`, and `ApiReply::DryRun` already maps to outcome `dry_run`.
 - **Errors:** `transport_closed` (`NotSent`). Every bus failure arrives as an envelope.
 - **Determinism:** N (call IDs). `envelope_for` is D0.
