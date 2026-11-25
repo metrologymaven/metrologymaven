@@ -475,11 +475,16 @@ fn ac5_gauge_export_validates_and_matches_the_oracle() {
     assert_eq!(titles, ["Quantisation", "Unit consistency", "Zero behaviour", "Timestamp monotonicity"]);
     assert_eq!(STREAM_COMMON.items.len(), 4);
     // One data-plane batch schema with declared encodings and a sequence range.
-    assert_eq!(desc.batch_schemas.len(), 1);
-    let bs = &desc.batch_schemas[0];
-    assert!(bs.seq_range && !bs.validity_mask);
-    let cols: Vec<&str> = bs.columns.iter().map(|c| c.name.as_str()).collect();
-    assert_eq!(cols, ["value", "resolution", "t_host", "t_dev"]);
+    // One data-plane batch schema per gauge unit: lengths in m, angles in rad.
+    let ids: Vec<&str> = desc.batch_schemas.iter().map(|b| b.id.as_str()).collect();
+    assert_eq!(ids, ["gauge.readings", "gauge.readings.angle"]);
+    for bs in &desc.batch_schemas {
+        assert!(bs.seq_range && !bs.validity_mask);
+        let cols: Vec<&str> = bs.columns.iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(cols, ["value", "resolution", "t_host", "t_dev"]);
+    }
+    // D-045: the semantics say where simulated values are labelled.
+    assert!(desc.semantics.text.contains("acquisition-batch/0 envelope, whose simulated flag"));
     for key in ["GaugeReading", "GaugeInfo", "Quantity", "StreamStatus", "SessionId"] {
         assert!(desc.defs.contains_key(key), "{key}");
     }
@@ -520,6 +525,45 @@ fn ac5_environment_export_validates_and_matches_the_oracle() {
     check_export(&desc, "environment_v1.json", "environment_v1.sha256");
     // The digests of the two packages differ.
     assert_ne!(desc.digest().unwrap(), GaugePackage::description().digest().unwrap());
+}
+
+#[test]
+fn each_gauge_unit_selects_its_batch_schema() {
+    let desc = GaugePackage::description();
+    let unit_of = |id: &str, col: &str| {
+        let bs = desc.batch_schemas.iter().find(|b| b.id == id).unwrap_or_else(|| panic!("no schema {id}"));
+        bs.columns.iter().find(|c| c.name == col).unwrap().unit
+    };
+    // A length reading (the caliper fixture) selects gauge.readings, in m.
+    let length = caliper();
+    assert_eq!(length.batch_schema_id(), Some(gauge::BATCH_SCHEMA_ID));
+    // An angle reading (the oracle's protractor case) selects gauge.readings.angle, in rad.
+    let angle = GaugeReading::from_json(&case("g_ok_protractor_rad")).unwrap();
+    assert_eq!(angle.batch_schema_id(), Some(gauge::ANGLE_BATCH_SCHEMA_ID));
+    for r in [&length, &angle] {
+        let id = r.batch_schema_id().unwrap();
+        for col in ["value", "resolution"] {
+            assert_eq!(unit_of(id, col), r.value.unit(), "{id} {col}");
+        }
+        assert_eq!(unit_of(id, "t_host"), SiUnit::Second);
+    }
+    assert_eq!(gauge::batch_schema_for(SiUnit::Metre), Some("gauge.readings"));
+    assert_eq!(gauge::batch_schema_for(SiUnit::Radian), Some("gauge.readings.angle"));
+    for u in [SiUnit::Second, SiUnit::Kelvin, SiUnit::Pascal, SiUnit::One] {
+        assert_eq!(gauge::batch_schema_for(u), None, "{u}");
+    }
+}
+
+#[test]
+fn malformed_identities_belong_to_the_unit_items() {
+    let mut r = caliper();
+    r.gauge_identity = UntrustedText::new("");
+    let e = check_gauge(None, &[r]).unwrap_err();
+    assert_eq!((e.item, e.reason, e.index), (gauge::ITEM_UNITS, "reading_invalid", Some(0)));
+    let mut r = room();
+    r.sensor_identity = UntrustedText::new(&"x".repeat(MAX_IDENTITY_BYTES + 1));
+    let e = check_env(None, &[r]).unwrap_err();
+    assert_eq!((e.item, e.reason, e.index), (environment::ITEM_UNITS, "reading_invalid", Some(0)));
 }
 
 // ------------------------------------------------------------------ settings (REQ-HAL.IDL.SENS-006 at runtime)

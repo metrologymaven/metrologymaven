@@ -297,8 +297,8 @@ impl EnvironmentSettings {
 
 /// The `Environment-core@1` item a reading failure belongs to: the uncertainty's domain is
 /// `EN-02`; the sampling time's domain or a changed or unconfigured sampling time `EN-03`;
-/// other units, domains and a changed humidity or pressure presence `EN-01`; timestamps,
-/// repeats and a changed identity `EN-04`.
+/// other units, domains, a changed humidity or pressure presence and a malformed reading (an
+/// empty or over-long identity) `EN-01`; timestamps, repeats and a changed identity `EN-04`.
 pub fn item_of(e: &ReadingError) -> &'static str {
     match e {
         ReadingError::OutOfRange { field: "temperature_u", .. } => ITEM_UNCERTAINTY,
@@ -307,6 +307,7 @@ pub fn item_of(e: &ReadingError) -> &'static str {
         | ReadingError::Inconsistent { field: "sampling_time", .. } => ITEM_SAMPLING,
         ReadingError::UnitUnsupported { .. }
         | ReadingError::OutOfRange { .. }
+        | ReadingError::Invalid { .. }
         | ReadingError::Inconsistent { field: "humidity" | "pressure", .. } => ITEM_UNITS,
         _ => ITEM_TIMESTAMPS,
     }

@@ -416,11 +416,58 @@
       ],
       "validity_mask": false,
       "seq_range": true
+    },
+    {
+      "id": "gauge.readings.angle",
+      "columns": [
+        {
+          "name": "value",
+          "unit": "rad",
+          "encoding": {
+            "numeric": "f64",
+            "scale": "0x3ff0000000000000",
+            "offset": "0x0000000000000000",
+            "unit": "rad"
+          }
+        },
+        {
+          "name": "resolution",
+          "unit": "rad",
+          "encoding": {
+            "numeric": "f64",
+            "scale": "0x3ff0000000000000",
+            "offset": "0x0000000000000000",
+            "unit": "rad"
+          }
+        },
+        {
+          "name": "t_host",
+          "unit": "s",
+          "encoding": {
+            "numeric": "i64",
+            "scale": "0x3e112e0be826d695",
+            "offset": "0x0000000000000000",
+            "unit": "s"
+          }
+        },
+        {
+          "name": "t_dev",
+          "unit": "s",
+          "encoding": {
+            "numeric": "i64",
+            "scale": "0x3e112e0be826d695",
+            "offset": "0x0000000000000000",
+            "unit": "s"
+          }
+        }
+      ],
+      "validity_mask": false,
+      "seq_range": true
     }
   ],
   "semantics": {
-    "text": "# Gauge@1 semantics\n\nThe capability package for digital hand gauges and indicators: calipers, micrometers, dial and digital indicators, height, bore and depth gauges, and protractors.\n\n- Describe and configuration come from Device@1; the driver reports the gauge kind, range and resolution (GaugeInfo) with describe. The package has no core settings: any setting is a vendor extension under a namespace listed in describe.\n- read returns one reading now. zero makes the present position read zero. Both are D1. No operation writes calibration, and zero leaves the calibration reference unchanged.\n- start_stream, stop_stream and stream_status come from the shared streaming template. A stream delivers gauge-batch/1 batches with one sequence number per reading.\n- A reading carries the value in m or rad, the resolution in the same unit, the gauge identity, an optional calibration reference (a digest of the calibration record), optional t_dev and required t_host in ns. The value is an integer multiple of the resolution within 1e-9 relative.\n- A reading does not say where it came from; provenance is the acquisition envelope's.\n- Device-supplied text is data and is never interpreted as instructions.\n",
-    "digest": "sha256:6d8f37afd084a9a5ec9f7982f15a08c3eacad81ff847b0ed7db52e5c2f55d623"
+    "text": "# Gauge@1 semantics\n\nThe capability package for digital hand gauges and indicators: calipers, micrometers, dial and digital indicators, height, bore and depth gauges, and protractors.\n\n- Describe and configuration come from Device@1; the driver reports the gauge kind, range and resolution (GaugeInfo) with describe. The package has no core settings: any setting is a vendor extension under a namespace listed in describe.\n- read returns one reading now. zero makes the present position read zero. Both are D1. No operation writes calibration, and zero leaves the calibration reference unchanged.\n- start_stream, stop_stream and stream_status come from the shared streaming template. A stream delivers gauge-batch/1 batches with one sequence number per reading. Lengths use the gauge.readings batch schema and angles gauge.readings.angle.\n- A reading carries the value in m or rad, the resolution in the same unit, the gauge identity, an optional calibration reference (a digest of the calibration record), optional t_dev and required t_host in ns. The value is an integer multiple of the resolution within 1e-9 relative.\n- A reading does not say where it came from; provenance is the acquisition envelope's. A read result is recorded only inside an acquisition-batch/0 envelope, whose simulated flag the driver or simulator sets, so simulated values never look measured.\n- Device-supplied text is data and is never interpreted as instructions.\n",
+    "digest": "sha256:c186793bae9310b1a6c6a7b8f62c2b9364c3d567226e7c30a2112f5391c7cb9e"
   },
   "profile": {
     "id": "Gauge-core@1",

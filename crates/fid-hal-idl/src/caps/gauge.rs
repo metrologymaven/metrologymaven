@@ -49,8 +49,20 @@ pub const PACKAGE_NAME: &str = "Gauge";
 pub const PACKAGE_VERSION: &str = "1.0.0";
 /// ID of the conformance profile.
 pub const PROFILE_ID: &str = "Gauge-core@1";
-/// ID of the package's batch schema.
+/// ID of the batch schema for lengths (value and resolution in m).
 pub const BATCH_SCHEMA_ID: &str = "gauge.readings";
+/// ID of the batch schema for angles (value and resolution in rad).
+pub const ANGLE_BATCH_SCHEMA_ID: &str = "gauge.readings.angle";
+
+/// The batch schema that carries readings in `unit`: [`BATCH_SCHEMA_ID`] for m,
+/// [`ANGLE_BATCH_SCHEMA_ID`] for rad, none for any other unit.
+pub fn batch_schema_for(unit: SiUnit) -> Option<&'static str> {
+    match unit {
+        SiUnit::Metre => Some(BATCH_SCHEMA_ID),
+        SiUnit::Radian => Some(ANGLE_BATCH_SCHEMA_ID),
+        _ => None,
+    }
+}
 /// Wire tag of one reading.
 pub const READING_TAG: &str = "gauge-reading/1";
 /// Wire tag of a batch of readings.
@@ -96,6 +108,11 @@ const READING_FIELDS: [&str; 7] =
     ["calibration_ref", "gauge_identity", "resolution", "schema", "t_dev", "t_host", "value"];
 
 impl GaugeReading {
+    /// The batch schema this reading's unit selects ([`batch_schema_for`]).
+    pub fn batch_schema_id(&self) -> Option<&'static str> {
+        batch_schema_for(self.value.unit())
+    }
+
     /// The number of resolution steps the value holds, rounded to the nearest integer.
     pub fn steps(&self) -> f64 {
         (self.value.value() / self.resolution.value()).round()
@@ -333,8 +350,9 @@ impl GaugeInfo {
 // ------------------------------------------------------------------ the evaluators
 
 /// The `Gauge-core@1` item a reading failure belongs to: quantisation and the resolution's
-/// domain are `GA-01`; units, ranges and a changed unit or resolution `GA-02`; timestamps,
-/// repeats and a changed identity or calibration reference `GA-04`.
+/// domain are `GA-01`; units, ranges, a changed unit or resolution and a malformed reading
+/// (an empty or over-long identity) `GA-02`; timestamps, repeats and a changed identity or
+/// calibration reference `GA-04`.
 pub fn item_of(e: &ReadingError) -> &'static str {
     match e {
         ReadingError::NotQuantised
@@ -342,6 +360,7 @@ pub fn item_of(e: &ReadingError) -> &'static str {
         | ReadingError::OutOfRange { reason: "too_many_steps", .. } => ITEM_QUANTISATION,
         ReadingError::UnitUnsupported { .. }
         | ReadingError::OutOfRange { .. }
+        | ReadingError::Invalid { .. }
         | ReadingError::Inconsistent { field: "unit" | "resolution", .. } => ITEM_UNITS,
         _ => ITEM_TIMESTAMPS,
     }
@@ -611,11 +630,14 @@ extension under a namespace listed in describe.\n\
 - read returns one reading now. zero makes the present position read zero. Both are D1. No \
 operation writes calibration, and zero leaves the calibration reference unchanged.\n\
 - start_stream, stop_stream and stream_status come from the shared streaming template. A stream \
-delivers gauge-batch/1 batches with one sequence number per reading.\n\
+delivers gauge-batch/1 batches with one sequence number per reading. Lengths use the \
+gauge.readings batch schema and angles gauge.readings.angle.\n\
 - A reading carries the value in m or rad, the resolution in the same unit, the gauge identity, \
 an optional calibration reference (a digest of the calibration record), optional t_dev and \
 required t_host in ns. The value is an integer multiple of the resolution within 1e-9 relative.\n\
-- A reading does not say where it came from; provenance is the acquisition envelope's.\n\
+- A reading does not say where it came from; provenance is the acquisition envelope's. A read \
+result is recorded only inside an acquisition-batch/0 envelope, whose simulated flag the driver or \
+simulator sets, so simulated values never look measured.\n\
 - Device-supplied text is data and is never interpreted as instructions.\n";
 
 /// The `Gauge@1` package.
@@ -624,7 +646,7 @@ pub struct GaugePackage;
 
 impl GaugePackage {
     /// The package's own parts, before the streaming template: `read` and `zero`, the type
-    /// schemas, the reading batch schema, the semantics note and the `Gauge-core@1` items.
+    /// schemas, the two reading batch schemas, the semantics note and the `Gauge-core@1` items.
     pub fn base() -> PackageDescription {
         PackageDescription {
             manifest: PackageManifest {
@@ -679,7 +701,8 @@ impl CapabilityPackage for GaugePackage {
     }
 }
 
-/// The reference encodings: value and resolution f64 in m, times i64 ns.
+/// The reference encodings: value and resolution f64 in m (lengths) or in rad (angles), times
+/// i64 ns. One schema per unit, so every column has one declared unit.
 fn batch_schemas() -> Vec<BatchSchemaDesc> {
     let col = |name: &str, numeric, scale, unit| {
         EncodingDescriptor::new(numeric, scale, 0.0, unit).ok().map(|encoding| BatchColumnDesc {
@@ -688,18 +711,23 @@ fn batch_schemas() -> Vec<BatchSchemaDesc> {
             encoding,
         })
     };
-    let columns = [
-        col("value", NumericType::F64, 1.0, SiUnit::Metre),
-        col("resolution", NumericType::F64, 1.0, SiUnit::Metre),
-        col("t_host", NumericType::I64, 1e-9, SiUnit::Second),
-        col("t_dev", NumericType::I64, 1e-9, SiUnit::Second),
-    ];
-    vec![BatchSchemaDesc {
-        id: BATCH_SCHEMA_ID.to_string(),
-        columns: columns.into_iter().flatten().collect(),
-        validity_mask: false,
-        seq_range: true,
-    }]
+    [(BATCH_SCHEMA_ID, SiUnit::Metre), (ANGLE_BATCH_SCHEMA_ID, SiUnit::Radian)]
+        .into_iter()
+        .map(|(id, unit)| {
+            let columns = [
+                col("value", NumericType::F64, 1.0, unit),
+                col("resolution", NumericType::F64, 1.0, unit),
+                col("t_host", NumericType::I64, 1e-9, SiUnit::Second),
+                col("t_dev", NumericType::I64, 1e-9, SiUnit::Second),
+            ];
+            BatchSchemaDesc {
+                id: id.to_string(),
+                columns: columns.into_iter().flatten().collect(),
+                validity_mask: false,
+                seq_range: true,
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]
