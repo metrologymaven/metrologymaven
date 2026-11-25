@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-io-step]
+built_pr: 625
 satisfies: [REQ-IO.CAD.STEP-004]
 covers: []
 depends_on: [IO.CAD.STEP.HDR, GEO.NURBS.DATA, GEO.NURBS.ANALYTIC, GEO.NURBS.EVAL]
