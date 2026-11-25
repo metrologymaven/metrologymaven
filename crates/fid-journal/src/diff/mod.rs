@@ -73,7 +73,7 @@ mod store;
 pub use store::{command_defs, diff_store, params_schema, result_schema, COMMAND_REF_PATTERN, MAX_LIST_ITEMS};
 
 use crate::branch::{Branches, Owner};
-use crate::entry::{parse_digest, PrincipalKind, GENESIS_PREV};
+use crate::entry::{parse_digest, parse_principal_kind, PrincipalKind, GENESIS_PREV};
 use crate::verify::{check_linked, Failure, FailureKind, ReadError, StoredEntry, TrustedHead};
 use fid_canon::CValue;
 use fid_types::Digest;
@@ -406,7 +406,7 @@ fn obj_field<'a>(o: &'a Obj, k: &str) -> Result<&'a Obj, DiffError> {
 
 /// The command part of a verified `command` header.
 fn command_of(o: &Obj, budget: &mut Budget) -> Result<Cmd, DiffError> {
-    let principal = PrincipalKind::parse(str_field(obj_field(o, "principal")?, "kind")?)
+    let principal = parse_principal_kind(str_field(obj_field(o, "principal")?, "kind")?)
         .map_err(|e| tampered(format!("verified header.principal.kind: {e}")))?;
     let c = obj_field(o, "command")?;
     let id = str_field(c, "id")?;
