@@ -14,6 +14,9 @@
 //! - [`face::one`] (GEO.DIST.FACE.ONE): the closest point on one trimmed CAD face from its
 //!   exact surface, edge curves and trimming loops: interior stationary points kept by the
 //!   GEO.CAD.TOPO.TRIM classification, boundary edges and corners, with fixed tie rules.
+//! - [`face::incid`] (GEO.DIST.FACE.INCID): the incident faces at a CAD foot (interior, edge,
+//!   vertex), their outward normals and angles from the B-rep topology, and the signed
+//!   distance through [`cad_sign`]; undefined at free and non-manifold edges.
 //! - [`batch`] (GEO.DIST.BATCH): the [`ProjectionTarget`] trait (implemented for meshes by
 //!   [`SignTarget`]), projection options (maximum distance, subset, direction), deterministic
 //!   multi-threaded [`project_batch`] with cancellation, and fixed-order [`summary`]
@@ -36,6 +39,7 @@ pub use batch::{
     ProjectionHit, ProjectionOptions, ProjectionTarget,
 };
 
+pub use face::incid::{Incid, IncidError, Incident, Undefined, FOOT_ERROR_M, MAP_TOL_M};
 pub use face::one::{
     project_face, FaceError, FaceFeature, FaceHit, FaceProjection, FaceProjector, FaceQueryOptions, Unsupported,
 };

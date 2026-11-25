@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-geo-dist]
 satisfies: [REQ-GEO.DIST.FACE-001, REQ-GEO.DIST.FACE-006]
 covers: []
 depends_on: [GEO.CAD.TOPO.MODEL, GEO.CAD.TOPO.ADJ, GEO.CAD.TOPO.PCURVE, GEO.NURBS.EVAL, GEO.DIST.SIGN]
@@ -74,7 +75,10 @@ GEO.DIST.SIGN defines one pseudo-normal rule for meshes and CAD; for CAD the cal
 
 ## Open questions
 
-- None.
+- **Built in `fid-geo-dist` `face::incid`.** The prepared form is `Incid::new(&Body)` (or `Incid::from_parts(Adjacency, Pcurves)`, to share GEO.CAD.TOPO.PCURVE's pcurves with GEO.DIST.FACE.ONE) with `incident_at(&FaceHit) -> Result<Vec<Incident>, Undefined>` and `signed(p, &FaceHit) -> Result<Signed, IncidError>`: the Design's free functions need the pcurves as well as the body and adjacency (the trim curves of the edge rule), and computation failures (an uncertified inversion, an evaluation error) are errors, never a guessed sign. `Undefined` is either the sign flag of REQ-004 (`Sign { reason, entity }`) or such an error. `Incident` also records whether the degenerate-normal fallback was used.
+- Judgement calls, stated in the module documentation: an interior foot has weight 2 pi; an edge "with exactly two faces" is read as an edge with exactly two coedges, so a seam (one face used twice) is a smooth edge, not a free one; a vertex is also undefined when an edge at it has one or more than two coedges (`Boundary`, `NonManifold`) or when its corners do not link its edges into one fan (`NonManifoldVertex`, as in GEO.DIST.SIGN); pole coedges (no 3-D curve, both ends one vertex, image within 1e-8 m of it) are passed over. A `uv` is used only when its surface point is within `MAP_TOL_M` = 1e-6 m [unverified] of the foot; otherwise the foot is inverted onto the face (certified only) and refused if still off. The fallback offset steps along the vertex's coedges first, then `+v, -v, +u, -u` inside a bounded domain; the Design's "into the face" has no trim test.
+- AC-2 uses `fixtures/geo/dist/face/incid/tube.json` (an invented solid cylinder with a coaxial through hole, written by `make_incid_cases.py` with the oracle) because the GEO.CAD.TESS `analytic_set` fixtures do not exist yet; re-point the test when they land.
+- `fixtures/geo/cad/topo/cube_labelled.json` gives each line's direction in `axis` (its `ref_dir` is a perpendicular), while a GEO.NURBS.ANALYTIC line runs along the reference direction, so read literally its edge curves miss their far vertices. The AC-1 test reads them with the two vectors swapped; read literally, a corner foot is refused (`Mapping`), not signed with a guessed angle (test `inconsistent_edge_curves_fail_closed`). Raised for GEO.CAD.TOPO.MODEL.
 
 ## Children
 
