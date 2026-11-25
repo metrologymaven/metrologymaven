@@ -155,7 +155,7 @@ fn quantisation_needs_a_usable_resolution() {
     let mut r = caliper();
     r.resolution = q(1e-5, SiUnit::Radian);
     assert_eq!(r.validate(), Err(ReadingError::UnitUnsupported { field: "resolution", unit: "rad".to_string() }));
-    r.value = q(0.5236, SiUnit::Radian);
+    r.value = q(0.5235, SiUnit::Radian);
     r.resolution = q(1e-4, SiUnit::Radian);
     r.validate().unwrap();
     r.value = q(1.0, SiUnit::Kelvin);
