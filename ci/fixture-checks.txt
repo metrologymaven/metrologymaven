@@ -112,6 +112,7 @@ python fixtures/gdt/drf/make_targets_plate.py --check
 python fixtures/gdt/drf/measured/make_cases.py --check
 python fixtures/gdt/ident/make_fixtures.py --check
 python fixtures/gdt/interp/make_cases.py --check
+python fixtures/gdt/prof/make_dev_fixtures.py --check
 python fixtures/gdt/record/make_cases.py --check
 python fixtures/gdt/resolve/make_cases.py --check
 python fixtures/gdt/rowflow/make_state_cases.py --check
