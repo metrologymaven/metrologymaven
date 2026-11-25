@@ -14,10 +14,12 @@
 //! - **REQ-HAL.IDL.SENS.STREAM-002:** [`validate_extensions`] fails with
 //!   `extension_undeclared` when a declared vendor-extension setting is not named
 //!   `<namespace>.<name>` with `<namespace>` among the vendor namespaces the package lists
-//!   in describe. [`check_config_schema`] applies the same rule to a device's
-//!   `config-schema/0`.
+//!   in describe. [`check_config_schema`] applies the rule to a device's `config-schema/0`
+//!   and fails closed: a setting that is neither a declared core setting of the package nor
+//!   such an extension is `extension_undeclared`.
 //! - **REQ-HAL.IDL.SENS.STREAM-003:** [`check_batch_size`] (item `SC-01`) passes only if the
-//!   recorded test stream lasts at least [`TEST_STREAM_NS`] and at least
+//!   recorded test stream lasts at least [`TEST_STREAM_NS`] (by its recorded duration and,
+//!   where the batches carry device time, by the sum of their spans) and at least
 //!   [`BATCH_PASS_PERCENT`] % of its batches hold [`BATCH_MIN_BYTES`] to [`BATCH_MAX_BYTES`]
 //!   bytes or span at most [`BATCH_MAX_SPAN_NS`] of device time. The thresholds are
 //!   proposals [unverified]; `MB` is read as 10^6 bytes.
@@ -41,12 +43,14 @@
 //! - [`StreamStatus`]: `{"next_seq": "<u64>", "state": "idle" | "streaming"}`;
 //! - [`StreamEvent`]: `{"kind": "started"}`, `{"kind": "stopped", "reason": <StopReason>}` or
 //!   `{"kind": "gap", "from": "<u64>", "to": "<u64>"}` with `from <= to`;
-//! - [`BatchRecord`]: `{"schema": "stream-batches/0", "origin": "synthetic" | "simulated" |
-//!   "device", "duration_ns": "<u64>", "batches": [{"first_seq", "last_seq", "bytes",
-//!   "span_ns"?}, ...]}`; `span_ns` is absent when the device gives no device time.
+//! - [`BatchRecord`]: `{"schema": "stream-batches/0", "origin": "synthetic" | "simulated",
+//!   "duration_ns": "<u64>", "batches": [{"first_seq", "last_seq", "bytes", "span_ns"?},
+//!   ...]}`; `span_ns` is absent when the device gives no device time. `"origin": "device"`
+//!   is refused (`origin_device_refused`, D-045): a free-standing file cannot show that a
+//!   device produced it.
 
 use crate::base::config::{config_digest, digest_canonical_bytes, ConfigDigest, ConfigSchema, Configuration};
-use crate::base::config::{ConfigError, SettingSchema};
+use crate::base::config::{ConfigError, SettingSchema, MAX_SETTINGS};
 use crate::base::device::{ConformanceProfile, ProfileItem};
 use crate::base::error::ErrorCode;
 use crate::package::{OperationDesc, PackageDescription, PackageError};
@@ -79,6 +83,9 @@ pub const BATCH_PASS_PERCENT: u64 = 95;
 /// Shortest test stream `SC-01` accepts, in nanoseconds (60 s).
 pub const TEST_STREAM_NS: u64 = 60_000_000_000;
 
+/// Longest core setting name, in bytes (as `HAL.IDL.BASE.CFG`).
+pub const MAX_CORE_NAME_BYTES: usize = crate::base::config::MAX_NAME_BYTES;
+
 /// Most vendor namespaces one package lists.
 pub const MAX_NAMESPACES: usize = 16;
 /// Longest vendor namespace, in bytes.
@@ -107,6 +114,9 @@ pub enum StreamError {
     /// `namespace_invalid`: a vendor namespace that is not `[a-z][a-z0-9_]*` of at most
     /// [`MAX_NAMESPACE_BYTES`] bytes, or more than [`MAX_NAMESPACES`] of them.
     NamespaceInvalid { namespace: String },
+    /// `setting_invalid`: a core setting name that is not `[a-z][a-z0-9_]*` of at most
+    /// [`MAX_CORE_NAME_BYTES`] bytes, or more than `MAX_SETTINGS` of them.
+    SettingInvalid { setting: String },
     /// `stream_conflict`: the base description already holds an operation, type schema,
     /// profile item or namespace of the same name with other content.
     Conflict { what: &'static str, name: String },
@@ -129,6 +139,7 @@ impl StreamError {
         match self {
             StreamError::ExtensionUndeclared { .. } => "extension_undeclared",
             StreamError::NamespaceInvalid { .. } => "namespace_invalid",
+            StreamError::SettingInvalid { .. } => "setting_invalid",
             StreamError::Conflict { .. } => "stream_conflict",
             StreamError::Missing { .. } => "stream_template_missing",
             StreamError::Extension(e) => e.code(),
@@ -147,6 +158,7 @@ impl fmt::Display for StreamError {
         match self {
             StreamError::ExtensionUndeclared { setting } => write!(f, "extension_undeclared: {setting:?}"),
             StreamError::NamespaceInvalid { namespace } => write!(f, "namespace_invalid: {namespace:?}"),
+            StreamError::SettingInvalid { setting } => write!(f, "setting_invalid: {setting:?}"),
             StreamError::Conflict { what, name } => write!(f, "stream_conflict: {what} {name:?}"),
             StreamError::Missing { what, name } => write!(f, "stream_template_missing: {what} {name:?}"),
             StreamError::Extension(e) => write!(f, "extension: {e}"),
@@ -258,15 +270,21 @@ impl StopReason {
     }
 }
 
-/// Where a [`BatchRecord`] came from. A pass on a synthetic or simulated record is never a
-/// statement about a real device.
+/// Where a [`BatchRecord`] came from (D-045: declared values never look measured).
+///
+/// This leaf makes only `synthetic` and `simulated` records. A record cannot claim `device`
+/// here: [`BatchRecord::new`] and the free-standing wire form both refuse it
+/// (`origin_device_refused`), because nothing in a file or a caller's word shows that a
+/// device produced the data. A device-origin record must come from the runner that drove the
+/// live session and bound the record to it (`HAL.SIM.CONF`), not from this module. So a pass
+/// here is never a statement about a real device.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RecordOrigin {
     /// Hand-written or generated test data.
     Synthetic,
     /// Recorded from a simulator (`HAL.SIM`).
     Simulated,
-    /// Recorded from a device.
+    /// Recorded from a device. Reserved: no constructor or wire form in this module accepts it.
     Device,
 }
 
@@ -491,6 +509,10 @@ pub fn stream_defs() -> BTreeMap<String, CValue> {
 
 /// The `Stream-common@1` profile (REQ-003, REQ-004). Item IDs are stable: an item is never
 /// renumbered, and a withdrawn ID is not reused.
+///
+/// Every built package copies these titles and checks into its own profile, so they enter the
+/// package digest. Editing the item text changes the digest of every streaming package, and
+/// needs a version bump of each package (and of this profile if the meaning changes).
 pub const STREAM_COMMON: ConformanceProfile = ConformanceProfile {
     id: PROFILE_ID,
     items: &[
@@ -537,13 +559,21 @@ pub const STREAM_COMMON: ConformanceProfile = ConformanceProfile {
 pub struct StreamingPackage {
     base: PackageDescription,
     namespaces: Vec<String>,
+    core_settings: Vec<String>,
     extensions: Vec<SettingSchema>,
 }
 
 impl StreamingPackage {
     /// Starts from the package's own operations, payload batch schemas, semantics and profile.
     pub fn new(base: PackageDescription) -> StreamingPackage {
-        StreamingPackage { base, namespaces: Vec::new(), extensions: Vec::new() }
+        StreamingPackage { base, namespaces: Vec::new(), core_settings: Vec::new(), extensions: Vec::new() }
+    }
+
+    /// Declares one of the package's own (core) setting names, such as `exposure`. A device
+    /// setting without a dot that is not a core setting is refused as an undeclared extension.
+    pub fn core_setting(mut self, name: impl Into<String>) -> StreamingPackage {
+        self.core_settings.push(name.into());
+        self
     }
 
     /// Lists a vendor namespace in describe.
@@ -594,19 +624,32 @@ impl StreamingPackage {
             }
             namespaces.insert(ns);
         }
-        let built =
-            StreamingDescription { description: desc, vendor_namespaces: namespaces, extensions: self.extensions };
+        let mut core_settings = BTreeSet::new();
+        for name in self.core_settings {
+            if core_settings.contains(&name) {
+                return Err(StreamError::Conflict { what: "core setting", name: kept(&name) });
+            }
+            core_settings.insert(name);
+        }
+        let built = StreamingDescription {
+            description: desc,
+            vendor_namespaces: namespaces,
+            core_settings,
+            extensions: self.extensions,
+        };
         built.validate()?;
         Ok(built)
     }
 }
 
 /// A validated streaming package: its `capability-package/v1` description plus the vendor
-/// namespaces it lists in describe and the extension settings it declares.
+/// namespaces it lists in describe, its core setting names and the extension settings it
+/// declares.
 #[derive(Debug, Clone, PartialEq)]
 pub struct StreamingDescription {
     description: PackageDescription,
     vendor_namespaces: BTreeSet<String>,
+    core_settings: BTreeSet<String>,
     extensions: Vec<SettingSchema>,
 }
 
@@ -617,11 +660,22 @@ impl StreamingDescription {
     pub fn from_parts(
         description: PackageDescription,
         vendor_namespaces: BTreeSet<String>,
+        core_settings: BTreeSet<String>,
         extensions: Vec<SettingSchema>,
     ) -> Result<StreamingDescription, StreamError> {
-        let out = StreamingDescription { description, vendor_namespaces, extensions };
+        let out = StreamingDescription { description, vendor_namespaces, core_settings, extensions };
         out.validate()?;
         Ok(out)
+    }
+
+    /// The package's core setting names.
+    pub fn core_settings(&self) -> &BTreeSet<String> {
+        &self.core_settings
+    }
+
+    /// [`check_config_schema`] against this package's namespaces and core settings.
+    pub fn check_config_schema(&self, schema: &ConfigSchema) -> Result<(), StreamError> {
+        check_config_schema(&self.vendor_namespaces, &self.core_settings, schema)
     }
 
     /// The `capability-package/v1` description, for export and digest.
@@ -668,7 +722,7 @@ impl StreamingDescription {
                 Some(_) => {}
             }
         }
-        validate_extensions(desc, &self.vendor_namespaces, &self.extensions)
+        validate_extensions(desc, &self.vendor_namespaces, &self.core_settings, &self.extensions)
     }
 }
 
@@ -682,14 +736,19 @@ impl StreamingDescription {
 ///    listed namespace (`extension_undeclared`);
 /// 3. the extensions form a valid `HAL.IDL.BASE.CFG` schema: distinct names, well-formed
 ///    types and ranges, all acquisition-relevant (`CONFIG_INVALID`);
-/// 4. every dotted `live_settings` name of every operation is a declared extension
+/// 4. every `live_settings` name of every operation is a core setting or a declared extension
 ///    (`extension_undeclared`).
+///
+/// Core setting names must be `[a-z][a-z0-9_]*` of at most 64 bytes, without a dot
+/// (`setting_invalid`); there are at most `HAL.IDL.BASE.CFG`'s `MAX_SETTINGS` of them.
 pub fn validate_extensions(
     desc: &PackageDescription,
     namespaces: &BTreeSet<String>,
+    core_settings: &BTreeSet<String>,
     extensions: &[SettingSchema],
 ) -> Result<(), StreamError> {
     check_namespaces(namespaces)?;
+    check_core_settings(core_settings)?;
     for ext in extensions {
         if !under_listed_namespace(namespaces, &ext.name) {
             return Err(StreamError::ExtensionUndeclared { setting: kept(&ext.name) });
@@ -699,7 +758,7 @@ pub fn validate_extensions(
     let declared: BTreeSet<&str> = extensions.iter().map(|e| e.name.as_str()).collect();
     for op in &desc.operations {
         for s in &op.live_settings {
-            if s.contains('.') && !declared.contains(s.as_str()) {
+            if !declared.contains(s.as_str()) && !core_settings.contains(s) {
                 return Err(StreamError::ExtensionUndeclared { setting: kept(s) });
             }
         }
@@ -707,14 +766,42 @@ pub fn validate_extensions(
     Ok(())
 }
 
-/// The runtime form of the rule (REQ-HAL.IDL.SENS-006): every extension setting (a dotted
-/// name) of a device's `config-schema/0` is under a namespace the driver listed in describe.
-/// The first offending setting in name order is reported.
-pub fn check_config_schema(namespaces: &BTreeSet<String>, schema: &ConfigSchema) -> Result<(), StreamError> {
+/// The runtime form of the rule (REQ-HAL.IDL.SENS-006), failing closed: every setting of a
+/// device's `config-schema/0` is either one of the package's core setting names or an
+/// extension `<namespace>.<name>` under a namespace the driver listed in describe. Anything
+/// else, including an undotted name outside the core set, is `extension_undeclared`. The first
+/// offending setting in name order is reported.
+pub fn check_config_schema(
+    namespaces: &BTreeSet<String>,
+    core_settings: &BTreeSet<String>,
+    schema: &ConfigSchema,
+) -> Result<(), StreamError> {
     check_namespaces(namespaces)?;
+    check_core_settings(core_settings)?;
     for s in schema.settings() {
-        if s.is_extension() && !under_listed_namespace(namespaces, &s.name) {
+        let declared = if s.is_extension() {
+            under_listed_namespace(namespaces, &s.name)
+        } else {
+            core_settings.contains(&s.name)
+        };
+        if !declared {
             return Err(StreamError::ExtensionUndeclared { setting: kept(&s.name) });
+        }
+    }
+    Ok(())
+}
+
+fn check_core_settings(core_settings: &BTreeSet<String>) -> Result<(), StreamError> {
+    if core_settings.len() > MAX_SETTINGS {
+        return Err(StreamError::SettingInvalid { setting: String::new() });
+    }
+    for s in core_settings {
+        let mut b = s.bytes();
+        let ok = s.len() <= MAX_CORE_NAME_BYTES
+            && matches!(b.next(), Some(b'a'..=b'z'))
+            && b.all(|c| matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'_'));
+        if !ok {
+            return Err(StreamError::SettingInvalid { setting: kept(s) });
         }
     }
     Ok(())
@@ -795,16 +882,44 @@ impl BatchSummary {
     }
 }
 
-/// A recorded test stream: its origin, its duration and its batches in arrival order.
+/// A recorded test stream: its origin, its duration and its batches in arrival order. The
+/// fields are private so the origin cannot be relabelled after construction; see
+/// [`RecordOrigin`] for why `device` is refused.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BatchRecord {
-    pub origin: RecordOrigin,
-    /// Duration of the test stream, in nanoseconds.
-    pub duration_ns: u64,
-    pub batches: Vec<BatchSummary>,
+    origin: RecordOrigin,
+    duration_ns: u64,
+    batches: Vec<BatchSummary>,
 }
 
 impl BatchRecord {
+    /// A `synthetic` or `simulated` record of at most [`MAX_RECORD_BATCHES`] batches.
+    /// `device` is `origin_device_refused`.
+    pub fn new(origin: RecordOrigin, duration_ns: u64, batches: Vec<BatchSummary>) -> Result<BatchRecord, StreamError> {
+        if origin == RecordOrigin::Device {
+            return Err(StreamError::record("/origin", "origin_device_refused"));
+        }
+        if batches.len() > MAX_RECORD_BATCHES {
+            return Err(StreamError::record("/batches", "too_many_batches"));
+        }
+        Ok(BatchRecord { origin, duration_ns, batches })
+    }
+
+    /// Where the record came from.
+    pub fn origin(&self) -> RecordOrigin {
+        self.origin
+    }
+
+    /// Duration of the test stream, in nanoseconds.
+    pub fn duration_ns(&self) -> u64 {
+        self.duration_ns
+    }
+
+    /// The batches, in arrival order.
+    pub fn batches(&self) -> &[BatchSummary] {
+        &self.batches
+    }
+
     /// The wire value.
     pub fn to_value(&self) -> CValue {
         obj(vec![
@@ -829,8 +944,11 @@ impl BatchRecord {
         if req_str(o, "", "schema")? != BATCH_RECORD_TAG {
             return Err(StreamError::record("/schema", "schema_unknown"));
         }
-        let origin = RecordOrigin::parse(req_str(o, "", "origin")?)
-            .ok_or_else(|| StreamError::record("/origin", "origin_unknown"))?;
+        let origin = match RecordOrigin::parse(req_str(o, "", "origin")?) {
+            Some(RecordOrigin::Device) => return Err(StreamError::record("/origin", "origin_device_refused")),
+            Some(origin) => origin,
+            None => return Err(StreamError::record("/origin", "origin_unknown")),
+        };
         let duration_ns = req_u64(o, "", "duration_ns")?;
         let Some(CValue::Arr(items)) = o.get("batches") else {
             return Err(StreamError::record(
@@ -845,40 +963,83 @@ impl BatchRecord {
         for (i, item) in items.iter().enumerate() {
             batches.push(BatchSummary::from_value(item, &format!("/batches/{i}"))?);
         }
-        Ok(BatchRecord { origin, duration_ns, batches })
+        BatchRecord::new(origin, duration_ns, batches)
     }
 }
 
 // ------------------------------------------------------------------ the evaluators
 
 /// The outcome of a passing `SC-01`: how many batches were within the recommendation, out of
-/// how many, over how long, and where the record came from.
+/// how many, over how long, and where the record came from. Only [`check_batch_size`] makes
+/// one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BatchSizeTally {
-    pub origin: RecordOrigin,
-    pub total: usize,
-    pub within: usize,
-    pub duration_ns: u64,
+    origin: RecordOrigin,
+    total: usize,
+    within: usize,
+    duration_ns: u64,
+    span_total_ns: Option<u64>,
 }
 
-/// Item `SC-01` (REQ-003). Fails with `no_batches` on an empty record, `stream_too_short`
-/// when the stream lasted less than [`TEST_STREAM_NS`], and `below_threshold` when fewer than
-/// [`BATCH_PASS_PERCENT`] % of the batches are within the recommendation. Exact integer
-/// arithmetic.
+impl BatchSizeTally {
+    /// Where the record came from; never `device` in this module.
+    pub fn origin(&self) -> RecordOrigin {
+        self.origin
+    }
+
+    /// Number of batches.
+    pub fn total(&self) -> usize {
+        self.total
+    }
+
+    /// Number of batches within the recommendation.
+    pub fn within(&self) -> usize {
+        self.within
+    }
+
+    /// Recorded duration of the test stream, in nanoseconds.
+    pub fn duration_ns(&self) -> u64 {
+        self.duration_ns
+    }
+
+    /// Sum of the batches' device-time spans, when they carry one.
+    pub fn span_total_ns(&self) -> Option<u64> {
+        self.span_total_ns
+    }
+}
+
+/// Item `SC-01` (REQ-003), checked in order: `no_batches` on an empty record;
+/// `spans_partial` when some batches carry `span_ns` and others do not; `stream_too_short`
+/// when the recorded duration, or (where spans are present) the sum of the spans, is below
+/// [`TEST_STREAM_NS`]; and `below_threshold` when fewer than [`BATCH_PASS_PERCENT`] % of the
+/// batches are within the recommendation. Exact integer arithmetic.
 pub fn check_batch_size(record: &BatchRecord) -> Result<BatchSizeTally, ItemFailure> {
     let fail = |reason| ItemFailure::new(ITEM_BATCH_SIZE, reason, None);
     let total = record.batches.len();
     if total == 0 {
         return Err(fail("no_batches"));
     }
+    let with_span = record.batches.iter().filter(|b| b.span_ns.is_some()).count();
+    if with_span != 0 && with_span != total {
+        return Err(fail("spans_partial"));
+    }
     if record.duration_ns < TEST_STREAM_NS {
         return Err(fail("stream_too_short"));
     }
+    let span_total_ns = if with_span == total {
+        let sum: u128 = record.batches.iter().filter_map(|b| b.span_ns).map(u128::from).sum();
+        if sum < u128::from(TEST_STREAM_NS) {
+            return Err(fail("stream_too_short"));
+        }
+        Some(u64::try_from(sum).unwrap_or(u64::MAX))
+    } else {
+        None
+    };
     let within = record.batches.iter().filter(|b| b.within_recommendation()).count();
     if (within as u128) * 100 < (BATCH_PASS_PERCENT as u128) * (total as u128) {
         return Err(fail("below_threshold"));
     }
-    Ok(BatchSizeTally { origin: record.origin, total, within, duration_ns: record.duration_ns })
+    Ok(BatchSizeTally { origin: record.origin, total, within, duration_ns: record.duration_ns, span_total_ns })
 }
 
 /// Item `SC-03` (REQ-004). Fails with `no_batches` on an empty list, `range_reversed` when a
@@ -997,20 +1158,22 @@ pub fn check_start_stop_idempotence(steps: &[ControlStep]) -> Result<(), ItemFai
     Ok(())
 }
 
-/// Item `SC-04` (REQ-004, REQ-HAL.IDL.SENS-006). Fails with `extension_undeclared` when an
-/// extension setting of the device's schema is not under a listed namespace,
+/// Item `SC-04` (REQ-004, REQ-HAL.IDL.SENS-006). Fails with `extension_undeclared` when a
+/// setting of the device's schema is neither a core setting nor an extension under a listed
+/// namespace ([`check_config_schema`]),
 /// `config_invalid` when the configuration does not validate against the schema,
 /// `extension_not_digested` when an extension value is missing from the digested object, and
 /// `digest_mismatch` when the digest the device reported is not the configuration digest.
 /// A schema without extensions passes the first three checks trivially.
 pub fn check_extensions_digested(
     namespaces: &BTreeSet<String>,
+    core_settings: &BTreeSet<String>,
     schema: &ConfigSchema,
     cfg: &Configuration,
     reported: &ConfigDigest,
 ) -> Result<(), ItemFailure> {
     let fail = |reason| Err(ItemFailure::new(ITEM_EXTENSIONS, reason, None));
-    if check_config_schema(namespaces, schema).is_err() {
+    if check_config_schema(namespaces, core_settings, schema).is_err() {
         return fail("extension_undeclared");
     }
     let Ok(bytes) = digest_canonical_bytes(schema, cfg) else {

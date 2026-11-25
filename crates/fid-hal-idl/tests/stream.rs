@@ -112,7 +112,7 @@ fn ac1_built_package_has_the_stream_operations_and_matches_the_oracle() {
     assert_eq!(validate_and_digest_json(&oracle_bytes).unwrap().as_str(), want_digest.trim());
 
     // The parsed export is accepted as a streaming package too.
-    StreamingDescription::from_parts(oracle, BTreeSet::new(), Vec::new()).unwrap();
+    StreamingDescription::from_parts(oracle, BTreeSet::new(), BTreeSet::new(), Vec::new()).unwrap();
 }
 
 #[test]
@@ -132,20 +132,22 @@ fn ac1_operation_descriptions_are_fixed() {
 #[test]
 fn a_description_without_the_template_is_refused() {
     // Device@1 has no stream operations.
-    let e = StreamingDescription::from_parts(DevicePackage::description(), BTreeSet::new(), Vec::new()).unwrap_err();
+    let e =
+        StreamingDescription::from_parts(DevicePackage::description(), BTreeSet::new(), BTreeSet::new(), Vec::new())
+            .unwrap_err();
     assert_eq!(e.code(), "stream_template_missing");
 
     // A built package whose stream_status was turned into a D1 operation.
     let mut desc = StreamingPackage::new(demo_base()).build().unwrap().description().clone();
     let op = desc.operations.iter_mut().find(|o| o.name == "stream_status").unwrap();
     op.class = SideEffect::D1;
-    let e = StreamingDescription::from_parts(desc, BTreeSet::new(), Vec::new()).unwrap_err();
+    let e = StreamingDescription::from_parts(desc, BTreeSet::new(), BTreeSet::new(), Vec::new()).unwrap_err();
     assert_eq!(e, StreamError::Conflict { what: "operation", name: "stream_status".to_string() });
 
     // A built package without the SC-03 profile item.
     let mut desc = StreamingPackage::new(demo_base()).build().unwrap().description().clone();
     desc.profile.items.retain(|i| i.id != "SC-03");
-    let e = StreamingDescription::from_parts(desc, BTreeSet::new(), Vec::new()).unwrap_err();
+    let e = StreamingDescription::from_parts(desc, BTreeSet::new(), BTreeSet::new(), Vec::new()).unwrap_err();
     assert_eq!(e, StreamError::Missing { what: "profile item", name: "SC-03".to_string() });
 }
 
@@ -246,10 +248,56 @@ fn dotted_live_settings_must_be_declared_extensions() {
 
 #[test]
 fn device_config_schemas_follow_the_rule() {
+    let core = names(&["exposure_count"]);
     let schema = ConfigSchema::new(vec![int_setting("exposure_count"), int_setting("acme.gain")]).unwrap();
-    check_config_schema(&names(&["acme"]), &schema).unwrap();
-    let e = check_config_schema(&names(&["other"]), &schema).unwrap_err();
+    check_config_schema(&names(&["acme"]), &core, &schema).unwrap();
+    let e = check_config_schema(&names(&["other"]), &core, &schema).unwrap_err();
     assert_eq!(e, StreamError::ExtensionUndeclared { setting: "acme.gain".to_string() });
+
+    // A core name the package does not declare is refused too (fail closed).
+    let e = check_config_schema(&names(&["acme"]), &BTreeSet::new(), &schema).unwrap_err();
+    assert_eq!(e, StreamError::ExtensionUndeclared { setting: "exposure_count".to_string() });
+
+    // Through a built package.
+    let built = StreamingPackage::new(demo_base())
+        .vendor_namespace("acme")
+        .core_setting("exposure_count")
+        .extension(int_setting("acme.gain"))
+        .build()
+        .unwrap();
+    built.check_config_schema(&schema).unwrap();
+
+    // Malformed or duplicate core names.
+    for bad in ["Exposure", "acme.gain", "", "9x"] {
+        let e = StreamingPackage::new(demo_base()).core_setting(bad).build().unwrap_err();
+        assert_eq!(e.code(), "setting_invalid", "{bad:?}");
+    }
+    let e = StreamingPackage::new(demo_base()).core_setting("x").core_setting("x").build().unwrap_err();
+    assert_eq!(e.code(), "stream_conflict");
+}
+
+#[test]
+fn ac2_runtime_form_secret_mode_is_extension_undeclared() {
+    // A driver's config-schema/0 holding `secret_mode`: neither a core setting of the package
+    // nor an extension under a listed namespace.
+    let schema = ConfigSchema::new(vec![int_setting("exposure_count"), int_setting("secret_mode")]).unwrap();
+    let built =
+        StreamingPackage::new(demo_base()).vendor_namespace("acme").core_setting("exposure_count").build().unwrap();
+    let e = built.check_config_schema(&schema).unwrap_err();
+    assert_eq!(e.code(), "extension_undeclared");
+    assert_eq!(e, StreamError::ExtensionUndeclared { setting: "secret_mode".to_string() });
+}
+
+#[test]
+fn undotted_live_settings_must_be_core_settings() {
+    let mut base = demo_base();
+    let mut op = StreamOperation::StartStream.description();
+    op.name = "set_exposure".to_string();
+    op.live_settings = vec!["exposure".to_string()];
+    base.operations.push(op);
+    let e = StreamingPackage::new(base.clone()).build().unwrap_err();
+    assert_eq!(e, StreamError::ExtensionUndeclared { setting: "exposure".to_string() });
+    StreamingPackage::new(base).core_setting("exposure").build().unwrap();
 }
 
 // ------------------------------------------------------------------ AC-3
@@ -271,6 +319,13 @@ fn expected_count(file: &str, key: &str) -> usize {
     }
 }
 
+fn expected_string(file: &str, key: &str) -> String {
+    match expected_field(&expected(), file, key) {
+        CValue::Str(s) => s.clone(),
+        other => panic!("{file}/{key}: {other:?}"),
+    }
+}
+
 fn expected_bool(file: &str, key: &str) -> bool {
     match expected_field(&expected(), file, key) {
         CValue::Bool(b) => *b,
@@ -281,18 +336,19 @@ fn expected_bool(file: &str, key: &str) -> bool {
 #[test]
 fn ac3_batch_size_item_passes_at_97_percent_and_fails_at_80() {
     let ok = BatchRecord::from_json(&read("sizes_ok.json")).unwrap();
-    assert_eq!(ok.origin, RecordOrigin::Synthetic);
+    assert_eq!(ok.origin(), RecordOrigin::Synthetic);
     assert!(expected_bool("sizes_ok.json", "pass"));
     let tally = check_batch_size(&ok).unwrap();
-    assert_eq!(tally.total, expected_count("sizes_ok.json", "total"));
-    assert_eq!(tally.within, expected_count("sizes_ok.json", "within"));
-    assert_eq!(tally.origin, RecordOrigin::Synthetic);
+    assert_eq!(tally.total(), expected_count("sizes_ok.json", "total"));
+    assert_eq!(tally.within(), expected_count("sizes_ok.json", "within"));
+    assert_eq!(tally.origin(), RecordOrigin::Synthetic);
+    assert_eq!(tally.span_total_ns().map(|n| n.to_string()), Some(expected_string("sizes_ok.json", "span_total_ns")));
 
     let bad = BatchRecord::from_json(&read("sizes_bad.json")).unwrap();
     assert!(!expected_bool("sizes_bad.json", "pass"));
     let e = check_batch_size(&bad).unwrap_err();
     assert_eq!((e.item, e.reason), (ITEM_BATCH_SIZE, "below_threshold"));
-    let within = bad.batches.iter().filter(|b| b.within_recommendation()).count();
+    let within = bad.batches().iter().filter(|b| b.within_recommendation()).count();
     assert_eq!(within, expected_count("sizes_bad.json", "within"));
 }
 
@@ -318,10 +374,9 @@ fn batch_size_boundaries_and_fail_closed_cases() {
     assert!(b(u64::MAX, Some(0)).within_recommendation());
     assert!(!b(1, Some(50_000_001)).within_recommendation());
 
-    let record = |n_in: usize, n_out: usize, duration_ns| BatchRecord {
-        origin: RecordOrigin::Synthetic,
-        duration_ns,
-        batches: [vec![b(2_000_000, None); n_in], vec![b(10, None); n_out]].concat(),
+    let record = |n_in: usize, n_out: usize, duration_ns| {
+        let batches = [vec![b(2_000_000, None); n_in], vec![b(10, None); n_out]].concat();
+        BatchRecord::new(RecordOrigin::Synthetic, duration_ns, batches).unwrap()
     };
     // Exactly 95 % passes; just under fails.
     assert!(check_batch_size(&record(95, 5, TEST_STREAM_NS)).is_ok());
@@ -329,6 +384,35 @@ fn batch_size_boundaries_and_fail_closed_cases() {
     // Too short, and empty.
     assert_eq!(check_batch_size(&record(100, 0, TEST_STREAM_NS - 1)).unwrap_err().reason, "stream_too_short");
     assert_eq!(check_batch_size(&record(0, 0, TEST_STREAM_NS)).unwrap_err().reason, "no_batches");
+
+    // Where spans are present, they must all be present and sum to at least 60 s.
+    let spanned = |span: u64, n: usize| vec![b(2_000_000, Some(span)); n];
+    let rec = |batches| BatchRecord::new(RecordOrigin::Simulated, TEST_STREAM_NS, batches).unwrap();
+    let full = check_batch_size(&rec(spanned(600_000_000, 100))).unwrap();
+    assert_eq!(full.span_total_ns(), Some(TEST_STREAM_NS));
+    assert_eq!(full.origin(), RecordOrigin::Simulated);
+    let short = check_batch_size(&rec(spanned(600_000_000, 99))).unwrap_err();
+    assert_eq!(short.reason, "stream_too_short");
+    let mut mixed = spanned(600_000_000, 100);
+    mixed.push(b(2_000_000, None));
+    assert_eq!(check_batch_size(&rec(mixed)).unwrap_err().reason, "spans_partial");
+    assert_eq!(check_batch_size(&record(100, 0, TEST_STREAM_NS)).unwrap().span_total_ns(), None);
+}
+
+#[test]
+fn origin_cannot_be_forged_as_device() {
+    // D-045: editing "synthetic" to "device" in a record file is refused.
+    let edited = String::from_utf8(read("sizes_ok.json")).unwrap().replace("\"synthetic\"", "\"device\"");
+    assert!(edited.contains("\"origin\": \"device\""));
+    assert_eq!(
+        BatchRecord::from_json(edited.as_bytes()).unwrap_err(),
+        StreamError::Record { pointer: "/origin".to_string(), reason: "origin_device_refused" }
+    );
+    // The constructor refuses it as well, and simulated records are accepted.
+    let e = BatchRecord::new(RecordOrigin::Device, TEST_STREAM_NS, Vec::new()).unwrap_err();
+    assert_eq!(e.code(), "stream_record_invalid");
+    let sim = String::from_utf8(read("sizes_ok.json")).unwrap().replace("\"synthetic\"", "\"simulated\"");
+    assert_eq!(BatchRecord::from_json(sim.as_bytes()).unwrap().origin(), RecordOrigin::Simulated);
 }
 
 #[test]
@@ -356,7 +440,7 @@ fn batch_records_are_read_strictly() {
 fn sequence_contiguity() {
     for name in ["sizes_ok.json", "sizes_bad.json"] {
         let rec = BatchRecord::from_json(&read(name)).unwrap();
-        assert_eq!(check_sequence_contiguity(&rec.batches).is_ok(), expected_bool(name, "contiguous"), "{name}");
+        assert_eq!(check_sequence_contiguity(rec.batches()).is_ok(), expected_bool(name, "contiguous"), "{name}");
     }
     let r = |first_seq, last_seq| BatchSummary { first_seq, last_seq, bytes: 2_000_000, span_ns: None };
     let fail = |batches: &[BatchSummary]| {
@@ -477,10 +561,11 @@ fn extension_values_are_in_the_reported_digest() {
     let schema = ext_schema();
     let acme = names(&["acme"]);
     let reported = config_digest(&schema, &ext_config(4)).unwrap();
-    check_extensions_digested(&acme, &schema, &ext_config(4), &reported).unwrap();
+    let core = names(&["exposure", "label"]);
+    check_extensions_digested(&acme, &core, &schema, &ext_config(4), &reported).unwrap();
 
     let fail = |ns: &BTreeSet<String>, cfg: &Configuration| {
-        let e = check_extensions_digested(ns, &schema, cfg, &reported).unwrap_err();
+        let e = check_extensions_digested(ns, &core, &schema, cfg, &reported).unwrap_err();
         assert_eq!(e.item, ITEM_EXTENSIONS);
         e.reason
     };
@@ -490,6 +575,10 @@ fn extension_values_are_in_the_reported_digest() {
     let mut missing = ext_config(4);
     missing.values.remove("acme.gain");
     assert_eq!(fail(&acme, &missing), "config_invalid");
+
+    // An undotted setting outside the package's core names is an undeclared extension.
+    let e = check_extensions_digested(&acme, &names(&["exposure"]), &schema, &ext_config(4), &reported).unwrap_err();
+    assert_eq!((e.item, e.reason), (ITEM_EXTENSIONS, "extension_undeclared"));
 }
 
 // ------------------------------------------------------------------ AC-4

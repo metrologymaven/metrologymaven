@@ -7,18 +7,19 @@
       "first_seq": "0",
       "last_seq": "99",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "100",
       "last_seq": "199",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "200",
       "last_seq": "299",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "300",
@@ -42,18 +43,19 @@
       "first_seq": "600",
       "last_seq": "699",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "700",
       "last_seq": "799",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "800",
       "last_seq": "899",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "900",
@@ -77,17 +79,19 @@
       "first_seq": "1200",
       "last_seq": "1299",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "1300",
       "last_seq": "1399",
-      "bytes": "8000001"
+      "bytes": "8000001",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "1400",
       "last_seq": "1499",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "1500",
@@ -111,18 +115,19 @@
       "first_seq": "1800",
       "last_seq": "1899",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "1900",
       "last_seq": "1999",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "2000",
       "last_seq": "2099",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "2100",
@@ -146,18 +151,19 @@
       "first_seq": "2400",
       "last_seq": "2499",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "2500",
       "last_seq": "2599",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "2600",
       "last_seq": "2699",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "2700",
@@ -181,18 +187,19 @@
       "first_seq": "3000",
       "last_seq": "3099",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "3100",
       "last_seq": "3199",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "3200",
       "last_seq": "3299",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "3300",
@@ -216,18 +223,19 @@
       "first_seq": "3600",
       "last_seq": "3699",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "3700",
       "last_seq": "3799",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "3800",
       "last_seq": "3899",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "3900",
@@ -251,18 +259,19 @@
       "first_seq": "4200",
       "last_seq": "4299",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "4300",
       "last_seq": "4399",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "4400",
       "last_seq": "4499",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "4500",
@@ -286,18 +295,19 @@
       "first_seq": "4800",
       "last_seq": "4899",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "4900",
       "last_seq": "4999",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "5000",
       "last_seq": "5099",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "5100",
@@ -321,18 +331,19 @@
       "first_seq": "5400",
       "last_seq": "5499",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "5500",
       "last_seq": "5599",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "5600",
       "last_seq": "5699",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "5700",
@@ -356,18 +367,19 @@
       "first_seq": "6000",
       "last_seq": "6099",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "6100",
       "last_seq": "6199",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "6200",
       "last_seq": "6299",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "6300",
@@ -391,18 +403,19 @@
       "first_seq": "6600",
       "last_seq": "6699",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "6700",
       "last_seq": "6799",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "6800",
       "last_seq": "6899",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "6900",
@@ -426,18 +439,19 @@
       "first_seq": "7200",
       "last_seq": "7299",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "7300",
       "last_seq": "7399",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "7400",
       "last_seq": "7499",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "7500",
@@ -461,18 +475,19 @@
       "first_seq": "7800",
       "last_seq": "7899",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "7900",
       "last_seq": "7999",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "8000",
       "last_seq": "8099",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "8100",
@@ -496,18 +511,19 @@
       "first_seq": "8400",
       "last_seq": "8499",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "8500",
       "last_seq": "8599",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "8600",
       "last_seq": "8699",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "8700",
@@ -531,18 +547,19 @@
       "first_seq": "9000",
       "last_seq": "9099",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "9100",
       "last_seq": "9199",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "9200",
       "last_seq": "9299",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "9300",
@@ -566,18 +583,19 @@
       "first_seq": "9600",
       "last_seq": "9699",
       "bytes": "1000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "9700",
       "last_seq": "9799",
       "bytes": "8000000",
-      "span_ns": "600000000"
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "9800",
       "last_seq": "9899",
-      "bytes": "2500000"
+      "bytes": "2500000",
+      "span_ns": "1500000000"
     },
     {
       "first_seq": "9900",

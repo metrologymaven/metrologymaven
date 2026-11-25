@@ -8,7 +8,8 @@ Writes project-authored fixtures (CC-BY-4.0) under fixtures/hal/idl/sens/stream/
   - demo_stream_v1.sha256   (AC-1: SHA-256 over this script's own RFC 8785 canonical form with
                              lists sorted as REQ-HAL.IDL.GEN.FMT-003 says)
   - sizes_ok.json           (AC-3: a synthetic 60 s batch record, 97 of 100 batches within the
-                             1-8 MB or 50 ms recommendation)
+                             1-8 MB or 50 ms recommendation; every batch carries device time
+                             and the spans sum to at least 60 s)
   - sizes_bad.json          (AC-3: the same shape, 80 of 100 within)
   - expected.json           (AC-3: this script's own tally and verdict for both records, plus
                              whether their sequence ranges are contiguous)
@@ -221,11 +222,11 @@ def in_batch(i):
     each boundary, appears."""
     kind = i % 6
     if kind == 0:
-        return batch(i, 1_000_000, 600_000_000)  # lower size bound, long span
+        return batch(i, 1_000_000, 1_500_000_000)  # lower size bound, long span
     if kind == 1:
-        return batch(i, 8_000_000, 600_000_000)  # upper size bound, long span
+        return batch(i, 8_000_000, 1_500_000_000)  # upper size bound, long span
     if kind == 2:
-        return batch(i, 2_500_000, None)  # by size, no device time
+        return batch(i, 2_500_000, 1_500_000_000)  # by size only
     if kind == 3:
         return batch(i, 400_000, 50_000_000)  # small, span exactly 50 ms
     if kind == 4:
@@ -239,9 +240,9 @@ def out_batch(i):
     if kind == 0:
         return batch(i, 999_999, 50_000_001)
     if kind == 1:
-        return batch(i, 8_000_001, None)
+        return batch(i, 8_000_001, 1_500_000_000)
     if kind == 2:
-        return batch(i, 500_000, 600_000_000)
+        return batch(i, 500_000, 1_500_000_000)
     return batch(i, 9_000_000, 75_000_000)
 
 
@@ -271,15 +272,18 @@ def verdict(rec):
     batches = rec["batches"]
     total = len(batches)
     n_in = sum(1 for b in batches if within(b))
+    spans = [int(b["span_ns"]) for b in batches if "span_ns" in b]
     if total == 0:
         result = {"pass": False, "reason": "no_batches"}
-    elif int(rec["duration_ns"]) < TEST_STREAM_NS:
+    elif spans and len(spans) != total:
+        result = {"pass": False, "reason": "spans_partial"}
+    elif int(rec["duration_ns"]) < TEST_STREAM_NS or (spans and sum(spans) < TEST_STREAM_NS):
         result = {"pass": False, "reason": "stream_too_short"}
     elif n_in * 100 < PASS_PERCENT * total:
         result = {"pass": False, "reason": "below_threshold"}
     else:
         result = {"pass": True}
-    result.update({"total": total, "within": n_in, "contiguous": contiguous(batches)})
+    result.update({"total": total, "within": n_in, "span_total_ns": str(sum(spans)), "contiguous": contiguous(batches)})
     return result
 
 
