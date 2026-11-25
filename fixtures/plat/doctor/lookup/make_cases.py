@@ -12,7 +12,9 @@ The matrix is always fixtures/plat/matrix/valid.toml.
 Rules implemented (REQ-PLAT.DOCTOR.LOOKUP-001..006):
   tier      matrix row for (os family, version, arch): tier if since_phase <= phase, else
             planned; no row -> not_listed; os or arch unknown -> unknown (reason copied).
-            Versions are dotted numbers compared with missing parts as 0.
+            Versions are 1 to 4 dot-separated runs of 1-10 ASCII digits, each a u32,
+            compared with missing parts as 0; a probed version that does not parse -> unknown
+            (reason error), since it was never compared with the matrix.
   fields    cpu_level, cores, ram_gib (total RAM), gpu_class, vram_gib, storage_free_gib
             (install volume), display (both dimensions), in that order.
   gpu class fallback or device_type cpu -> software; integrated -> integrated; discrete with
@@ -35,8 +37,10 @@ Run from the repository root:
 import copy
 import json
 import os
+import re
 import sys
 import tomllib
+import unicodedata
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
@@ -93,9 +97,24 @@ def load_snapshot(name):
         return json.load(f)
 
 
+U32_MAX = 4294967295
+VERSION_RE = re.compile(r"[0-9]{1,10}(\.[0-9]{1,10}){0,3}")
+
+
 def version(s):
+    """Dotted version of 1 to 4 ASCII-digit parts, each a u32, missing parts 0; else None."""
+    if VERSION_RE.fullmatch(s) is None:
+        return None
     parts = [int(p) for p in s.split(".")]
+    if any(p > U32_MAX for p in parts):
+        return None
     return tuple(parts + [0] * (4 - len(parts)))
+
+
+def bound_detail(s):
+    """Control characters to spaces, whitespace runs collapsed, at most 200 characters."""
+    cleaned = "".join(" " if unicodedata.category(c) == "Cc" else c for c in s)
+    return " ".join(cleaned.split())[:200]
 
 
 def tier_of(snap, matrix, phase):
@@ -106,21 +125,20 @@ def tier_of(snap, matrix, phase):
     family = snap["os"]["value"]["family"]
     ver = snap["os"]["value"]["version"]
     arch = snap["arch"]["value"]
-    try:
-        v = version(ver)
-    except ValueError:
-        v = None
-    if v is not None:
-        for row in matrix["row"]:
-            lo = version(row["version_min"])
-            hi = version(row["version_max"]) if "version_max" in row else None
-            if row["os"] == family and row["arch"] == arch and v >= lo and (hi is None or v < hi):
-                if PHASES.index(phase) >= PHASES.index(row["since_phase"]):
-                    return {"status": "known", "value": {"kind": "tier", "tier": row["tier"]}}
-                return {
-                    "status": "known",
-                    "value": {"kind": "planned", "tier": row["tier"], "since_phase": row["since_phase"]},
-                }
+    v = version(ver)
+    if v is None:
+        # Never compared with any row: unknown, not a checked not_listed.
+        return {"status": "unknown", "reason": "error", "detail": bound_detail("os: unparsable version " + ver)}
+    for row in matrix["row"]:
+        lo = version(row["version_min"])
+        hi = version(row["version_max"]) if "version_max" in row else None
+        if row["os"] == family and row["arch"] == arch and v >= lo and (hi is None or v < hi):
+            if PHASES.index(phase) >= PHASES.index(row["since_phase"]):
+                return {"status": "known", "value": {"kind": "tier", "tier": row["tier"]}}
+            return {
+                "status": "known",
+                "value": {"kind": "planned", "tier": row["tier"], "since_phase": row["since_phase"]},
+            }
     return {"status": "known", "value": {"kind": "not_listed"}}
 
 
@@ -266,6 +284,16 @@ CASES = [
     ("win10_lower_row", mutate("env-win11-discrete.json", os__value__version="10.0.19045"), PROFILES, "P1a"),
     ("win_below_matrix", mutate("env-win11-discrete.json", os__value__version="6.1"), PROFILES, "P1a"),
     ("unparsable_version", mutate("env-win11-discrete.json", os__value__version="11 Pro"), PROFILES, "P1a"),
+    ("unparsable_version_plus", mutate("env-win11-discrete.json", os__value__version="+1"), PROFILES, "P1a"),
+    ("unparsable_version_underscore", mutate("env-win11-discrete.json", os__value__version="1_0"), PROFILES, "P1a"),
+    ("unparsable_version_five_parts", mutate("env-win11-discrete.json", os__value__version="10.0.22631.1.2"),
+     PROFILES, "P1a"),
+    ("unparsable_version_u32_overflow", mutate("env-win11-discrete.json", os__value__version="10.0.4294967296"),
+     PROFILES, "P1a"),
+    ("version_u32_max_parses", mutate("env-win11-discrete.json", os__value__version="10.0.4294967295"), PROFILES,
+     "P1a"),
+    ("unparsable_version_and_below", mutate("env-ubuntu-vm-software.json", os__value__version="24.04 LTS"),
+     PROFILES, "P1a"),
     ("riscv_not_listed", mutate("env-win11-discrete.json", arch__value="riscv64"), PROFILES, "P1a"),
     ("os_unknown_tier_unknown", mutate("env-win11-discrete.json", os=unknown("error", "os-release unreadable")),
      PROFILES, "P1a"),

@@ -13,7 +13,7 @@
 use crate::probe::{bound_detail, EnvSnapshot, GpuSelection, Probed, UnknownReason, VolumeRole};
 use fid_canon::CValue;
 use fid_platform_core::hw_profile::{GpuClass, HwProfiles, Profile, MINIMUM, RECOMMENDED};
-use fid_platform_core::matrix::{Arch, EffectiveTier, Matrix, Phase};
+use fid_platform_core::matrix::{Arch, EffectiveTier, Matrix, Phase, Version};
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -216,7 +216,8 @@ impl fmt::Display for Outcome {
 /// The result of [`assess`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct Assessment {
-    /// The effective tier, or unknown when the OS (family or version) or architecture is.
+    /// The effective tier, or unknown when the OS (family or version) or architecture is, or
+    /// when the probed OS version cannot be parsed as a matrix version (reason `error`).
     pub tier: Probed<EffectiveTier>,
     /// One verdict per profile, in name order.
     pub profiles: Vec<ProfileVerdict>,
@@ -289,6 +290,11 @@ fn lookup_tier(snapshot: &EnvSnapshot, matrix: &Matrix, phase: Phase) -> Probed<
         Probed::Known(a) => a,
         Probed::Unknown { reason, detail } => return unknown_from("arch", *reason, detail),
     };
+    // A probed version the matrix cannot parse was never compared with any row, so the tier is
+    // unknown rather than a checked `not_listed` (which would mean exit 3).
+    if Version::parse(&os.version).is_none() {
+        return Probed::unknown(UnknownReason::Error, format!("os: unparsable version {}", os.version));
+    }
     Probed::Known(matrix.lookup(&os.family, &os.version, arch.as_str(), phase))
 }
 
