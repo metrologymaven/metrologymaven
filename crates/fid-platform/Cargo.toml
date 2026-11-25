@@ -29,6 +29,9 @@ sha2 = "0.10"
 # PLAT.GPU.POLICY and the OS, architecture and version types, moved below the tool layer for
 # PLAT.GPU.DETECT (layer model); re-exported from `gpu_policy` and `matrix`.
 fid-gpu-policy = { path = "../fid-gpu-policy" }
+# PLAT.MATRIX.FILE and PLAT.HW.PROFILE, moved below the tool layer for PLAT.DOCTOR.LOOKUP
+# (fid-doctor is app layer); re-exported unchanged as `matrix` and `hw_profile`.
+fid-platform-core = { path = "../fid-platform-core" }
 
 [lints]
 workspace = true
