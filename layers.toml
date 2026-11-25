@@ -124,6 +124,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-io-las" = "services"
 "fid-io-mesh" = "services"
 "fid-io-step" = "services"
+# AP242 PMI entity graph extraction and classification (IO.CAD.PMI.READ): needs fid-io-step (services).
+"fid-io-pmi" = "services"
 "fid-cad-proto" = "services"
 "fid-io-res" = "services"
 "fid-xml" = "services"
