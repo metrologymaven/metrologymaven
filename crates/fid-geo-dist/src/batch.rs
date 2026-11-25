@@ -4,7 +4,8 @@
 //! `threads` threads and returns one [`Projection`] per point, in input order.
 //! [`summary`] reduces the results to a [`BatchSummary`]. The mesh target is
 //! [`SignTarget`] (GEO.DIST.MESH closest point with the GEO.DIST.SIGN sign of record).
-//! GEO.DIST.FACE implements the same trait for CAD faces and bodies.
+//! GEO.DIST.FACE.BODY implements the same trait for CAD faces, face sets, bodies and instances
+//! ([`crate::face::body`]).
 //!
 //! # Determinism (pinned, REQ-001, REQ-004)
 //!
@@ -64,6 +65,7 @@
 //!
 //! The subset option restricts the triangles in both modes.
 
+use crate::face::body::BodyError;
 use crate::mesh::{check_query, corners, DistError, MeshProjection, MeshQuery, TriangleSubset, COORD_LIMIT};
 use crate::sign::{SignError, SignStatus, SignTarget};
 use core::fmt;
@@ -92,8 +94,11 @@ type V3 = [f64; 3];
 /// The sign carried by a hit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HitSign {
-    /// The GEO.DIST.SIGN status of a closest-point projection.
+    /// The GEO.DIST.SIGN status of a closest-point projection onto a mesh.
     Mesh(SignStatus),
+    /// The GEO.DIST.SIGN status of a closest-point projection onto CAD faces
+    /// (GEO.DIST.FACE.INCID, [`crate::face::body`]).
+    Cad(SignStatus),
     /// A projection along a direction: the sign is the side of `p` along `v`.
     Along,
 }
@@ -119,7 +124,9 @@ impl ProjectionHit {
     /// True when `signed_distance` carries a sign of record.
     pub fn sign_defined(&self) -> bool {
         match self.sign {
-            HitSign::Mesh(s) => matches!(s, SignStatus::Outside | SignStatus::Inside | SignStatus::OnSurface),
+            HitSign::Mesh(s) | HitSign::Cad(s) => {
+                matches!(s, SignStatus::Outside | SignStatus::Inside | SignStatus::OnSurface)
+            }
             HitSign::Along => true,
         }
     }
@@ -149,7 +156,7 @@ impl Projection {
                     out.extend_from_slice(&x.to_bits().to_le_bytes());
                 }
                 out.push(match h.sign {
-                    HitSign::Mesh(s) => s.code(),
+                    HitSign::Mesh(s) | HitSign::Cad(s) => s.code(),
                     HitSign::Along => ALONG_SIGN_CODE,
                 });
                 let (flag, (u, v)) = match h.params {
@@ -193,6 +200,8 @@ pub enum ProjectError {
     Sign(SignError),
     /// The direction is non-finite, beyond [`COORD_LIMIT`] or zero.
     InvalidDirection,
+    /// An error of a CAD face, face-set, body or instance target (GEO.DIST.FACE.BODY).
+    Body(BodyError),
 }
 
 impl From<SignError> for ProjectError {
@@ -213,6 +222,7 @@ impl ProjectError {
         match self {
             ProjectError::Sign(e) => e.code(),
             ProjectError::InvalidDirection => "invalid_direction",
+            ProjectError::Body(e) => e.code(),
         }
     }
 }
@@ -222,6 +232,7 @@ impl fmt::Display for ProjectError {
         match self {
             ProjectError::Sign(e) => write!(f, "{e}"),
             ProjectError::InvalidDirection => write!(f, "direction must be finite, within 2^250 and not zero"),
+            ProjectError::Body(e) => write!(f, "{e}"),
         }
     }
 }

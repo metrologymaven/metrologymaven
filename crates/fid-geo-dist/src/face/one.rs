@@ -56,6 +56,12 @@
 //! point) and the candidate is farther than `2 tol_m` from every edge and corner, the
 //! classification is repeated with half that distance as the band; only Outside drops it.
 //!
+//! **Cone nappes** (added by GEO.DIST.FACE.BODY): GEO.CAD.TOPO.TRIM does not treat a cone's
+//! apex line `v = v_apex` (`r0 + v tan a = 0`) as boundary, so a candidate on the other nappe
+//! of a face whose trim lies on one nappe could classify Inside. When every trimming segment
+//! end lies on one side of `v_apex` (beyond [`DEFAULT_TOL_M`]), a candidate more than
+//! `topo_tol_m` (in `v`) on the other side is dropped before classification ([`cone_nappe`]).
+//!
 //! # Choice
 //!
 //! The smallest distance; within [`FACE_TIE_WINDOW_M`] of each other, Interior before Edge
@@ -312,7 +318,8 @@ impl<'a> SurfRef<'a> {
 enum Geom<'a> {
     Line(&'a Line),
     Circle(&'a Circle),
-    Curve(&'a dyn Curve),
+    /// `Sync`, so a prepared face can be shared by batch worker threads (GEO.DIST.FACE.BODY).
+    Curve(&'a (dyn Curve + Sync)),
     OnSurface(&'a Curve2),
 }
 
@@ -345,6 +352,8 @@ pub struct FaceProjector<'a> {
     seams: Vec<BEdge<'a>>,
     /// NURBS face: pole points of the face with their parameters.
     poles: Vec<Pole>,
+    /// Cone face: `(v_apex, side)` when its trim lies on one nappe ([`cone_nappe`]).
+    nappe: Option<(f64, f64)>,
 }
 
 impl fmt::Debug for FaceProjector<'_> {
@@ -590,11 +599,11 @@ impl<'a> FaceProjector<'a> {
                     (Some(AnalyticCurve::Circle(c)), _) => (Geom::Circle(c), c.radius()),
                     (Some(AnalyticCurve::Ellipse(el)), _) => {
                         let (a, b) = el.semi_axes();
-                        (Geom::Curve(el as &dyn Curve), fmax(a, b) * LIPSCHITZ_INFLATE)
+                        (Geom::Curve(el as &(dyn Curve + Sync)), fmax(a, b) * LIPSCHITZ_INFLATE)
                     }
                     (None, Some(n)) => {
                         let l = nurbs_lip(n.degree(), n.knots().as_slice(), n.ctrl(), n.weights())?;
-                        (Geom::Curve(n as &dyn Curve), l)
+                        (Geom::Curve(n as &(dyn Curve + Sync)), l)
                     }
                     (None, None) => return Err(FaceError::NoEdgeGeometry { edge: id }),
                 },
@@ -660,7 +669,11 @@ impl<'a> FaceProjector<'a> {
             vertices.push((v.id().clone(), v.point()));
         }
         vertices.sort_by(|a, b| a.0.cmp(&b.0));
-        Ok(FaceProjector { face_id: f.id().clone(), trim, surf, patches, edges, vertices, seams, poles })
+        let nappe = match surf {
+            SurfRef::Analytic(AnalyticSurface::Cone(c)) => cone_nappe(&trim, c.radius(), c.half_angle()),
+            _ => None,
+        };
+        Ok(FaceProjector { face_id: f.id().clone(), trim, surf, patches, edges, vertices, seams, poles, nappe })
     }
 
     /// The face's topology ID.
@@ -692,6 +705,11 @@ impl<'a> FaceProjector<'a> {
     /// classification is repeated with the band half that distance: Inside or OnBoundary
     /// (the band then meets only a boundary that is not an edge, a pole) keep it.
     fn inside(&self, uv: [f64; 2], x: [f64; 3], tol: f64) -> Result<bool, FaceError> {
+        if let Some((va, side)) = self.nappe {
+            if (uv[1] - va) * side < -tol {
+                return Ok(false);
+            }
+        }
         match classify_uv(&self.trim, uv[0], uv[1], tol) {
             Ok(TrimClass::Inside) => Ok(true),
             Ok(TrimClass::Outside) => Ok(false),
@@ -1051,6 +1069,33 @@ impl<'a> FaceProjector<'a> {
             return Ok(FaceProjection::NoHit);
         }
         Ok(FaceProjection::Hit(hit))
+    }
+}
+
+/// The nappe of a cone face with radius `r0` at `v = 0` and half-angle `a`: `(v_apex, +1)`
+/// when every trimming segment end of `trim` lies at `v >= v_apex - DEFAULT_TOL_M` and some
+/// beyond `v_apex + DEFAULT_TOL_M`, `(v_apex, -1)` for the mirror case, else `None` (no
+/// segments, or segments on both nappes). `v_apex = -(r0 / tan a)`.
+pub(crate) fn cone_nappe(trim: &TrimIndex, r0: f64, half_angle: f64) -> Option<(f64, f64)> {
+    let ta = fid_num::f::tan(half_angle).ok()?;
+    let va = -(r0 / ta);
+    if !va.is_finite() {
+        return None;
+    }
+    let (mut pos, mut neg) = (false, false);
+    for s in trim.segments() {
+        for v in [s.a[1], s.b[1]] {
+            if v > va + DEFAULT_TOL_M {
+                pos = true;
+            } else if v < va - DEFAULT_TOL_M {
+                neg = true;
+            }
+        }
+    }
+    match (pos, neg) {
+        (true, false) => Some((va, 1.0)),
+        (false, true) => Some((va, -1.0)),
+        _ => None,
     }
 }
 
