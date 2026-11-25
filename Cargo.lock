@@ -1240,6 +1240,7 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-ctrl",
+ "fid-registry-build",
  "fid-surface",
  "fid-types",
 ]

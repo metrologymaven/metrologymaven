@@ -18,5 +18,10 @@ fid-ctrl = { path = "../fid-ctrl" }
 fid-surface = { path = "../fid-surface" }
 fid-types = { path = "../fid-types" }
 
+[dev-dependencies]
+# AUTO.CLI.DISPATCH AC-6: the workspace registry manifest, whose flag tables must build with no
+# collision (tests/dispatch_workspace.rs). Dev-only, like fid-mcp's; layer services.
+fid-registry-build = { path = "../fid-registry-build" }
+
 [lints]
 workspace = true

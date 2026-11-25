@@ -22,7 +22,8 @@ pub const SURFACE: &str = "cli";
 /// Emitted tree filename inside the `cli` surface directory.
 pub const TREE_FILE: &str = "cli-tree.json";
 /// Schema tag carried inside `cli-tree.json`.
-pub const TREE_SCHEMA: &str = "cli-tree-v1";
+/// v2 (AUTO.CLI.DISPATCH) added the required per-major `lifecycle` and `root_config` fields.
+pub const TREE_SCHEMA: &str = "cli-tree-v2";
 /// Maximum accepted size of `cli-tree.json`, in bytes.
 pub const MAX_TREE_BYTES: usize = 32 * 1024 * 1024;
 /// Maximum JSON nesting depth accepted in `cli-tree.json`.
@@ -97,6 +98,12 @@ pub struct CliMajor {
     pub determinism: Determinism,
     pub dry_run: bool,
     pub human_only: bool,
+    /// The manifest's lifecycle `state` for this major (`None` when the record names none).
+    /// AUTO.CLI.DISPATCH treats `hidden` and `removed` majors as absent.
+    pub lifecycle: Option<String>,
+    /// `fid_surface::roots::is_root_config` for this major: it changes the file roots, so it is
+    /// absent for every principal but `human` (REQ-AUTO.SURF.ROOTS-006).
+    pub root_config: bool,
 }
 
 impl CliMajor {
@@ -107,8 +114,10 @@ impl CliMajor {
         o.insert("dry_run".to_string(), CValue::Bool(self.dry_run));
         o.insert("help".to_string(), CValue::Str(self.help.clone()));
         o.insert("human_only".to_string(), CValue::Bool(self.human_only));
+        o.insert("lifecycle".to_string(), opt_str(&self.lifecycle));
         o.insert("major".to_string(), CValue::Num(f64::from(self.major)));
         o.insert("params".to_string(), CValue::Arr(self.params.iter().map(CliParam::to_value).collect()));
+        o.insert("root_config".to_string(), CValue::Bool(self.root_config));
         o.insert("side_effect".to_string(), CValue::Str(self.side_effect.as_str().to_string()));
         o.insert("summary".to_string(), CValue::Str(self.summary.clone()));
         CValue::Obj(o)
@@ -135,6 +144,13 @@ impl CliMajor {
             .map_err(|_| CliTreeError::Parse(format!("{at}: invalid determinism {det_raw:?}")))?;
         let dry_run = req_bool(o, "dry_run", at)?;
         let human_only = req_bool(o, "human_only", at)?;
+        // Required (string or null): a tree without visibility metadata is refused, not read
+        // as "everything visible".
+        if !o.contains_key("lifecycle") {
+            return Err(CliTreeError::Parse(format!("{at}: missing field \"lifecycle\"")));
+        }
+        let lifecycle = opt_str_val(o, "lifecycle", at)?;
+        let root_config = req_bool(o, "root_config", at)?;
         let Some(CValue::Arr(raw_params)) = o.get("params") else {
             return Err(CliTreeError::Parse(format!("{at}: params must be an array")));
         };
@@ -142,7 +158,19 @@ impl CliMajor {
         for (i, p) in raw_params.iter().enumerate() {
             params.push(CliParam::from_value(p, &format!("{at}.params[{i}]"))?);
         }
-        Ok(Self { major, command_id, params, summary, help, side_effect, determinism, dry_run, human_only })
+        Ok(Self {
+            major,
+            command_id,
+            params,
+            summary,
+            help,
+            side_effect,
+            determinism,
+            dry_run,
+            human_only,
+            lifecycle,
+            root_config,
+        })
     }
 }
 
@@ -441,6 +469,8 @@ pub fn emit(p: &Projection) -> Result<CliEmitOutput, CliTreeError> {
             determinism: cmd.determinism,
             dry_run: cmd.dry_run,
             human_only: cmd.human_only,
+            lifecycle: cmd.lifecycle.clone(),
+            root_config: fid_surface::roots::is_root_config(cmd),
         });
     }
 

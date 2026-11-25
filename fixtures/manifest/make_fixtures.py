@@ -460,6 +460,125 @@ def fuzz_corpus():
     return canon({"seed": f"{SEED:#x}", "cases": cases}) + b"\n"
 
 
+# ------------------------------------------------------------------ AUTO.CLI.DISPATCH
+
+CLI_DISPATCH = ROOT / "fixtures" / "cli" / "dispatch"
+
+
+def relifecycle(d, state):
+    """`d` with lifecycle `state` and its definition_digest recomputed."""
+    d = {k: v for k, v in d.items() if k != "definition_digest"}
+    d["lifecycle"] = {"state": state, "since": "2026-06-01"}
+    d["definition_digest"] = sha(canon(d))
+    return d
+
+
+def sort_defs(defs):
+    return sorted(defs, key=lambda d: (d["id"].encode(), d["major"]))
+
+
+def cli_dispatch():
+    """AUTO.CLI.DISPATCH fixture manifest (Test fixtures of spec/auto/cli/dispatch/NODE.md).
+
+    `demo.place_label@1` also has an array property `tags` (not in the leaf's fixture list) so
+    the append-per-occurrence rule of REQ-004 has a case."""
+    offset = {"type": "object", "x-quantity": "length"}
+    return manifest(sort_defs([
+        definition("demo.show_thing", 1, "R0", "exposed"),
+        definition("demo.set_offset", 1, "W2", "exposed",
+                   params={"offset": offset, "label": {"type": "string", "default": "none"}},
+                   required=("offset",)),
+        definition("demo.place_label", 1, "W2", "exposed",
+                   params={"anchor": {"type": "object"}, "tags": {"type": "array", "items": {"type": "string"}}}),
+        relifecycle(definition("demo.old_cmd", 1, "R0", "exposed"), "hidden"),
+        definition("demo.mix", 1, "R0", "exposed"),
+        relifecycle(definition("demo.mix", 2, "R0", "exposed"), "hidden"),
+        definition("project.set_import_root", 1, "W2", "exposed", effects=("Other", ROOTS_EFFECT)),
+    ]))
+
+
+def cli_dispatch_collision():
+    """AC-6: a property whose flag is a reserved flag, and two properties with one flag."""
+    return manifest(sort_defs([
+        definition("demo.bad_flags", 1, "R0", "exposed", params={"dry_run": {"type": "boolean"}}),
+        definition("demo.twin_flags", 1, "R0", "exposed",
+                   params={"a_b": {"type": "string"}, "a-b": {"type": "string"}}),
+    ]))
+
+
+# AUTO.CLI.OUT REQ-002 exit-code table, hand-labelled from spec/auto/cli/out/NODE.md (never from
+# the Rust table): outcome first, then the error code of a `failed` envelope.
+OUTCOME_EXIT = {"committed": 0, "computed": 0, "dry_run": 0, "request_filed": 8, "cancelled": 5,
+                "not_run": 6, "no_reply": 7}
+ERROR_EXIT = {"usage_error": 2, "dry_run_unsupported": 2, "policy_refused": 3, "raw_path_refused": 3,
+              "cancelled": 5, "internal_error": 1, "validation_error": 4, "unit_error": 4,
+              "precondition_failed": 4, "conflict": 4, "not_found": 4, "version_mismatch": 4,
+              "root_escape": 4, "timeout": 4}
+SHOW = "demo.show_thing@1"
+JOURNAL_HASH = "sha256:" + "0123456789abcdef" * 4
+
+
+def env(outcome, **extra):
+    e = {"command_id": SHOW, "envelope_version": 1, "outcome": outcome}
+    e.update(extra)
+    return e
+
+
+def failed(code, bus_code=None, bus_reason=None, origin="pipeline"):
+    err = {"code": code, "message": f"scripted {code}"}
+    if bus_code is not None:
+        err["details"] = {"bus_code": bus_code, "bus_origin": origin, "bus_reason": bus_reason}
+    return env("failed", error=err)
+
+
+def cli_outcomes():
+    """Scripted fake-bus answers for `fid demo show-thing --json`.
+
+    - `outcomes` (AC-2): `finish` is the final envelope the bus sends (stdout must equal its
+      RFC 8785 bytes plus a newline); `refuse` and `silent` make the tracker end the invocation
+      itself as `not_run` (bus refused before accepting) or `no_reply` (accepted, then no final
+      state before the deadline). `exit` is the AUTO.CLI.OUT REQ-002 code.
+    - `absent` (AC-4): failures the bus raised as `hidden_command`, or `not_found` with reason
+      `unknown_command`, `unknown_major` or `removed_major`; the CLI must replace each by the
+      absent-major refusal.
+    - `passthrough` (AC-10): other `not_found` reasons, a validation error, and a
+      `not_found/unknown_command` whose `bus_origin` is a handler; stdout is the scripted
+      envelope unchanged. Every scripted bus error carries `bus_origin` (`pipeline` unless
+      stated).
+    """
+    outcomes = [
+        {"name": "computed", "finish": env("computed", result={"thing": "x"}), "exit": 0},
+        {"name": "committed", "finish": env("committed", journal_entry_hash=JOURNAL_HASH), "exit": 0},
+        {"name": "dry_run", "finish": env("dry_run", result={"changes": []}), "exit": 0},
+        {"name": "request_filed", "finish": env("request_filed", request_id="req-1"), "exit": 8},
+        {"name": "cancelled", "finish": env("cancelled"), "exit": 5},
+        {"name": "not_run", "refuse": "scripted refusal", "outcome": "not_run", "exit": 6},
+        {"name": "no_reply", "silent": True, "outcome": "no_reply", "exit": 7},
+    ]
+    for code in sorted(ERROR_EXIT):
+        outcomes.append({"name": f"failed/{code}", "finish": failed(code), "exit": ERROR_EXIT[code]})
+    for o in outcomes:
+        want = OUTCOME_EXIT.get(o["name"])
+        assert want is None or want == o["exit"], o["name"]
+    absent = [
+        {"name": "hidden_command/hidden_major", "finish": failed("not_found", "hidden_command", "hidden_major")},
+        {"name": "not_found/unknown_command", "finish": failed("not_found", "not_found", "unknown_command")},
+        {"name": "not_found/unknown_major", "finish": failed("not_found", "not_found", "unknown_major")},
+        {"name": "not_found/removed_major", "finish": failed("not_found", "not_found", "removed_major")},
+    ]
+    passthrough = [
+        {"name": "not_found/unknown_entity", "finish": failed("not_found", "not_found", "unknown_entity"), "exit": 4},
+        {"name": "not_found/unknown_branch", "finish": failed("not_found", "not_found", "unknown_branch"), "exit": 4},
+        {"name": "not_found/unknown_job", "finish": failed("not_found", "not_found", "unknown_job"), "exit": 4},
+        {"name": "validation/schema", "finish": failed("validation_error", "validation", "schema"), "exit": 4},
+        # A handler (not the pipeline) answering `not_found/unknown_command`, e.g. about a
+        # command named in its parameters: not an absent-major answer.
+        {"name": "handler/not_found/unknown_command",
+         "finish": failed("not_found", "not_found", "unknown_command", origin="handler"), "exit": 4},
+    ]
+    return canon({"absent": absent, "command_id": SHOW, "outcomes": outcomes, "passthrough": passthrough}) + b"\n"
+
+
 def outputs():
     files = {
         MAN / "min-classes.json": min_classes(),
@@ -469,7 +588,12 @@ def outputs():
         MAN / "long-name.json": long_name(),
         MAN / "keywords.json": keywords(),
         MAN / "roots-config.json": roots_config(),
+        MAN / "cli-dispatch.json": cli_dispatch(),
+        MAN / "cli-dispatch-collision.json": cli_dispatch_collision(),
+        CLI_DISPATCH / "outcomes.json": cli_outcomes(),
     }
+    reference_project(files[MAN / "cli-dispatch.json"])  # must project cleanly
+    reference_project(files[MAN / "cli-dispatch-collision.json"])
     reference_project(files[MAN / "roots-config.json"])  # must project cleanly
     files[PROJ / "roots-config.visible.json"] = roots_visibility(files[MAN / "roots-config.json"])
     files[PROJ / "min-classes.golden.json"] = reference_project(files[MAN / "min-classes.json"])
