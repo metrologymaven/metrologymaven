@@ -13,7 +13,8 @@
 //! - [`drf`] (`GDT.DRF.BUILD`): DRF construction from simulated datums and DoF bookkeeping,
 //!   and the datum target coverage check (`GDT.DRF.COMMON.COVER`).
 //! - [`dim`] (`GDT.DIM.RADIAL`): diameter and radius of a feature fitted by `fid-fit`'s
-//!   least-squares circle, cylinder or sphere, checked against the chain's association.
+//!   least-squares circle, cylinder or sphere, checked against the chain's association;
+//!   and (`GDT.DIM.SIZEISO.RANK`) the rank-order statistics over ISO local sizes.
 //! - [`prof`] (`GDT.PROF.DEV`): per-point signed deviations from the nominal CAD faces
 //!   (GEO.DIST.FACE.BODY closest points, GEO.DIST.FACE.INCID signs) with each face's
 //!   nominal approximation error, boundary and no-projection flags; and (`GDT.PROF.ZDEF.UNIF`)
