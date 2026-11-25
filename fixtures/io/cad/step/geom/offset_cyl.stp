@@ -1,0 +1,27 @@
+ISO-10303-21;
+HEADER;
+/* Invented geometry for spec node IO.CAD.STEP.GEOM (Metrology Maven), CC-BY-4.0. AC-3: offsets of a cylinder (exact cylinders of known radius), of a plane and of a cone at its apex. */
+FILE_DESCRIPTION(('invented geometry fixture'),'2;1');
+FILE_NAME('offset_cyl.stp','2026-11-25T00:00:00',('Fixture Author'),('Metrology Maven'),'make_cases.py','fid synthetic generator','');
+FILE_SCHEMA(('AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF { 1 0 10303 442 1 1 4 }'));
+ENDSEC;
+DATA;
+#1=CARTESIAN_POINT('o',(5.,-2.,10.));
+#2=DIRECTION('z',(0.,0.,1.));
+#3=DIRECTION('x',(1.,0.,0.));
+#4=AXIS2_PLACEMENT_3D('p',#1,#2,#3);
+#10=CYLINDRICAL_SURFACE('base',#4,20.);
+#11=OFFSET_SURFACE('outer',#10,5.,.F.);
+#12=OFFSET_SURFACE('inner',#10,-2.5,.F.);
+#13=PLANE('flat',#4);
+#14=OFFSET_SURFACE('raised',#13,1.5,.F.);
+#15=CONICAL_SURFACE('apex cone',#4,0.,0.5);
+#16=OFFSET_SURFACE('cone shell',#15,1.,.F.);
+#40=SHAPE_REPRESENTATION('shape',(#11,#12,#14,#16),#9005);
+#9001=(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.));
+#9002=(NAMED_UNIT(*)PLANE_ANGLE_UNIT()SI_UNIT($,.RADIAN.));
+#9003=(NAMED_UNIT(*)SI_UNIT($,.STERADIAN.)SOLID_ANGLE_UNIT());
+#9004=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-06),#9001,'distance_accuracy_value','synthetic');
+#9005=(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#9004))GLOBAL_UNIT_ASSIGNED_CONTEXT((#9001,#9002,#9003))REPRESENTATION_CONTEXT('ctx','3D'));
+ENDSEC;
+END-ISO-10303-21;

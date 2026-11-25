@@ -1778,7 +1778,9 @@ name = "fid-io-step"
 version = "0.0.1"
 dependencies = [
  "fid-canon",
+ "fid-geo-nurbs",
  "fid-io-reg",
+ "fid-num",
 ]
 
 [[package]]
