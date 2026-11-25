@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-gps]
+built_pr: 609
 satisfies: [REQ-GDT.PROF-005, REQ-GDT.PROF-006]
 covers: []
 depends_on: [GEO.DIST, GEO.CAD]
