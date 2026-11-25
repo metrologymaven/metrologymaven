@@ -1,0 +1,46 @@
+{
+ "schema": "fid.test.gdt.dim.size.rank.seeded/1",
+ "seed": "0x512e",
+ "count": 1000000,
+ "generator": "splitmix64; k = 2^23 + (r >> 41); size = k * 2^-33 m",
+ "sha256": "35faa8d8be6ff9e5d1284d665c2f10b7cccff1b6205793d6e00ea8e05ba6d110",
+ "middle_pair_equal": false,
+ "results": {
+  "max": {
+   "exact": "0x3f5fffffe0000000"
+  },
+  "min": {
+   "exact": "0x3f50000180000000"
+  },
+  "mean": {
+   "exact": "0x3f5800750575d9a1",
+   "pinned": "0x3f5800750575d9a1",
+   "max_ulps": 0
+  },
+  "median.mean_of_middle": {
+   "exact": "0x3f58005360000000"
+  },
+  "median.lower": {
+   "exact": "0x3f58005320000000"
+  },
+  "median.upper": {
+   "exact": "0x3f580053a0000000"
+  },
+  "mid_range": {
+   "exact": "0x3f580000b0000000"
+  },
+  "range": {
+   "exact": "0x3f4ffffcc0000000"
+  },
+  "std_dev.n": {
+   "exact": "0x3f3275c6d034b301",
+   "pinned": "0x3f3275c6d034b301",
+   "max_ulps": 2
+  },
+  "std_dev.n_minus_1": {
+   "exact": "0x3f3275c76b0f6a9e",
+   "pinned": "0x3f3275c76b0f6a9f",
+   "max_ulps": 2
+  }
+ }
+}
