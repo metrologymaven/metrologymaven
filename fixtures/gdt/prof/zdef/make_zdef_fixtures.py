@@ -28,10 +28,12 @@ checks) is SplitMix64 from seed 0x2def, per case:
         modes 2, 3: r5 -> bound = lower if r5 & 1 == 0 else upper; k = (r5 >> 1) % 7 - 3;
                     d = bound moved |k| steps up (k > 0) or down (k < 0) to the adjacent float
 (generator arithmetic in plain binary64, as in Rust). The line for case i is
-  "{i} {kind} {t} {share} {d} {lower} {upper} {width} {shift} {A} {B} {E}\\n"
+  "{i} {kind} {t} {share} {d} {lower} {upper} {width} {shift} {A} {B} {E} {X}\\n"
 with floats as 0x + 16 hex digits, A = lower <= d <= upper, B = |d - shift| <= width * 0.5
 (both 0/1) and E = 1 when all four of upper - lower, (lower + upper) / 2, d - shift and
-width / 2 are exact in binary64 (then A == B is asserted here).
+width / 2 are exact in binary64 (then A == B is asserted here); X = d lies in the exact
+interval of the given t and share (Fraction), which `contains` must return. A zero bound or
+share is +0.0.
 
 Usage: `python3 make_zdef_fixtures.py` (write) or `--check` (regenerate in memory and
 compare with the committed files byte for byte). Stdlib only.
@@ -93,8 +95,16 @@ def neg(a: float) -> float:
     return -a
 
 
+def z0(x: float) -> float:
+    """A zero bound or share is written as +0.0 (the leaf's zero normalisation)."""
+    return 0.0 if x == 0.0 else x
+
+
 def zone(kind: str, t: float, share, side):
-    """(lower, upper, width, shift) per the leaf's REQ-001..004 table."""
+    """(lower, upper, width, shift, exact_lower, exact_upper) per the leaf's REQ-001..004
+    table; the exact bounds are the rationals of the given binary64 t and share."""
+    if share is not None:
+        share = z0(share)
     if kind == "bilateral":
         h = r_half(t)
         lower, upper = neg(h), h
@@ -105,6 +115,7 @@ def zone(kind: str, t: float, share, side):
         lower, upper = (neg(rest), share) if side == "outward" else (neg(share), rest)
     else:
         raise ValueError(kind)
+    lower, upper = z0(lower), z0(upper)
     width = r_sub(upper, lower)
     shift = r_half(r_add(lower, upper))
     # Exact cross-check of the closed forms against the rational definition.
@@ -117,7 +128,7 @@ def zone(kind: str, t: float, share, side):
         sq = F(share)
         exp = (-(tq - sq), sq) if side == "outward" else (-sq, tq - sq)
     assert abs(F(lower) - exp[0]) <= F(math.ulp(t)) and abs(F(upper) - exp[1]) <= F(math.ulp(t))
-    return lower, upper, width, shift
+    return lower, upper, width, shift, exp[0], exp[1]
 
 
 # ------------------------------------------------------------------ rows.json
@@ -175,7 +186,12 @@ def mm(x: float) -> str:
 
 
 def interval_case(name, kind, t, share, side, row, variant):
-    lower, upper, width, shift = zone(kind, t, share, side)
+    lower, upper, width, shift, xlo, xhi = zone(kind, t, share, side)
+    # Membership probes at each bound and its two neighbours, against the exact interval.
+    probes = []
+    for b in (lower, upper):
+        for d in (math.nextafter(b, -math.inf), b, math.nextafter(b, math.inf)):
+            probes.append({"d": hx(d), "inside": xlo <= F(d) <= xhi})
     d = {"kind": kind, "t": hx(t)}
     if kind == "unilateral":
         d["side"] = side
@@ -184,7 +200,7 @@ def interval_case(name, kind, t, share, side, row, variant):
     rec = {
         "kind": kind,
         "lower": hx(lower),
-        "share": hx(share) if kind == "unequal" else None,
+        "share": hx(z0(share)) if kind == "unequal" else None,
         "share_side": side if kind == "unequal" else None,
         "shift": hx(shift),
         "side": side if kind == "unilateral" else None,
@@ -203,6 +219,7 @@ def interval_case(name, kind, t, share, side, row, variant):
             "shift": hx(shift),
             "mm": [mm(lower), mm(upper)],
             "record": rec,
+            "probes": probes,
         },
     }
 
@@ -242,6 +259,9 @@ def constant_doc():
     for ss, tag in ((0.0, "zero"), (t, "full")):
         cases.append(interval_case(f"edge_share_{tag}_outward", "unequal", t, ss, "outward", SURF, "share_outward"))
         cases.append(interval_case(f"edge_share_{tag}_inward", "unequal", t, ss, "inward", SURF, "share_inward"))
+    # A -0.0 share is normalised to +0.0 (record and bounds).
+    cases.append(interval_case("edge_share_negative_zero_inward", "unequal", t, -0.0, "inward", SURF, "share_inward"))
+    cases.append(interval_case("edge_share_negative_zero_outward", "unequal", t, -0.0, "outward", SURF, "share_outward"))
     # A kind the limited row does not list is still supported there.
     cases.append(interval_case("line_row_bilateral_supported", "bilateral", t, None, None, LINE, "share_outward"))
     # AC-3 and the other bad_zone_parameter paths.
@@ -326,6 +346,7 @@ def property_doc():
     disagreements = []
     exact_count = 0
     near_bound = 0
+    corrections = 0
     for i in range(COUNT):
         r1 = rng.next()
         t = float(1000 + r1 % 9999001) * 1e-9
@@ -337,7 +358,7 @@ def property_doc():
         if share > t:
             share = t
         r4 = rng.next()
-        lower, upper, width, shift = zone(kind, t, share if kind == "unequal" else None, side)
+        lower, upper, width, shift, xlo, xhi = zone(kind, t, share if kind == "unequal" else None, side)
         if r4 % 4 < 2:
             u = float(r4 >> 11) * 2.0**-53
             d = (u * 2.0 - 1.0) * t
@@ -347,6 +368,11 @@ def property_doc():
             bound = lower if r5 & 1 == 0 else upper
             d = step(bound, (r5 >> 1) % 7 - 3)
         a = F(lower) <= F(d) <= F(upper)
+        # Membership in the exact zone (what `contains` must return).
+        x = xlo <= F(d) <= xhi
+        if x != a:
+            corrections += 1
+            assert d in (lower, upper), i  # only a rounded bound itself can differ
         diff = r_sub(d, shift)
         hw = r_half(width)
         b = abs(diff) <= hw
@@ -373,8 +399,8 @@ def property_doc():
                     "dist_over_ulp_t": "%.6f" % float(dist / ulp_t),
                 }
             )
-        line = "%d %d %s %s %s %s %s %s %s %d %d %d\n" % (
-            i, kc, hx(t), hx(share), hx(d), hx(lower), hx(upper), hx(width), hx(shift), a, b, e,
+        line = "%d %d %s %s %s %s %s %s %s %d %d %d %d\n" % (
+            i, kc, hx(t), hx(share), hx(d), hx(lower), hx(upper), hx(width), hx(shift), a, b, e, x,
         )
         h.update(line.encode("ascii"))
     return {
@@ -383,6 +409,7 @@ def property_doc():
         "count": COUNT,
         "near_bound_cases": near_bound,
         "exact_cases": exact_count,
+        "exact_zone_corrections": corrections,
         "sha256": h.hexdigest(),
         "disagreements": disagreements,
     }

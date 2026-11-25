@@ -29,7 +29,33 @@
      "side": null,
      "t": "0x3f3a36e2eb1c432d",
      "upper": "0x3f2a36e2eb1c432d"
-    }
+    },
+    "probes": [
+     {
+      "d": "0xbf2a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf2a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf2a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432e",
+      "inside": false
+     }
+    ]
    }
   },
   {
@@ -59,7 +85,33 @@
      "side": "outward",
      "t": "0x3f3a36e2eb1c432d",
      "upper": "0x3f3a36e2eb1c432d"
-    }
+    },
+    "probes": [
+     {
+      "d": "0x8000000000000001",
+      "inside": false
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432e",
+      "inside": false
+     }
+    ]
    }
   },
   {
@@ -89,7 +141,33 @@
      "side": "inward",
      "t": "0x3f3a36e2eb1c432d",
      "upper": "0x0000000000000000"
-    }
+    },
+    "probes": [
+     {
+      "d": "0xbf3a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x8000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": false
+     }
+    ]
    }
   },
   {
@@ -119,7 +197,33 @@
      "side": null,
      "t": "0x3f3a36e2eb1c432d",
      "upper": "0x3f1a36e2eb1c432d"
-    }
+    },
+    "probes": [
+     {
+      "d": "0xbf33a92a30553263",
+      "inside": false
+     },
+     {
+      "d": "0xbf33a92a30553262",
+      "inside": false
+     },
+     {
+      "d": "0xbf33a92a30553261",
+      "inside": true
+     },
+     {
+      "d": "0x3f1a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f1a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f1a36e2eb1c432e",
+      "inside": false
+     }
+    ]
    }
   },
   {
@@ -149,7 +253,33 @@
      "side": null,
      "t": "0x3f3a36e2eb1c432d",
      "upper": "0x3f33a92a30553262"
-    }
+    },
+    "probes": [
+     {
+      "d": "0xbf1a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf1a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf1a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f33a92a30553261",
+      "inside": true
+     },
+     {
+      "d": "0x3f33a92a30553262",
+      "inside": false
+     },
+     {
+      "d": "0x3f33a92a30553263",
+      "inside": false
+     }
+    ]
    }
   },
   {
@@ -178,7 +308,33 @@
      "side": null,
      "t": "0x3f3a400000000000",
      "upper": "0x3f2a400000000000"
-    }
+    },
+    "probes": [
+     {
+      "d": "0xbf2a400000000001",
+      "inside": false
+     },
+     {
+      "d": "0xbf2a400000000000",
+      "inside": true
+     },
+     {
+      "d": "0xbf2a3fffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a3fffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a400000000000",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a400000000001",
+      "inside": false
+     }
+    ]
    }
   },
   {
@@ -208,7 +364,33 @@
      "side": "outward",
      "t": "0x3f3a400000000000",
      "upper": "0x3f3a400000000000"
-    }
+    },
+    "probes": [
+     {
+      "d": "0x8000000000000001",
+      "inside": false
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a3fffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a400000000000",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a400000000001",
+      "inside": false
+     }
+    ]
    }
   },
   {
@@ -238,7 +420,33 @@
      "side": "inward",
      "t": "0x3f3a400000000000",
      "upper": "0x0000000000000000"
-    }
+    },
+    "probes": [
+     {
+      "d": "0xbf3a400000000001",
+      "inside": false
+     },
+     {
+      "d": "0xbf3a400000000000",
+      "inside": true
+     },
+     {
+      "d": "0xbf3a3fffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x8000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": false
+     }
+    ]
    }
   },
   {
@@ -268,7 +476,33 @@
      "side": null,
      "t": "0x3f3a400000000000",
      "upper": "0x3f1a000000000000"
-    }
+    },
+    "probes": [
+     {
+      "d": "0xbf33c00000000001",
+      "inside": false
+     },
+     {
+      "d": "0xbf33c00000000000",
+      "inside": true
+     },
+     {
+      "d": "0xbf33bfffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x3f19ffffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x3f1a000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x3f1a000000000001",
+      "inside": false
+     }
+    ]
    }
   },
   {
@@ -298,7 +532,33 @@
      "side": null,
      "t": "0x3f3a400000000000",
      "upper": "0x3f33c00000000000"
-    }
+    },
+    "probes": [
+     {
+      "d": "0xbf1a000000000001",
+      "inside": false
+     },
+     {
+      "d": "0xbf1a000000000000",
+      "inside": true
+     },
+     {
+      "d": "0xbf19ffffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x3f33bfffffffffff",
+      "inside": true
+     },
+     {
+      "d": "0x3f33c00000000000",
+      "inside": true
+     },
+     {
+      "d": "0x3f33c00000000001",
+      "inside": false
+     }
+    ]
    }
   },
   {
@@ -328,7 +588,33 @@
      "side": null,
      "t": "0x3f3a36e2eb1c432d",
      "upper": "0x0000000000000000"
-    }
+    },
+    "probes": [
+     {
+      "d": "0xbf3a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x8000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": false
+     }
+    ]
    }
   },
   {
@@ -341,24 +627,50 @@
    "row": "dmt:asme/profile_of_a_surface/none@1",
    "variant": "share_inward",
    "expect": {
-    "lower": "0x8000000000000000",
+    "lower": "0x0000000000000000",
     "upper": "0x3f3a36e2eb1c432d",
     "width": "0x3f3a36e2eb1c432d",
     "shift": "0x3f2a36e2eb1c432d",
     "mm": [
-     "-0.000000",
+     "0.000000",
      "0.400000"
     ],
     "record": {
      "kind": "unequal",
-     "lower": "0x8000000000000000",
+     "lower": "0x0000000000000000",
      "share": "0x0000000000000000",
      "share_side": "inward",
      "shift": "0x3f2a36e2eb1c432d",
      "side": null,
      "t": "0x3f3a36e2eb1c432d",
      "upper": "0x3f3a36e2eb1c432d"
-    }
+    },
+    "probes": [
+     {
+      "d": "0x8000000000000001",
+      "inside": false
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432e",
+      "inside": false
+     }
+    ]
    }
   },
   {
@@ -371,24 +683,50 @@
    "row": "dmt:asme/profile_of_a_surface/none@1",
    "variant": "share_outward",
    "expect": {
-    "lower": "0x8000000000000000",
+    "lower": "0x0000000000000000",
     "upper": "0x3f3a36e2eb1c432d",
     "width": "0x3f3a36e2eb1c432d",
     "shift": "0x3f2a36e2eb1c432d",
     "mm": [
-     "-0.000000",
+     "0.000000",
      "0.400000"
     ],
     "record": {
      "kind": "unequal",
-     "lower": "0x8000000000000000",
+     "lower": "0x0000000000000000",
      "share": "0x3f3a36e2eb1c432d",
      "share_side": "outward",
      "shift": "0x3f2a36e2eb1c432d",
      "side": null,
      "t": "0x3f3a36e2eb1c432d",
      "upper": "0x3f3a36e2eb1c432d"
-    }
+    },
+    "probes": [
+     {
+      "d": "0x8000000000000001",
+      "inside": false
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432e",
+      "inside": false
+     }
+    ]
    }
   },
   {
@@ -418,7 +756,145 @@
      "side": null,
      "t": "0x3f3a36e2eb1c432d",
      "upper": "0x0000000000000000"
-    }
+    },
+    "probes": [
+     {
+      "d": "0xbf3a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x8000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "edge_share_negative_zero_inward",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x8000000000000000"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_inward",
+   "expect": {
+    "lower": "0x0000000000000000",
+    "upper": "0x3f3a36e2eb1c432d",
+    "width": "0x3f3a36e2eb1c432d",
+    "shift": "0x3f2a36e2eb1c432d",
+    "mm": [
+     "0.000000",
+     "0.400000"
+    ],
+    "record": {
+     "kind": "unequal",
+     "lower": "0x0000000000000000",
+     "share": "0x0000000000000000",
+     "share_side": "inward",
+     "shift": "0x3f2a36e2eb1c432d",
+     "side": null,
+     "t": "0x3f3a36e2eb1c432d",
+     "upper": "0x3f3a36e2eb1c432d"
+    },
+    "probes": [
+     {
+      "d": "0x8000000000000001",
+      "inside": false
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f3a36e2eb1c432e",
+      "inside": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "edge_share_negative_zero_outward",
+   "def": {
+    "kind": "unequal",
+    "t": "0x3f3a36e2eb1c432d",
+    "share": "0x8000000000000000"
+   },
+   "row": "dmt:asme/profile_of_a_surface/none@1",
+   "variant": "share_outward",
+   "expect": {
+    "lower": "0xbf3a36e2eb1c432d",
+    "upper": "0x0000000000000000",
+    "width": "0x3f3a36e2eb1c432d",
+    "shift": "0xbf2a36e2eb1c432d",
+    "mm": [
+     "-0.400000",
+     "0.000000"
+    ],
+    "record": {
+     "kind": "unequal",
+     "lower": "0xbf3a36e2eb1c432d",
+     "share": "0x0000000000000000",
+     "share_side": "outward",
+     "shift": "0xbf2a36e2eb1c432d",
+     "side": null,
+     "t": "0x3f3a36e2eb1c432d",
+     "upper": "0x0000000000000000"
+    },
+    "probes": [
+     {
+      "d": "0xbf3a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf3a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf3a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x8000000000000001",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000000",
+      "inside": true
+     },
+     {
+      "d": "0x0000000000000001",
+      "inside": false
+     }
+    ]
    }
   },
   {
@@ -447,7 +923,33 @@
      "side": null,
      "t": "0x3f3a36e2eb1c432d",
      "upper": "0x3f2a36e2eb1c432d"
-    }
+    },
+    "probes": [
+     {
+      "d": "0xbf2a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf2a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf2a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432e",
+      "inside": false
+     }
+    ]
    }
   },
   {
@@ -712,7 +1214,33 @@
      "side": null,
      "t": "0x3f3a36e2eb1c432d",
      "upper": "0x3f2a36e2eb1c432d"
-    }
+    },
+    "probes": [
+     {
+      "d": "0xbf2a36e2eb1c432e",
+      "inside": false
+     },
+     {
+      "d": "0xbf2a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0xbf2a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432c",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432d",
+      "inside": true
+     },
+     {
+      "d": "0x3f2a36e2eb1c432e",
+      "inside": false
+     }
+    ]
    }
   },
   {

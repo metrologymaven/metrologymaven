@@ -122,6 +122,7 @@ fn constant_cases_match_the_oracle() {
             match err {
                 ZdefError::BadZoneParameter { name: p } => assert_eq!(p.name(), st(&e["name"]), "{name}"),
                 ZdefError::Unsupported { kind } => assert_eq!(kind.code(), st(&e["kind"]), "{name}"),
+                ZdefError::UnknownZoneLimitation { .. } => panic!("{name}: unexpected {err}"),
             }
             // No interval on any error path.
             assert!(zone_intervals(&def, ch, r.limitations()).is_err(), "{name}");
@@ -140,6 +141,14 @@ fn constant_cases_match_the_oracle() {
         let have = fid_canon::to_canonical_bytes(&a.record.to_cvalue()).unwrap();
         assert_eq!(String::from_utf8(have).unwrap(), String::from_utf8(want).unwrap(), "{name} record");
         assert_eq!(zone_intervals(&def, ch, r.limitations()).unwrap(), a.intervals, "{name}");
+        // Membership at each bound and its neighbours, against the oracle's exact interval.
+        let probes = arr(&exp["probes"]);
+        assert_eq!(probes.len(), 6, "{name}");
+        for pr in probes {
+            let pr = obj(pr);
+            let want = matches!(pr["inside"], CValue::Bool(true));
+            assert_eq!(z.contains(f(&pr["d"])), Some(want), "{name} probe {}", st(&pr["d"]));
+        }
     }
 }
 
@@ -187,14 +196,22 @@ fn ac3_ac4_error_paths() {
     let lim = vec!["zone_def_unsupported:bilateral".to_owned()];
     let e = zone_intervals(&ZoneDefinition::Bilateral { t: 0.4e-3 }, chain(surf, "share_outward"), &lim);
     assert_eq!(e, Err(ZdefError::Unsupported { kind: ZoneDefKind::Bilateral }));
-    // A look-alike code does not match.
-    let lim = vec!["zone_def_unsupported:unilateralx".to_owned(), "zone_def_unsupported".to_owned()];
-    let ok = zone_intervals(
-        &ZoneDefinition::Unilateral { t: 0.4e-3, side: Side::Inward },
-        chain(surf, "share_outward"),
-        &lim,
-    );
-    assert!(ok.is_ok());
+    // An unknown or misspelt kind, or no kind, is refused (fail closed), for every
+    // definition kind; other limitation codes are ignored.
+    let uni = ZoneDefinition::Unilateral { t: 0.4e-3, side: Side::Inward };
+    let ch = chain(surf, "share_outward");
+    for (lim, index) in [
+        (vec!["zone_def_unsupported:unilateralx"], 0),
+        (vec!["pattern_size_limited", "zone_def_unsupported"], 1),
+        (vec!["zone_def_unsupported:bilateral", "zone_def_unsupported:unequl"], 1),
+    ] {
+        let lim: Vec<String> = lim.into_iter().map(str::to_owned).collect();
+        let e = zone_intervals(&uni, ch, &lim);
+        assert_eq!(e, Err(ZdefError::UnknownZoneLimitation { index }), "{lim:?}");
+        assert_eq!(e.unwrap_err().code(), "unknown_zone_limitation");
+    }
+    let lim = vec!["pattern_size_limited".to_owned(), "zone_def_unsupported:unequal".to_owned()];
+    assert!(zone_intervals(&uni, ch, &lim).is_ok());
 }
 
 /// AC-5: non-uniform is UNSUPPORTED in this build, with no interval.
@@ -291,6 +308,7 @@ fn ac2_seeded_property() {
     let mut rng = SplitMix(0x2def);
     let mut lines = String::new();
     let mut disagree: Vec<(u64, u64)> = Vec::new();
+    let mut corrections = 0u64;
     for i in 0..count {
         let tt = (1000 + rng.next() % 9_999_001) as f64 * 1e-9;
         let kc = rng.next() % 5;
@@ -317,7 +335,12 @@ fn ac2_seeded_property() {
             let bound = if r5 & 1 == 0 { lo } else { hi };
             step(bound, (r5 >> 1) as i64 % 7 - 3)
         };
-        let in_a = z.contains(d).unwrap();
+        // A: the rounded interval; X: `contains`, the exact zone (checked by the digest).
+        let in_a = lo <= d && d <= hi;
+        let in_x = z.contains(d).unwrap();
+        if in_x != in_a {
+            corrections += 1;
+        }
         let diff = d - z.shift_m;
         let hw = z.width_m * 0.5;
         let in_b = diff.abs() <= hw;
@@ -336,7 +359,7 @@ fn ac2_seeded_property() {
             disagree.push((i, d.to_bits()));
         }
         lines.push_str(&format!(
-            "{i} {kc} {} {} {} {} {} {} {} {} {} {}\n",
+            "{i} {kc} {} {} {} {} {} {} {} {} {} {} {}\n",
             hx(tt),
             hx(share),
             hx(d),
@@ -346,7 +369,8 @@ fn ac2_seeded_property() {
             hx(z.shift_m),
             u8::from(in_a),
             u8::from(in_b),
-            u8::from(exact)
+            u8::from(exact),
+            u8::from(in_x)
         ));
     }
     let digest = digest_bytes(lines.as_bytes());
@@ -364,6 +388,9 @@ fn ac2_seeded_property() {
         .collect();
     assert_eq!(disagree, listed);
     assert!(!listed.is_empty());
+    // A versus the exact zone: the rounded interval differs only at a rounded bound.
+    assert_eq!(corrections, int(&doc["exact_zone_corrections"]));
+    assert!(corrections > 0);
 }
 
 /// `a - b == r` exactly (Knuth two-sum error term is zero).

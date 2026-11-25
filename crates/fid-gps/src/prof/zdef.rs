@@ -15,9 +15,22 @@
 //! | `Unequal{t, share}`, side outward  | `-(t - share)` | `share`        |
 //! | `Unequal{t, share}`, side inward   | `-share`       | `t - share`    |
 //!
-//! then `width = upper - lower` and `shift = (lower + upper) * 0.5`, and nothing else (REQ-004,
-//! Design). Each line is at most one rounded IEEE-754 operation plus exact negations and
-//! halvings, so the results are bit-identical on every platform (D0).
+//! then `width = upper - lower` and `shift = (lower + upper) * 0.5` (REQ-004, Design). Each
+//! line is at most one rounded IEEE-754 operation plus exact negations and halvings, so the
+//! results are bit-identical on every platform (D0). A zero bound and a zero share are
+//! written as `+0.0` (a `-0.0` share is normalised), so the record bits do not depend on the
+//! path that produced a zero.
+//!
+//! # Membership
+//!
+//! Only `t - share` can round. Its rounding error is kept (Knuth two-sum, exact) with the
+//! zone, and [`ConstantZone::contains`] answers against the *exact* interval of the given
+//! `t` and `share`: a deviation that equals a rounded bound is inside only when the exact
+//! bound is not stricter. (A binary64 `d` other than the rounded bound is on the same side
+//! of the exact bound as of the rounded one, because rounding to nearest leaves no float
+//! between them.) The verdict is never wrong against the exact zone. It is the geometric
+//! membership only, not a conformance decision: that is UNC.DEC's, from the zone size and
+//! the stated tolerance with the uncertainty.
 //!
 //! # Sign convention
 //!
@@ -43,9 +56,11 @@
 //! A definition kind is `UNSUPPORTED` (no interval) when the resolved row carries the
 //! limitation `zone_def_unsupported:<kind>` ([`ZoneDefKind::code`]; `nonuniform` is also
 //! read as `non_uniform`, the spelling the synthetic table uses), and a `NonUniform`
-//! definition is always `UNSUPPORTED` in this build (owned by `GDT.PROF.ZDEF.NONUNIF`). The
-//! dispatch runs before parameter validation: an unsupported kind is refused whatever its
-//! parameters.
+//! definition is always `UNSUPPORTED` in this build (owned by `GDT.PROF.ZDEF.NONUNIF`). A
+//! `zone_def_unsupported` limitation without an argument or with an argument that names no
+//! kind is refused as `unknown_zone_limitation` (fail closed: a misspelt kind must not
+//! silently enable the kind it meant). The dispatch runs before parameter validation: an
+//! unsupported kind is refused whatever its parameters.
 //!
 //! Pure KNP-1 style: no I/O, no `unsafe`, no panics, no FMA, no `f64::min`/`f64::max`, NaN
 //! is an error.
@@ -163,9 +178,15 @@ impl ZoneDefKind {
         }
     }
 
-    /// Whether a limitation argument names this kind (`nonuniform` also names `non_uniform`).
-    fn named_by(self, arg: &str) -> bool {
-        arg == self.code() || (self == ZoneDefKind::NonUniform && arg == "nonuniform")
+    /// The kind a limitation argument names (`nonuniform` also names `non_uniform`).
+    fn from_limitation_arg(arg: &str) -> Option<ZoneDefKind> {
+        match arg {
+            "bilateral" => Some(ZoneDefKind::Bilateral),
+            "unilateral" => Some(ZoneDefKind::Unilateral),
+            "unequal" => Some(ZoneDefKind::Unequal),
+            "non_uniform" | "nonuniform" => Some(ZoneDefKind::NonUniform),
+            _ => None,
+        }
     }
 }
 
@@ -179,25 +200,38 @@ pub struct Interval {
 }
 
 /// A constant-width zone: its interval, width `upper - lower` and disposition shift
-/// `(lower + upper) * 0.5` (REQ-004).
+/// `(lower + upper) * 0.5` (REQ-004), and the exact rounding error of each bound.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ConstantZone {
-    /// The allowed interval.
+    /// The allowed interval (each bound rounded to nearest).
     pub interval: Interval,
-    /// `upper - lower`, metres.
+    /// `upper - lower`, metres. Informational: the conformance comparison is UNC's, of the
+    /// zone size against the stated tolerance.
     pub width_m: f64,
     /// `(lower + upper) * 0.5`, metres, signed like the deviations.
     pub shift_m: f64,
+    /// Exact lower bound minus `interval.lower_m` (0 unless `t - share` rounded).
+    pub lower_err_m: f64,
+    /// Exact upper bound minus `interval.upper_m` (0 unless `t - share` rounded).
+    pub upper_err_m: f64,
 }
 
 impl ConstantZone {
-    /// Whether the deviation `d` lies in the interval, `lower <= d <= upper` (no
-    /// arithmetic); `None` for NaN.
+    /// Whether the deviation `d` lies in the exact interval of the stated `t` and `share`
+    /// (module docs, Membership); `None` for NaN. Never wrong against the exact zone.
+    ///
+    /// This is geometric membership only, **not a conformance decision**: accepting or
+    /// rejecting the characteristic is owned by UNC.DEC (zone size against the stated
+    /// tolerance, with the measurement uncertainty).
     pub fn contains(&self, d: f64) -> Option<bool> {
         if d.is_nan() {
             return None;
         }
-        Some(self.interval.lower_m <= d && d <= self.interval.upper_m)
+        let (lo, hi) = (self.interval.lower_m, self.interval.upper_m);
+        // At a rounded bound, the exact bound decides: inside when it is not stricter.
+        let above_lower = d > lo || (d == lo && self.lower_err_m <= 0.0);
+        let below_upper = d < hi || (d == hi && self.upper_err_m >= 0.0);
+        Some(above_lower && below_upper)
     }
 
     /// Membership of one `GDT.PROF.DEV` deviation; `None` when it has no projection or no
@@ -207,8 +241,9 @@ impl ConstantZone {
         self.contains(d)
     }
 
-    /// The `GDT.ZONE.ZTYPE` offset shape of this zone; its size to compare against is
-    /// [`ConstantZone::width_m`].
+    /// The `GDT.ZONE.ZTYPE` offset shape of this zone, centred at the disposition shift. Its
+    /// usage size is compared against the stated tolerance by UNC (UNC.DEC), not here;
+    /// [`ConstantZone::width_m`] is informational.
     pub fn offset_shape(&self) -> ZoneShape {
         ZoneShape::Offset { disposition_shift: self.shift_m }
     }
@@ -311,6 +346,12 @@ pub enum ZdefError {
         /// The definition kind.
         kind: ZoneDefKind,
     },
+    /// `unknown_zone_limitation{index}`: limitation `index` is `zone_def_unsupported` without
+    /// an argument, or with an argument that names no zone definition kind.
+    UnknownZoneLimitation {
+        /// Position of the limitation in the list given.
+        index: usize,
+    },
 }
 
 impl ZdefError {
@@ -319,6 +360,7 @@ impl ZdefError {
         match self {
             ZdefError::BadZoneParameter { .. } => "bad_zone_parameter",
             ZdefError::Unsupported { .. } => "UNSUPPORTED",
+            ZdefError::UnknownZoneLimitation { .. } => "unknown_zone_limitation",
         }
     }
 }
@@ -328,6 +370,7 @@ impl fmt::Display for ZdefError {
         match self {
             ZdefError::BadZoneParameter { name } => write!(f, "bad_zone_parameter{{{}}}", name.name()),
             ZdefError::Unsupported { kind } => write!(f, "UNSUPPORTED{{{}}}", kind.code()),
+            ZdefError::UnknownZoneLimitation { index } => write!(f, "unknown_zone_limitation{{{index}}}"),
         }
     }
 }
@@ -347,39 +390,58 @@ pub fn zone_intervals(
 /// [`zone_intervals`] together with the ResultRecord fragment.
 pub fn apply(def: &ZoneDefinition, chain: &OperatorChain, limitations: &[String]) -> Result<AppliedZone, ZdefError> {
     let kind = def.kind();
-    let listed =
-        limitations.iter().filter_map(|l| l.strip_prefix(UNSUPPORTED_LIMITATION_PREFIX)).any(|arg| kind.named_by(arg));
+    let mut listed = false;
+    for (index, l) in limitations.iter().enumerate() {
+        let arg = match l.strip_prefix(UNSUPPORTED_LIMITATION_PREFIX) {
+            Some(arg) => arg,
+            None if l.as_str() == UNSUPPORTED_LIMITATION_PREFIX.trim_end_matches(':') => "",
+            None => continue,
+        };
+        match ZoneDefKind::from_limitation_arg(arg) {
+            Some(k) => listed |= k == kind,
+            None => return Err(ZdefError::UnknownZoneLimitation { index }),
+        }
+    }
     if listed {
         return Err(ZdefError::Unsupported { kind });
     }
-    let (t, share, share_side, side, lower, upper) = match def {
+    // (t, share, share_side, side, lower, upper, lower_err, upper_err)
+    let (t, share, share_side, side, lower, upper, lower_err, upper_err) = match def {
         ZoneDefinition::NonUniform(_) => return Err(ZdefError::Unsupported { kind }),
         ZoneDefinition::Bilateral { t } => {
             let t = check_t(*t)?;
             let h = t * 0.5;
-            (t, None, None, None, -h, h)
+            (t, None, None, None, -h, h, 0.0, 0.0)
         }
         ZoneDefinition::Unilateral { t, side } => {
             let t = check_t(*t)?;
             match side {
-                Side::Outward => (t, None, None, Some(*side), 0.0, t),
-                Side::Inward => (t, None, None, Some(*side), -t, 0.0),
+                Side::Outward => (t, None, None, Some(*side), 0.0, t, 0.0, 0.0),
+                Side::Inward => (t, None, None, Some(*side), -t, 0.0, 0.0, 0.0),
             }
         }
         ZoneDefinition::Unequal { t, share } => {
             let t = check_t(*t)?;
             let share = check_share(*share, t)?;
             let s = chain_share_side(chain)?;
-            let rest = t - share;
+            let (rest, err) = two_diff(t, share);
             match s {
-                Side::Outward => (t, Some(share), Some(s), None, -rest, share),
-                Side::Inward => (t, Some(share), Some(s), None, -share, rest),
+                Side::Outward => (t, Some(share), Some(s), None, -rest, share, -err, 0.0),
+                Side::Inward => (t, Some(share), Some(s), None, -share, rest, 0.0, err),
             }
         }
     };
+    // `x + 0.0` is exact and turns only `-0.0` into `+0.0`.
+    let (lower, upper) = (lower + 0.0, upper + 0.0);
     let width_m = upper - lower;
     let shift_m = (lower + upper) * 0.5;
-    let zone = ConstantZone { interval: Interval { lower_m: lower, upper_m: upper }, width_m, shift_m };
+    let zone = ConstantZone {
+        interval: Interval { lower_m: lower, upper_m: upper },
+        width_m,
+        shift_m,
+        lower_err_m: lower_err,
+        upper_err_m: upper_err,
+    };
     let record = ZoneDefRecord { kind, t, share, share_side, side, lower, upper, shift: shift_m };
     Ok(AppliedZone { intervals: ZoneIntervals::Constant(zone), record })
 }
@@ -393,10 +455,21 @@ fn check_t(t: f64) -> Result<f64, ZdefError> {
     }
 }
 
-/// `share` must lie in `[0, t]` (NaN fails both comparisons).
+/// `a - b` rounded to nearest and its exact error `(a - b) - rounded` (Knuth two-sum, no
+/// FMA; exact for finite inputs whose difference does not overflow).
+fn two_diff(a: f64, b: f64) -> (f64, f64) {
+    let nb = -b;
+    let r = a + nb;
+    let bv = r - a;
+    let av = r - bv;
+    let err = (a - av) + (nb - bv);
+    (r, err)
+}
+
+/// `share` must lie in `[0, t]` (NaN fails both comparisons); `-0.0` becomes `+0.0`.
 fn check_share(share: f64, t: f64) -> Result<f64, ZdefError> {
     if (0.0..=t).contains(&share) {
-        Ok(share)
+        Ok(share + 0.0)
     } else {
         Err(ZdefError::BadZoneParameter { name: ZoneParam::Share })
     }

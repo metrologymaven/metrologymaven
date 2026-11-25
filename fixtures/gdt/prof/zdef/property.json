@@ -4,7 +4,8 @@
  "count": 10000,
  "near_bound_cases": 4970,
  "exact_cases": 6458,
- "sha256": "cb761eb03784c0eb4476384aee8ae76c9878de110fc488ee4459a73da03324e4",
+ "exact_zone_corrections": 23,
+ "sha256": "a8df72ec50474db04c5613612bad55b913798d6a5000e4e2ebb80fb04b01ce4b",
  "disagreements": [
   {
    "index": 57,
@@ -1113,7 +1114,7 @@
   {
    "index": 2494,
    "d": "0x8000000000000003",
-   "lower": "0x8000000000000000",
+   "lower": "0x0000000000000000",
    "upper": "0x3f81071d6f6b6192",
    "in_interval": false,
    "dist_over_ulp_t": "0.000000"
@@ -1945,7 +1946,7 @@
   {
    "index": 4045,
    "d": "0x8000000000000001",
-   "lower": "0x8000000000000000",
+   "lower": "0x0000000000000000",
    "upper": "0x3f6f6d64f71462d3",
    "in_interval": false,
    "dist_over_ulp_t": "0.000000"
