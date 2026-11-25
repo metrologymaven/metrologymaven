@@ -3,7 +3,8 @@
 
 Writes the miniature catalogues the `fid-app-manifest` tests read from fixtures/manifest/:
 
-- registry-manifest.json: a CORE.REG.MAN manifest {format: 1, quantity_catalogue_digest, commands},
+- registry-manifest.json (and registry-majors.json / registry-unsorted.json, two majors of
+  one command in manifest order and reversed): a CORE.REG.MAN manifest {format: 1, quantity_catalogue_digest, commands},
   each command a CORE.REG.DEF.FIELD definition plus definition_digest = SHA-256 of the RFC 8785
   form of the definition without that field, sorted by (id, major), canonical bytes;
 - settings.json: a CORE.STO.SET `fid-settings-manifest/1` document (one admin setting, i.e. a
@@ -90,6 +91,13 @@ def registry_manifest():
     return canon({"format": 1, "quantity_catalogue_digest": QCD, "commands": defs})
 
 
+def registry_majors(order):
+    """Two majors of one command, in manifest order (major 2 before 10) or reversed. The
+    manifest order is numeric on the major; the wire strings would sort `@10` first."""
+    defs = [definition("report.show_report", m, "R0") for m in order]
+    return canon({"format": 1, "quantity_catalogue_digest": QCD, "commands": defs})
+
+
 def settings_manifest():
     settings = [
         {
@@ -149,6 +157,8 @@ def templates():
 def outputs():
     return {
         MAN / "registry-manifest.json": registry_manifest(),
+        MAN / "registry-majors.json": registry_majors([2, 10]),
+        MAN / "registry-unsorted.json": registry_majors([10, 2]),
         MAN / "settings.json": settings_manifest(),
         MAN / "panels.json": panels(),
         MAN / "layouts.json": layouts(),

@@ -69,8 +69,11 @@ impl RegistryView {
     /// from `registry.show_manifest@1`). Refused: over `fid_registry::MAX_MANIFEST_BYTES`, not
     /// JSON or a duplicate key, other top-level fields than `commands`, `format` (1) and
     /// `quantity_catalogue_digest`, more than `MAX_COMMANDS` commands, a `definition_digest`
-    /// that is missing or does not match the definition, a definition `CommandDef` rejects,
-    /// and a repeated (ID, major).
+    /// that is missing or does not match the definition, a `quantity_catalogue_digest` that is
+    /// not a `sha256:` digest, a definition `CommandDef` rejects, a repeated (ID, major) and
+    /// commands not strictly sorted by (ID bytes, numeric major), as `check_manifest` requires.
+    /// CORE.REG.VAL's rules and the canonical-form check are left to CORE.REG.MAN, which wrote
+    /// the manifest; the quantity catalogue it names is not compared with one in force.
     pub fn from_manifest_bytes(bytes: &[u8]) -> Result<RegistryView, &'static str> {
         if bytes.len() > fid_registry::MAX_MANIFEST_BYTES {
             return Err("too_large");
@@ -83,11 +86,18 @@ impl RegistryView {
         if top.get("format") != Some(&CValue::Num(f64::from(fid_registry::MANIFEST_FORMAT))) {
             return Err("format");
         }
+        match top.get("quantity_catalogue_digest") {
+            Some(CValue::Str(d)) if Digest::is_valid(d) => {}
+            _ => return Err("quantity_catalogue_digest"),
+        }
         let Some(CValue::Arr(items)) = top.get("commands") else { return Err("shape") };
         if items.len() > MAX_COMMANDS {
             return Err("too_many");
         }
         let mut commands = BTreeMap::new();
+        // (ID, major) of the previous command: `CommandId`'s own order is that of the wire
+        // string (`a@10` < `a@2`), not the manifest order.
+        let mut last: Option<(String, u32)> = None;
         for item in items {
             let CValue::Obj(def) = item else { return Err("shape") };
             let mut body = def.clone();
@@ -101,6 +111,13 @@ impl RegistryView {
                 return Err("digest");
             }
             let def = CommandDef::from_value(body).map_err(|_| "definition")?;
+            let key = (def.id.clone(), def.major);
+            match &last {
+                Some(prev) if *prev == key => return Err("duplicate"),
+                Some(prev) if *prev > key => return Err("order"),
+                _ => {}
+            }
+            last = Some(key);
             let name = CommandName::parse(&def.id).map_err(|_| "definition")?;
             let id = CommandId::new(&name, def.major).map_err(|_| "definition")?;
             if commands.insert(id, def.side_effect).is_some() {

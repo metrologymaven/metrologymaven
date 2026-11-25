@@ -415,6 +415,38 @@ fn registry_manifest_with_a_wrong_digest_is_refused() {
 }
 
 #[test]
+fn registry_manifest_quantity_catalogue_digest_must_be_a_digest() {
+    let text = std::fs::read_to_string(fixture("registry-manifest.json")).unwrap();
+    let qcd = format!("\"quantity_catalogue_digest\":\"sha256:{}\"", "ab".repeat(32));
+    assert!(text.contains(&qcd));
+    let upper = format!("\"sha256:{}\"", "AB".repeat(32));
+    for bad in ["7", "\"sha256:AB\"", "null", upper.as_str()] {
+        let t = text.replacen(&qcd, &format!("\"quantity_catalogue_digest\":{bad}"), 1);
+        assert_eq!(RegistryView::from_manifest_bytes(t.as_bytes()), Err("quantity_catalogue_digest"), "{bad}");
+    }
+}
+
+#[test]
+fn registry_manifest_commands_must_be_sorted_by_id_then_numeric_major() {
+    // Written by make_app_fixtures.py: report.show_report@2 then @10 (manifest order), and reversed.
+    let ok = RegistryView::from_manifest_bytes(&std::fs::read(fixture("registry-majors.json")).unwrap()).unwrap();
+    let ids: Vec<&str> = ok.commands().keys().map(|c| c.as_str()).collect();
+    assert_eq!(ids, ["report.show_report@10", "report.show_report@2"]);
+    let bad = std::fs::read(fixture("registry-unsorted.json")).unwrap();
+    assert_eq!(RegistryView::from_manifest_bytes(&bad), Err("order"));
+    // The main fixture with two commands swapped (each digest still matches its definition).
+    let text = std::fs::read_to_string(fixture("registry-manifest.json")).unwrap();
+    let a = text.find("{\"algorithms\"").unwrap();
+    let b = a + 1 + text[a + 1..].find(",{\"algorithms\"").unwrap();
+    let c = b + 1 + text[b + 1..].find(",{\"algorithms\"").unwrap();
+    let swapped = format!("{}{},{}{}", &text[..a], &text[b + 1..c], &text[a..b], &text[c..]);
+    assert_eq!(RegistryView::from_manifest_bytes(swapped.as_bytes()), Err("order"));
+    // A repeated (ID, major).
+    let dup = format!("{}{},{}", &text[..a], &text[a..b], &text[a..]);
+    assert_eq!(RegistryView::from_manifest_bytes(dup.as_bytes()), Err("duplicate"));
+}
+
+#[test]
 fn every_broken_catalogue_file_is_reported_at_once() {
     let d = catalogue_copy();
     std::fs::remove_file(d.join("layouts.json")).unwrap();
