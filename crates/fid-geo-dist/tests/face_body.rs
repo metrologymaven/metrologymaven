@@ -248,6 +248,48 @@ fn load_body(rel: &str, off: V3) -> Body {
     b.build().unwrap_or_else(|e| panic!("{rel}: {e}"))
 }
 
+/// Several topology-JSON bodies as separate shells of one body: part `k` is translated by
+/// its offset and every label gets the suffix `@k`.
+fn load_multi(parts: &[(&str, V3)]) -> Body {
+    let mut b = BodyBuilder::new([0x5a; 16]);
+    for (k, &(rel, off)) in parts.iter().enumerate() {
+        let j = parse_json(&read(rel));
+        let tag = |l: Option<&str>| l.map(|x| format!("{x}@{k}"));
+        let (mut vs, mut es, mut cs, mut ls, mut fs) = (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        for v in j.get("vertices").arr() {
+            vs.push(b.add_vertex(add(v3(v.get("point")), off), tag(opt_label(v)).as_deref()));
+        }
+        for e in j.get("edges").arr() {
+            let (s0, s1) = (vs[e.get("start").num() as usize], vs[e.get("end").num() as usize]);
+            es.push(b.add_edge(tcurve(e.get("curve"), off), s0, s1, v2(e.get("range")), tag(opt_label(e)).as_deref()));
+        }
+        for c in j.get("coedges").arr() {
+            let e = es[c.get("edge").num() as usize];
+            cs.push(b.add_coedge(e, tsense(c.get("sense")), tpcurve(c.get("pcurve")), tag(opt_label(c)).as_deref()));
+        }
+        for l in j.get("loops").arr() {
+            let list = l.get("coedges").arr().iter().map(|x| cs[x.num() as usize]).collect();
+            ls.push(b.add_loop(list, l.get("outer").truthy(), tag(opt_label(l)).as_deref()));
+        }
+        for f in j.get("faces").arr() {
+            let list = f.get("loops").arr().iter().map(|x| ls[x.num() as usize]).collect();
+            fs.push(b.add_face(
+                tsurface(f.get("surface"), off),
+                tsense(f.get("sense")),
+                list,
+                tag(opt_label(f)).as_deref(),
+            ));
+        }
+        for sh in j.get("shells").arr() {
+            b.add_shell(
+                sh.get("faces").arr().iter().map(|x| fs[x.num() as usize]).collect(),
+                sh.get("closed").truthy(),
+            );
+        }
+    }
+    b.build().unwrap_or_else(|e| panic!("multi body: {e}"))
+}
+
 // ------------------------------------------------------------------ ref_v1 bodies, one shell per face
 
 /// Builds a GEO.DIST.FACE.REF body description (`fid-brep-builder/0`) with every face in its
@@ -444,8 +486,8 @@ const TRIM_GAP: (&str, &str) = ("torus_segment.json", "F1");
 
 /// AC-1: the body answer (closest point over every face, lowest face ID within 1e-15 m) of
 /// every `ref_v1` query agrees with the oracle: face, foot and distance within 1e-9 m, the
-/// feature by the fixture rule. The torus band's queries either fail closed on face F1 (the
-/// open trim gap) or, where F1 is pruned, are compared too.
+/// feature by the fixture rule. All 160 queries of the torus band fail closed on its face F1
+/// (the open trim gap); none of them is answered.
 #[test]
 fn ac1_ref_v1_body_queries() {
     let mut compared = 0;
@@ -494,7 +536,7 @@ fn ac1_ref_v1_body_queries() {
     }
     assert!(bad.is_empty(), "{} of {compared} queries disagree with the oracle", bad.len());
     assert!(compared >= 1300, "only {compared} queries compared");
-    assert!(gap > 0, "the torus trim gap has closed: mark AC-1 met in NODE.md");
+    assert_eq!(gap, 160, "the torus trim gap has changed: update AC-1 in NODE.md");
     eprintln!("AC-1: {compared} queries agree, {gap} fail closed on the torus trim gap");
 }
 
@@ -588,6 +630,62 @@ fn ac2_bit_identical_to_brute_force_seed_23() {
     assert!(hits > 8000, "only {hits} hits");
     assert!(failed <= 20, "{failed} queries failed closed");
     eprintln!("AC-2: {hits} hits, {failed} failed closed in both paths");
+}
+
+/// The hierarchy with several leaves (34 faces, leaves of at most 8): three unit cubes and
+/// two L-blocks as separate closed shells of one body, partly overlapping in every axis
+/// range, so leaves are visited in lower-bound order and the search breaks out early. 4 000
+/// queries (SplitMix64 seed 17), with and without a maximum distance: the pruned search gives
+/// exactly the bytes of the brute-force loop, and the unsigned hit too.
+#[test]
+fn multi_leaf_pruned_equals_brute_force() {
+    let cube = "geo/cad/topo/cube_labelled.json";
+    let lblock = "geo/dist/face/incid/lblock.json";
+    let body = load_multi(&[
+        (cube, [0.0, 0.0, 0.0]),
+        (cube, [1.5, 0.25, 0.0]),
+        (cube, [0.5, 2.75, 0.5]),
+        (lblock, [3.0, 3.0, 0.0]),
+        (lblock, [-3.0, 0.5, -0.5]),
+    ]);
+    assert_eq!(body.faces().len(), 34);
+    let t = BodyTarget::new(&body, frame_ref()).unwrap();
+    assert!(t.set().bounds().whole().iter().all(|w| !w));
+    let mut g = SplitMix(17);
+    let mut faces_hit = std::collections::BTreeSet::new();
+    for i in 0..4000usize {
+        let p = [g.in_range(-4.0, 6.0), g.in_range(-1.0, 6.0), g.in_range(-1.5, 2.5)];
+        let max = if i % 4 == 3 { Some(0.3) } else { None };
+        let o = ProjectionOptions { max_distance: max, ..opts() };
+        let fast = t.project(p, &o);
+        assert!(fast.is_ok(), "query {i}: {fast:?}");
+        assert_eq!(record(&fast), record(&t.set().project_brute(p, &o)), "query {i} at {p:?}");
+        assert_eq!(t.set().closest(p, &o).unwrap(), t.set().closest_brute(p, &o).unwrap(), "query {i}");
+        if let Ok(Projection::Hit(h)) = fast {
+            faces_hit.insert(h.entity_id);
+        }
+    }
+    assert!(faces_hit.len() >= 30, "only {} faces ever won", faces_hit.len());
+}
+
+/// GEO.DIST.FACE.ONE cone-nappe rule, directly on a `FaceProjector`: the INCID cone C30 face
+/// (apex at the origin, nappe below it, the apex line not a trim boundary) projects a point
+/// above the apex to the apex, never to the other nappe (which is nearer: before the rule
+/// the foot was there, at distance cos(30 deg) of the true one).
+#[test]
+fn face_projector_cone_other_nappe_dropped() {
+    let body = load_body("geo/dist/face/incid/cone_c30.json", [0.0; 3]);
+    let pc = fid_geo_cad::derive_pcurves(&body, fid_geo_cad::DEFAULT_TOL_M).unwrap();
+    let fp = fid_geo_dist::FaceProjector::new(&body, &pc, face_ix(&body, "C30-F1")).unwrap();
+    for k in 1..=16 {
+        let z = k as f64 / 1024.0;
+        let fid_geo_dist::FaceProjection::Hit(h) = fp.project([0.0, 0.0, z], Default::default()).unwrap() else {
+            panic!("{z}: no hit")
+        };
+        assert!(len(h.foot) <= 1e-9, "{z}: foot {:?} is not the apex", h.foot);
+        assert!(h.foot[2] <= 1e-9, "{z}: foot on the other nappe");
+        assert!((h.distance - z).abs() <= 1e-12, "{z}: {}", h.distance);
+    }
 }
 
 /// The analytic faces of the invented bodies get certified (not whole-space) boxes, and a
@@ -930,8 +1028,8 @@ fn refusals_fail_closed() {
 }
 
 /// Torus and NURBS faces are not intersected along a direction here: a line meeting such a
-/// face's box is refused; the torus band's face F1 fails closed in closest-point queries near
-/// it, while queries the hierarchy can answer without F1 are answered.
+/// face's box is refused (fail closed). (Closest-point queries on the torus band all fail
+/// closed on its face F1; see AC-1.)
 #[test]
 fn torus_and_nurbs_fail_closed() {
     let fx = load("torus_segment.json");

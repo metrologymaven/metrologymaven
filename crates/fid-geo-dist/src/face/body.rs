@@ -66,6 +66,15 @@
 //! sign comes from GEO.DIST.FACE.INCID on the whole body ([`Incid::signed`]): the
 //! [`HitSign::Cad`] status, and the signed distance `+d` outside, `-d` inside, else `d`.
 //!
+//! **What the sign means on a partial target.** On a [`BodyTarget`] without a subset the foot
+//! is the body's closest point, so the sign is the body's inside or outside. On a
+//! [`FaceTarget`], a [`FaceSetTarget`] or a target restricted by the subset option, the foot
+//! is the closest point of the *target's* faces, and the sign is the GEO.DIST.SIGN rule at
+//! that foot (the outward normals of the faces incident there, taken from the whole body):
+//! the side of the target's faces, **not** whether the point is inside the body. A point
+//! outside the body can be `Inside` relative to a face set (for example below a cube's top
+//! face but beside the cube), and vice versa.
+//!
 //! # Projection along a direction
 //!
 //! The direction `v` is scaled by exact powers of two until `1 <= max |w_k| < 2` (the line is
