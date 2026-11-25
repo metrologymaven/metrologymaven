@@ -381,7 +381,7 @@ impl Composition {
 enum Inner {
     /// Opened with the write lock; the journal owns it. `scan` is a read-only store of the
     /// same folder, used once to fold the project.
-    Writable { journal: Arc<Journal>, scan: Store },
+    Writable { journal: Arc<Journal>, scan: Box<Store> },
     /// Opened read-only, without the lock.
     ReadOnly { store: Arc<Store> },
 }
@@ -438,7 +438,7 @@ impl OpenedProject {
         journal.location().check_identity(id).map_err(|e| crate::HostError::from_store(&e))?;
         let scan = Store::open(path, OpenMode::Read).map_err(store_error)?;
         scan.location().check_identity(id).map_err(|e| crate::HostError::from_store(&e))?;
-        Ok(OpenedProject { inner: Inner::Writable { journal: Arc::new(journal), scan } })
+        Ok(OpenedProject { inner: Inner::Writable { journal: Arc::new(journal), scan: Box::new(scan) } })
     }
 
     /// The read-only form of an already opened store.
@@ -453,7 +453,7 @@ impl OpenedProject {
 
     fn scan_store(&self) -> &Store {
         match &self.inner {
-            Inner::Writable { scan, .. } => scan,
+            Inner::Writable { scan, .. } => &**scan,
             Inner::ReadOnly { store } => store,
         }
     }
@@ -463,6 +463,16 @@ impl OpenedProject {
 enum ProjectHold {
     Writable(Arc<Journal>),
     ReadOnly(Arc<Store>),
+}
+
+impl ProjectHold {
+    /// The project root.
+    fn root(&self) -> &Path {
+        match self {
+            ProjectHold::Writable(journal) => journal.location().root(),
+            ProjectHold::ReadOnly(store) => store.location().root(),
+        }
+    }
 }
 
 /// Holds an open project and its bus. Dropping it releases the project and, for a writable
@@ -479,7 +489,10 @@ impl fmt::Debug for ProjectGuard {
             Some(ProjectHold::ReadOnly(_)) => "read",
             None => "closed",
         };
-        f.debug_struct("ProjectGuard").field("mode", &mode).finish_non_exhaustive()
+        f.debug_struct("ProjectGuard")
+            .field("mode", &mode)
+            .field("root", &self.hold.as_ref().map(ProjectHold::root))
+            .finish_non_exhaustive()
     }
 }
 
