@@ -1149,6 +1149,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-app-manifest"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-registry",
+ "fid-store",
+ "fid-types",
+ "toml",
+]
+
+[[package]]
 name = "fid-brand-lint"
 version = "0.0.1"
 dependencies = [

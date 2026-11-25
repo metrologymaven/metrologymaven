@@ -199,6 +199,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # Capture (VIZ.CAPTURE.REC.POLICY first): recording-policy keys and fail-closed evaluation over fid-store
 # settings (model); viewer because screenshots and video will need fid-render.
 "fid-capture" = "viewer"
+# App manifest schema, validation and start-up loader (ECO.APPS.MANIFEST.SCHEMA): shared app
+# machinery below the `app` crates; over fid-registry and fid-store (model).
+"fid-app-manifest" = "viewer"
 # View state model (VIZ.VIEW.STATE): ViewState, its canonical form and digest.
 "fid-view" = "viewer"
 # View and render commands on the bus (VIZ.RENDER.FRAME.TIER: view.get_render_info@1).

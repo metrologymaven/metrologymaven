@@ -102,6 +102,7 @@ python fixtures/flow/pkg/make_fixtures.py --check
 python fixtures/flow/study/tasks/make_fixtures.py --check
 python fixtures/flow/unassist/make_fixtures.py --check
 python fixtures/flow/verdict/make_fixtures.py --check
+python fixtures/gdt/dim/make_ptdev.py --check
 python fixtures/gdt/dim/make_radial.py --check
 python fixtures/gdt/dmt/check_schema.py
 python fixtures/gdt/dmt/make_fixtures.py --check
@@ -151,6 +152,7 @@ python fixtures/hal/idl/base/health/make_fixtures.py --check
 python fixtures/hal/idl/gen/fmt/make_fixtures.py --check
 python fixtures/hal/idl/neg/make_fixtures.py --check
 python fixtures/hal/idl/profile/make_fixtures.py --check
+python fixtures/hal/idl/sens/gauenv/make_fixtures.py --check
 python fixtures/hal/idl/sens/line/make_fixtures.py --check
 python fixtures/hal/idl/sens/stream/make_fixtures.py --check
 python fixtures/hal/idl/stamp/make_fixtures.py --check
@@ -195,6 +197,7 @@ python fixtures/man/repro/make_fixtures.py --check
 python fixtures/man/val-toy-v1/make_fixtures.py --check
 python fixtures/man/wasm/make_fixtures.py --check
 python fixtures/man/xart-calls-v1/make_fixtures.py --check
+python fixtures/manifest/make_app_fixtures.py --check
 python fixtures/manifest/make_fixtures.py --check
 python fixtures/mcp/make_fixtures.py --check
 python fixtures/mcp/profiles/make_fixtures.py --check

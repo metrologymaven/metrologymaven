@@ -1,0 +1,17 @@
+{
+  "caliper_read": {
+    "bytes": 339,
+    "sha256": "sha256:84a8ca6169a2377536e5ff430911671bfa18d790c166b6f56f95922320ed7fd7",
+    "value": "0x3f8945b6c3760bf6",
+    "resolution": "0x3ee4f8b588e368f1",
+    "steps": 1234,
+    "ratio": "0x4093480000000000",
+    "calibration_ref": "sha256:a530da48381cda6f0c28a8406196ae1e463c04adcb815e3bf1d07d7bc3622708"
+  },
+  "room_env": {
+    "bytes": 445,
+    "sha256": "sha256:5981ae73faba68c2f1a32adc64fd0858e6a26d5e7a7035e4464edd8279a19146",
+    "temperature": "0x4072526666666666",
+    "temperature_u": "0x3fa999999999999a"
+  }
+}
