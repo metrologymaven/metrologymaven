@@ -1,0 +1,95 @@
+{
+ "comment": "HAL.ACQ.INGEST.CREDIT AC-4: no credit while stopping or stopped",
+ "window": {
+  "bytes": 8388608,
+  "batches": 4
+ },
+ "events": [
+  [
+   "grant"
+  ],
+  [
+   "admit",
+   1048576,
+   0,
+   0
+  ],
+  [
+   "admit",
+   1048576,
+   1,
+   1
+  ],
+  [
+   "begin_stop"
+  ],
+  [
+   "grant"
+  ],
+  [
+   "ack",
+   1048576,
+   0,
+   0
+  ],
+  [
+   "admit",
+   1048576,
+   2,
+   2
+  ],
+  [
+   "admit",
+   1048576,
+   3,
+   3
+  ],
+  [
+   "admit",
+   1048576,
+   4,
+   4
+  ],
+  [
+   "begin_stop"
+  ],
+  [
+   "grant"
+  ],
+  [
+   "finish_stop"
+  ],
+  [
+   "grant"
+  ],
+  [
+   "ack",
+   1048576,
+   1,
+   1
+  ],
+  [
+   "admit",
+   0,
+   5,
+   5
+  ]
+ ],
+ "expected": [
+  "grant granted=8388608/4 active out=8388608/4 fly=0/0",
+  "admit accepted active out=7340032/3 fly=1048576/1",
+  "admit accepted active out=6291456/2 fly=2097152/2",
+  "begin_stop ok stopping out=6291456/2 fly=2097152/2",
+  "grant granted=0/0 stopping out=6291456/2 fly=2097152/2",
+  "ack returned=0/0 stopping out=6291456/2 fly=1048576/1",
+  "admit accepted stopping out=5242880/1 fly=2097152/2",
+  "admit accepted stopping out=4194304/0 fly=3145728/3",
+  "admit refused credit_exceeded gap=4-4:CREDIT_EXHAUSTED stopping out=4194304/0 fly=3145728/3",
+  "begin_stop ok stopping out=4194304/0 fly=3145728/3",
+  "grant granted=0/0 stopping out=4194304/0 fly=3145728/3",
+  "finish_stop ok stopped out=0/0 fly=3145728/3",
+  "grant granted=0/0 stopped out=0/0 fly=3145728/3",
+  "ack returned=0/0 stopped out=0/0 fly=2097152/2",
+  "admit refused credit_exceeded gap=5-5:CREDIT_EXHAUSTED stopped out=0/0 fly=2097152/2"
+ ]
+}
