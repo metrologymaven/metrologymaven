@@ -362,7 +362,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
           toolchain: stable
-          components: clippy
+          components: clippy, rustfmt
           targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu,wasm32-unknown-unknown,aarch64-apple-darwin,x86_64-pc-windows-msvc
       - name: Working tree is the committed bytes (KRN.MAN.MANI.IMPL REQ-003)
         shell: bash
@@ -427,6 +427,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          cargo xtask fmt --check
           cargo xtask layers
           cargo xtask kernel-allow
           cargo xtask lint-crate-graph

@@ -48,6 +48,9 @@
 //! `kernel-allow`: the kernel-graph third-party dependency allowlist (spec node
 //! `ECO.REPO.ALLOW`), in [`kernel_allow`]; it reuses the layer map and the resolved graph
 //! built here.
+//!
+//! `fmt`: cross-platform batched workspace formatting (`cargo fmt` / `rustfmt`) staying within
+//! Windows' 32 KiB `CreateProcess` command-line limit, in [`fmt`].
 
 pub mod apps_policy;
 pub mod bench;
@@ -56,6 +59,7 @@ pub mod conic_audit;
 pub mod convergence;
 pub mod crate_graph;
 pub mod deny_scope;
+pub mod fmt;
 pub mod kernel_allow;
 pub mod licence_check;
 pub mod plat_deploy_netlist;
