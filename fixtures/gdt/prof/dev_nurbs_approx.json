@@ -1,0 +1,970 @@
+{
+ "description": "GDT.PROF.DEV AC-2 invented: a B-spline face declared with nominal_approximation_error 2e-7 m and an exact plane face, points at +-0.03 mm",
+ "license": "CC-BY-4.0",
+ "generator": "fixtures/gdt/prof/make_dev_fixtures.py",
+ "tolerance_m": 1e-12,
+ "body": {
+  "body_id": "415050524f5800000000000000000a02",
+  "vertices": [
+   {
+    "point": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "label": "N-V1"
+   },
+   {
+    "point": [
+     0.02,
+     0.0,
+     0.0
+    ],
+    "label": "N-V2"
+   },
+   {
+    "point": [
+     0.02,
+     0.02,
+     0.0
+    ],
+    "label": "N-V3"
+   },
+   {
+    "point": [
+     0.0,
+     0.02,
+     0.0
+    ],
+    "label": "N-V4"
+   },
+   {
+    "point": [
+     0.03,
+     0.0,
+     0.0
+    ],
+    "label": "P-V1"
+   },
+   {
+    "point": [
+     0.05,
+     0.0,
+     0.0
+    ],
+    "label": "P-V2"
+   },
+   {
+    "point": [
+     0.05,
+     0.02,
+     0.0
+    ],
+    "label": "P-V3"
+   },
+   {
+    "point": [
+     0.03,
+     0.02,
+     0.0
+    ],
+    "label": "P-V4"
+   }
+  ],
+  "edges": [
+   {
+    "start": 0,
+    "end": 1,
+    "range": [
+     0.0,
+     0.02
+    ],
+    "curve": {
+     "type": "line",
+     "origin": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "direction": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "label": "N-E1"
+   },
+   {
+    "start": 1,
+    "end": 2,
+    "range": [
+     0.0,
+     0.02
+    ],
+    "curve": {
+     "type": "line",
+     "origin": [
+      0.02,
+      0.0,
+      0.0
+     ],
+     "direction": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "label": "N-E2"
+   },
+   {
+    "start": 2,
+    "end": 3,
+    "range": [
+     0.0,
+     0.02
+    ],
+    "curve": {
+     "type": "line",
+     "origin": [
+      0.02,
+      0.02,
+      0.0
+     ],
+     "direction": [
+      -1.0,
+      0.0,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "label": "N-E3"
+   },
+   {
+    "start": 3,
+    "end": 0,
+    "range": [
+     0.0,
+     0.02
+    ],
+    "curve": {
+     "type": "line",
+     "origin": [
+      0.0,
+      0.02,
+      0.0
+     ],
+     "direction": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "label": "N-E4"
+   },
+   {
+    "start": 4,
+    "end": 5,
+    "range": [
+     0.0,
+     0.02
+    ],
+    "curve": {
+     "type": "line",
+     "origin": [
+      0.03,
+      0.0,
+      0.0
+     ],
+     "direction": [
+      1.0,
+      0.0,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "label": "P-E1"
+   },
+   {
+    "start": 5,
+    "end": 6,
+    "range": [
+     0.0,
+     0.02
+    ],
+    "curve": {
+     "type": "line",
+     "origin": [
+      0.05,
+      0.0,
+      0.0
+     ],
+     "direction": [
+      0.0,
+      1.0,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "label": "P-E2"
+   },
+   {
+    "start": 6,
+    "end": 7,
+    "range": [
+     0.0,
+     0.02
+    ],
+    "curve": {
+     "type": "line",
+     "origin": [
+      0.05,
+      0.02,
+      0.0
+     ],
+     "direction": [
+      -1.0,
+      0.0,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "label": "P-E3"
+   },
+   {
+    "start": 7,
+    "end": 4,
+    "range": [
+     0.0,
+     0.02
+    ],
+    "curve": {
+     "type": "line",
+     "origin": [
+      0.03,
+      0.02,
+      0.0
+     ],
+     "direction": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      0.0,
+      1.0
+     ]
+    },
+    "label": "P-E4"
+   }
+  ],
+  "coedges": [
+   {
+    "edge": 0,
+    "sense": "same",
+    "pcurve": null,
+    "label": "N-C1"
+   },
+   {
+    "edge": 1,
+    "sense": "same",
+    "pcurve": null,
+    "label": "N-C2"
+   },
+   {
+    "edge": 2,
+    "sense": "same",
+    "pcurve": null,
+    "label": "N-C3"
+   },
+   {
+    "edge": 3,
+    "sense": "same",
+    "pcurve": null,
+    "label": "N-C4"
+   },
+   {
+    "edge": 4,
+    "sense": "same",
+    "pcurve": null,
+    "label": "P-C1"
+   },
+   {
+    "edge": 5,
+    "sense": "same",
+    "pcurve": null,
+    "label": "P-C2"
+   },
+   {
+    "edge": 6,
+    "sense": "same",
+    "pcurve": null,
+    "label": "P-C3"
+   },
+   {
+    "edge": 7,
+    "sense": "same",
+    "pcurve": null,
+    "label": "P-C4"
+   }
+  ],
+  "loops": [
+   {
+    "coedges": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "outer": true,
+    "label": "N-L"
+   },
+   {
+    "coedges": [
+     4,
+     5,
+     6,
+     7
+    ],
+    "outer": true,
+    "label": "P-L"
+   }
+  ],
+  "faces": [
+   {
+    "surface": {
+     "type": "nurbs",
+     "degree_u": 2,
+     "degree_v": 2,
+     "knots_u": [
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "knots_v": [
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "n_u": 3,
+     "n_v": 3,
+     "ctrl": [
+      [
+       0.0,
+       0.0,
+       0.0
+      ],
+      [
+       0.0,
+       0.01,
+       0.0
+      ],
+      [
+       0.0,
+       0.02,
+       0.0
+      ],
+      [
+       0.01,
+       0.0,
+       0.0
+      ],
+      [
+       0.01,
+       0.01,
+       0.0
+      ],
+      [
+       0.01,
+       0.02,
+       0.0
+      ],
+      [
+       0.02,
+       0.0,
+       0.0
+      ],
+      [
+       0.02,
+       0.01,
+       0.0
+      ],
+      [
+       0.02,
+       0.02,
+       0.0
+      ]
+     ]
+    },
+    "sense": "same",
+    "loops": [
+     0
+    ],
+    "label": "N-face"
+   },
+   {
+    "surface": {
+     "type": "plane",
+     "origin": [
+      0.03,
+      0.0,
+      0.0
+     ],
+     "axis": [
+      0.0,
+      0.0,
+      1.0
+     ],
+     "ref_dir": [
+      1.0,
+      0.0,
+      0.0
+     ]
+    },
+    "sense": "same",
+    "loops": [
+     1
+    ],
+    "label": "P-face"
+   }
+  ],
+  "shells": [
+   {
+    "faces": [
+     0
+    ],
+    "closed": false
+   },
+   {
+    "faces": [
+     1
+    ],
+    "closed": false
+   }
+  ]
+ },
+ "max_approx_error_m": "2e-7",
+ "cases": [
+  {
+   "id": "ac2_approx",
+   "note": "AC-2: every deviation on N-face carries 2e-7 m, P-face 0; maximum 2e-7 m",
+   "toleranced_faces": [
+    {
+     "face": "N-face",
+     "approx_error_m": 2e-07
+    },
+    {
+     "face": "P-face",
+     "approx_error_m": 0.0
+    }
+   ],
+   "search_radius_m": 0.001,
+   "pose": {
+    "r": [
+     [
+      "0x3ff0000000000000",
+      "0x0000000000000000",
+      "0x0000000000000000"
+     ],
+     [
+      "0x0000000000000000",
+      "0x3ff0000000000000",
+      "0x0000000000000000"
+     ],
+     [
+      "0x0000000000000000",
+      "0x0000000000000000",
+      "0x3ff0000000000000"
+     ]
+    ],
+    "t": [
+     "0x0000000000000000",
+     "0x0000000000000000",
+     "0x0000000000000000"
+    ]
+   },
+   "pose_digest": "sha256:bc440af43f15d02b98d4117940a5210c673a1ac35176f0755fd3df2f2b07c83e",
+   "points": [
+    [
+     "0x3f815239f7ced917",
+     "0x3f6a805c6a7ef9db",
+     "0x3eff75104d551d69"
+    ],
+    [
+     "0x3f8ff879db22d0e6",
+     "0x3f86db973f7ced92",
+     "0xbeff75104d551d69"
+    ],
+    [
+     "0x3f831dcd43958106",
+     "0x3f7a9765f3b645a2",
+     "0x3eff75104d551d69"
+    ],
+    [
+     "0x3f838fa75c28f5c3",
+     "0x3f7f19ea4dd2f1ab",
+     "0xbeff75104d551d69"
+    ],
+    [
+     "0x3f73fca5e353f7cf",
+     "0x3f81fd55ba5e3540",
+     "0x3eff75104d551d69"
+    ],
+    [
+     "0x3f7239fe7ef9db23",
+     "0x3f90d52f60418938",
+     "0xbeff75104d551d69"
+    ],
+    [
+     "0x3f903b9410624dd3",
+     "0x3f8f207789374bc8",
+     "0x3eff75104d551d69"
+    ],
+    [
+     "0x3f8eeab533333334",
+     "0x3f85dd4f9db22d0f",
+     "0xbeff75104d551d69"
+    ],
+    [
+     "0x3f8f5d41b645a1cc",
+     "0x3f7f00bb95810626",
+     "0x3eff75104d551d69"
+    ],
+    [
+     "0x3f87e53a9fbe76ca",
+     "0x3f8bdba1a1cac084",
+     "0xbeff75104d551d69"
+    ],
+    [
+     "0x3fa5bb3615810625",
+     "0x3f726801c28f5c29",
+     "0x3eff75104d551d69"
+    ],
+    [
+     "0x3fa35d6e676c8b44",
+     "0x3f824b5e28f5c290",
+     "0xbeff75104d551d69"
+    ],
+    [
+     "0x3fa75d8b1cac0832",
+     "0x3f90d6dad2f1a9fc",
+     "0x3eff75104d551d69"
+    ],
+    [
+     "0x3fa1721633333333",
+     "0x3f81d09476c8b43a",
+     "0xbeff75104d551d69"
+    ],
+    [
+     "0x3fa75c44db22d0e6",
+     "0x3f820b3522d0e561",
+     "0x3eff75104d551d69"
+    ],
+    [
+     "0x3fa7db6af7ced916",
+     "0x3f6ecbf4bc6a7efa",
+     "0xbeff75104d551d69"
+    ],
+    [
+     "0x3fa3a48548b43958",
+     "0x3f7c7e28083126ea",
+     "0x3eff75104d551d69"
+    ],
+    [
+     "0x3fa4e4576978d4fe",
+     "0x3f878a94ac083128",
+     "0xbeff75104d551d69"
+    ],
+    [
+     "0x3fa1705dd0e56041",
+     "0x3f907a9300000001",
+     "0x3eff75104d551d69"
+    ],
+    [
+     "0x3fa2679810624dd3",
+     "0x3f7661384189374c",
+     "0xbeff75104d551d69"
+    ]
+   ],
+   "expected": [
+    {
+     "face": "N-face",
+     "foot": [
+      "8.45761573314666829925823066105e-3",
+      "3.23503541946411126914440181679e-3",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "2e-7"
+    },
+    {
+     "face": "N-face",
+     "foot": [
+      "1.56106491088867198324674490095e-2",
+      "1.11610237360000620621125477783e-2",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "-3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "2e-7"
+    },
+    {
+     "face": "N-face",
+     "foot": [
+      "9.33418619632720922285606945934e-3",
+      "6.49204087257385271947374150159e-3",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "2e-7"
+    },
+    {
+     "face": "N-face",
+     "foot": [
+      "9.55134153366088943515332942980e-3",
+      "7.59307408332824795155202579622e-3",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "-3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "2e-7"
+    },
+    {
+     "face": "N-face",
+     "foot": [
+      "4.87961578369140638183898417424e-3",
+      "8.78397917747497647411591970013e-3",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "2e-7"
+    },
+    {
+     "face": "N-face",
+     "foot": [
+      "4.44983875751495377287580978987e-3",
+      "1.64382364749908471690531541753e-2",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "-3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "2e-7"
+    },
+    {
+     "face": "N-face",
+     "foot": [
+      "1.58522734642028810536640293094e-2",
+      "1.51986445188522362181871017128e-2",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "2e-7"
+    },
+    {
+     "face": "N-face",
+     "foot": [
+      "1.50961071252822889854350307814e-2",
+      "1.06760234832763683393563880486e-2",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "-3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "2e-7"
+    },
+    {
+     "face": "N-face",
+     "foot": [
+      "1.53145917654037497235286480191e-2",
+      "7.56905817985534766501043435483e-3",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "2e-7"
+    },
+    {
+     "face": "N-face",
+     "foot": [
+      "1.16676883697509788107016248659e-2",
+      "1.36025073528289811020108857065e-2",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "-3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "2e-7"
+    },
+    {
+     "face": "P-face",
+     "foot": [
+      "4.24439336061477670569708209314e-2",
+      "4.49371993541717532766321951954e-3",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "0"
+    },
+    {
+     "face": "P-face",
+     "foot": [
+      "3.78221989870071439998611140254e-2",
+      "8.93281519412994495787927462516e-3",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "-3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "0"
+    },
+    {
+     "face": "P-face",
+     "foot": [
+      "4.56355545520782529544945305133e-2",
+      "1.64446059465408328525981573875e-2",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "0"
+    },
+    {
+     "face": "P-face",
+     "foot": [
+      "3.40735375881195054481587192186e-2",
+      "8.69861590862274283719735024079e-3",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "-3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "0"
+    },
+    {
+     "face": "P-face",
+     "foot": [
+      "4.56258313655853314783072960381e-2",
+      "8.81043922901153693516551612674e-3",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "0"
+    },
+    {
+     "face": "P-face",
+     "foot": [
+      "4.65959002971649133284515187370e-2",
+      "3.75936317443847662495004513517e-3",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "-3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "0"
+    },
+    {
+     "face": "P-face",
+     "foot": [
+      "3.83645678758621211379420401499e-2",
+      "6.95624959468841598531074765788e-3",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "0"
+    },
+    {
+     "face": "P-face",
+     "foot": [
+      "4.08046070337295535557231573875e-2",
+      "1.14947905540466327467541418628e-2",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "-3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "0"
+    },
+    {
+     "face": "P-face",
+     "foot": [
+      "3.40604131221771203041903675057e-2",
+      "1.60925835371017490749157019536e-2",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "0"
+    },
+    {
+     "face": "P-face",
+     "foot": [
+      "3.59466094970703128885780586188e-2",
+      "5.46380972862243671772652930940e-3",
+      "0"
+     ],
+     "normal": [
+      "0",
+      "0",
+      "1"
+     ],
+     "signed_dev": "-3.00000000000000007600257229123e-5",
+     "on_boundary": false,
+     "no_projection": false,
+     "approx_error_m": "0"
+    }
+   ]
+  }
+ ]
+}

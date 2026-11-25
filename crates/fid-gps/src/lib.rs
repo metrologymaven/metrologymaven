@@ -14,17 +14,22 @@
 //!   and the datum target coverage check (`GDT.DRF.COMMON.COVER`).
 //! - [`dim`] (`GDT.DIM.RADIAL`): diameter and radius of a feature fitted by `fid-fit`'s
 //!   least-squares circle, cylinder or sphere, checked against the chain's association.
+//! - [`prof`] (`GDT.PROF.DEV`): per-point signed deviations from the nominal CAD faces
+//!   (GEO.DIST.FACE.BODY closest points, GEO.DIST.FACE.INCID signs) with each face's
+//!   nominal approximation error, boundary and no-projection flags.
 //!
 //! Pure: no I/O (callers pass bytes), no `HashMap`/`HashSet`, and nothing here panics on any
 //! input: every outcome is a returned `Result`. The only floating-point arithmetic is in
-//! [`zone`], [`drf`] and [`dim`] (outside the fits of `fid-fit`), written in KNP-1 style
+//! [`zone`], [`drf`], [`dim`] and [`prof`] (outside the fits of `fid-fit`), written in KNP-1 style
 //! (pinned evaluation order, no fused multiply-add, no `f64::min`/`f64::max`, square root
-//! through `fid-num`, NaN rejected), so its results are bit-identical on every platform
-//! including wasm32.
+//! through `fid-num`, NaN rejected), so its results are bit-identical on every platform.
+//! CI runs `zone_shape` on wasm32 too; the [`prof`] output pin (GDT.PROF.DEV AC-5) is
+//! checked on Linux, Windows and macOS only, not on wasm32.
 
 pub mod dim;
 pub mod dmt;
 pub mod drf;
 pub mod form;
+pub mod prof;
 pub mod resolve;
 pub mod zone;

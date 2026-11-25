@@ -1557,8 +1557,11 @@ version = "0.0.1"
 dependencies = [
  "fid-canon",
  "fid-fit",
+ "fid-geo-cad",
+ "fid-geo-dist",
  "fid-geo-frame",
  "fid-geo-index",
+ "fid-geo-nurbs",
  "fid-geo-types",
  "fid-num",
  "fid-types",
