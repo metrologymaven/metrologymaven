@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-gps]
+built_pr: 628
 satisfies: [REQ-GDT.LOC.DERIV-001, REQ-GDT.LOC.DERIV-003]
 covers: []
 depends_on: [GDT.LOC.DERIV.TYPES, KRN.LSQ, KRN.ENV, KRN.MZ]
