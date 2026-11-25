@@ -650,10 +650,7 @@ impl Bus {
     fn run(&self, call: &Call<'_>, inv: &Invocation, at: &Cell<Option<Stage>>) -> Result<CommandResult, BusError> {
         // 1. resolve
         self.enter(at, Stage::Resolve)?;
-        let derived = call.sessions.derive_principal(call.channel).map_err(|e| {
-            at.set(None);
-            e
-        })?;
+        let derived = call.sessions.derive_principal(call.channel).inspect_err(|_| at.set(None))?;
         let resolved = self.table.resolve_id(&inv.command, &derived)?;
         let def = resolved.def();
         // 2. validate
