@@ -9,6 +9,7 @@ phase: P2
 size: S
 owners: []
 claimed_by:
+built_in: [fid-hal-idl]
 satisfies: [REQ-HAL.IDL.SENS-001, REQ-HAL.IDL.SENS-006, REQ-HAL.IDL.SENS-007]
 covers: []
 depends_on: [HAL.IDL.BASE, HAL.IDL.UNITS, HAL.IDL.GEN.FMT]

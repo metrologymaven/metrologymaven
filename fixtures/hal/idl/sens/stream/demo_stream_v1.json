@@ -1,0 +1,236 @@
+{
+  "schema": "capability-package/v1",
+  "manifest": {
+    "name": "DemoStream",
+    "version": "1.0.0",
+    "deprecated": false,
+    "tier3_usable": true
+  },
+  "$defs": {
+    "SessionId": {
+      "type": "string",
+      "maxLength": 36
+    },
+    "StopReason": {
+      "type": "string",
+      "enum": [
+        "requested",
+        "device_error",
+        "limit",
+        "safety_stop",
+        "end_of_data"
+      ]
+    },
+    "StreamEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "started",
+            "stopped",
+            "gap"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/StopReason"
+        },
+        "from": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "to": {
+          "type": "string",
+          "maxLength": 20
+        }
+      },
+      "required": [
+        "kind"
+      ]
+    },
+    "StreamState": {
+      "type": "string",
+      "enum": [
+        "idle",
+        "streaming"
+      ]
+    },
+    "StreamStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "$ref": "#/$defs/StreamState"
+        },
+        "next_seq": {
+          "type": "string",
+          "maxLength": 20
+        }
+      },
+      "required": [
+        "next_seq",
+        "state"
+      ]
+    }
+  },
+  "operations": [
+    {
+      "name": "start_stream",
+      "class": "D1",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/$defs/StreamStatus"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "CONFIG_INVALID",
+        "NOT_QUALIFIED",
+        "CALIBRATION_EXPIRED",
+        "LIMIT",
+        "SAFETY_STOP_OBSERVED",
+        "VENDOR_LICENSE",
+        "UNSUPPORTED",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "stop_stream",
+      "class": "D1",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/$defs/StreamStatus"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "stream_status",
+      "class": "R0",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/$defs/StreamStatus"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    }
+  ],
+  "batch_schemas": [
+    {
+      "id": "demo.samples",
+      "columns": [
+        {
+          "name": "value",
+          "unit": "m",
+          "encoding": {
+            "numeric": "i32",
+            "scale": "0x3eb0c6f7a0b5ed8d",
+            "offset": "0x0000000000000000",
+            "unit": "m"
+          }
+        }
+      ],
+      "validity_mask": true,
+      "seq_range": true
+    }
+  ],
+  "semantics": {
+    "text": "# DemoStream@1 semantics\n\nAn invented package that exists only to exercise the HAL.IDL.SENS.STREAM template. It streams one length column and stands for no real device.\n",
+    "digest": "sha256:998d0c60089221776b64068677bd9e3b410a74507af0523703759ab7f404e6eb"
+  },
+  "profile": {
+    "id": "DemoStream-core@1",
+    "items": [
+      {
+        "id": "DS-01",
+        "summary": "Payload encoding: the value column declares its exact encoding."
+      },
+      {
+        "id": "SC-01",
+        "summary": "Batch size within the recommendation: over a test stream of at least 60 s, at least 95 % of batches hold 1 MB to 8 MB or span at most 50 ms of device time."
+      },
+      {
+        "id": "SC-02",
+        "summary": "Start and stop idempotence: start_stream on a running stream changes nothing and emits no second started event; stop_stream on a stopped stream changes nothing and emits no second stopped event."
+      },
+      {
+        "id": "SC-03",
+        "summary": "Sequence contiguity: each batch starts one after the last sequence number of the batch before it; no batch range is reversed, overlapping or missing."
+      },
+      {
+        "id": "SC-04",
+        "summary": "Extension declaration and digesting: every vendor-extension setting is named under a vendor namespace listed in describe; every extension value is in the configuration digest the device reports."
+      }
+    ]
+  }
+}

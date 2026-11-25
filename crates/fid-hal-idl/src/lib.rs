@@ -17,8 +17,12 @@
 //!   cap and the canonical digest that excludes the signature block (`HAL.IDL.PROFILE`).
 //! - [`negotiate`]: capability declarations, the runtime-support table, the fail-closed
 //!   negotiation function and the capability-package semver rules (`HAL.IDL.NEG`).
+//! - [`caps`]: the sensor capability packages; so far [`caps::stream`], the shared streaming
+//!   template, the vendor-extension rule and the `Stream-common@1` profile
+//!   (`HAL.IDL.SENS.STREAM`).
 
 pub mod base;
+pub mod caps;
 pub mod negotiate;
 pub mod package;
 pub mod profile;
@@ -66,4 +70,9 @@ pub use profile::{InstrumentProfile, ProfileError, ProfileErrorKind, SourceKind 
 pub use negotiate::{
     negotiate, negotiate_json, negotiate_with_profile, CapabilityDeclaration, CapabilityOffer, NegError, NegErrorKind,
     NegotiationResult, Outcome, RuntimeSupport, VersionRange,
+};
+
+pub use caps::stream::{
+    BatchRecord, BatchSummary, StreamError, StreamEvent, StreamOperation, StreamState, StreamStatus,
+    StreamingDescription, StreamingPackage, STREAM_COMMON,
 };
