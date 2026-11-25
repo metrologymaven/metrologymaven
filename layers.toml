@@ -155,6 +155,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # Installation and operational qualification records and commands (QUAL.IQOQ.RECORD): L3 services.
 "fid-qual" = "services"
 "fid-cli" = "app"
+# Composition root (AUTO.SURF.COMPOSE): links the bus, the store, the handler crates and the
+# surfaces, and builds the `fid` executable; above fid-cli (app), never linked by a surface.
+"fid-compose" = "app"
 "fid-slice" = "app"
 "fid-kernel-wasm" = "app"
 "fid-xtask" = "tool"

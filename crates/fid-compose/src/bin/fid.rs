@@ -1,5 +1,10 @@
 //! `fid`: the Metrology Maven command line.
 //!
+//! Built only as the bin target `fid` of `fid-compose` (REQ-AUTO.SURF.COMPOSE-015): the process
+//! entry that may link both the CLI library and the bus lives in the composition root, never in a
+//! `[surfaces]` crate. It keeps the behaviour it had in `fid-cli` byte for byte until `fid-cli`
+//! takes transports through `AUTO.CLI.TARGET.SELECT` and `AUTO.CLI.TARGET.HEADLESS`.
+//!
 //! First slice: `fid canon` exposes the canonical-JSON crate (CORE.JRN.CANON) so
 //! people, agents and CI can hash journal-style JSON exactly the way the kernel will.
 //! `fid ctrl status` / `fid ctrl ping` are control-channel diagnostics (AUTO.CTRL.CLIENT).

@@ -1,6 +1,6 @@
 //! Acceptance criteria of spec node AUTO.CTRL.CLIENT for the client library (AC-3, AC-4, AC-5)
 //! and its requirements, against scripted fake servers and the in-process test app. The CLI
-//! criteria (AC-1, AC-2) are in `crates/fid-cli/tests/ctrl.rs`. Every listener binds port 0;
+//! criteria (AC-1, AC-2) are in `crates/fid-compose/tests/ctrl.rs`. Every listener binds port 0;
 //! every token file and runtime directory lives in its own temp directory.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 

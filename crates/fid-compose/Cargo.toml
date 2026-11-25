@@ -1,0 +1,53 @@
+[package]
+name = "fid-compose"
+description = "Metrology Maven composition root: the handler sources, the project bus and the no-project bus, the in-process host and the `fid` executable (spec node AUTO.SURF.COMPOSE)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# The `fid` executable (REQ-AUTO.SURF.COMPOSE-015): built only here, never from a [surfaces] crate.
+[[bin]]
+name = "fid"
+path = "src/bin/fid.rs"
+
+[dependencies]
+# CORE.BUS.PORT (SessionHost, LocalBus, LocalPort), the pipeline, the file policy and the
+# handler contract. Layer engine; this crate is the one place that links it with the surfaces.
+fid-bus = { path = "../fid-bus" }
+fid-bus-api = { path = "../fid-bus-api" }
+fid-canon = { path = "../fid-canon" }
+# The CLI library (argv, help, rendering) the moved `fid` main calls, unchanged. Layer app.
+fid-cli = { path = "../fid-cli" }
+# The Record Journal of a writable project (owns the write lock) and its entry types.
+fid-journal = { path = "../fid-journal", features = ["store"] }
+# The element tree, observation sources and UUIDs of the project state view.
+fid-project = { path = "../fid-project" }
+# The first wired handlers (CORE.PRJ.TREE.QUERY, CORE.PRJ.CONT.HIER) and the project identity.
+fid-project-cmd = { path = "../fid-project-cmd" }
+fid-registry = { path = "../fid-registry" }
+# The manifest in force and the SOURCES list HANDLER_SOURCES mirrors (CORE.REG.MAN).
+fid-registry-build = { path = "../fid-registry-build" }
+# CORE.STO.LAYOUT: opening a project read-only or with the write lock.
+fid-store = { path = "../fid-store" }
+# AUTO.SURF.INPROC: the InProcTransport handed to the surface.
+fid-surface = { path = "../fid-surface" }
+fid-types = { path = "../fid-types" }
+
+# The OS user of the process (REQ-AUTO.SURF.COMPOSE-007), with no `unsafe` here.
+# Unix: the real user ID through rustix 1 (safe wrappers; already in the lock with these
+# features through fid-ctrl). Windows: the SID of the process token through fid-ctrl-acl (the
+# named `unsafe` exception of D-048, layer services).
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", features = ["fs", "process"] }
+
+[target.'cfg(windows)'.dependencies]
+fid-ctrl-acl = { path = "../fid-ctrl-acl" }
+
+[dev-dependencies]
+# AUTO.CTRL.CLIENT AC-1, AC-2 (moved here with the binary): the in-process test app.
+fid-ctrl = { path = "../fid-ctrl" }
+
+[lints]
+workspace = true
