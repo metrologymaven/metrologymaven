@@ -40,7 +40,16 @@
 //! **Tangents** of a coedge at a vertex: the edge's 3-D curve derivative (times `-1` for a
 //! coedge of sense `Reversed`), used when the curve passes within [`MAP_TOL_M`] of the vertex;
 //! otherwise `Su du + Sv dv` from the trim curve's derivative. A tangent that is zero, or a
-//! corner angle that is not certainly in `(0, 2 pi]`, is [`SignUndefined::Degenerate`].
+//! corner angle within [`ANGLE_EPS`] of `0` or `2 pi` (a cusp, or two coedges along one
+//! generator, as at a cone apex), is [`SignUndefined::Degenerate`].
+//!
+//! **Seams of NURBS faces** (an edge whose two coedges both lie on the face): the surface may
+//! be only C0 across it, so an interior foot of a NURBS face that lies on a seam (within
+//! [`SEAM_TOL_M`] of its 3-D curve, or of the image of a line pcurve when the seam has no 3-D
+//! curve) is signed by the edge rule, with both sides' normals. A seam that cannot be tested
+//! exactly (its curve inversion is not certified near the foot, or it has only a NURBS pcurve
+//! whose parameter box contains the foot's `uv`) gives [`SignUndefined::Degenerate`].
+//! Analytic periodic surfaces are smooth across their seams and need no test.
 //!
 //! # Parameters on a face (fail closed)
 //!
@@ -54,14 +63,22 @@
 //!
 //! # Degenerate normals (surface poles and apexes)
 //!
-//! Where `Su x Sv` is degenerate (GEO.NURBS.EVAL `Regularity::Degenerate`: a collapsed NURBS
-//! row, a cone apex), the normal is taken at a parameter offset of [`FALLBACK_REL`] = 1e-9 of
-//! the domain width (`1e-9 max(1, |x|)` for an unbounded parameter) into the face, the first
-//! regular one of: for a vertex foot, the outgoing coedge's trim curve stepped `1e-9` of its
-//! edge range along the coedge, then the incoming coedge's stepped back; then, for every foot,
-//! `(u, v + dv)`, `(u, v - dv)`, `(u + du, v)`, `(u - du, v)`, skipping any outside a bounded
-//! domain (a sphere's latitude, a non-periodic NURBS direction). [`Incident::fallback`]
-//! records the fallback. No regular normal among them is [`SignUndefined::Degenerate`].
+//! A point is **near-degenerate** when `|Su x Sv| <= NEAR_REL Lu Lv` ([`NEAR_REL`] = 1e-6),
+//! with `Lu`, `Lv` the face's derivative scales: plane `(1, 1)`, cylinder `(r, 1)`, sphere
+//! `(r, r)`, torus `(R + r, r)`, cone `(L, hypot(1, tan a))` with `L` the largest of `|r0|`
+//! and the distances of the face's vertices from the axis (1 m when both are zero), NURBS the
+//! Lipschitz bounds `2 p (w_max / w_min) diam / dmin` of each direction; or where GEO.NURBS.EVAL
+//! reports no normal. There the collapsing direction (the one whose derivative is smaller
+//! against its scale; a point where neither is below `sqrt(NEAR_REL)` is a fold and is
+//! [`SignUndefined::Degenerate`]) is sampled on a **ring** of [`RING`] + 1 parameters over its
+//! domain, at an offset `d` = [`FALLBACK_REL`] = 1e-9 of the domain width (`1e-9 max(1, |x|)`
+//! for an unbounded parameter) of the other parameter, on each side that lies in a bounded
+//! domain and on the face's own sheet (the side where the face's trim curves lie, sampled at
+//! five parameters per coedge; both sides when they lie on both, or the face has no loops, or
+//! the offset direction is periodic). If every ring normal is regular and all lie within about
+//! 1e-4 rad ([`RING_AGREE`]) of their mean (a sphere or NURBS pole), the mean is the normal and
+//! [`Incident::fallback`] is set; if they disagree (a cone apex, where the normal turns with
+//! the generator), the sign is [`SignUndefined::Degenerate`], never a guess.
 //!
 //! # Determinism (D0, KNP-1)
 //!
@@ -97,8 +114,27 @@ pub const MAP_TOL_M: f64 = 1e-6;
 /// Parameter offset of the degenerate-normal fallback, relative to the domain width.
 pub const FALLBACK_REL: f64 = 1e-9;
 
+/// A point is near-degenerate when `|Su x Sv| <= NEAR_REL Lu Lv` (module docs).
+pub const NEAR_REL: f64 = 1e-6;
+
+/// Ring samples of the degenerate-normal rule are `RING + 1` parameters over the domain.
+pub const RING: usize = 16;
+
+/// Ring normals agree when each has a dot product of at least this with their mean unit
+/// vector (an angle of about 1e-4 rad).
+pub const RING_AGREE: f64 = 1.0 - 5e-9;
+
+/// A corner angle within this of `0` or `2 pi` (radians, 2^-30) is degenerate.
+pub const ANGLE_EPS: f64 = 1.0 / 1_073_741_824.0;
+
+/// An interior foot of a NURBS face within this distance of a seam is on the seam (metres).
+pub const SEAM_TOL_M: f64 = DEFAULT_TOL_M;
+
 /// Parameters at which a pole coedge's trim curve is checked against its vertex.
 const POLE_SAMPLES: usize = 5;
+
+/// The `1 - (1 - x)` style inflation of every Lipschitz bound (`1 + 2^-20`).
+const LIPSCHITZ_INFLATE: f64 = 1.0 + 1.0 / 1_048_576.0;
 
 // ---------------------------------------------------------------- public types
 
@@ -278,12 +314,12 @@ fn ends(co: &Coedge, e: &Edge) -> (VertexIx, VertexIx) {
     }
 }
 
-/// Edge parameters at the start and end of a coedge, and its direction in `t` (`+1`, `-1`).
-fn coedge_params(co: &Coedge, e: &Edge) -> (f64, f64, f64) {
+/// Edge parameters at the start and end of a coedge.
+fn coedge_params(co: &Coedge, e: &Edge) -> (f64, f64) {
     let [t0, t1] = e.param_range();
     match co.sense() {
-        Sense::Same => (t0, t1, 1.0),
-        Sense::Reversed => (t1, t0, -1.0),
+        Sense::Same => (t0, t1),
+        Sense::Reversed => (t1, t0),
     }
 }
 
@@ -374,21 +410,6 @@ impl<'a> Surf<'a> {
             Surf::Nurbs(s) => invert_surface(s, q).map(|i| [i.u, i.v]).map_err(|_| fail()),
         }
     }
-
-    /// Offsets of the degenerate-normal fallback, in the fixed order.
-    fn offsets(&self, uv: [f64; 2]) -> [[f64; 2]; 4] {
-        let ((u0, u1), (v0, v1)) = self.dynamic().domain();
-        let step = |x: f64, lo: f64, hi: f64| -> f64 {
-            let w = hi - lo;
-            if w.is_finite() {
-                FALLBACK_REL * w
-            } else {
-                FALLBACK_REL * magnitude(x)
-            }
-        };
-        let (du, dv) = (step(uv[0], u0, u1), step(uv[1], v0, v1));
-        [[uv[0], uv[1] + dv], [uv[0], uv[1] - dv], [uv[0] + du, uv[1]], [uv[0] - du, uv[1]]]
-    }
 }
 
 // ---------------------------------------------------------------- the prepared body
@@ -474,7 +495,7 @@ impl<'b> Incid<'b> {
         let face = self.face_ix(&hit.face)?;
         match &hit.feature {
             FaceFeature::Interior => self.interior(face, &hit.face, hit),
-            FaceFeature::Edge(id) => self.at_edge(face, id, hit.foot),
+            FaceFeature::Edge(id) => self.at_edge(face, id, hit.foot, None),
             FaceFeature::Vertex(id) => self.at_vertex(&hit.face, id),
         }
     }
@@ -604,26 +625,222 @@ impl<'b> Incid<'b> {
 
     // ------------------------------------------------------------ normals
 
-    /// The outward normal of face `f` at `uv`, else at the fallback parameters: first
-    /// `along` (in order), then the fixed domain offsets.
-    fn outward(&self, f: FaceIx, uv: [f64; 2], along: &[[f64; 2]]) -> Result<Outward, IncidError> {
+    /// The outward normal of face `f` at `uv`, or by the ring rule near a singular point
+    /// (module docs); `None` when the normal is degenerate there.
+    fn outward(&self, f: FaceIx, uv: [f64; 2]) -> Result<Outward, IncidError> {
         let (surf, sense, _) = self.surface(f)?;
         let orient = |n: V3| match sense {
             Sense::Same => n,
             Sense::Reversed => [-n[0], -n[1], -n[2]],
         };
-        if let Some(n) = surf.normal(uv)? {
-            return Ok(Some((orient(n), false)));
+        let [_, su, sv] = surf.first(uv)?;
+        let (lu, lv) = self.scales(f, &surf)?;
+        let area = norm3(cross3(su, sv)).ok_or(IncidError::Eval)?;
+        if area > NEAR_REL * (lu * lv) {
+            if let Some(n) = surf.normal(uv)? {
+                return Ok(Some((orient(n), false)));
+            }
         }
-        for &w in along.iter().chain(surf.offsets(uv).iter()) {
-            if !surf.in_domain(w) {
+        // Near a singular point: which direction collapses.
+        let nu = norm3(su).ok_or(IncidError::Eval)? / lu;
+        let nv = norm3(sv).ok_or(IncidError::Eval)? / lv;
+        let r = if nu <= nv { 0 } else { 1 };
+        let small = if r == 0 { nu } else { nv };
+        if small.is_nan() || small > NEAR_SQRT {
+            return Ok(None);
+        }
+        let o = 1 - r;
+        let ((u0, u1), (v0, v1)) = surf.dynamic().domain();
+        let (lo, hi) = if r == 0 { (u0, u1) } else { (v0, v1) };
+        let (olo, ohi) = if o == 0 { (u0, u1) } else { (v0, v1) };
+        if !(hi - lo).is_finite() {
+            return Ok(None);
+        }
+        let c0 = if o == 0 { uv[0] } else { uv[1] };
+        let width = ohi - olo;
+        let d = if width.is_finite() { FALLBACK_REL * width } else { FALLBACK_REL * magnitude(c0) };
+        let (plus, minus) = self.sheet_sides(f, &surf, o, c0, d)?;
+        let mut normals: Vec<V3> = Vec::with_capacity(2 * (RING + 1));
+        for (side, ok) in [(d, plus), (-d, minus)] {
+            if !ok {
                 continue;
             }
-            if let Some(n) = surf.normal(w)? {
-                return Ok(Some((orient(n), true)));
+            let c = c0 + side;
+            let probe = if o == 0 { [c, lo] } else { [lo, c] };
+            if !surf.in_domain(probe) {
+                continue;
+            }
+            for k in 0..=RING {
+                let w = if k == RING { hi } else { lo + ((hi - lo) * k as f64) / RING as f64 };
+                let at = if r == 0 { [w, c] } else { [c, w] };
+                match surf.normal(at)? {
+                    Some(n) => normals.push(orient(n)),
+                    None => return Ok(None),
+                }
             }
         }
-        Ok(None)
+        let mut sum = [0.0; 3];
+        for n in &normals {
+            sum = [sum[0] + n[0], sum[1] + n[1], sum[2] + n[2]];
+        }
+        let Some(mean) = unit3(sum) else { return Ok(None) };
+        if normals.is_empty() || normals.iter().any(|n| dot3(*n, mean) < RING_AGREE || dot3(*n, mean).is_nan()) {
+            return Ok(None);
+        }
+        Ok(Some((mean, true)))
+    }
+
+    /// Which sides `c0 + d` / `c0 - d` of the offset parameter `o` the face lies on, from its
+    /// trim curves (module docs).
+    fn sheet_sides(&self, f: FaceIx, surf: &Surf<'_>, o: usize, c0: f64, d: f64) -> Result<(bool, bool), IncidError> {
+        let periodic = match *surf {
+            Surf::Analytic(AnalyticSurface::Torus(_)) => true,
+            Surf::Analytic(_) => o == 0,
+            Surf::Nurbs(n) => {
+                if o == 0 {
+                    n.periodic_u()
+                } else {
+                    n.periodic_v()
+                }
+            }
+        };
+        if periodic {
+            return Ok((true, true));
+        }
+        let body = self.body();
+        let face = body.face(f).ok_or(IncidError::Eval)?;
+        let (mut above, mut below) = (false, false);
+        let margin = 4.0 * d;
+        for &lx in face.loops() {
+            for &c in body.r#loop(lx).ok_or(IncidError::Eval)?.coedges() {
+                let (_, e, _) = self.coedge(c)?;
+                let [t0, t1] = e.param_range();
+                for k in 0..POLE_SAMPLES {
+                    let t = if k + 1 == POLE_SAMPLES {
+                        t1
+                    } else {
+                        t0 + ((t1 - t0) * k as f64) / (POLE_SAMPLES - 1) as f64
+                    };
+                    if let Some((w, _)) = self.trim_at(c, t) {
+                        let x = if o == 0 { w[0] } else { w[1] };
+                        above |= x > c0 + margin;
+                        below |= x < c0 - margin;
+                    }
+                }
+            }
+        }
+        if above || below {
+            Ok((above, below))
+        } else {
+            Ok((true, true))
+        }
+    }
+
+    /// The derivative scales `(Lu, Lv)` of face `f` (module docs).
+    fn scales(&self, f: FaceIx, surf: &Surf<'_>) -> Result<(f64, f64), IncidError> {
+        let num = |r: Result<f64, fid_num::NumError>| r.map_err(|_| IncidError::Eval);
+        Ok(match *surf {
+            Surf::Analytic(a) => match a {
+                AnalyticSurface::Plane(_) => (1.0, 1.0),
+                AnalyticSurface::Cylinder(c) => (c.radius(), 1.0),
+                AnalyticSurface::Sphere(s) => (s.radius(), s.radius()),
+                AnalyticSurface::Torus(t) => {
+                    let (big, small) = t.radii();
+                    (big + small, small)
+                }
+                AnalyticSurface::Cone(c) => {
+                    let tan = num(fid_num::f::tan(c.half_angle()))?;
+                    let mut lu = c.radius().abs();
+                    let body = self.body();
+                    let face = body.face(f).ok_or(IncidError::Eval)?;
+                    for &lx in face.loops() {
+                        for &ce in body.r#loop(lx).ok_or(IncidError::Eval)?.coedges() {
+                            let (_, e, _) = self.coedge(ce)?;
+                            for v in [e.start(), e.end()] {
+                                let l = c.placement().to_local(self.vertex_point(v)?).map_err(|_| IncidError::Eval)?;
+                                let rho = num(fid_num::f::hypot(l[0], l[1]))?;
+                                if rho > lu {
+                                    lu = rho;
+                                }
+                            }
+                        }
+                    }
+                    let lu = if lu > 0.0 { lu } else { 1.0 };
+                    (lu, num(fid_num::f::hypot(1.0, tan))?)
+                }
+            },
+            Surf::Nurbs(n) => {
+                let w = n.weights();
+                (
+                    nurbs_lip(n.degree_u(), n.knots_u().as_slice(), n.ctrl(), w)?,
+                    nurbs_lip(n.degree_v(), n.knots_v().as_slice(), n.ctrl(), w)?,
+                )
+            }
+        })
+    }
+
+    /// Whether an interior foot of a NURBS face lies on seam edge `e` (module docs).
+    fn seam_test(
+        &self,
+        e: &Edge,
+        cs: &[CoedgeIx],
+        foot: V3,
+        uv: [f64; 2],
+        surf: &Surf<'_>,
+    ) -> Result<Seam, IncidError> {
+        let [t0, t1] = e.param_range();
+        if let Some(curve) = e.curve() {
+            let t = if let Some(a) = curve.as_analytic() {
+                let Ok(f) = a.invert(foot) else { return Ok(Seam::Unsure) };
+                let (lo, hi) = a.domain();
+                if (hi - lo).is_finite() {
+                    into_range(f.t, hi - lo, t0, t1)
+                } else {
+                    f.t
+                }
+            } else {
+                let n = curve.as_nurbs().ok_or(IncidError::Eval)?;
+                match invert_curve(n, foot) {
+                    Ok(i) => i.t,
+                    // Not certified: undecidable only when the foot could be on the curve
+                    // (within MAP_TOL_M of its control box).
+                    Err(_) => return Ok(if near_box(n.ctrl(), foot, MAP_TOL_M) { Seam::Unsure } else { Seam::Off }),
+                }
+            };
+            let t = clamp(t, t0, t1);
+            let at = match (curve.as_analytic(), curve.as_nurbs()) {
+                (Some(a), _) => a.eval(t, 0),
+                (None, Some(n)) => n.eval(t, 0),
+                (None, None) => return Err(IncidError::Eval),
+            }
+            .map_err(|_| IncidError::Eval)?
+            .p;
+            let d = norm3(sub3(at, foot)).ok_or(IncidError::Eval)?;
+            return Ok(if d <= SEAM_TOL_M { Seam::On(Some(t)) } else { Seam::Off });
+        }
+        // No 3-D curve: the coedges' trim curves in the parameter plane.
+        for &c in cs {
+            match self.pcurves.curves.get(c.index()) {
+                Some(Ok(TrimCurve::Imported(curve))) => {
+                    if let Some((o, d)) = curve.as_line() {
+                        let dd = d[0] * d[0] + d[1] * d[1];
+                        let t = clamp(((uv[0] - o[0]) * d[0] + (uv[1] - o[1]) * d[1]) / dd, t0, t1);
+                        let w = [o[0] + t * d[0], o[1] + t * d[1]];
+                        if norm3(sub3(surf.point(w)?, foot)).ok_or(IncidError::Eval)? <= SEAM_TOL_M {
+                            return Ok(Seam::On(Some(t)));
+                        }
+                    } else if let Some(n) = curve.as_nurbs() {
+                        let ((u0, u1), (v0, v1)) = surf.dynamic().domain();
+                        let pad = [FALLBACK_REL * 1e3 * (u1 - u0), FALLBACK_REL * 1e3 * (v1 - v0)];
+                        if in_box2(n.ctrl(), uv, pad) {
+                            return Ok(Seam::Unsure);
+                        }
+                    }
+                }
+                _ => return Ok(Seam::Unsure),
+            }
+        }
+        Ok(Seam::Off)
     }
 
     // ------------------------------------------------------------ the three cases
@@ -635,7 +852,35 @@ impl<'b> Incid<'b> {
         } else {
             self.verified_inversion(&surf, id, hit.foot)?
         };
-        match self.outward(f, uv, &[])? {
+        if let Surf::Nurbs(_) = surf {
+            // A seam of a NURBS face may be a crease: route a foot on it to the edge rule.
+            for eid in self.adj.edges_of_face(id)? {
+                let cids = self.adj.coedges_of_edge(&eid)?;
+                if cids.len() != 2 {
+                    continue;
+                }
+                let mut cs = Vec::with_capacity(2);
+                for cid in &cids {
+                    let c = self.coedge_ix(cid)?;
+                    if self.coedge(c)?.2 == f {
+                        cs.push(c);
+                    }
+                }
+                if cs.len() != 2 {
+                    continue;
+                }
+                let e = match self.body().lookup(&eid) {
+                    Some(EntityIx::Edge(e)) => self.body().edge(e).ok_or(IncidError::Eval)?,
+                    _ => return Err(IncidError::Eval.into()),
+                };
+                match self.seam_test(e, &cs, hit.foot, uv, &surf)? {
+                    Seam::Off => {}
+                    Seam::On(t) => return self.at_edge(f, &eid, hit.foot, t),
+                    Seam::Unsure => return Err(Undefined::Sign { reason: SignUndefined::Degenerate, entity: eid }),
+                }
+            }
+        }
+        match self.outward(f, uv)? {
             Some((normal, fallback)) => Ok(vec![Incident { normal, angle: TAU, fallback }]),
             None => Err(Undefined::Sign { reason: SignUndefined::Degenerate, entity: id.clone() }),
         }
@@ -659,7 +904,14 @@ impl<'b> Incid<'b> {
         Ok(uses.into_iter().map(|(f, _, c)| (f, c)).collect())
     }
 
-    fn at_edge(&self, face: FaceIx, id: &TopologyId, foot: V3) -> Result<Vec<Incident>, Undefined> {
+    /// The edge rule; `t_hint` is the foot's edge parameter when the caller already has it.
+    fn at_edge(
+        &self,
+        face: FaceIx,
+        id: &TopologyId,
+        foot: V3,
+        t_hint: Option<f64>,
+    ) -> Result<Vec<Incident>, Undefined> {
         let not_on = || Undefined::Error(IncidError::NotOnFace { entity: id.clone() });
         let e = match self.body().lookup(id) {
             Some(EntityIx::Edge(e)) => e,
@@ -676,12 +928,12 @@ impl<'b> Incid<'b> {
         }
         let uses = self.two_uses(id)?;
         let edge = self.body().edge(e).ok_or(IncidError::Eval)?;
-        let t = self.edge_param(edge, foot);
+        let t = t_hint.or_else(|| self.edge_param(edge, foot));
         let mut out = Vec::with_capacity(2);
         for (fid, c) in uses {
             let uv = self.uv_on(c, t, foot)?;
             let (_, _, f) = self.coedge(c)?;
-            match self.outward(f, uv, &[])? {
+            match self.outward(f, uv)? {
                 Some((normal, fallback)) => out.push(Incident { normal, angle: PI, fallback }),
                 None => return Err(Undefined::Sign { reason: SignUndefined::Degenerate, entity: fid }),
             }
@@ -727,24 +979,13 @@ impl<'b> Incid<'b> {
             for &(c_in, c_out) in &corners {
                 let (co_out, e_out, _) = self.coedge(c_out)?;
                 let (co_in, e_in, _) = self.coedge(c_in)?;
-                let (ts_out, _, dir_out) = coedge_params(co_out, e_out);
-                let (_, te_in, dir_in) = coedge_params(co_in, e_in);
+                let (ts_out, _) = coedge_params(co_out, e_out);
+                let (_, te_in) = coedge_params(co_in, e_in);
                 let n = match face_normal {
                     Some(n) => n,
                     None => {
                         let uv = self.uv_on(c_out, Some(ts_out), at)?;
-                        let [a0, a1] = e_out.param_range();
-                        let [b0, b1] = e_in.param_range();
-                        let mut along = Vec::with_capacity(2);
-                        let step_out = ts_out + dir_out * (FALLBACK_REL * (a1 - a0));
-                        if let Some((w, _)) = self.trim_at(c_out, step_out) {
-                            along.push(w);
-                        }
-                        let step_in = te_in - dir_in * (FALLBACK_REL * (b1 - b0));
-                        if let Some((w, _)) = self.trim_at(c_in, step_in) {
-                            along.push(w);
-                        }
-                        match self.outward(f, uv, &along)? {
+                        match self.outward(f, uv)? {
                             Some(n) => {
                                 face_normal = Some(n);
                                 n
@@ -938,7 +1179,8 @@ fn interpolate(uv: &[[f64; 2]], ts: &[f64], t: f64) -> Option<([f64; 2], Option<
 
 /// Interior angle at a corner: from the outgoing tangent `out` to the reversed incoming
 /// tangent `-inc`, both projected into the plane of the unit normal `n`, counter-clockwise
-/// about `n`, in `(0, 2 pi]`; `None` when a projected tangent vanishes or the angle is zero.
+/// about `n`, in `[ANGLE_EPS, 2 pi - ANGLE_EPS]`; `None` when a projected tangent vanishes or
+/// the angle is within [`ANGLE_EPS`] of `0` or `2 pi`.
 fn corner_angle(n: V3, inc: V3, out: V3) -> Result<Option<f64>, IncidError> {
     let project = |d: V3| sub3(d, scale3(n, dot3(d, n)));
     let (Some(a), Some(b)) = (unit3(project(out)), unit3(project([-inc[0], -inc[1], -inc[2]]))) else {
@@ -950,7 +1192,100 @@ fn corner_angle(n: V3, inc: V3, out: V3) -> Result<Option<f64>, IncidError> {
     if theta < 0.0 {
         theta += TAU;
     }
-    Ok((theta > 0.0 && theta <= TAU).then_some(theta))
+    Ok((theta >= ANGLE_EPS && TAU - theta >= ANGLE_EPS).then_some(theta))
+}
+
+/// `sqrt(NEAR_REL)`: below this relative derivative a direction collapses (module docs).
+const NEAR_SQRT: f64 = 1e-3;
+
+/// Outcome of the seam test of an interior foot.
+enum Seam {
+    /// Not on the seam.
+    Off,
+    /// On the seam, with its edge parameter when known.
+    On(Option<f64>),
+    /// Cannot be decided exactly.
+    Unsure,
+}
+
+/// Lipschitz bound `2 p (w_max / w_min) diam / dmin` of one direction of a NURBS surface
+/// (`diam` the diagonal of the control points' box, `dmin` the least positive
+/// `knot[i + p] - knot[i]`), inflated by `1 + 2^-20`.
+fn nurbs_lip(degree: usize, knots: &[f64], ctrl: &[[f64; 3]], weights: Option<&[f64]>) -> Result<f64, IncidError> {
+    let mut lo = [f64::INFINITY; 3];
+    let mut hi = [f64::NEG_INFINITY; 3];
+    for c in ctrl {
+        for (k, x) in c.iter().enumerate() {
+            if *x < lo[k] {
+                lo[k] = *x;
+            }
+            if *x > hi[k] {
+                hi[k] = *x;
+            }
+        }
+    }
+    let diam = norm3(sub3(hi, lo)).ok_or(IncidError::Eval)?;
+    let mut dmin = f64::INFINITY;
+    for i in 0..knots.len().saturating_sub(degree) {
+        let (Some(&a), Some(&b)) = (knots.get(i), knots.get(i + degree)) else { continue };
+        let d = b - a;
+        if d > 0.0 && d < dmin {
+            dmin = d;
+        }
+    }
+    let (mut wmin, mut wmax) = (1.0, 1.0);
+    if let Some(ws) = weights {
+        wmin = f64::INFINITY;
+        wmax = 0.0;
+        for &w in ws {
+            if w < wmin {
+                wmin = w;
+            }
+            if w > wmax {
+                wmax = w;
+            }
+        }
+    }
+    let l = ((2.0 * degree as f64) * (wmax / wmin)) * (diam / dmin);
+    if l.is_finite() && l > 0.0 {
+        Ok(l * LIPSCHITZ_INFLATE)
+    } else {
+        Err(IncidError::Eval)
+    }
+}
+
+/// Whether `q` lies within `pad` of the box of the control points.
+fn near_box(ctrl: &[[f64; 3]], q: V3, pad: f64) -> bool {
+    (0..3).all(|k| {
+        let mut lo = f64::INFINITY;
+        let mut hi = f64::NEG_INFINITY;
+        for c in ctrl {
+            if c[k] < lo {
+                lo = c[k];
+            }
+            if c[k] > hi {
+                hi = c[k];
+            }
+        }
+        (lo - pad..=hi + pad).contains(&q[k])
+    })
+}
+
+/// Whether `uv` lies within `pad` of the box of the (2-D) control points.
+fn in_box2(ctrl: &[[f64; 3]], uv: [f64; 2], pad: [f64; 2]) -> bool {
+    (0..2).all(|k| {
+        let mut lo = f64::INFINITY;
+        let mut hi = f64::NEG_INFINITY;
+        for c in ctrl {
+            if c[k] < lo {
+                lo = c[k];
+            }
+            if c[k] > hi {
+                hi = c[k];
+            }
+        }
+        (lo - pad[k]..=hi + pad[k]).contains(&uv[k])
+    })
 }
 
 /// Union-find over the edges of a vertex, joined by the corners between them.
@@ -1008,6 +1343,13 @@ mod tests {
         // A cusp (out reverses in) has no angle; a normal-only tangent neither.
         assert_eq!(corner_angle(z, [1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]).unwrap(), None);
         assert_eq!(corner_angle(z, [0.0, 0.0, 1.0], [0.0, 1.0, 0.0]).unwrap(), None);
+        // Within ANGLE_EPS of 0 or 2 pi: refused (out turns back along in, up to 1e-10 rad).
+        let tiny = 1e-10;
+        assert_eq!(corner_angle(z, [1.0, 0.0, 0.0], [-1.0, tiny, 0.0]).unwrap(), None);
+        assert_eq!(corner_angle(z, [1.0, 0.0, 0.0], [-1.0, -tiny, 0.0]).unwrap(), None);
+        // Just outside the margin: kept.
+        let a = corner_angle(z, [1.0, 0.0, 0.0], [-1.0, 1e-6, 0.0]).unwrap().unwrap();
+        assert!(a > 0.0 && a < 2e-6, "{a}");
     }
 
     #[test]

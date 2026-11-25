@@ -137,6 +137,9 @@ fn surface(j: &Json, off: V3) -> SurfaceDef {
         "plane" => SurfaceParams::Plane { frame: fr },
         "cylinder" => SurfaceParams::Cylinder { frame: fr, radius: j.get("radius").num() },
         "sphere" => SurfaceParams::Sphere { frame: fr, radius: j.get("radius").num() },
+        "cone" => {
+            SurfaceParams::Cone { frame: fr, radius: j.get("radius").num(), half_angle: j.get("half_angle").num() }
+        }
         t => panic!("surface type {t}"),
     };
     SurfaceDef::analytic(p).unwrap()
@@ -325,13 +328,15 @@ struct Case {
     entity: String,
     face: String,
     distance: f64,
+    /// The oracle's foot (cone sections only).
+    foot: Option<V3>,
 }
 
-/// The `cube` or `tube` section of `cases.txt`: header digest and cases.
-fn cases(section: &str) -> (String, Vec<Case>) {
+/// A section of `cases.txt` (`cube`, `tube`, `lblock`, `cone C30`, `cone C20`): its header
+/// words and its cases (`None` for a point skipped as too near the surface).
+fn section(name: &str) -> (Vec<String>, Vec<Option<Case>>) {
     let text = read("geo/dist/face/incid/cases.txt");
-    let mut digest = None;
-    let mut count = 0usize;
+    let mut header = None;
     let mut out = Vec::new();
     let mut inside = false;
     for line in text.lines() {
@@ -339,26 +344,45 @@ fn cases(section: &str) -> (String, Vec<Case>) {
             continue;
         }
         let w: Vec<&str> = line.split_whitespace().collect();
-        if w[0] == "cube" || w[0] == "tube" {
-            inside = w[0] == section;
+        if ["cube", "tube", "lblock", "cone"].contains(&w[0]) {
+            let title = if w[0] == "cone" { format!("cone {}", w[1]) } else { w[0].to_string() };
+            inside = title == name;
             if inside {
-                count = w[4].parse().unwrap();
-                digest = Some(w[6].to_string());
+                header = Some(w.iter().map(|x| x.to_string()).collect::<Vec<_>>());
             }
             continue;
         }
-        if inside {
-            out.push(Case {
-                outside: w[0] == "o",
-                kind: w[1].to_string(),
-                entity: w[2].to_string(),
-                face: w[3].to_string(),
-                distance: w[4].parse().unwrap(),
-            });
+        if !inside {
+            continue;
         }
+        if w[0] == "z" {
+            out.push(None);
+            continue;
+        }
+        let foot = (w.len() == 8).then(|| [w[5].parse().unwrap(), w[6].parse().unwrap(), w[7].parse().unwrap()]);
+        out.push(Some(Case {
+            outside: w[0] == "o",
+            kind: w[1].to_string(),
+            entity: w[2].to_string(),
+            face: w[3].to_string(),
+            distance: w[4].parse().unwrap(),
+            foot,
+        }));
     }
-    assert_eq!(out.len(), count, "{section}: case count");
-    (digest.unwrap(), out)
+    let header = header.unwrap_or_else(|| panic!("no section {name}"));
+    let count: usize = header[header.iter().position(|x| x == "count").unwrap() + 1].parse().unwrap();
+    assert_eq!(out.len(), count, "{name}: case count");
+    (header, out)
+}
+
+fn header_value<'a>(header: &'a [String], key: &str) -> &'a str {
+    &header[header.iter().position(|x| x == key).unwrap() + 1]
+}
+
+/// The `cube` or `tube` section: points digest and cases (no skipped points there).
+fn cases(name: &str) -> (String, Vec<Case>) {
+    let (h, cs) = section(name);
+    (header_value(&h, "points_sha256").to_string(), cs.into_iter().map(Option::unwrap).collect())
 }
 
 // ------------------------------------------------------------------ feet (inputs)
@@ -778,4 +802,266 @@ fn inconsistent_edge_curves_fail_closed() {
         feature: FaceFeature::Interior,
     };
     assert_eq!(incid.signed([1.5, 0.5, 0.5], &inner).unwrap().status, SignStatus::Outside);
+}
+
+// ------------------------------------------------------------------ concave edges and corners: L-block
+
+/// The L-block stream (seed 37), mirroring `lblock_points` of the oracle script: a random
+/// edge (JSON order) or vertex of `lblock.json`, offset by up to 2^(23 - e) grid units.
+fn lblock_points(j: &Json) -> Vec<[i64; 3]> {
+    let pts: Vec<[i64; 3]> = j
+        .get("vertices")
+        .arr()
+        .iter()
+        .map(|v| {
+            let p = v3(v.get("point"));
+            [(p[0] * GRID) as i64, (p[1] * GRID) as i64, (p[2] * GRID) as i64]
+        })
+        .collect();
+    let edges: Vec<(usize, usize)> =
+        j.get("edges").arr().iter().map(|e| (e.get("start").num() as usize, e.get("end").num() as usize)).collect();
+    let mut g = SplitMix(37);
+    let mut out = Vec::new();
+    for _ in 0..4_000 {
+        let pick = g.below((edges.len() + pts.len()) as i64) as usize;
+        let base = if pick < edges.len() {
+            let (a, b) = edges[pick];
+            let d = [pts[b][0] - pts[a][0], pts[b][1] - pts[a][1], pts[b][2] - pts[a][2]];
+            let length = d.iter().map(|c| c.abs()).max().unwrap();
+            let k = g.below(length + 1);
+            [pts[a][0] + d[0] / length * k, pts[a][1] + d[1] / length * k, pts[a][2] + d[2] / length * k]
+        } else {
+            pts[pick - edges.len()]
+        };
+        let e = g.below(14);
+        let de = 1i64 << (23 - e);
+        let mut p = [0i64; 3];
+        for (k, x) in p.iter_mut().enumerate() {
+            *x = base[k] + g.below(2 * de + 1) - de;
+        }
+        out.push(p);
+    }
+    out
+}
+
+#[test]
+fn lblock_concave_edges_and_corners() {
+    let j = parse_json(&read("geo/dist/face/incid/lblock.json"));
+    let pts: Vec<V3> = lblock_points(&j).into_iter().map(metres).collect();
+    let (h, cs) = section("lblock");
+    assert_eq!(digest(&pts), header_value(&h, "points_sha256"), "point stream differs from the oracle's");
+    let body = load_body("geo/dist/face/incid/lblock.json", [0.0; 3]);
+    let kept: Vec<(V3, Case)> = pts.iter().zip(cs).filter_map(|(p, c)| c.map(|c| (*p, c))).collect();
+    // The concave vertical edge at (1, 1) is the foot of points inside the material behind it.
+    assert!(kept.iter().filter(|(_, c)| c.entity == "L-E09" && !c.outside).count() > 10);
+    let (p, c): (Vec<V3>, Vec<Case>) = kept.into_iter().unzip();
+    check_stream(&body, &p, &c, [0.0; 3]);
+    // End to end through FACE.ONE on a subset.
+    through_face_one("geo/dist/face/incid/lblock.json", &p, &c, 20);
+}
+
+#[test]
+fn lblock_concave_corner_angles() {
+    let body = load_body("geo/dist/face/incid/lblock.json", [0.0; 3]);
+    let incid = Incid::new(&body).unwrap();
+    // L-V10 = (1, 1, 1): the top face's reflex corner (3 pi / 2) and the two side faces of the
+    // notch (pi / 2 each), ascending face ID.
+    let hit = FaceHit {
+        foot: [1.0, 1.0, 1.0],
+        distance: 0.0,
+        face: tid("L-F2"),
+        uv: [1.0, 1.0],
+        feature: FaceFeature::Vertex(tid("L-V10")),
+    };
+    let inc = incid.incident_at(&hit).unwrap();
+    let got: Vec<(V3, f64)> = inc.iter().map(|i| (i.normal, i.angle)).collect();
+    assert_eq!(got.len(), 3, "{got:?}");
+    assert_eq!(got[0].0, [0.0, 0.0, 1.0]);
+    assert!((got[0].1 - 3.0 * FRAC_PI_2).abs() < 1e-14, "{got:?}");
+    assert_eq!(got[1].0, [0.0, 1.0, 0.0]);
+    assert_eq!(got[2].0, [1.0, 0.0, 0.0]);
+    assert!((got[1].1 - FRAC_PI_2).abs() < 1e-14 && (got[2].1 - FRAC_PI_2).abs() < 1e-14, "{got:?}");
+    // Concave edge L-E09: inside behind it, outside in the notch beside it.
+    let edge = FaceHit {
+        foot: [1.0, 1.0, 0.5],
+        distance: 0.0,
+        face: tid("L-F5"),
+        uv: [0.5, 0.0],
+        feature: FaceFeature::Edge(tid("L-E09")),
+    };
+    assert_eq!(incid.signed([0.9, 0.9, 0.5], &edge).unwrap().status, SignStatus::Inside);
+}
+
+// ------------------------------------------------------------------ cone apexes
+
+fn cone_points(header: &[String], n: usize, seed: u64, w: f64) -> Vec<V3> {
+    let az: f64 = header_value(header, "apex_z").parse().unwrap();
+    let top: i64 = header_value(header, "top").parse().unwrap();
+    let mut g = SplitMix(seed);
+    let mut out = Vec::new();
+    for i in 0..n {
+        if i % 8 == 0 {
+            let k = 3 + g.below(18);
+            out.push([0.0, 0.0, az - w * 2f64.powi(-(k as i32))]);
+            continue;
+        }
+        let e = g.below(14);
+        let de = 1i64 << (top - e);
+        let o: Vec<i64> = (0..3).map(|_| g.below(2 * de + 1) - de).collect();
+        out.push([o[0] as f64 / GRID, o[1] as f64 / GRID, az + o[2] as f64 / GRID]);
+    }
+    out
+}
+
+/// Signs near a cone apex: an apex foot is `Undefined(Degenerate)` (the normal turns with the
+/// generator there), every other foot gets the oracle's sign; a near-degenerate side foot may
+/// only be undefined within 1e-4 of the height from the apex; never a wrong sign.
+fn check_cone(name: &str, file: &str, seed: u64, w: f64, height: f64) {
+    let (h, cs) = section(&format!("cone {name}"));
+    let n: usize = header_value(&h, "count").parse().unwrap();
+    let pts = cone_points(&h, n, seed, w);
+    assert_eq!(digest(&pts), header_value(&h, "points_sha256"), "{name}: point stream differs");
+    let az: f64 = header_value(&h, "apex_z").parse().unwrap();
+    let apex = [0.0, 0.0, az];
+    let body = load_body(&format!("geo/dist/face/incid/{file}"), [0.0; 3]);
+    let incid = Incid::new(&body).unwrap();
+    let (mut apex_feet, mut defined, mut beyond_tip) = (0, 0, 0);
+    for (i, (p, c)) in pts.iter().zip(cs).enumerate() {
+        let Some(c) = c else { continue };
+        let foot = c.foot.unwrap();
+        let face = tid(&c.face);
+        let surf = body.face(face_ix(&body, &face)).unwrap().surface().as_analytic().unwrap();
+        let f = surf.invert(foot).unwrap();
+        let feature = if c.kind == "E" { FaceFeature::Edge(tid(&c.entity)) } else { FaceFeature::Interior };
+        let hit = FaceHit { foot, distance: len(sub(*p, foot)), face, uv: [f.u, f.v], feature };
+        let s = incid.signed(*p, &hit).unwrap_or_else(|e| panic!("{name} case {i} {c:?}: {e}"));
+        assert!(close(s.unsigned, c.distance) || (s.unsigned - c.distance).abs() < 1e-15 * height, "{name} {i}");
+        if c.kind == "A" {
+            apex_feet += 1;
+            if p[0] == 0.0 && p[1] == 0.0 {
+                beyond_tip += 1;
+            }
+            assert_eq!(s.status, SignStatus::Undefined(SignUndefined::Degenerate), "{name} case {i} {c:?}: {s:?}");
+            continue;
+        }
+        match s.status {
+            SignStatus::Outside | SignStatus::Inside => {
+                assert_eq!(s.status == SignStatus::Outside, c.outside, "{name} case {i} {c:?} p {p:?}: wrong sign");
+                defined += 1;
+            }
+            SignStatus::Undefined(SignUndefined::Degenerate) => {
+                assert!(len(sub(foot, apex)) <= 1e-4 * height, "{name} case {i} {c:?}: undefined away from the apex");
+            }
+            other => panic!("{name} case {i} {c:?}: {other:?}"),
+        }
+    }
+    assert!(apex_feet > 50 && beyond_tip > 40 && defined > 150, "{name}: {apex_feet} {beyond_tip} {defined}");
+}
+
+#[test]
+fn cone_apex_r0_0_half_angle_30() {
+    check_cone("C30", "cone_c30.json", 41, -1.0, 1.0 / 32.0);
+}
+
+#[test]
+fn cone_apex_r0_3_half_angle_20_beyond_the_tip() {
+    check_cone("C20", "cone_c20.json", 43, 1.0, 8.242432258363868);
+}
+
+// ------------------------------------------------------------------ NURBS crease on a seam
+
+/// A closed NURBS tube of degree 1 around the triangle (0, 0), (1, 0), (0.5, 1), z in [0, 1],
+/// whose seam (u = 0 = 3) runs along the corner (0, 0): a C0 crease with face normals
+/// 116.6 degrees apart. Open shell; the seam is a line, the end edges are degree-1 curves.
+fn crease_tube() -> Body {
+    let corners = [[0.0, 0.0], [1.0, 0.0], [0.5, 1.0], [0.0, 0.0]];
+    let mut ctrl = Vec::new();
+    for c in corners {
+        for z in [0.0, 1.0] {
+            ctrl.push([c[0], c[1], z]);
+        }
+    }
+    let surf = NurbsSurface::new(NurbsSurfaceParts {
+        degree_u: 1,
+        degree_v: 1,
+        knots_u: vec![0.0, 0.0, 1.0, 2.0, 3.0, 3.0],
+        knots_v: vec![0.0, 0.0, 1.0, 1.0],
+        n_u: 4,
+        n_v: 2,
+        ctrl,
+        weights: None,
+        periodic_u: false,
+        periodic_v: false,
+    })
+    .unwrap();
+    let ring = |z: f64| {
+        let c = NurbsCurve::new(NurbsCurveParts {
+            degree: 1,
+            knots: vec![0.0, 0.0, 1.0, 2.0, 3.0, 3.0],
+            ctrl: corners.iter().map(|c| [c[0], c[1], z]).collect(),
+            weights: None,
+            periodic: false,
+        })
+        .unwrap();
+        CurveDef::nurbs(c).unwrap()
+    };
+    let mut b = BodyBuilder::new([9; 16]);
+    let v0 = b.add_vertex([0.0, 0.0, 0.0], Some("K-V1"));
+    let v1 = b.add_vertex([0.0, 0.0, 1.0], Some("K-V2"));
+    let bottom = b.add_edge(Some(ring(0.0)), v0, v0, [0.0, 3.0], Some("K-E1"));
+    let top = b.add_edge(Some(ring(1.0)), v1, v1, [0.0, 3.0], Some("K-E2"));
+    let seam_frame = Frame { origin: [0.0, 0.0, 0.0], axis: [1.0, 0.0, 0.0], ref_dir: [0.0, 0.0, 1.0] };
+    let seam = b.add_edge(
+        Some(CurveDef::analytic(CurveParams::Line { frame: seam_frame }).unwrap()),
+        v0,
+        v1,
+        [0.0, 1.0],
+        Some("K-E3"),
+    );
+    let line = |o: [f64; 2], d: [f64; 2]| Some(Curve2::line(o, d).unwrap());
+    let c1 = b.add_coedge(bottom, Sense::Same, line([0.0, 0.0], [1.0, 0.0]), None);
+    let c2 = b.add_coedge(seam, Sense::Same, line([3.0, 0.0], [0.0, 1.0]), None);
+    let c3 = b.add_coedge(top, Sense::Reversed, line([0.0, 1.0], [1.0, 0.0]), None);
+    let c4 = b.add_coedge(seam, Sense::Reversed, line([0.0, 0.0], [0.0, 1.0]), None);
+    let l = b.add_loop(vec![c1, c2, c3, c4], true, None);
+    let f = b.add_face(SurfaceDef::nurbs(surf).unwrap(), Sense::Same, vec![l], Some("K-F1"));
+    b.add_shell(vec![f], false);
+    b.build().unwrap()
+}
+
+#[test]
+fn nurbs_seam_crease_uses_both_sides() {
+    let body = crease_tube();
+    let incid = Incid::new(&body).unwrap();
+    let foot = [0.0, 0.0, 0.5];
+    // Outward normals of the two sides at the crease: -y (edge to (1, 0)) and
+    // (-1, 0.5) / |.| (edge from (0.5, 1)).
+    let n3 = {
+        let l = (1.0f64 + 0.25).sqrt();
+        [-1.0 / l, 0.5 / l, 0.0]
+    };
+    for u in [0.0, 3.0] {
+        let hit = FaceHit { foot, distance: 0.1, face: tid("K-F1"), uv: [u, 0.5], feature: FaceFeature::Interior };
+        let inc = incid.incident_at(&hit).unwrap();
+        assert_eq!(inc.len(), 2, "the seam foot takes the edge rule: {inc:?}");
+        assert!(inc.iter().all(|i| i.angle == PI));
+        // Hand-labelled: beyond either side of the crease is outside the triangle.
+        for dir in [n3, [0.0, -1.0, 0.0]] {
+            let p = [foot[0] + 0.1 * dir[0], foot[1] + 0.1 * dir[1], foot[2]];
+            assert_eq!(incid.signed(p, &hit).unwrap().status, SignStatus::Outside, "u {u} dir {dir:?}");
+        }
+    }
+    // Off the seam the face's own normal is used.
+    let hit = FaceHit {
+        foot: [0.25, 0.0, 0.5],
+        distance: 0.1,
+        face: tid("K-F1"),
+        uv: [0.25, 0.5],
+        feature: FaceFeature::Interior,
+    };
+    let inc = incid.incident_at(&hit).unwrap();
+    assert_eq!(inc.len(), 1);
+    assert!((inc[0].normal[1] + 1.0).abs() < 1e-15, "{inc:?}");
+    assert_eq!(incid.signed([0.25, -0.1, 0.5], &hit).unwrap().status, SignStatus::Outside);
+    assert_eq!(incid.signed([0.25, 0.1, 0.5], &hit).unwrap().status, SignStatus::Inside);
 }

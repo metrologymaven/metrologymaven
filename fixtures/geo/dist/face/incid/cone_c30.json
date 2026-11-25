@@ -1,0 +1,212 @@
+{
+ "description": "invented solid cone C30: r0 0.0, half-angle 0.5235987755982988 rad, apex at the top of the placement's nappe, planar base (GEO.DIST.FACE.INCID review: signs at a cone apex)",
+ "license": "CC-BY-4.0",
+ "generator": "fixtures/geo/dist/face/incid/make_incid_cases.py",
+ "body_id": "434f4e45433330000000000000000000",
+ "vertices": [
+  {
+   "point": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "C30-V1"
+  },
+  {
+   "point": [
+    0.018042195912175804,
+    0.0,
+    -0.03125
+   ],
+   "label": "C30-V2"
+  }
+ ],
+ "edges": [
+  {
+   "start": 1,
+   "end": 1,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "origin": [
+     0.0,
+     0.0,
+     -0.03125
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.018042195912175804
+   },
+   "label": "C30-E1"
+  },
+  {
+   "start": 1,
+   "end": 0,
+   "range": [
+    0.0,
+    0.03608439182435161
+   ],
+   "curve": {
+    "type": "line",
+    "origin": [
+     0.018042195912175804,
+     0.0,
+     -0.03125
+    ],
+    "direction": [
+     -0.5,
+     0.0,
+     0.8660254037844387
+    ],
+    "normal": [
+     0.0,
+     1.0,
+     0.0
+    ]
+   },
+   "label": "C30-E2"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 1,
+   "sense": "reversed",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     6.283185307179586,
+     0.03125
+    ],
+    "dir": [
+     0.0,
+     -0.8660254037844387
+    ]
+   }
+  },
+  {
+   "edge": 0,
+   "sense": "reversed",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.03125
+    ],
+    "dir": [
+     1.0,
+     0.0
+    ]
+   }
+  },
+  {
+   "edge": 1,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.03125
+    ],
+    "dir": [
+     0.0,
+     -0.8660254037844387
+    ]
+   }
+  },
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0,
+    1,
+    2
+   ],
+   "outer": true
+  },
+  {
+   "coedges": [
+    3
+   ],
+   "outer": true
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "cone",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.0,
+    "half_angle": 0.5235987755982988
+   },
+   "sense": "same",
+   "loops": [
+    0
+   ],
+   "label": "C30-F1"
+  },
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     -0.03125
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    1
+   ],
+   "label": "C30-F2"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0,
+    1
+   ],
+   "closed": true
+  }
+ ]
+}
