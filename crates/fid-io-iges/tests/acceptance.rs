@@ -451,9 +451,12 @@ fn writer_accepts_pointers_and_computed_reals() {
     assert_eq!(IgesParam::real(f64::NAN), None);
 }
 
+/// A change applied to a valid file before writing it.
+type Change = Box<dyn Fn(&mut IgesFile)>;
+
 #[test]
 fn writer_rejects_what_the_form_cannot_hold() {
-    let cases: Vec<(&str, Box<dyn Fn(&mut IgesFile)>)> = vec![
+    let cases: Vec<(&str, Change)> = vec![
         ("global_delimiter", Box::new(|f| f.global.record_delim = b',')),
         ("global_delimiter", Box::new(|f| f.global.param_delim = b'1')),
         ("line_content", Box::new(|f| f.start.push(IgesText::new(&"x".repeat(73)).unwrap()))),
