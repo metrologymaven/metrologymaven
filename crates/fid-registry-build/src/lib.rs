@@ -127,12 +127,14 @@ fn report_defs() -> Result<Vec<CommandDef>, DefError> {
 /// `sign.set_profile@1` and `sign.show_profile@1` of TRUST.PROFILE.SELECT. `fid-mig` declares
 /// `migrate.list_sources@1` of MIG.SRC.REG and `migrate.generate_coverage@1` of MIG.COVER.GEN.
 /// `fid-scan-mesh-cmd` declares `mesh.invert_normals@1` of SCAN.MESHOP.CUT.INVERT.
-pub const SOURCES: [Source; 18] = [
+/// `fid-hal-runtime` declares `device.show_devices@1` of HAL.ACQ.SESS.REG.
+pub const SOURCES: [Source; 19] = [
     Source { krate: "fid-align", defs: fid_align::command_defs },
     Source { krate: "fid-bus", defs: fid_bus::policy::projection::command_defs },
     Source { krate: "fid-dep", defs: dep_defs },
     Source { krate: "fid-esig", defs: fid_esig::command_defs },
     Source { krate: "fid-geo-cmd", defs: fid_geo_cmd::command_defs },
+    Source { krate: "fid-hal-runtime", defs: fid_hal_runtime::registry::command_defs },
     Source { krate: "fid-jobs", defs: fid_jobs::command_defs },
     Source { krate: "fid-journal", defs: journal_defs },
     Source { krate: "fid-mig", defs: fid_mig::command_defs },

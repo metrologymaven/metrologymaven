@@ -1607,9 +1607,14 @@ dependencies = [
 name = "fid-hal-runtime"
 version = "0.0.1"
 dependencies = [
+ "fid-bus",
+ "fid-canon",
  "fid-hal-idl",
  "fid-num",
+ "fid-registry",
  "fid-testkit",
+ "fid-types",
+ "fid-uuid",
 ]
 
 [[package]]
@@ -2119,6 +2124,7 @@ dependencies = [
  "fid-gdt",
  "fid-geo-cmd",
  "fid-geo-types",
+ "fid-hal-runtime",
  "fid-io-reg",
  "fid-jobs",
  "fid-journal",

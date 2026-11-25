@@ -135,6 +135,7 @@ python fixtures/geo/ooc/make_stream_fixtures.py --check
 python fixtures/geo/sel/query/make_fixtures.py --check
 python fixtures/geo/types/make_mesh_fixtures.py --check
 python fixtures/geo/types/reg/make_reg_fixtures.py --check
+python fixtures/hal/acq/sess/reg/make_fixtures.py --check
 python fixtures/hal/idl/base/cfg/make_fixtures.py --check
 python fixtures/hal/idl/base/desc/make_fixtures.py --check
 python fixtures/hal/idl/base/err/make_fixtures.py --check
