@@ -19,7 +19,8 @@
 //!   negotiation function and the capability-package semver rules (`HAL.IDL.NEG`).
 //! - [`caps`]: the sensor capability packages; so far [`caps::stream`], the shared streaming
 //!   template, the vendor-extension rule and the `Stream-common@1` profile
-//!   (`HAL.IDL.SENS.STREAM`).
+//!   (`HAL.IDL.SENS.STREAM`), and [`caps::linescan`], the `LineScan@1` package with its
+//!   columnar profile batches and `LineScan-core@1` (`HAL.IDL.SENS.LINE`).
 
 pub mod base;
 pub mod caps;
@@ -75,4 +76,9 @@ pub use negotiate::{
 pub use caps::stream::{
     BatchRecord, BatchSummary, StreamError, StreamEvent, StreamOperation, StreamState, StreamStatus,
     StreamingDescription, StreamingPackage, STREAM_COMMON,
+};
+
+pub use caps::linescan::{
+    EncodedArray, EncodedBatch, LineScanError, LineScanPackage, LineScanSettings, PoseColumn, PoseRef, ProfileBatch,
+    Trigger, TriggerMode, ValidityMask, LINESCAN_CORE,
 };

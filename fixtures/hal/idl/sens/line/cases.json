@@ -1,0 +1,284 @@
+[
+  {
+    "name": "ok_base",
+    "expect": "ok",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000",
+    "summary": {
+      "first_seq": "10",
+      "last_seq": "12",
+      "bytes": "671",
+      "span_ns": "2000"
+    }
+  },
+  {
+    "name": "ok_full",
+    "expect": "ok",
+    "header": "{\"arrays\":{\"intensity\":{\"encoding\":{\"numeric\":\"u16\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3ff0000000000000\",\"unit\":\"1\"},\"len\":\"12\"},\"mask\":{\"len\":\"12\"},\"pose_seq\":{\"len\":\"3\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"pose_stream\":\"tracker-1.pose\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000320000000000000033000000000000003400000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b0200006400650066006700680069006a006b006c006d006e006f00",
+    "summary": {
+      "first_seq": "10",
+      "last_seq": "12",
+      "bytes": "897",
+      "span_ns": "2000"
+    }
+  },
+  {
+    "name": "ok_no_t_dev",
+    "expect": "ok",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000",
+    "summary": {
+      "first_seq": "10",
+      "last_seq": "12",
+      "bytes": "627",
+      "span_ns": null
+    }
+  },
+  {
+    "name": "ok_t_host_equal",
+    "expect": "ok",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "640000000000000064000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000",
+    "summary": {
+      "first_seq": "10",
+      "last_seq": "12",
+      "bytes": "671",
+      "span_ns": "2000"
+    }
+  },
+  {
+    "name": "ok_masked_nan",
+    "expect": "ok",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"f32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3ff0000000000000\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000df0f82a8fbb7acc527b7acc5273782a8fb3782a8fbb70000c07facc5273782a8fb3782a8fbb7acc527b7acc5273782a8fb37f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000",
+    "summary": {
+      "first_seq": "10",
+      "last_seq": "12",
+      "bytes": "671",
+      "span_ns": "2000"
+    }
+  },
+  {
+    "name": "z_one_point_short",
+    "expect": "array_length_mismatch",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"11\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a020000"
+  },
+  {
+    "name": "x_unit_rad",
+    "expect": "encoding_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"rad\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "t_host_decreasing",
+    "expect": "timestamps_not_monotonic",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "64000000000000002c01000000000000c800000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "t_dev_decreasing",
+    "expect": "timestamps_not_monotonic",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000b80b000000000000b70b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "t_dev_equal",
+    "expect": "timestamps_not_monotonic",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000d007000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "duplicate_profile_no_t_dev",
+    "expect": "profile_id_duplicate",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c800000000000000c800000000000000070000000000000008000000000000000800000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff0100000002000001020000fe010000ff0100000002000001020000"
+  },
+  {
+    "name": "duplicate_profile_with_t_dev",
+    "expect": "timestamps_not_monotonic",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c800000000000000c800000000000000e803000000000000d007000000000000d007000000000000070000000000000008000000000000000800000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff0100000002000001020000fe010000ff0100000002000001020000"
+  },
+  {
+    "name": "profile_id_repeat",
+    "expect": "profile_id_duplicate",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000700000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "payload_trailing_byte",
+    "expect": "array_length_mismatch",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b02000000"
+  },
+  {
+    "name": "seq_range_mismatch",
+    "expect": "array_length_mismatch",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"13\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "profile_id_short",
+    "expect": "array_length_mismatch",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b00000000000007000000000000000800000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "mask_len_wrong",
+    "expect": "array_length_mismatch",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"11\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "x_len_long",
+    "expect": "array_length_mismatch",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"13\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e00000000000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "mask_padding_set",
+    "expect": "mask_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff1fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "x_nan_valid",
+    "expect": "sample_not_finite",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"f32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3ff0000000000000\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0f82a8fbb7acc527b7acc5273782a8fb3782a8fbb70000c07facc5273782a8fb3782a8fbb7acc527b7acc5273782a8fb37f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "z_overflow_valid",
+    "expect": "sample_not_finite",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"f64\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x7fe1ccf385ebc8a0\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000000000000000f03f000000000000f03f000000000000f03f000000000000f03f000000000000f03f000000000000f03f000000000000f03f000000000000f03f000000000000f03f000000000000f03f000000000000f03f0000000000002440"
+  },
+  {
+    "name": "z_overflow_masked",
+    "expect": "ok",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"f64\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x7fe1ccf385ebc8a0\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff07e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000000000000000f03f000000000000f03f000000000000f03f000000000000f03f000000000000f03f000000000000f03f000000000000f03f000000000000f03f000000000000f03f000000000000f03f000000000000f03f0000000000002440",
+    "summary": {
+      "first_seq": "10",
+      "last_seq": "12",
+      "bytes": "719",
+      "span_ns": "2000"
+    }
+  },
+  {
+    "name": "intensity_unit_m",
+    "expect": "encoding_invalid",
+    "header": "{\"arrays\":{\"intensity\":{\"encoding\":{\"numeric\":\"u16\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3ff0000000000000\",\"unit\":\"m\"},\"len\":\"12\"},\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000000000000000000000000000000000000000000000000000"
+  },
+  {
+    "name": "x_numeric_u64",
+    "expect": "encoding_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"u64\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "z_scale_zero",
+    "expect": "encoding_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x0000000000000000\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "x_unit_mm",
+    "expect": "encoding_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"mm\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "z_encoding_missing",
+    "expect": "encoding_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "frame_not_sensor",
+    "expect": "batch_header_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"machine\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "frame_id_not_v5",
+    "expect": "batch_header_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"3d0b8f5c-9a51-4c2e-8f0e-6b7d2a1c4e90\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "origin_device",
+    "expect": "batch_header_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"origin\":\"device\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "pose_seq_without_stream",
+    "expect": "batch_header_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"pose_seq\":{\"len\":\"3\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000320000000000000033000000000000003400000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "pose_stream_invalid",
+    "expect": "batch_header_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"pose_seq\":{\"len\":\"3\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"pose_stream\":\"Pose\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000320000000000000033000000000000003400000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "range_reversed",
+    "expect": "batch_header_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"9\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "u64_leading_zero",
+    "expect": "batch_header_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"010\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "schema_unknown",
+    "expect": "batch_header_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/2\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "array_unknown",
+    "expect": "batch_header_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"normals\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "t_host_missing",
+    "expect": "batch_header_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "header_whitespace",
+    "expect": "batch_header_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\": \"12\"},\"profile_id\":{\"len\": \"3\"},\"t_dev\":{\"len\": \"3\"},\"t_host\":{\"len\": \"3\"},\"x\":{\"encoding\":{\"numeric\": \"i32\",\"offset\": \"0x0000000000000000\",\"scale\": \"0x3eb0c6f7a0b5ed8d\",\"unit\": \"m\"},\"len\": \"12\"},\"z\":{\"encoding\":{\"numeric\": \"i32\",\"offset\": \"0x0000000000000000\",\"scale\": \"0x3eb0c6f7a0b5ed8d\",\"unit\": \"m\"},\"len\": \"12\"}},\"first_seq\": \"10\",\"frame\":{\"id\": \"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\": \"sensor\"},\"last_seq\": \"12\",\"points_per_profile\": \"4\",\"profiles\": \"3\",\"schema\": \"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "header_key_order",
+    "expect": "batch_header_invalid",
+    "header": "{\"schema\":\"linescan-batch/1\",\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "header_trailing_newline",
+    "expect": "batch_header_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\"}\n",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  },
+  {
+    "name": "duplicate_key",
+    "expect": "batch_header_invalid",
+    "header": "{\"arrays\":{\"mask\":{\"len\":\"12\"},\"profile_id\":{\"len\":\"3\"},\"t_dev\":{\"len\":\"3\"},\"t_host\":{\"len\":\"3\"},\"x\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"},\"z\":{\"encoding\":{\"numeric\":\"i32\",\"offset\":\"0x0000000000000000\",\"scale\":\"0x3eb0c6f7a0b5ed8d\",\"unit\":\"m\"},\"len\":\"12\"}},\"first_seq\":\"10\",\"frame\":{\"id\":\"e4d5fdf8-6db4-510a-8f49-1fbf0f71a5b1\",\"kind\":\"sensor\"},\"last_seq\":\"12\",\"points_per_profile\":\"4\",\"profiles\":\"3\",\"schema\":\"linescan-batch/1\",\"schema\":\"linescan-batch/1\"}",
+    "payload_hex": "6400000000000000c8000000000000002c01000000000000e803000000000000d007000000000000b80b000000000000070000000000000008000000000000000900000000000000ff0fe2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000e2fffffff6ffffff0a0000001e000000f4010000f5010000f6010000f7010000fe010000ff010000000200000102000008020000090200000a0200000b020000"
+  }
+]
