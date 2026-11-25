@@ -67,7 +67,7 @@ fn argv(a: &[&str]) -> Vec<String> {
 #[derive(Debug, Clone)]
 enum Answer {
     /// Accept, then finish with this envelope.
-    Finish(Envelope),
+    Finish(Box<Envelope>),
     /// Refuse before accepting.
     Refuse(String),
     /// Accept, then never finish.
@@ -121,14 +121,13 @@ impl BusTransport for FakeTarget {
         }
         self.jobs += 1;
         let job = uuid_v7(0x0191_0000_0000, self.jobs);
-        let answer = self
-            .answers
-            .pop_front()
-            .unwrap_or_else(|| Answer::Finish(Envelope::computed(r.command.as_str(), CValue::Obj(BTreeMap::new()))));
+        let answer = self.answers.pop_front().unwrap_or_else(|| {
+            Answer::Finish(Box::new(Envelope::computed(r.command.as_str(), CValue::Obj(BTreeMap::new()))))
+        });
         match answer {
             Answer::Finish(env) => {
                 self.inbox.push_back(BusEvent::Accepted { key: r.key, job });
-                self.inbox.push_back(BusEvent::Finished { key: r.key, job, envelope: Box::new(env) });
+                self.inbox.push_back(BusEvent::Finished { key: r.key, job, envelope: env });
             }
             Answer::Refuse(reason) => {
                 self.inbox.push_back(BusEvent::Refused { key: r.key, attempt: r.attempt, reason })
@@ -301,7 +300,7 @@ fn ac1_set_offset_sends_one_invocation_and_prints_the_bus_envelope() {
         journal_entry_hash: Some(format!("sha256:{}", "ab".repeat(32))),
         ..Envelope::bare("demo.set_offset@1", Outcome::Committed)
     };
-    let mut bus = FakeTarget::answering(PrincipalKind::Script, Answer::Finish(reply.clone()));
+    let mut bus = FakeTarget::answering(PrincipalKind::Script, Answer::Finish(Box::new(reply.clone())));
     let r = run_on(&tree, &["demo", "set-offset", "--offset", "12.700mm", "--label=a", "--json"], &mut bus);
     assert_eq!(r.exit, ExitCode::Success, "{r:?}");
     let sent = bus.submits();
@@ -329,7 +328,7 @@ fn ac2_every_outcome_passes_through_with_its_exit_code() {
         let name = text(&c["name"]);
         let CValue::Num(exit) = c["exit"] else { panic!("exit") };
         let answer = if let Some(env) = c.get("finish") {
-            Answer::Finish(envelope_of(env))
+            Answer::Finish(Box::new(envelope_of(env)))
         } else if let Some(reason) = c.get("refuse") {
             Answer::Refuse(text(reason).to_string())
         } else {
@@ -406,7 +405,8 @@ fn ac4_bus_hidden_or_unknown_answers_become_the_absent_refusal() {
         let name = text(&c["name"]);
         for json in [false, true] {
             let a: &[&str] = if json { &["demo", "show-thing", "--json"] } else { &["demo", "show-thing"] };
-            let mut bus = FakeTarget::answering(PrincipalKind::Script, Answer::Finish(envelope_of(&c["finish"])));
+            let mut bus =
+                FakeTarget::answering(PrincipalKind::Script, Answer::Finish(Box::new(envelope_of(&c["finish"]))));
             let got = run_on(&tree, a, &mut bus);
             assert_eq!(bus.submits().len(), 1, "{name}");
             let mut bus2 = FakeTarget::new(PrincipalKind::Script);
@@ -428,7 +428,7 @@ fn ac10_other_not_found_and_validation_errors_pass_through() {
         let c = obj(case);
         let name = text(&c["name"]);
         let CValue::Num(exit) = c["exit"] else { panic!("exit") };
-        let mut bus = FakeTarget::answering(PrincipalKind::Script, Answer::Finish(envelope_of(&c["finish"])));
+        let mut bus = FakeTarget::answering(PrincipalKind::Script, Answer::Finish(Box::new(envelope_of(&c["finish"]))));
         let r = run_on(&tree, &["demo", "show-thing", "--json"], &mut bus);
         assert_eq!(r.stdout, format!("{}\n", canon(&c["finish"])), "{name}");
         assert_eq!(f64::from(r.exit.code()), exit, "{name}");
