@@ -249,7 +249,7 @@ fn run_scenario(name: &str) -> World {
 
 // ------------------------------------------------------------------ acceptance criteria
 
-fn effective_page<'a>(show: &'a CValue, idx: usize) -> &'a CValue {
+fn effective_page(show: &CValue, idx: usize) -> &CValue {
     &arr(get(show, "pages"))[idx]
 }
 
