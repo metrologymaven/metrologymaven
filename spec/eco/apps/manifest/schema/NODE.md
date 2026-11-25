@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-app-manifest]
+built_pr: 622
 satisfies: [REQ-ECO.APPS.MANIFEST-001, REQ-ECO.APPS.MANIFEST-002, REQ-ECO.APPS.MANIFEST-003, REQ-ECO.APPS.MANIFEST-004, REQ-ECO.APPS.MANIFEST-007]
 covers: []
 depends_on: [CORE.REG.MAN, VIZ.SHELL.DOCK, CORE.STO.SET, RPT.MODEL]
