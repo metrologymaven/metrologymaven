@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-surface]
+built_pr: 627
 satisfies: [REQ-AUTO.SURF-005, REQ-AUTO.SURF-007]
 covers: []
 depends_on: [CORE.BUS.API, AUTO.SURF.JOBS, AUTO.SURF.ENV]
@@ -108,6 +110,8 @@ The `BusTransport` (`AUTO.SURF.JOBS`) that every surface uses when the bus runs 
 
 - The table is defined here because no other node owned the bus-to-envelope translation, and only a crate that sees `ApiError` can apply it. `AUTO.SURF.ENV` may take it over, or cite it, when it next changes. `AUTO.SURF.ENV` has no codes for `unauthenticated` or `upgrade_refused`, so both are reported as `policy_refused` and keep their bus code in the details.
 - Progress and cancellation for long-running commands need the bus to hand them to `CORE.JOB` and the port to report the job. Until then every in-process call is synchronous.
+
+- **D-035 erratum, decided by the maintainer on 2026-11-25 (spec text to follow in a separate spec-only PR).** REQ-005 needs the erratum "except `hidden_command`". A new REQ-011 should say: if a failed reply's bus code is `hidden_command`, from any stage, then the transport shall finish byte for byte as the bus's `not_found/unknown_major` refusal of the requested command ID from stage `resolve` (code `not_found`, message `"<name>"@<major>: unknown major`, details `bus_code: not_found`, `bus_reason: unknown_major`, `bus_origin: pipeline`). A matching AC should take the unknown side from a real bus. Reason: a lifecycle-hidden major still exposed over MCP answered `hidden_command`, whose message and details differ from `unknown_major` and so confirmed the major exists. The code in PR #627 already does this (`fid_surface::inproc::hidden_as_unknown_major`, tests `inproc.rs` and `inproc_bus.rs`), and the AC-2 fixture row is relabelled to match.
 
 ## Children
 
