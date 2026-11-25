@@ -1,0 +1,111 @@
+{
+ "about": "GDT.LOC.DERIV.TYPES AC-1: points, chain and the record derive() returns with the stub axis registered under syn.axis.stub@1.0.0 (see make_deriv_fixtures.py). Synthetic, CC0.",
+ "chain": {
+  "steps": [
+   {
+    "alg": "syn.partition.whole_feature@1.0.0",
+    "kind": "partition",
+    "params": {}
+   },
+   {
+    "alg": "syn.association.ls_cylinder@1.0.0",
+    "kind": "association",
+    "params": {}
+   },
+   {
+    "alg": "syn.axis.stub@1.0.0",
+    "kind": "reduction",
+    "params": {}
+   },
+   {
+    "alg": "syn.evaluation.zone@1.0.0",
+    "kind": "evaluation",
+    "params": {}
+   }
+  ],
+  "variant": "default"
+ },
+ "expected": {
+  "alg": "syn.axis.stub@1.0.0",
+  "element": {
+   "direction": [
+    "0x0000000000000000",
+    "0x0000000000000000",
+    "0x3ff0000000000000"
+   ],
+   "extent": "0x3fa6000000000000",
+   "kind": "axis",
+   "point": [
+    "0x3f923d70a3d70a3d",
+    "0xbf70624dd2f1a9fc",
+    "0x3f78000000000000"
+   ]
+  },
+  "flags": [],
+  "schema": "fid.derived-element/1"
+ },
+ "expected_canonical": "{\"alg\":\"syn.axis.stub@1.0.0\",\"element\":{\"direction\":[\"0x0000000000000000\",\"0x0000000000000000\",\"0x3ff0000000000000\"],\"extent\":\"0x3fa6000000000000\",\"kind\":\"axis\",\"point\":[\"0x3f923d70a3d70a3d\",\"0xbf70624dd2f1a9fc\",\"0x3f78000000000000\"]},\"flags\":[],\"schema\":\"fid.derived-element/1\"}",
+ "feature_kind": "cylinder",
+ "points": [
+  [
+   "0x3f923d70a3d70a3d",
+   "0xbf70624dd2f1a9fc",
+   "0xbf70000000000000"
+  ],
+  [
+   "0x3f90a3d70a3d70a4",
+   "0x3f46872b020c49ba",
+   "0x3f88000000000000"
+  ],
+  [
+   "0x3f8e147ae147ae14",
+   "0x3f626e978d4fdf3b",
+   "0xbf88000000000000"
+  ],
+  [
+   "0x3f847ae147ae147b",
+   "0x3f6f3b645a1cac08",
+   "0x3f94000000000000"
+  ],
+  [
+   "0x3f75c28f5c28f5c3",
+   "0x3f626e978d4fdf3b",
+   "0x3f70000000000000"
+  ],
+  [
+   "0x3f6eb851eb851eb8",
+   "0x3f46872b020c49ba",
+   "0xbf90000000000000"
+  ],
+  [
+   "0x3f6eb851eb851eb8",
+   "0xbf81cac083126e98",
+   "0x3f9c000000000000"
+  ],
+  [
+   "0x3f75c28f5c28f5c3",
+   "0xbf84fdf3b645a1cb",
+   "0xbf80000000000000"
+  ],
+  [
+   "0x3f847ae147ae147b",
+   "0xbf883126e978d4fe",
+   "0x3f90000000000000"
+  ],
+  [
+   "0x3f8e147ae147ae14",
+   "0xbf84fdf3b645a1cb",
+   "0x0000000000000000"
+  ],
+  [
+   "0x3f90a3d70a3d70a4",
+   "0xbf81cac083126e98",
+   "0x3f98000000000000"
+  ],
+  [
+   "0x3f919fe6cb398065",
+   "0xbf504e239a8b943e",
+   "0x3f80000000000000"
+  ]
+ ]
+}
