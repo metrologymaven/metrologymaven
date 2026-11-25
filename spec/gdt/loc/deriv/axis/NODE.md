@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-gps]
 satisfies: [REQ-GDT.LOC.DERIV-001, REQ-GDT.LOC.DERIV-003]
 covers: []
 depends_on: [GDT.LOC.DERIV.TYPES, KRN.LSQ, KRN.ENV, KRN.MZ]
@@ -68,7 +69,11 @@ Analytic cylinders and cones (CC0); ORS-GDT suite from `UNC.ORS.GDT`.
 
 ## Open questions
 
-- None.
+- **Build notes (fid-gps, `loc::derive::axis`).** Registered in `DeriveRegistry::builtin()` under the reduction ID `gps.derive.axis@1.0.0` (no reduction ID was pinned; chosen in the `gps.<feature>.<method>` form of `gps.zone.composite`). The fit is the single association step before the reduction; none or several, or any step parameter, is `UNSUPPORTED{alg}`. Fits run today: `fit.cylinder.ls@1.0.0`, `fit.cone.ls@1.0.0`, `fit.cylinder.mc@1.0.0`; the minimum-zone and maximum-inscribed fits are `UNSUPPORTED{alg}` until `KRN.MZ.RND.CYL` and `KRN.ENV.MIC.CYL` land in `fid-fit`.
+- **Optimality (D-045).** The least-squares cylinder and cone carry no global certificate, so their axis is always `local_optimum_only`, even when `fid-fit` did not flag the fit. Only the minimum circumscribed cylinder with a passed global cross-check (the DRF datum's acceptance) is `Certified{GlobalFit}`. A `suspect_axis` (or cone `weak_axis`) fit is `fit_failed`, not merely flagged. All fit errors, including too few points, are `fit_failed` (REQ-004 read literally).
+- **REQ-001 gap.** The `fid.derived-element/1` record of `derive()` carries the reduction's ID, not the fit's; the fit's ID is returned by `derive_axis_with_fit` (and is in the chain's association step). Recording it in the record needs a `GDT.LOC.DERIV.TYPES` change.
+- **No nominal direction.** REQ-003 assumes one; without it the fit's canonical direction is kept.
+- **AC-5 open.** It waits for the ORS-GDT derived-axis cases (`UNC.ORS.GDT`, unbuilt).
 
 ## Children
 
