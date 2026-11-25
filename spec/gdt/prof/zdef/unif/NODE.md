@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-gps]
+built_pr: 611
 satisfies: [REQ-GDT.PROF.ZDEF-001, REQ-GDT.PROF.ZDEF-002, REQ-GDT.PROF.ZDEF-003]
 covers: []
 depends_on: [GDT.PROF.DEV, GDT.ZONE.ZTYPE, GDT.RES.RESOLVE]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-25
 ---
 
 # GDT.PROF.ZDEF.UNIF: Constant-width zone intervals and dispatch
@@ -71,6 +73,14 @@ Owns the `ZoneDefinition` type for profile tolerances and turns the constant-wid
 ## Open questions
 
 - Whether the ASME unequally disposed share is measured on the side that adds material or removes it is DMT content; this leaf only takes `share_side` from the chain.
+- **Built** in `fid-gps` `prof::zdef` (`ZoneDefinition`, `Side`, `NonUniformParams`, `ZoneDefKind`, `Interval`, `ConstantZone`, `ZoneIntervals`, `ZoneDefRecord`, `AppliedZone`, `zone_intervals`, `apply`, `ZdefError`). AC-1 to AC-5 are met on invented fixtures `fixtures/gdt/prof/zdef/constant.json`, `property.json` and `rows.json`, whose expected values come from the oracle `fixtures/gdt/prof/zdef/make_zdef_fixtures.py` (exact rationals, one explicit rounding per IEEE operation). AC-1 has a decimal set (t = 0.4 mm, share 0.1 mm as the nearest binary64) and a dyadic set (t = 105·2⁻¹⁸ m, share = 26·2⁻¹⁸ m) whose intervals equal the exact rationals. AC-2 pins the 10 000-case stream by a SHA-256 and lists the 584 disagreements (each within 1 ulp of t of a bound; most are subnormal `d` next to a zero bound), and checks `contains` against the oracle's exact-zone membership for every case (23 cases where the rounded interval and the exact zone differ, all at a rounded bound). AC-6 is the bit comparison on Linux, Windows, macOS and wasm32.
+- **Sign convention confirmed** (the open point of GDT.PROF.DEV): the interval is on `signed_dev` as DEV defines it, positive outward, away from the material, so `Side::Outward` is the positive side. A deviation whose `signed_dev` is `None` (no sign of record, including a foot on the edge of the toleranced set, D-045) has no membership: `ConstantZone::contains_deviation` returns `None`, never `Some(true)`. The caller-declared `approx_error` (D-045) is not folded into the interval; it stays with the deviations for UNC. Torus faces never reach this module (DEV refuses them).
+- **Share side.** `Unequal` carries `{t, share}` only: the side is read from the resolved chain's token parameter `share_side` (`outward` / `inward`), which must appear in at least one step and agree wherever it appears; missing, conflicting, non-token or unknown values fail `bad_zone_parameter{share_side}`. The record carries the side read. The Scope's `Unequal{t, share, share_side}` is read this way so the side cannot be hard-coded by the caller.
+- **Parameter rules beyond REQ-005**: an infinite or subnormal `t` is also `bad_zone_parameter{t}` (a subnormal width cannot be halved exactly). `share = 0` and `share = t` are valid. A `-0.0` share is normalised to `+0.0`, and every zero bound is written `+0.0`, so the record bits do not depend on the path.
+- **Dispatch order**: the `UNSUPPORTED` check runs before parameter validation, so an unsupported kind is refused whatever its parameters. Kind codes are `bilateral`, `unilateral`, `unequal`, `non_uniform`; the limitation argument `nonuniform` (the synthetic table's spelling) is also read as `non_uniform`, so a row that lists it stays refused once NONUNIF lands. A `zone_def_unsupported` limitation with no argument or an argument that names no kind fails `unknown_zone_limitation{index}` (fail closed: a misspelt kind must not enable the kind it meant). This error is an addition to the leaf's two error codes.
+- **Record additions**: `ZoneDefRecord` adds `side` (the side of a unilateral zone) to the REQ-007 fields, as REQ-GDT.PROF.ZDEF-002 asks the record to name the definition's parameters; absent values are `null`, lengths are IEEE-754 hex bits in metres. `ConstantZone::offset_shape` gives the GDT.ZONE.ZTYPE `Offset{disposition_shift}`. UNC (UNC.DEC) compares that shape's usage size against the stated tolerance; `width_m` is informational and is not the comparison limit.
+- **Membership is exact, and it is not a decision.** Only `t - share` can round. `ConstantZone` keeps that bound's exact rounding error (two-sum, `lower_err_m` / `upper_err_m`), and `contains` answers against the exact interval of the given `t` and `share`: a `d` equal to a rounded bound is inside only when the exact bound is not stricter, and any other binary64 `d` is on the same side of both. So the verdict is never wrong against the exact zone. In AC-1 the decimal unequal-outward lower bound (−0.3 mm rounded) is itself outside the exact zone. `contains` is geometric membership, not a conformance decision; UNC.DEC owns that.
+- `NonUniform` carries `NonUniformParams { widths_m }` as a placeholder; GDT.PROF.ZDEF.NONUNIF owns its real parameters and may change them.
 
 ## Children
 
