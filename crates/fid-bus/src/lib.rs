@@ -5,6 +5,7 @@ pub mod error;
 pub mod handler;
 pub mod pipeline;
 pub mod policy;
+pub mod port;
 pub mod principal;
 pub mod route;
 mod unicode16;
@@ -39,6 +40,10 @@ pub use policy::egress::{
 pub use policy::projection::{
     authorise, authorise_projection, list_requests, Approval, Authorised, Decision, Filing, Projected, RejectHandler,
     RequestBook, RequestId, RequestRecord, RequestState, WithdrawHandler,
+};
+pub use port::{
+    channel_kind, to_api_error, CallParts, JournalId, LocalBus, LocalPort, SessionHost, UpgradeJournal,
+    NO_PRESENCE_PROVIDER, OTHER_JOURNAL,
 };
 pub use principal::{
     Channel, ChannelKind, ClientId, ConfirmMethod, ConfirmedUpgrade, HumanPresence, IdError, Identity, JournalAppend,

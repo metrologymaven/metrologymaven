@@ -1,6 +1,6 @@
 [package]
 name = "fid-bus"
-description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy, file handles, MCP projection with pending requests, authored literal normalisation, the egress primitive, command resolution, parameter validation and preconditions, and the pipeline with its all-or-nothing commit, and branch routing with per-branch writer locks (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS, CORE.BUS.POL.PROJ, CORE.BUS.UNIT, CORE.BUS.POL.EGRESS, CORE.BUS.PIPE.VALID, CORE.BUS.PIPE.STAGE, CORE.BUS.ROUTE)"
+description = "Metrology Maven command bus: closed error code set, principal model, handler contract, class policy, file handles, MCP projection with pending requests, authored literal normalisation, the egress primitive, command resolution, parameter validation and preconditions, and the pipeline with its all-or-nothing commit, and branch routing with per-branch writer locks (spec nodes CORE.BUS.PIPE.ERR, CORE.BUS.PRIN, CORE.BUS.PIPE.HANDLER, CORE.BUS.POL.CLASS, CORE.BUS.POL.FS, CORE.BUS.POL.PROJ, CORE.BUS.UNIT, CORE.BUS.POL.EGRESS, CORE.BUS.PIPE.VALID, CORE.BUS.PIPE.STAGE, CORE.BUS.ROUTE), and the in-process bus port (CORE.BUS.PORT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -42,6 +42,9 @@ fid-uuid = { path = "../fid-uuid" }
 # backtracking, with size and nesting limits. MIT OR Apache-2.0; already in the lock
 # (fid-io-reg, fid-vocab), same features.
 regex = { version = "1", default-features = false, features = ["std", "unicode"] }
+# CORE.BUS.PORT implements the surface-facing `BusPort` trait and its call, reply and error
+# types. Layer model, below the bus; depends only on fid-canon and fid-types.
+fid-bus-api = { path = "../fid-bus-api" }
 
 [target.'cfg(unix)'.dependencies]
 # O_NONBLOCK, O_NOCTTY and EXDEV constants only (CORE.BUS.POL.FS). Already in the lock.

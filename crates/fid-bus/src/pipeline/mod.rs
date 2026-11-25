@@ -124,6 +124,7 @@ use fid_journal::{
 use fid_registry::{CommandDef, PredContext};
 use fid_types::{CommandId, SideEffect};
 use hooks::Hooks;
+use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -622,52 +623,71 @@ impl Bus {
         Ok(())
     }
 
-    fn enter(&self, stage: Stage) -> Result<(), BusError> {
+    /// Records `stage` as the one running (for [`Bus::execute_staged`]), then calls the probe.
+    fn enter(&self, at: &Cell<Option<Stage>>, stage: Stage) -> Result<(), BusError> {
+        at.set(Some(stage));
         self.probe.enter(stage)
     }
 
     /// Runs one invocation (module docs). Any error returns at once and changes nothing.
     pub fn execute(&self, call: &Call<'_>, inv: &Invocation) -> Result<CommandResult, BusError> {
+        self.run(call, inv, &Cell::new(None))
+    }
+
+    /// [`Bus::execute`], also reporting the stage an error was raised in (CORE.BUS.PORT
+    /// REQ-012): the last stage entered, or `None` for an error raised outside the stages
+    /// (deriving the principal from the channel, which CORE.BUS.PORT reports as `session`).
+    /// The run itself is exactly [`Bus::execute`]'s.
+    pub(crate) fn execute_staged(
+        &self,
+        call: &Call<'_>,
+        inv: &Invocation,
+    ) -> Result<CommandResult, (Option<Stage>, BusError)> {
+        let at = Cell::new(None);
+        self.run(call, inv, &at).map_err(|e| (at.get(), e))
+    }
+
+    fn run(&self, call: &Call<'_>, inv: &Invocation, at: &Cell<Option<Stage>>) -> Result<CommandResult, BusError> {
         // 1. resolve
-        self.enter(Stage::Resolve)?;
-        let derived = call.sessions.derive_principal(call.channel)?;
+        self.enter(at, Stage::Resolve)?;
+        let derived = call.sessions.derive_principal(call.channel).inspect_err(|_| at.set(None))?;
         let resolved = self.table.resolve_id(&inv.command, &derived)?;
         let def = resolved.def();
         // 2. validate
-        self.enter(Stage::Validate)?;
+        self.enter(at, Stage::Validate)?;
         let validated = resolved.validate_value(&inv.params, call.view).map_err(BusError::from)?;
         let read = is_read(def.side_effect);
         if read {
             read_envelope(inv)?;
         }
         // 3. authorise
-        self.enter(Stage::Authorise)?;
+        self.enter(at, Stage::Authorise)?;
         check_raw_paths(&derived, def, &inv.params)?;
         let authorised =
             authorise(call.sessions, call.channel, def, validated.params(), inv.approval_of.as_ref(), call.view)?;
         let (principal, decision) = authorised.into_parts();
         let approval = match decision {
-            Decision::File(filing) => return self.file(call, inv, &principal, &filing),
+            Decision::File(filing) => return self.file(call, inv, &principal, &filing, at),
             Decision::RunApproved(a) => Some(a.event()?),
             Decision::Run => None,
         };
         // 4. precondition
-        self.enter(Stage::Precondition)?;
+        self.enter(at, Stage::Precondition)?;
         resolved.check_preconditions(validated.params(), call.roots)?;
         // 5. route
         let target = if read {
             None
         } else {
-            self.enter(Stage::Route)?;
+            self.enter(at, Stage::Route)?;
             Some(self.route(call, inv, &principal, def)?)
         };
         // 6. handler
-        self.enter(Stage::Handler)?;
+        self.enter(at, Stage::Handler)?;
         let seed = self.env.seed();
         let ctx = HandlerCtx::derive(call.sessions, call.channel, seed, CancelToken::never())?;
         let ran = run_stage(&self.handlers, inv.command.as_str(), call.view, validated.params(), &ctx)?;
         // 7. effects
-        self.enter(Stage::Effects)?;
+        self.enter(at, Stage::Effects)?;
         let (checked, result) = ran.check(&ctx)?;
         let (_, _, mut events) = checked.into_parts();
         // The stage that added each event, recorded in the entry header (CORE.JRN.ENTRY
@@ -687,7 +707,7 @@ impl Bus {
             return self.hand_off_read(call, inv, &principal, def, &validated, seed, events, &sources, result);
         };
         // 8. commit
-        self.enter(Stage::Commit)?;
+        self.enter(at, Stage::Commit)?;
         let draft = self.command_draft(
             &principal,
             def,
@@ -751,8 +771,9 @@ impl Bus {
         inv: &Invocation,
         principal: &Principal,
         filing: &Filing,
+        at: &Cell<Option<Stage>>,
     ) -> Result<CommandResult, BusError> {
-        self.enter(Stage::Route)?;
+        self.enter(at, Stage::Route)?;
         let branch = self.router.request_branch(principal, call.channel)?;
         let name = agent_branch(principal, &branch)?;
         let target = self.guard(call, inv, &name)?;
@@ -760,7 +781,7 @@ impl Bus {
         if inv.dry_run {
             return Ok(CommandResult::WouldFile { command: filing.command().clone() });
         }
-        self.enter(Stage::Commit)?;
+        self.enter(at, Stage::Commit)?;
         self.refuse_if_poisoned()?;
         let id = self.env.request_id()?;
         let ctx =
