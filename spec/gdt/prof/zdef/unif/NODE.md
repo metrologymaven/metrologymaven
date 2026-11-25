@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-gps]
+built_pr: 611
 satisfies: [REQ-GDT.PROF.ZDEF-001, REQ-GDT.PROF.ZDEF-002, REQ-GDT.PROF.ZDEF-003]
 covers: []
 depends_on: [GDT.PROF.DEV, GDT.ZONE.ZTYPE, GDT.RES.RESOLVE]
