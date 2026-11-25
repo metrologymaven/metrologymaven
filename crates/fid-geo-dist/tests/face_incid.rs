@@ -650,15 +650,15 @@ fn octant(sense: Sense) -> Body {
     let wv = [1.0, w, 1.0];
     let mut ctrl = Vec::new();
     let mut weights = Vec::new();
-    for i in 0..3 {
-        for j in 0..3 {
+    for (c, a) in uc.iter().zip(wu) {
+        for (j, b) in wv.iter().enumerate() {
             let p = match j {
-                0 => [uc[i][0], uc[i][1], 0.0],
-                1 => [uc[i][0], uc[i][1], 1.0],
+                0 => [c[0], c[1], 0.0],
+                1 => [c[0], c[1], 1.0],
                 _ => [0.0, 0.0, 1.0],
             };
             ctrl.push(p);
-            weights.push(wu[i] * wv[j]);
+            weights.push(a * b);
         }
     }
     let knots = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0];
