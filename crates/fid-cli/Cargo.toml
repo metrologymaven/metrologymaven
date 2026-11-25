@@ -19,6 +19,10 @@ fid-surface = { path = "../fid-surface" }
 fid-types = { path = "../fid-types" }
 
 [dev-dependencies]
+# AUTO.SURF.INPROC AC-3: tests/dispatch_inproc.rs builds bus replies (ApiReply, ApiError) for
+# `fid_surface::inproc::envelope_for` and checks them against `dispatch::is_absent_answer`. Layer
+# model; the bus API is the one CORE crate a surface crate may link (REQ-CORE.BUS.LINT-004).
+fid-bus-api = { path = "../fid-bus-api" }
 # AUTO.CLI.DISPATCH AC-6: the workspace registry manifest, whose flag tables must build with no
 # collision (tests/dispatch_workspace.rs). Dev-only, like fid-mcp's; layer services.
 fid-registry-build = { path = "../fid-registry-build" }

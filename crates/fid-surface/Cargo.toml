@@ -1,6 +1,6 @@
 [package]
 name = "fid-surface"
-description = "Metrology Maven shared result envelope and error codes for CLI and MCP, and the surface projection model, the invocation tracker, and the root-handle gate (spec nodes AUTO.SURF.ENV, AUTO.SURF.PROJ, AUTO.SURF.JOBS, AUTO.SURF.ROOTS)"
+description = "Metrology Maven shared result envelope and error codes for CLI and MCP, and the surface projection model, the invocation tracker, the root-handle gate, and the in-process bus transport (spec nodes AUTO.SURF.ENV, AUTO.SURF.PROJ, AUTO.SURF.JOBS, AUTO.SURF.ROOTS, AUTO.SURF.INPROC)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,6 +8,9 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+# AUTO.SURF.INPROC: the BusPort trait and ApiReply types the in-process transport wraps. Layer
+# model, over fid-canon and fid-types only; never fid-bus, so this crate still builds for wasm32.
+fid-bus-api = { path = "../fid-bus-api" }
 fid-canon = { path = "../fid-canon" }
 fid-types = { path = "../fid-types" }
 # UUID value type for idempotency keys and job IDs (AUTO.SURF.JOBS). Layer model; only sha1.
