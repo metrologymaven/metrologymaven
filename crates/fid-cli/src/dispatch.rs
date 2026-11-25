@@ -267,18 +267,18 @@ pub fn check_tree_flags(tree: &CliTree) -> Result<(), Vec<FlagCollision>> {
 pub trait ArgParser {
     /// Parses one value token of `param` into its typed JSON value. For an array property it
     /// is called once per occurrence and returns one element.
-    fn parse_value(&self, param: &CliParam, raw: &str) -> Result<CValue, Envelope>;
+    fn parse_value(&self, param: &CliParam, raw: &str) -> Result<CValue, Box<Envelope>>;
     /// Reads the `--params` document named by `source` (`-` is stdin) as an object keyed by
     /// property name, with the bounded reader of REQ-AUTO.CLI.ARGS-004.
-    fn read_params(&mut self, source: &str) -> Result<BTreeMap<String, CValue>, Envelope>;
+    fn read_params(&mut self, source: &str) -> Result<BTreeMap<String, CValue>, Box<Envelope>>;
 }
 
 /// `AUTO.CLI.GATE`: the class, dry-run and raw-path checks. A refusal is a `failed` envelope.
 pub trait Gate {
     /// Class (M1, S1, A0) and dry-run checks, before any flag is mapped.
-    fn class_and_dry_run(&self, major: &CliMajor, dry_run: bool) -> Result<(), Envelope>;
+    fn class_and_dry_run(&self, major: &CliMajor, dry_run: bool) -> Result<(), Box<Envelope>>;
     /// The raw-path check (`AUTO.SURF.ROOTS`) on the assembled parameter document.
-    fn raw_paths(&self, kind: PrincipalKind, major: &CliMajor, params: &CValue) -> Result<(), Envelope>;
+    fn raw_paths(&self, kind: PrincipalKind, major: &CliMajor, params: &CValue) -> Result<(), Box<Envelope>>;
 }
 
 /// Which target the invocation goes to (`AUTO.CLI.TARGET.SELECT`).
@@ -376,13 +376,17 @@ fn usage(id: &CommandId, msg: String) -> Envelope {
     Envelope::failed(id.as_str(), ErrorCode::UsageError, &msg, None)
 }
 
-fn usage_detail(id: &CommandId, cli_error: &str, msg: String) -> Envelope {
+fn usage_box(id: &CommandId, msg: String) -> Box<Envelope> {
+    Box::new(usage(id, msg))
+}
+
+fn usage_detail(id: &CommandId, cli_error: &str, msg: String) -> Box<Envelope> {
     let details = CValue::Obj(BTreeMap::from([("cli_error".to_string(), CValue::Str(cli_error.to_string()))]));
-    Envelope::failed(id.as_str(), ErrorCode::UsageError, &format!("{cli_error}: {msg}"), Some(details))
+    Box::new(Envelope::failed(id.as_str(), ErrorCode::UsageError, &format!("{cli_error}: {msg}"), Some(details)))
 }
 
 /// REQ-007: one object value with the bounded reader.
-fn read_object(id: &CommandId, flag: &str, raw: &str) -> Result<CValue, Envelope> {
+fn read_object(id: &CommandId, flag: &str, raw: &str) -> Result<CValue, Box<Envelope>> {
     if raw.len() > MAX_OBJECT_BYTES {
         return Err(usage_detail(
             id,
@@ -405,7 +409,7 @@ fn map_flags(
     rest: &[String],
     args: &dyn ArgParser,
     command_path: &str,
-) -> Result<(ReservedFlags, BTreeMap<String, CValue>), Envelope> {
+) -> Result<(ReservedFlags, BTreeMap<String, CValue>), Box<Envelope>> {
     let id = &major.command_id;
     let mut reserved = ReservedFlags::default();
     let mut values: BTreeMap<String, CValue> = BTreeMap::new();
@@ -414,13 +418,13 @@ fn map_flags(
         let arg = &rest[i];
         i += 1;
         if !arg.starts_with('-') || arg == "-" {
-            return Err(usage(id, format!("unexpected argument `{arg}` for `{command_path}`")));
+            return Err(usage_box(id, format!("unexpected argument `{arg}` for `{command_path}`")));
         }
         let (flag, inline) = match arg.split_once('=') {
             Some((f, v)) => (f, Some(v)),
             None => (arg.as_str(), None),
         };
-        let take_value = |i: &mut usize| -> Result<String, Envelope> {
+        let take_value = |i: &mut usize| -> Result<String, Box<Envelope>> {
             if let Some(v) = inline {
                 return Ok(v.to_string());
             }
@@ -429,7 +433,7 @@ fn map_flags(
                     *i += 1;
                     Ok(v.clone())
                 }
-                None => Err(usage(id, format!("flag `{flag}` requires a value"))),
+                None => Err(usage_box(id, format!("flag `{flag}` requires a value"))),
             }
         };
         if RESERVED_FLAGS.contains(&flag) {
@@ -437,13 +441,13 @@ fn map_flags(
                 let v = take_value(&mut i)?;
                 let slot = if flag == "--params" { &mut reserved.params } else { &mut reserved.project };
                 if slot.is_some() {
-                    return Err(usage(id, format!("flag `{flag}` given more than once")));
+                    return Err(usage_box(id, format!("flag `{flag}` given more than once")));
                 }
                 *slot = Some(v);
                 continue;
             }
             if inline.is_some() {
-                return Err(usage(id, format!("flag `{flag}` takes no value")));
+                return Err(usage_box(id, format!("flag `{flag}` takes no value")));
             }
             match flag {
                 "--json" => reserved.json = true,
@@ -462,23 +466,23 @@ fn map_flags(
                 Some(s) => format!("unknown flag `{flag}` for `{command_path}`; did you mean `{s}`?"),
                 None => format!("unknown flag `{flag}` for `{command_path}`"),
             };
-            return Err(usage(id, msg));
+            return Err(usage_box(id, msg));
         };
         let array = spec.is_array();
         if !array && values.contains_key(&spec.property) {
-            return Err(usage(id, format!("flag `{flag}` given more than once")));
+            return Err(usage_box(id, format!("flag `{flag}` given more than once")));
         }
         let raw = take_value(&mut i)?;
         let value = if spec.is_object() {
             read_object(id, flag, &raw)?
         } else {
             let Some(param) = major.params.iter().find(|p| p.name == spec.property) else {
-                return Err(Envelope::failed(
+                return Err(Box::new(Envelope::failed(
                     id.as_str(),
                     ErrorCode::InternalError,
                     "flag table and parameters disagree",
                     None,
-                ));
+                )));
             };
             args.parse_value(param, &raw)?
         };
@@ -523,7 +527,7 @@ pub fn prepare(
     // 2. Class and dry-run checks; `--dry-run` is the exact token, like `--json`.
     let dry_run = rest.iter().any(|a| a == "--dry-run");
     if let Err(e) = gate.class_and_dry_run(&major, dry_run) {
-        return refused(e);
+        return refused(*e);
     }
     // 3. Flag mapping with ARGS parsing, then the `--params` document under the flags.
     let table = match FlagTable::build(&major) {
@@ -534,12 +538,12 @@ pub fn prepare(
     };
     let (reserved, mut values) = match map_flags(&major, &table, &rest, parser, &path) {
         Ok(x) => x,
-        Err(e) => return refused(e),
+        Err(e) => return refused(*e),
     };
     if let Some(source) = &reserved.params {
         let doc = match parser.read_params(source) {
             Ok(d) => d,
-            Err(e) => return refused(e),
+            Err(e) => return refused(*e),
         };
         for (k, v) in doc {
             if IDENTITY_FIELDS.contains(&k.as_str()) && !major.params.iter().any(|p| p.name == k) {
@@ -552,7 +556,7 @@ pub fn prepare(
     let params = CValue::Obj(values);
     // 4. Raw-path check, then the required check.
     if let Err(e) = gate.raw_paths(kind, &major, &params) {
-        return refused(e);
+        return refused(*e);
     }
     if let CValue::Obj(given) = &params {
         if let Some((flag, _)) = table.flags.iter().find(|(_, s)| s.required && !given.contains_key(&s.property)) {

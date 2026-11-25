@@ -187,11 +187,11 @@ fn split_quantity(raw: &str) -> Option<(&str, &str)> {
 }
 
 impl ArgParser for TestArgs {
-    fn parse_value(&self, param: &CliParam, raw: &str) -> Result<CValue, Envelope> {
+    fn parse_value(&self, param: &CliParam, raw: &str) -> Result<CValue, Box<Envelope>> {
         if param.quantity_kind.is_some() {
             let Some((value, unit)) = split_quantity(raw) else {
                 let msg = format!("`{}` needs a unit", param.name);
-                return Err(Envelope::failed("cli.invoke@1", ErrorCode::UsageError, &msg, None));
+                return Err(Box::new(Envelope::failed("cli.invoke@1", ErrorCode::UsageError, &msg, None)));
             };
             let mut o = BTreeMap::new();
             o.insert("unit".to_string(), CValue::Str(unit.to_string()));
@@ -201,7 +201,7 @@ impl ArgParser for TestArgs {
         Ok(CValue::Str(raw.to_string()))
     }
 
-    fn read_params(&mut self, source: &str) -> Result<BTreeMap<String, CValue>, Envelope> {
+    fn read_params(&mut self, source: &str) -> Result<BTreeMap<String, CValue>, Box<Envelope>> {
         assert_eq!(source, "-", "tests read --params from stdin only");
         match parse_with_limits(&self.stdin, 1024 * 1024, 32) {
             Ok(CValue::Obj(o)) => Ok(o),
@@ -215,18 +215,18 @@ impl ArgParser for TestArgs {
 struct TestGate;
 
 impl Gate for TestGate {
-    fn class_and_dry_run(&self, major: &CliMajor, dry_run: bool) -> Result<(), Envelope> {
+    fn class_and_dry_run(&self, major: &CliMajor, dry_run: bool) -> Result<(), Box<Envelope>> {
         let id = major.command_id.as_str();
         if matches!(major.side_effect, SideEffect::M1 | SideEffect::S1 | SideEffect::A0) {
-            return Err(Envelope::failed(id, ErrorCode::PolicyRefused, "refused at the CLI", None));
+            return Err(Box::new(Envelope::failed(id, ErrorCode::PolicyRefused, "refused at the CLI", None)));
         }
         if dry_run && !major.dry_run {
-            return Err(Envelope::failed(id, ErrorCode::DryRunUnsupported, "dry_run_unsupported", None));
+            return Err(Box::new(Envelope::failed(id, ErrorCode::DryRunUnsupported, "dry_run_unsupported", None)));
         }
         Ok(())
     }
 
-    fn raw_paths(&self, _kind: PrincipalKind, _major: &CliMajor, _params: &CValue) -> Result<(), Envelope> {
+    fn raw_paths(&self, _kind: PrincipalKind, _major: &CliMajor, _params: &CValue) -> Result<(), Box<Envelope>> {
         Ok(())
     }
 }
