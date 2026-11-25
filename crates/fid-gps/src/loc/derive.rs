@@ -16,14 +16,17 @@
 //! 2. **Lookup.** The reduction's algorithm ID is looked up exactly in the registry; no entry
 //!    is `UNSUPPORTED{alg}` (REQ-002). No other implementation is tried in its place.
 //! 3. **Inputs.** Every point coordinate and the nominal direction (when given) must be finite
-//!    (`non_finite_input{field, index}`; KNP-1: NaN is an error).
+//!    (`non_finite_input{field}`; KNP-1: NaN is an error).
 //! 4. **Call.** The implementation gets the request, the chain and its reduction step. Its
 //!    refusal `Unsupported{alg}` is passed through as `UNSUPPORTED{alg}`, and its failure
 //!    with a typed [`DerivationReason`] as `derivation_failed{reason}` with no element
 //!    (REQ-003).
-//! 5. **Result.** The element and flags the implementation produced, with the registry key
-//!    (the reduction's algorithm ID) as the producing algorithm ID. The implementation cannot
-//!    name another ID.
+//! 5. **Result.** The element and the optimality the implementation declared, with the
+//!    registry key (the reduction's algorithm ID) as the producing algorithm ID. The
+//!    implementation cannot name another ID. Every implementation must state its result's
+//!    [`Optimality`] when it builds a [`Produced`]: `LocalOnly` becomes the flag
+//!    `local_optimum_only`; `Certified` is the implementation's claim (with the basis it
+//!    names), which `derive()` records but does not check.
 //!
 //! # Element invariants
 //!
@@ -262,6 +265,8 @@ impl Axis {
         if extent < 0.0 {
             return Err(ElementError::NegativeExtent);
         }
+        // A zero extent is stored as +0.0, so -0.0 and 0.0 give the same element and record.
+        let extent = if extent == 0.0 { 0.0 } else { extent };
         Ok(Axis { point, direction, extent })
     }
 
@@ -275,7 +280,7 @@ impl Axis {
         self.direction
     }
 
-    /// The length of the axis segment, in metres.
+    /// The length of the axis segment, in metres (never -0.0).
     pub fn extent(&self) -> f64 {
         self.extent
     }
@@ -451,11 +456,12 @@ impl DerivedElement {
 }
 
 /// What [`derive`] returns: the element, the algorithm ID of the reduction operator that
-/// produced it, and the flags the implementation passed through.
+/// produced it, and the optimality its implementation declared (with the flags that follow).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Derived {
     element: DerivedElement,
     alg: AlgId,
+    optimality: Optimality,
     flags: BTreeSet<DeriveFlag>,
 }
 
@@ -470,7 +476,13 @@ impl Derived {
         &self.alg
     }
 
-    /// The flags, sorted.
+    /// The optimality the implementation declared.
+    pub fn optimality(&self) -> &Optimality {
+        &self.optimality
+    }
+
+    /// The flags, sorted: `local_optimum_only` exactly when the optimality is `LocalOnly`. An
+    /// absent flag is the implementation's claim, not a global certificate checked here.
     pub fn flags(&self) -> &BTreeSet<DeriveFlag> {
         &self.flags
     }
@@ -512,19 +524,72 @@ pub struct DeriveCall<'a> {
     pub reduction: &'a Operator,
 }
 
-/// What an implementation produced: a valid element and the flags it passes through.
+/// On what an implementation claims its element is not merely a local optimum.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Certificate {
+    /// The element follows from the data in closed form, with no iterative optimum (for
+    /// example median points from given opposite-point pairs).
+    ClosedForm,
+    /// A fit that returned a global-optimality certificate; `by` is the fit's algorithm ID.
+    GlobalFit {
+        /// The certifying fit.
+        by: AlgId,
+    },
+}
+
+/// Whether the element rests only on a local optimum. Every implementation must state it: there
+/// is no default.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Optimality {
+    /// The fit behind the element is certified only as a local optimum, or not certified at
+    /// all. The element carries the flag `local_optimum_only` and is never a datum or a value
+    /// of record without a global cross-check.
+    LocalOnly,
+    /// The implementation claims the element is not merely a local optimum, on the stated
+    /// basis. `derive()` records the claim; it does not check it.
+    Certified {
+        /// The basis of the claim.
+        cert: Certificate,
+    },
+}
+
+impl Optimality {
+    /// The flags this optimality gives.
+    pub fn flags(&self) -> BTreeSet<DeriveFlag> {
+        let mut f = BTreeSet::new();
+        if let Optimality::LocalOnly = self {
+            f.insert(DeriveFlag::LocalOptimumOnly);
+        }
+        f
+    }
+}
+
+/// What an implementation produced: a valid element and its declared optimality.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Produced {
-    /// The element.
-    pub element: DerivedElement,
-    /// The flags.
-    pub flags: BTreeSet<DeriveFlag>,
+    element: DerivedElement,
+    optimality: Optimality,
 }
 
 impl Produced {
-    /// An element with no flags.
-    pub fn new(element: DerivedElement) -> Produced {
-        Produced { element, flags: BTreeSet::new() }
+    /// An element with the optimality its implementation declares.
+    pub fn new(element: DerivedElement, optimality: Optimality) -> Produced {
+        Produced { element, optimality }
+    }
+
+    /// The element.
+    pub fn element(&self) -> &DerivedElement {
+        &self.element
+    }
+
+    /// The declared optimality.
+    pub fn optimality(&self) -> &Optimality {
+        &self.optimality
+    }
+
+    /// The flags the optimality gives.
+    pub fn flags(&self) -> BTreeSet<DeriveFlag> {
+        self.optimality.flags()
     }
 }
 
@@ -534,7 +599,7 @@ pub enum ImplError {
     /// The implementation does not support part of the chain (for example a non-axial fit).
     Unsupported {
         /// The algorithm ID it does not support.
-        alg: String,
+        alg: AlgId,
     },
     /// The data cannot support the element.
     Failed(DerivationReason),
@@ -586,7 +651,7 @@ pub enum DeriveError {
     /// (REQ-002), or the implementation does not support part of the chain.
     Unsupported {
         /// The algorithm ID.
-        alg: String,
+        alg: AlgId,
     },
     /// `derivation_failed{reason}`: the implementation could not produce the element (REQ-003).
     DerivationFailed {
@@ -598,8 +663,8 @@ pub enum DeriveError {
     NonFiniteInput {
         /// `points` or `nominal_direction`.
         field: &'static str,
-        /// The point index (0 for the nominal direction).
-        index: usize,
+        /// The point index; `None` for the nominal direction.
+        index: Option<usize>,
     },
 }
 
@@ -622,9 +687,10 @@ impl fmt::Display for DeriveError {
         match self {
             DeriveError::NoReductionInChain => f.write_str(c),
             DeriveError::AmbiguousReduction { count } => write!(f, "{c}{{{count}}}"),
-            DeriveError::Unsupported { alg } => write!(f, "{c}{{{}}}", alg.escape_debug()),
+            DeriveError::Unsupported { alg } => write!(f, "{c}{{{}}}", alg.as_str()),
             DeriveError::DerivationFailed { reason } => write!(f, "{c}{{{}}}", reason.as_str()),
-            DeriveError::NonFiniteInput { field, index } => write!(f, "{c}{{{field}[{index}]}}"),
+            DeriveError::NonFiniteInput { field, index: Some(i) } => write!(f, "{c}{{{field}[{i}]}}"),
+            DeriveError::NonFiniteInput { field, index: None } => write!(f, "{c}{{{field}}}"),
         }
     }
 }
@@ -702,19 +768,22 @@ pub fn derive(
     }
     let alg = reduction.alg();
     let Some(f) = registry.get(alg) else {
-        return Err(DeriveError::Unsupported { alg: alg.as_str().to_owned() });
+        return Err(DeriveError::Unsupported { alg: alg.clone() });
     };
     if let Some(i) = request.points.iter().position(|p| !finite3(p)) {
-        return Err(DeriveError::NonFiniteInput { field: "points", index: i });
+        return Err(DeriveError::NonFiniteInput { field: "points", index: Some(i) });
     }
     if let Some(d) = &request.nominal_direction {
         if !finite3(d) {
-            return Err(DeriveError::NonFiniteInput { field: "nominal_direction", index: 0 });
+            return Err(DeriveError::NonFiniteInput { field: "nominal_direction", index: None });
         }
     }
     let call = DeriveCall { request, chain, reduction };
     match f(&call) {
-        Ok(p) => Ok(Derived { element: p.element, alg: alg.clone(), flags: p.flags }),
+        Ok(p) => {
+            let flags = p.optimality.flags();
+            Ok(Derived { element: p.element, alg: alg.clone(), optimality: p.optimality, flags })
+        }
         Err(ImplError::Unsupported { alg }) => Err(DeriveError::Unsupported { alg }),
         Err(ImplError::Failed(reason)) => Err(DeriveError::DerivationFailed { reason }),
     }

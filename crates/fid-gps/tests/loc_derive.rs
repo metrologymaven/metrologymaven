@@ -12,9 +12,9 @@
 use fid_canon::{to_canonical_bytes, CValue};
 use fid_gps::dmt::{AlgId, Operator, OperatorChain, OperatorKind};
 use fid_gps::loc::derive::{
-    derive, Axis, DerivationReason, DeriveCall, DeriveError, DeriveFlag, DeriveRegistry, DeriveRequest, DerivedElement,
-    ElementKind, FeatureKind, ImplError, MedianLine, MedianPoints, MedianSurface, Produced, RegistryError,
-    DERIVED_ELEMENT_JSON_SCHEMA, DERIVED_ELEMENT_SCHEMA,
+    derive, Axis, Certificate, DerivationReason, DeriveCall, DeriveError, DeriveFlag, DeriveRegistry, DeriveRequest,
+    DerivedElement, ElementKind, FeatureKind, ImplError, MedianLine, MedianPoints, MedianSurface, Optimality, Produced,
+    RegistryError, DERIVED_ELEMENT_JSON_SCHEMA, DERIVED_ELEMENT_SCHEMA,
 };
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
@@ -126,17 +126,23 @@ fn stub_axis(call: &DeriveCall<'_>) -> Result<Produced, ImplError> {
     }
     let axis = Axis::new([first[0], first[1], (zmin + zmax) / 2.0], [0.0, 0.0, 1.0], zmax - zmin)
         .map_err(|_| ImplError::Failed(DerivationReason::FitFailed))?;
-    Ok(Produced::new(DerivedElement::Axis(axis)))
+    Ok(Produced::new(DerivedElement::Axis(axis), Optimality::Certified { cert: Certificate::ClosedForm }))
 }
 
 fn stub_flagged(call: &DeriveCall<'_>) -> Result<Produced, ImplError> {
-    let mut p = stub_axis(call)?;
-    p.flags.insert(DeriveFlag::LocalOptimumOnly);
-    Ok(p)
+    let p = stub_axis(call)?;
+    Ok(Produced::new(p.element().clone(), Optimality::LocalOnly))
+}
+
+fn stub_global(call: &DeriveCall<'_>) -> Result<Produced, ImplError> {
+    let p = stub_axis(call)?;
+    let cert = Certificate::GlobalFit { by: alg("syn.association.mz_cylinder@1.0.0") };
+    Ok(Produced::new(p.element().clone(), Optimality::Certified { cert }))
 }
 
 fn stub_line(call: &DeriveCall<'_>) -> Result<Produced, ImplError> {
-    Ok(Produced::new(DerivedElement::MedianLine(MedianLine::new(call.request.points.to_vec()).unwrap())))
+    let line = MedianLine::new(call.request.points.to_vec()).unwrap();
+    Ok(Produced::new(DerivedElement::MedianLine(line), Optimality::Certified { cert: Certificate::ClosedForm }))
 }
 
 fn fail_sections(_: &DeriveCall<'_>) -> Result<Produced, ImplError> {
@@ -156,7 +162,7 @@ fn fail_opposite(_: &DeriveCall<'_>) -> Result<Produced, ImplError> {
 }
 
 fn refuse_fit(_: &DeriveCall<'_>) -> Result<Produced, ImplError> {
-    Err(ImplError::Unsupported { alg: "syn.association.mz_cylinder@1.0.0".to_owned() })
+    Err(ImplError::Unsupported { alg: alg("syn.association.mz_cylinder@1.0.0") })
 }
 
 fn must_not_run(_: &DeriveCall<'_>) -> Result<Produced, ImplError> {
@@ -169,7 +175,7 @@ fn echo(call: &DeriveCall<'_>) -> Result<Produced, ImplError> {
     let idx = call.chain.steps().iter().position(|s| std::ptr::eq(s, call.reduction)).unwrap();
     let second = call.request.nominal_direction.unwrap_or([0.0, 0.0, 1.0]);
     let line = MedianLine::new(vec![[idx as f64, 0.0, 0.0], second]).unwrap();
-    Ok(Produced::new(DerivedElement::MedianLine(line)))
+    Ok(Produced::new(DerivedElement::MedianLine(line), Optimality::LocalOnly))
 }
 
 thread_local! {
@@ -241,8 +247,35 @@ fn ac1_flags_pass_through() {
     let reg = registry(&[(STUB, stub_flagged)]);
     let d = derive(&reg, &request(&PTS), &reducing(STUB)).unwrap();
     assert_eq!(d.flags().iter().copied().collect::<Vec<_>>(), vec![DeriveFlag::LocalOptimumOnly]);
+    assert_eq!(d.optimality(), &Optimality::LocalOnly);
     let CValue::Obj(m) = d.to_cvalue() else { panic!() };
     assert_eq!(m["flags"], CValue::Arr(vec![CValue::Str("local_optimum_only".to_owned())]));
+}
+
+#[test]
+fn optimality_is_declared_and_only_certified_results_are_unflagged() {
+    // An implementation must declare optimality to build a `Produced` (there is no
+    // default constructor), and only a declared certificate drops `local_optimum_only`.
+    let el = || DerivedElement::MedianPoints(MedianPoints::new(vec![[0.0; 3]]).unwrap());
+    let local = Produced::new(el(), Optimality::LocalOnly);
+    assert_eq!(local.flags().into_iter().collect::<Vec<_>>(), vec![DeriveFlag::LocalOptimumOnly]);
+    let closed = Produced::new(el(), Optimality::Certified { cert: Certificate::ClosedForm });
+    assert!(closed.flags().is_empty());
+
+    // The claim and its basis reach the caller unchanged; derive() does not upgrade or drop it.
+    let reg = registry(&[(STUB, stub_global), ("syn.axis.local@1.0.0", stub_flagged)]);
+    let g = derive(&reg, &request(&PTS), &reducing(STUB)).unwrap();
+    assert!(g.flags().is_empty());
+    assert_eq!(
+        g.optimality(),
+        &Optimality::Certified { cert: Certificate::GlobalFit { by: alg("syn.association.mz_cylinder@1.0.0") } }
+    );
+    let l = derive(&reg, &request(&PTS), &reducing("syn.axis.local@1.0.0")).unwrap();
+    assert_eq!(l.optimality(), &Optimality::LocalOnly);
+    assert!(l.flags().contains(&DeriveFlag::LocalOptimumOnly));
+    // Same element, different optimality: the records differ only in the flags.
+    assert_eq!(g.element(), l.element());
+    assert_ne!(canon(&g.to_cvalue()), canon(&l.to_cvalue()));
 }
 
 // ------------------------------------------------------------------ AC-2: UNSUPPORTED
@@ -252,13 +285,13 @@ fn ac2_unregistered_operator_is_unsupported() {
     let reg = registry(&[(STUB, must_not_run)]);
     for a in ["syn.axis.unregistered@1.0.0", "syn.axis.stub@1.0.1", "syn.axis.stub@2.0.0"] {
         let e = derive(&reg, &request(&PTS), &reducing(a)).unwrap_err();
-        assert_eq!(e, DeriveError::Unsupported { alg: a.to_owned() });
+        assert_eq!(e, DeriveError::Unsupported { alg: alg(a) });
         assert_eq!(e.code(), "UNSUPPORTED");
         assert_eq!(e.to_string(), format!("UNSUPPORTED{{{a}}}"));
     }
     // An empty registry supports nothing, whatever the data.
     let e = derive(&DeriveRegistry::new(), &request(&[]), &reducing(STUB)).unwrap_err();
-    assert_eq!(e, DeriveError::Unsupported { alg: STUB.to_owned() });
+    assert_eq!(e, DeriveError::Unsupported { alg: alg(STUB) });
     // The startup registry does not know the test stub.
     assert!(DeriveRegistry::builtin().get(&alg(STUB)).is_none());
     let e = derive(&DeriveRegistry::builtin(), &request(&PTS), &reducing(STUB)).unwrap_err();
@@ -269,7 +302,7 @@ fn ac2_unregistered_operator_is_unsupported() {
 fn ac2_implementation_refusal_is_unsupported_with_its_alg() {
     let reg = registry(&[(STUB, refuse_fit)]);
     let e = derive(&reg, &request(&PTS), &reducing(STUB)).unwrap_err();
-    assert_eq!(e, DeriveError::Unsupported { alg: "syn.association.mz_cylinder@1.0.0".to_owned() });
+    assert_eq!(e, DeriveError::Unsupported { alg: alg("syn.association.mz_cylinder@1.0.0") });
 }
 
 // ------------------------------------------------------------------ AC-3: derivation_failed
@@ -342,12 +375,14 @@ fn non_finite_inputs_are_refused_before_the_call() {
     for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
         let pts = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.01], [0.0, bad, 0.02]];
         let e = derive(&reg, &request(&pts), &reducing(STUB)).unwrap_err();
-        assert_eq!(e, DeriveError::NonFiniteInput { field: "points", index: 2 });
+        assert_eq!(e, DeriveError::NonFiniteInput { field: "points", index: Some(2) });
         assert_eq!(e.code(), "non_finite_input");
+        assert_eq!(e.to_string(), "non_finite_input{points[2]}");
         let mut req = request(&PTS);
         req.nominal_direction = Some([0.0, 0.0, bad]);
         let e = derive(&reg, &req, &reducing(STUB)).unwrap_err();
-        assert_eq!(e, DeriveError::NonFiniteInput { field: "nominal_direction", index: 0 });
+        assert_eq!(e, DeriveError::NonFiniteInput { field: "nominal_direction", index: None });
+        assert_eq!(e.to_string(), "non_finite_input{nominal_direction}");
     }
 }
 
@@ -376,6 +411,11 @@ fn element_constructors_enforce_the_invariants() {
     assert_eq!(Axis::new([0.0; 3], [0.0; 3], 1.0).unwrap_err().code(), "not_unit");
     assert_eq!(Axis::new([0.0; 3], z, f64::INFINITY).unwrap_err().to_string(), "non_finite{extent}");
     assert_eq!(Axis::new([0.0; 3], z, -1e-9).unwrap_err().code(), "negative_extent");
+    // A negative-zero extent is a zero extent, stored as +0.0.
+    let neg = Axis::new([0.0; 3], z, -0.0).unwrap();
+    assert_eq!(neg.extent().to_bits(), 0);
+    assert_eq!(neg, Axis::new([0.0; 3], z, 0.0).unwrap());
+    assert_eq!(Axis::new([0.0; 3], z, 0.03).unwrap().extent(), 0.03);
 
     assert_eq!(MedianLine::new(vec![[0.0; 3]]).unwrap_err().to_string(), "too_few_points{2:1}");
     assert_eq!(MedianLine::new(vec![[0.0; 3], [0.0, f64::NAN, 0.0]]).unwrap_err().to_string(), "non_finite{points[1]}");
@@ -427,7 +467,12 @@ fn ac5_examples_of_all_four_variants_serialise_byte_for_byte() {
         kinds.insert(element.kind());
         let flags: BTreeSet<DeriveFlag> =
             arr(&rec["flags"]).iter().map(|f| DeriveFlag::parse(st(f)).unwrap()).collect();
-        NEXT.with(|n| *n.borrow_mut() = Some(Produced { element, flags }));
+        let optimality = if flags.contains(&DeriveFlag::LocalOptimumOnly) {
+            Optimality::LocalOnly
+        } else {
+            Optimality::Certified { cert: Certificate::ClosedForm }
+        };
+        NEXT.with(|n| *n.borrow_mut() = Some(Produced::new(element, optimality)));
         let d = derive(&reg, &request(&PTS), &reducing(st(&rec["alg"]))).unwrap();
         assert_eq!(canon(&d.to_cvalue()), st(&ex["canonical"]), "{}", st(&ex["name"]));
     }

@@ -18,6 +18,7 @@
       ]
     },
     "flags": {
+      "description": "local_optimum_only: the element rests on a fit certified only as a local optimum (or not certified), so it is never a datum or a value of record without a global cross-check. An absent local_optimum_only is the implementation's claim (closed form, or a fit's global certificate), not a global certificate checked by derive().",
       "type": "array",
       "uniqueItems": true,
       "maxItems": 1,
