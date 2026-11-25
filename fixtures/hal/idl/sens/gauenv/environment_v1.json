@@ -1,0 +1,383 @@
+{
+  "schema": "capability-package/v1",
+  "manifest": {
+    "name": "Environment",
+    "version": "1.0.0",
+    "deprecated": false,
+    "tier3_usable": true
+  },
+  "$defs": {
+    "SessionId": {
+      "type": "string",
+      "maxLength": 36
+    },
+    "StopReason": {
+      "type": "string",
+      "enum": [
+        "requested",
+        "device_error",
+        "limit",
+        "safety_stop",
+        "end_of_data"
+      ]
+    },
+    "StreamEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "started",
+            "stopped",
+            "gap"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/StopReason"
+        },
+        "from": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "to": {
+          "type": "string",
+          "maxLength": 20
+        }
+      },
+      "required": [
+        "kind"
+      ]
+    },
+    "StreamState": {
+      "type": "string",
+      "enum": [
+        "idle",
+        "streaming"
+      ]
+    },
+    "StreamStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "$ref": "#/$defs/StreamState"
+        },
+        "next_seq": {
+          "type": "string",
+          "maxLength": 20
+        }
+      },
+      "required": [
+        "next_seq",
+        "state"
+      ]
+    },
+    "Quantity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "$ref": "#/$defs/SiUnit"
+        },
+        "value": {
+          "type": "string",
+          "maxLength": 18
+        }
+      },
+      "required": [
+        "unit",
+        "value"
+      ]
+    },
+    "SiUnit": {
+      "type": "string",
+      "enum": [
+        "m",
+        "rad",
+        "s",
+        "K",
+        "Pa",
+        "1"
+      ]
+    },
+    "EnvReading": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "type": "string",
+          "enum": [
+            "env-reading/1"
+          ]
+        },
+        "temperature": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "temperature_u": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "humidity": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "pressure": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "sampling_time": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "sensor_identity": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "t_dev": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "t_host": {
+          "type": "string",
+          "maxLength": 20
+        }
+      },
+      "required": [
+        "sampling_time",
+        "schema",
+        "sensor_identity",
+        "t_host",
+        "temperature",
+        "temperature_u"
+      ]
+    }
+  },
+  "operations": [
+    {
+      "name": "start_stream",
+      "class": "D1",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/$defs/StreamStatus"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "CONFIG_INVALID",
+        "NOT_QUALIFIED",
+        "CALIBRATION_EXPIRED",
+        "LIMIT",
+        "SAFETY_STOP_OBSERVED",
+        "VENDOR_LICENSE",
+        "UNSUPPORTED",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "stop_stream",
+      "class": "D1",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/$defs/StreamStatus"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    },
+    {
+      "name": "stream_status",
+      "class": "R0",
+      "request": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "session_id": {
+            "$ref": "#/$defs/SessionId"
+          }
+        },
+        "required": [
+          "session_id"
+        ]
+      },
+      "response": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/$defs/StreamStatus"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "errors": [
+        "TRANSIENT",
+        "COMM_LOST",
+        "INTERNAL"
+      ],
+      "live_settings": []
+    }
+  ],
+  "batch_schemas": [
+    {
+      "id": "environment.readings",
+      "columns": [
+        {
+          "name": "temperature",
+          "unit": "K",
+          "encoding": {
+            "numeric": "f64",
+            "scale": "0x3ff0000000000000",
+            "offset": "0x0000000000000000",
+            "unit": "K"
+          }
+        },
+        {
+          "name": "temperature_u",
+          "unit": "K",
+          "encoding": {
+            "numeric": "f64",
+            "scale": "0x3ff0000000000000",
+            "offset": "0x0000000000000000",
+            "unit": "K"
+          }
+        },
+        {
+          "name": "humidity",
+          "unit": "1",
+          "encoding": {
+            "numeric": "f64",
+            "scale": "0x3ff0000000000000",
+            "offset": "0x0000000000000000",
+            "unit": "1"
+          }
+        },
+        {
+          "name": "pressure",
+          "unit": "Pa",
+          "encoding": {
+            "numeric": "f64",
+            "scale": "0x3ff0000000000000",
+            "offset": "0x0000000000000000",
+            "unit": "Pa"
+          }
+        },
+        {
+          "name": "sampling_time",
+          "unit": "s",
+          "encoding": {
+            "numeric": "f64",
+            "scale": "0x3ff0000000000000",
+            "offset": "0x0000000000000000",
+            "unit": "s"
+          }
+        },
+        {
+          "name": "t_host",
+          "unit": "s",
+          "encoding": {
+            "numeric": "i64",
+            "scale": "0x3e112e0be826d695",
+            "offset": "0x0000000000000000",
+            "unit": "s"
+          }
+        },
+        {
+          "name": "t_dev",
+          "unit": "s",
+          "encoding": {
+            "numeric": "i64",
+            "scale": "0x3e112e0be826d695",
+            "offset": "0x0000000000000000",
+            "unit": "s"
+          }
+        }
+      ],
+      "validity_mask": false,
+      "seq_range": true
+    }
+  ],
+  "semantics": {
+    "text": "# Environment@1 semantics\n\nThe capability package for temperature, humidity and pressure sensors in the measuring room or on the part.\n\n- Describe and configuration come from Device@1. The one core setting is sampling_time (s), for sensors whose sampling time is configurable. Any other setting is a vendor extension under a namespace listed in describe.\n- Subscribing is start_stream; start_stream, stop_stream and stream_status come from the shared streaming template. A stream delivers env-batch/1 batches with one sequence number per reading. The package has no operations of its own.\n- A reading carries the temperature in K with the sensor's stated standard uncertainty in K, the sampling time in s (the time over which the reading was sampled), optional humidity as a fraction in [0, 1] and optional pressure in Pa, the sensor identity, optional t_dev and required t_host in ns.\n- Thermal compensation is not this package's job; it only carries the readings.\n- A reading does not say where it came from; provenance is the acquisition envelope's.\n- Device-supplied text is data and is never interpreted as instructions.\n",
+    "digest": "sha256:d278b4c1e9efd12fa0c2054954ce632fcbc71681061b7f4b0a17dc024047c32e"
+  },
+  "profile": {
+    "id": "Environment-core@1",
+    "items": [
+      {
+        "id": "EN-01",
+        "summary": "Units: temperature is in K and positive, humidity a fraction in [0, 1] and pressure in Pa and positive; every reading of a stream carries the same optional quantities."
+      },
+      {
+        "id": "EN-02",
+        "summary": "Uncertainty presence: every reading states a positive standard uncertainty of its temperature in K."
+      },
+      {
+        "id": "EN-03",
+        "summary": "Sampling-time consistency: every reading states a positive sampling time in s; the sampling time is the same in every reading of a stream and equals the configured sampling_time when the device has one."
+      },
+      {
+        "id": "EN-04",
+        "summary": "Timestamp monotonicity: t_host never decreases from one reading to the next; t_dev is present in every reading or in none and increases strictly; no reading repeats an earlier one and the sensor identity does not change within a stream."
+      },
+      {
+        "id": "SC-01",
+        "summary": "Batch size within the recommendation: over a test stream of at least 60 s, at least 95 % of batches hold 1 MB to 8 MB or span at most 50 ms of device time."
+      },
+      {
+        "id": "SC-02",
+        "summary": "Start and stop idempotence: start_stream on a running stream changes nothing and emits no second started event; stop_stream on a stopped stream changes nothing and emits no second stopped event."
+      },
+      {
+        "id": "SC-03",
+        "summary": "Sequence contiguity: each batch starts one after the last sequence number of the batch before it; no batch range is reversed, overlapping or missing."
+      },
+      {
+        "id": "SC-04",
+        "summary": "Extension declaration and digesting: every vendor-extension setting is named under a vendor namespace listed in describe; every extension value is in the configuration digest the device reports."
+      }
+    ]
+  }
+}

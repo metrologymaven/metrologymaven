@@ -114,6 +114,8 @@ python fixtures/gdt/drf/make_targets_plate.py --check
 python fixtures/gdt/drf/measured/make_cases.py --check
 python fixtures/gdt/ident/make_fixtures.py --check
 python fixtures/gdt/interp/make_cases.py --check
+python fixtures/gdt/loc/check_deriv_schema.py
+python fixtures/gdt/loc/make_deriv_fixtures.py --check
 python fixtures/gdt/prof/line/make_sect_fixtures.py --check
 python fixtures/gdt/prof/make_dev_fixtures.py --check
 python fixtures/gdt/prof/zdef/make_zdef_fixtures.py --check
@@ -152,6 +154,7 @@ python fixtures/hal/idl/base/health/make_fixtures.py --check
 python fixtures/hal/idl/gen/fmt/make_fixtures.py --check
 python fixtures/hal/idl/neg/make_fixtures.py --check
 python fixtures/hal/idl/profile/make_fixtures.py --check
+python fixtures/hal/idl/sens/gauenv/make_fixtures.py --check
 python fixtures/hal/idl/sens/line/make_fixtures.py --check
 python fixtures/hal/idl/sens/stream/make_fixtures.py --check
 python fixtures/hal/idl/stamp/make_fixtures.py --check
