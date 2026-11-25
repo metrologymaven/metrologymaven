@@ -1,0 +1,58 @@
+{
+ "comment": "HAL.ACQ.INGEST.CREDIT AC-3: acknowledgements that would exceed the window",
+ "window": {
+  "bytes": 8388608,
+  "batches": 4
+ },
+ "events": [
+  [
+   "grant"
+  ],
+  [
+   "admit",
+   2097152,
+   0,
+   1
+  ],
+  [
+   "admit",
+   2097152,
+   2,
+   3
+  ],
+  [
+   "ack",
+   2097152
+  ],
+  [
+   "ack",
+   2097152
+  ],
+  [
+   "ack",
+   2097152
+  ],
+  [
+   "ack",
+   5242880
+  ],
+  [
+   "grant"
+  ],
+  [
+   "ack",
+   9007199254740992
+  ]
+ ],
+ "expected": [
+  "grant granted=8388608/4 active out=8388608/4 fly=0/0",
+  "admit accepted active out=6291456/3 fly=2097152/1",
+  "admit accepted active out=4194304/2 fly=4194304/2",
+  "ack returned=2097152/1 active out=6291456/3 fly=2097152/1",
+  "ack returned=2097152/1 active out=8388608/4 fly=0/0",
+  "ack returned=0/0 active out=8388608/4 fly=0/0",
+  "ack returned=0/0 active out=8388608/4 fly=0/0",
+  "grant granted=0/0 active out=8388608/4 fly=0/0",
+  "ack returned=0/0 active out=8388608/4 fly=0/0"
+ ]
+}

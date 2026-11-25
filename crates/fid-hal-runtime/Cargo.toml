@@ -1,6 +1,6 @@
 [package]
 name = "fid-hal-runtime"
-description = "Metrology Maven device runtime and acquisition manager: deterministic encoding conversion, clock time mapping and the device registry of serving sources (spec node HAL.ACQ)"
+description = "Metrology Maven device runtime and acquisition manager: deterministic encoding conversion, clock time mapping, the device registry of serving sources and the ingest credit ledger (spec node HAL.ACQ)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

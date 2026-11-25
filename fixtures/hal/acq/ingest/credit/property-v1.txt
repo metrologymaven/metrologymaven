@@ -1,0 +1,5 @@
+# HAL.ACQ.INGEST.CREDIT AC-5: SHA-256 of the trace lines of the seeded scripts.
+# Written by make_fixtures.py; see its docstring for the generator and line format.
+seed 11
+scripts 10000
+sha256 sha256:5b93f20d252f5571e5c6ae2aff575fc53c9f64fb1da2cbdb4063765cbce272ad

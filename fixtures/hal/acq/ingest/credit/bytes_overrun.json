@@ -1,0 +1,55 @@
+{
+ "comment": "HAL.ACQ.INGEST.CREDIT REQ-001: byte credit exhausted while batch credit remains",
+ "window": {
+  "bytes": 8388608,
+  "batches": 4
+ },
+ "events": [
+  [
+   "grant"
+  ],
+  [
+   "admit",
+   6291456,
+   0,
+   5
+  ],
+  [
+   "admit",
+   3145728,
+   6,
+   8
+  ],
+  [
+   "admit",
+   2097152,
+   9,
+   10
+  ],
+  [
+   "ack",
+   6291456
+  ],
+  [
+   "admit",
+   9437184,
+   11,
+   19
+  ],
+  [
+   "admit",
+   0,
+   20,
+   20
+  ]
+ ],
+ "expected": [
+  "grant granted=8388608/4 active out=8388608/4 fly=0/0",
+  "admit accepted active out=2097152/3 fly=6291456/1",
+  "admit refused credit_exceeded gap=6-8:CREDIT_EXHAUSTED active out=2097152/3 fly=6291456/1",
+  "admit accepted active out=0/2 fly=8388608/2",
+  "ack returned=6291456/1 active out=6291456/3 fly=2097152/1",
+  "admit refused credit_exceeded gap=11-19:CREDIT_EXHAUSTED active out=6291456/3 fly=2097152/1",
+  "admit accepted active out=6291456/2 fly=2097152/2"
+ ]
+}

@@ -1,0 +1,308 @@
+{
+ "comment": "HAL.ACQ.INGEST.CREDIT AC-1: steady flow within an 8 MB / 4-batch window",
+ "window": {
+  "bytes": 8388608,
+  "batches": 4
+ },
+ "events": [
+  [
+   "grant"
+  ],
+  [
+   "admit",
+   1572864,
+   0,
+   9
+  ],
+  [
+   "admit",
+   1572864,
+   10,
+   19
+  ],
+  [
+   "admit",
+   1572864,
+   20,
+   29
+  ],
+  [
+   "admit",
+   1572864,
+   30,
+   39
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   40,
+   49
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   50,
+   59
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   60,
+   69
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   70,
+   79
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   80,
+   89
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   90,
+   99
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   100,
+   109
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   110,
+   119
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   120,
+   129
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   130,
+   139
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   140,
+   149
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   150,
+   159
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   160,
+   169
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   170,
+   179
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   180,
+   189
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   190,
+   199
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   200,
+   209
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   210,
+   219
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   220,
+   229
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "admit",
+   1572864,
+   230,
+   239
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "ack",
+   1572864
+  ],
+  [
+   "ack",
+   1572864
+  ]
+ ],
+ "expected": [
+  "grant granted=8388608/4 active out=8388608/4 fly=0/0",
+  "admit accepted active out=6815744/3 fly=1572864/1",
+  "admit accepted active out=5242880/2 fly=3145728/2",
+  "admit accepted active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "admit accepted active out=2097152/0 fly=6291456/4",
+  "ack returned=1572864/1 active out=3670016/1 fly=4718592/3",
+  "ack returned=1572864/1 active out=5242880/2 fly=3145728/2",
+  "ack returned=1572864/1 active out=6815744/3 fly=1572864/1",
+  "ack returned=1572864/1 active out=8388608/4 fly=0/0",
+  "ack returned=0/0 active out=8388608/4 fly=0/0"
+ ]
+}

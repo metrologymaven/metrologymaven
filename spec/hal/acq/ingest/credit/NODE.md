@@ -9,6 +9,7 @@ phase: P2
 size: S
 owners: []
 claimed_by:
+built_in: [fid-hal-runtime]
 satisfies: [REQ-HAL.ACQ.INGEST-001]
 covers: []
 depends_on: [HAL.IDL.STAMP]
