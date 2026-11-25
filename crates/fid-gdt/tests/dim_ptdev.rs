@@ -564,3 +564,103 @@ fn definition_and_results_conform_to_the_published_schemas() {
     }
     assert!(result.evaluate(&v, &NoHooks).is_err());
 }
+
+/// Evaluates `n` points, each 0.01 mm above its nominal, in the identity frame.
+fn eval_n_points(n: usize) -> (World, fid_gdt::dim::ptdev::Evaluated) {
+    let pts = vec![[0.0, 0.0, 0.00001]; n];
+    let noms = vec![NominalPoint { point: [0.0, 0.0, 0.0], normal: [0.0, 0.0, 1.0] }; n];
+    let mut world = World::new(&["ch-n"]);
+    world.store.insert_frame("world", Rigid::IDENTITY).unwrap();
+    world.store.insert_point_set("pts-n", pts).unwrap();
+    world.store.insert_nominal_set("noms-n", noms).unwrap();
+    let results = ResultStore::new();
+    let args = [
+        EVAL_DEVIATION_CLI,
+        "--run",
+        "run-1",
+        "--char",
+        "ch-n",
+        "--points",
+        "pts-n",
+        "--nominals",
+        "noms-n",
+        "--frame",
+        "world",
+    ];
+    let ev = invoke_cli(&results, &world.inputs(), H, &args).unwrap();
+    (world, ev)
+}
+
+fn items_digest_of(ev: &fid_gdt::dim::ptdev::Evaluated) -> Digest {
+    let v = ev.to_value();
+    Digest::parse(st(&obj(&obj(&v)["summary"])["items_digest"])).unwrap()
+}
+
+#[test]
+fn ac4_threshold_boundary_10000_inline_10001_attachment() {
+    // At 10,000 points the items are inline; the items digest still binds them.
+    let (_w, ev) = eval_n_points(10_000);
+    assert!(ev.attachment().is_none());
+    let v = ev.to_value();
+    let m = obj(&v);
+    assert_eq!(m["attachment"], CValue::Null);
+    assert_eq!(arr(&m["items"]).len(), 10_000);
+    let items = items_digest_of(&ev);
+    let e = ev.event().unwrap().to_value();
+    let eo = obj(&e);
+    assert_eq!(eo["attachment_digest"], CValue::Null);
+    assert_eq!(st(&eo["items_digest"]), items.as_str());
+    let rec = ev.record(entry_digest("ch-n", &ev.event().unwrap().to_canonical_bytes().unwrap())).unwrap();
+    assert!(rec.input_digests().contains(&items));
+
+    // At 10,001 points the payload moves to the attachment, whose digest is the items digest.
+    let (_w, ev) = eval_n_points(10_001);
+    let att = ev.attachment().expect("10,001 points must emit the columnar attachment");
+    assert_eq!(att.count, 10_001);
+    let v = ev.to_value();
+    let m = obj(&v);
+    assert_eq!(m["items"], CValue::Null);
+    assert_eq!(st(&obj(&m["attachment"])["digest"]), att.digest.as_str());
+    assert_eq!(items_digest_of(&ev), att.digest);
+    let e = ev.event().unwrap().to_value();
+    let eo = obj(&e);
+    assert_eq!(st(&eo["attachment_digest"]), att.digest.as_str());
+    assert_eq!(st(&eo["items_digest"]), att.digest.as_str());
+}
+
+#[test]
+fn ac5_replay_binds_items_not_only_the_summary() {
+    // Same points and nominals; the frame stored under `rot30_z` differs. dn and therefore the
+    // whole summary are frame-independent, but dx, dy, dz are not.
+    let a = plane_world(None);
+    let mut b = plane_world(None);
+    b.store.insert_frame("rot30_z", Rigid::IDENTITY).unwrap();
+    let results = ResultStore::new();
+    let ev_a = invoke_cli(&results, &a.inputs(), H, &PLANE_ARGS).unwrap();
+    let ev_b = invoke_cli(&results, &b.inputs(), H, &PLANE_ARGS).unwrap();
+    let ea = ev_a.event().unwrap().to_value();
+    let eb = ev_b.event().unwrap().to_value();
+    let (oa, ob) = (obj(&ea), obj(&eb));
+    for k in ["count", "max_abs_dn_si", "max_dn_si", "min_dn_si", "value_si", "attachment_digest"] {
+        assert_eq!(oa[k], ob[k], "summary field {k} must not depend on the frame");
+    }
+    assert_ne!(oa["items_digest"], ob["items_digest"], "changed items must change the event");
+
+    // Replay compares the items: an event whose items digest was swapped for B's diverges, even
+    // though every summary field is unchanged.
+    let reg_store = RegisterStore::new();
+    let regs_data = Regs::new();
+    let sources = regs_data.sources();
+    let regs = ReplayRegisters { store: &reg_store, sources: &sources };
+    let good = ev_a.event().unwrap().to_canonical_bytes().unwrap();
+    let h = entry_digest("ch-plane-pts", &good);
+    let ok: Vec<(Digest, Principal, &[u8])> = vec![(h, H, good.as_slice())];
+    assert_eq!(replay(&a.inputs(), &regs, &ok).outcome, ReplayOutcome::Identical);
+    let mut forged = ea.clone();
+    if let CValue::Obj(o) = &mut forged {
+        o.insert("items_digest".to_owned(), ob["items_digest"].clone());
+    }
+    let forged = fid_canon::to_canonical_bytes(&forged).unwrap();
+    let bad: Vec<(Digest, Principal, &[u8])> = vec![(h, H, forged.as_slice())];
+    assert_eq!(replay(&a.inputs(), &regs, &bad).outcome, ReplayOutcome::Divergent);
+}

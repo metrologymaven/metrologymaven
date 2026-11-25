@@ -355,7 +355,14 @@ pub struct ColumnarAttachment {
 /// Evaluated payload for point or feature deviation mode.
 #[derive(Debug, Clone, PartialEq)]
 pub enum DeviationOutcome {
-    Points { result: PointDeviationResult, attachment: Option<ColumnarAttachment> },
+    /// `items_digest` is the SHA-256 of the `fid-ptdev-col/1` encoding of every per-point
+    /// deviation, computed at every size so the event and the record bind the items, not only
+    /// the summary. Above [`COLUMNAR_THRESHOLD`] the same bytes are the attachment.
+    Points {
+        result: PointDeviationResult,
+        items_digest: Digest,
+        attachment: Option<ColumnarAttachment>,
+    },
     Feature(FeatureDeviation),
 }
 
@@ -410,7 +417,7 @@ impl Evaluated {
     /// Canonical JSON result payload (`fid.check-deviation-result/1`).
     pub fn to_value(&self) -> CValue {
         let (mode, value_si, items, attachment, feature_val, summary) = match &self.outcome {
-            DeviationOutcome::Points { result, attachment } => {
+            DeviationOutcome::Points { result, items_digest, attachment } => {
                 let (items_val, att_val) = match attachment {
                     Some(att) => (
                         CValue::Null,
@@ -440,6 +447,7 @@ impl Evaluated {
                 };
                 let sum = obj([
                     ("count", CValue::Num(result.deviations.len() as f64)),
+                    ("items_digest", CValue::Str(items_digest.as_str().to_owned())),
                     ("max_abs_dn_si", CValue::Str(hex(result.max_abs_dn_si))),
                     ("max_dn_si", CValue::Str(hex(result.max_dn_si))),
                     ("min_dn_si", CValue::Str(hex(result.min_dn_si))),
@@ -575,17 +583,24 @@ pub(crate) fn eval_deviation_for(
             input_digests.push(ns.digest);
             let result =
                 evaluate_point_deviations(&ps.points, &ns.nominals, &frame.world_to_frame).map_err(EvalError::PtDev)?;
+            // The items digest binds every dx, dy, dz, dn at every size (event and record inputs);
+            // above the threshold the same bytes become the columnar attachment (AC-4).
+            let bytes = encode_columnar(&result.deviations);
+            let items_digest = Digest::from_bytes(fid_canon::digest_bytes(&bytes).0);
+            input_digests.push(items_digest);
             let attachment = if result.deviations.len() > COLUMNAR_THRESHOLD {
-                let bytes = encode_columnar(&result.deviations);
-                let digest = Digest::from_bytes(fid_canon::digest_bytes(&bytes).0);
-                input_digests.push(digest);
-                Some(ColumnarAttachment { format: COLUMNAR_FORMAT, count: result.deviations.len(), digest, bytes })
+                Some(ColumnarAttachment {
+                    format: COLUMNAR_FORMAT,
+                    count: result.deviations.len(),
+                    digest: items_digest,
+                    bytes,
+                })
             } else {
                 None
             };
             let v = result.max_abs_dn_si;
             (
-                DeviationOutcome::Points { result, attachment },
+                DeviationOutcome::Points { result, items_digest, attachment },
                 EvaluationBasis::Points,
                 v,
                 format!("deviation(points={points}, nominals={nominals}, frame={})", req.frame),

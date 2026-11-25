@@ -29,6 +29,9 @@ pub enum PtDevEventPayload {
         min_dn_bits: u64,
         max_dn_bits: u64,
         max_abs_dn_bits: u64,
+        /// Digest of the columnar encoding of every per-point deviation (always present).
+        items_digest: Digest,
+        /// The attachment digest; `None` at or below the columnar threshold.
         attachment_digest: Option<Digest>,
     },
     Feature {
@@ -64,7 +67,10 @@ pub struct PtDevEvent {
 impl PtDevEvent {
     pub(crate) fn of(ev: &Evaluated) -> PtDevEvent {
         let (value_si_bits, payload) = match (&ev.target, &ev.outcome) {
-            (DeviationTarget::Points { points, nominals }, DeviationOutcome::Points { result, attachment }) => (
+            (
+                DeviationTarget::Points { points, nominals },
+                DeviationOutcome::Points { result, items_digest, attachment },
+            ) => (
                 result.max_abs_dn_si.to_bits(),
                 PtDevEventPayload::Points {
                     points: points.clone(),
@@ -73,6 +79,7 @@ impl PtDevEvent {
                     min_dn_bits: result.min_dn_si.to_bits(),
                     max_dn_bits: result.max_dn_si.to_bits(),
                     max_abs_dn_bits: result.max_abs_dn_si.to_bits(),
+                    items_digest: *items_digest,
                     attachment_digest: attachment.as_ref().map(|a| a.digest),
                 },
             ),
@@ -95,6 +102,7 @@ impl PtDevEvent {
                     min_dn_bits: 0,
                     max_dn_bits: 0,
                     max_abs_dn_bits: 0,
+                    items_digest: Digest::TOMBSTONE,
                     attachment_digest: None,
                 },
             ),
@@ -142,7 +150,7 @@ impl PtDevEvent {
         );
         m.insert("interpretation".to_owned(), CValue::Str(self.interpretation.clone()));
         m.insert("interpretation_pin".to_owned(), self.pin.to_cvalue());
-        m.insert("principal".to_owned(), CValue::Str(principal_str(self.principal).to_owned()));
+        m.insert("principal".to_owned(), CValue::Str(self.principal.as_str().to_owned()));
         m.insert("run".to_owned(), CValue::Str(self.run.as_str().to_owned()));
         m.insert("sign_convention".to_owned(), CValue::Str(SIGN_CONVENTION.to_owned()));
         m.insert("value_si".to_owned(), CValue::Str(format!("0x{:016x}", self.value_si_bits)));
@@ -155,6 +163,7 @@ impl PtDevEvent {
                 min_dn_bits,
                 max_dn_bits,
                 max_abs_dn_bits,
+                items_digest,
                 attachment_digest,
             } => {
                 m.insert(
@@ -162,6 +171,7 @@ impl PtDevEvent {
                     attachment_digest.map_or(CValue::Null, |d| CValue::Str(d.as_str().to_owned())),
                 );
                 m.insert("count".to_owned(), CValue::Num(*count as f64));
+                m.insert("items_digest".to_owned(), CValue::Str(items_digest.as_str().to_owned()));
                 m.insert("max_abs_dn_si".to_owned(), CValue::Str(format!("0x{max_abs_dn_bits:016x}")));
                 m.insert("max_dn_si".to_owned(), CValue::Str(format!("0x{max_dn_bits:016x}")));
                 m.insert("min_dn_si".to_owned(), CValue::Str(format!("0x{min_dn_bits:016x}")));
@@ -254,11 +264,16 @@ impl PtDevEvent {
                 let min_dn_bits = parse_hex_bits(req_str(o, "min_dn_si")?)?;
                 let max_dn_bits = parse_hex_bits(req_str(o, "max_dn_si")?)?;
                 let max_abs_dn_bits = parse_hex_bits(req_str(o, "max_abs_dn_si")?)?;
+                let items_digest = Digest::parse(req_str(o, "items_digest")?).map_err(|_| bad())?;
                 let attachment_digest = match o.get("attachment_digest") {
                     Some(CValue::Null) => None,
                     Some(CValue::Str(s)) => Some(Digest::parse(s).map_err(|_| bad())?),
                     _ => return Err(bad()),
                 };
+                // The attachment, when present, is the items encoding itself.
+                if attachment_digest.is_some_and(|a| a != items_digest) {
+                    return Err(bad());
+                }
                 PtDevEventPayload::Points {
                     points,
                     nominals,
@@ -266,6 +281,7 @@ impl PtDevEvent {
                     min_dn_bits,
                     max_dn_bits,
                     max_abs_dn_bits,
+                    items_digest,
                     attachment_digest,
                 }
             }
@@ -365,14 +381,6 @@ pub fn replay(
         steps += 1;
     }
     PtDevReplayed { outcome: ReplayOutcome::Identical, steps, store: results }
-}
-
-fn principal_str(p: Principal) -> &'static str {
-    match p {
-        Principal::Human => "human",
-        Principal::Agent => "agent",
-        Principal::Script => "script",
-    }
 }
 
 fn parse_principal(s: &str) -> Option<Principal> {

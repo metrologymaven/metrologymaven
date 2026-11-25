@@ -19,7 +19,7 @@ mcp: [check_eval_deviation]
 journal: [check.eval_deviation@1]
 built_in: [fid-gps, fid-gdt]
 built_pr: 620
-updated: 2026-11-23
+updated: 2026-11-25
 ---
 
 # GDT.DIM.PTDEV: Point deviations and feature-versus-nominal checks
