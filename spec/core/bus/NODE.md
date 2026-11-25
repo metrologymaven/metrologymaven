@@ -102,3 +102,5 @@ Alternatives considered:
 | CORE.BUS.ROUTE | Branch routing, optimistic concurrency and idempotency | 006 009 010 | none |
 | CORE.BUS.UNIT | Authored literal normalisation to SI (leaf) | 014 | none |
 | CORE.BUS.LINT | No-side-doors crate-graph check (leaf) | 016 | none |
+| CORE.BUS.API | Bus API crate: the call types and port trait surfaces see (leaf) | 001 016 | none |
+| CORE.BUS.PORT | In-process bus port: sessions, human upgrade and calls (leaf) | 001 002 | none |
