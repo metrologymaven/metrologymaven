@@ -44,7 +44,7 @@ The toolkit-neutral format every component spec is written in (Markdown with a s
 
 ## Acceptance criteria
 
-- **AC-1** Given fixture `fixtures/ux/comp/schema/ok/button.md` and package fixture `fixtures/ux/system/pkg/v1.0.0/`, when `fid-design comp-check --root ok --package v1.0.0 --json` runs, then it exits 0.
+- **AC-1** Given fixture `fixtures/ux/comp/schema/ok/button.md` and package fixture `fixtures/ux/comp/schema/v1.0.0/` (the system package `fixtures/ux/system/pkg/v1.0.0/` plus `tokens/pairs.json` and the surface and spacing tokens a focus check needs), when `fid-design comp-check --root ok --package v1.0.0 --json` runs, then it exits 0.
 - **AC-2** (error path) Given `pointer-only.md` (drag to reorder with no keyboard entry), when the check runs, then it exits 1 with `COMP-POINTER-ONLY reorder`.
 - **AC-3** (error path) Given `bad-token.md`, when the check runs, then it exits 1 with `COMP-TOKEN-UNKNOWN sem.text.nonexistent`.
 - **AC-4** (error path) Given `no-reason.md`, when the check runs, then it exits 1 with `COMP-DISABLED-REASON`.
@@ -71,7 +71,7 @@ The toolkit-neutral format every component spec is written in (Markdown with a s
 ## Open questions
 
 - The focus-indicator size rule cites WCAG 2.2 SC 2.4.13 (AAA) as guidance beyond the AA rule of REQ-UX.COMP-004 [unverified that 2 px matches the SC's area formula].
-- Build note (fid-design `comp`): the package fixture `fixtures/ux/system/pkg/v1.0.0/` named in AC-1 has no `tokens/pairs.json` and no surface token, so REQ-004 cannot pass against it. AC-1 runs, as written, in `fixtures/ux/comp/schema/` against `fixtures/ux/comp/schema/v1.0.0/`: that package copied byte for byte plus `tokens/pairs.json`, `sem.surface.base` and `space.1` (`make_fixtures.py`). The unmodified package is kept as a test case that fails with `COMP-FOCUS`.
+- Build note (fid-design `comp`): AC-1 names `fixtures/ux/comp/schema/v1.0.0/` because the system package `fixtures/ux/system/pkg/v1.0.0/` has no `tokens/pairs.json` and no surface token, so REQ-004 cannot pass against it. The derived package is written by `make_fixtures.py`; the unmodified system package is kept as a test case that fails with `COMP-FOCUS`.
 - Build note: `comp-check` treats every `*.md` directly under `--root` as a component spec (fail closed), so a non-spec document such as UX.COMP.CMD's `components/manifest-mapping.md` would fail `COMP-SCHEMA`. That leaf should place it outside `components/` or the format should gain a non-spec marker.
 - Build note: `--root` also accepts a single spec file; `component-spec@1` adds `format`, `parts[].actionable` and `focus.against` (the surfaces whose pairs REQ-004 looks up) to the fields REQ-001 lists.
 

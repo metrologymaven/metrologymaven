@@ -38,7 +38,12 @@
 //!   key, an unknown key, a missing prose section, a duplicate id, an empty root.
 //! - `COMP-TOKEN-UNKNOWN <token>`: a token named anywhere in the front block (tokens, density,
 //!   focus) does not resolve in the package (`fid_design_pkg::Package::resolve`: unknown name,
-//!   alias cycle, too many hops, deprecated without replacement).
+//!   alias cycle, too many hops, deprecated without replacement). A value that is not a token
+//!   name at all is named by its field (`COMP-TOKEN-UNKNOWN tokens.label.default.text`).
+//!
+//! Finding subjects never carry a raw spec string: a subject is a file name, a field path, a
+//! state from [`STATES`], or a value already checked against a name grammar (token names,
+//! `[a-z][a-z0-9-]*` actions and roles).
 //! - `COMP-STATE-MISSING <state>`: one of the eight states is not listed.
 //! - `COMP-POINTER-ONLY <action>`: a pointer action has no keyboard entry with the same action.
 //! - `COMP-FOCUS <fg>/<bg>`: a focus pair (`focus.token` on an `against` surface) is not declared
@@ -47,7 +52,8 @@
 //!   [`MIN_FOCUS_WIDTH_PX`], or an interactive spec whose focus state does not apply.
 //! - `COMP-DISABLED-REASON <file>`: the disabled state applies and no valid `disabled_reason`
 //!   shows the reason as visible or focus-reachable text, or a given `disabled_reason` is invalid.
-//! - `COMP-ROLE <role>`: `a11y.role` is missing or not in [`ROLES`].
+//! - `COMP-ROLE <role>`: `a11y.role` is missing or not in [`ROLES`] (`COMP-ROLE a11y.role`
+//!   when the value is not role-shaped).
 //! - `COMP-DENSITY <file>`: no density table, an unknown part, a missing mode or mismatched
 //!   properties between the modes.
 //!
@@ -461,7 +467,8 @@ impl Ctx<'_> {
             return None;
         };
         if !is_valid_name(name) || name.len() > 200 {
-            self.push(TOKEN_UNKNOWN, name, format!("{at}: not a token name"));
+            // The raw string is untrusted: the finding names the field, never the string.
+            self.push(TOKEN_UNKNOWN, at, "not a token name ([a-z][a-z0-9]*(.[a-z0-9-]+)*, at most 200 bytes)");
             return None;
         }
         if let Err(e) = self.pkg.resolve(name) {
@@ -896,8 +903,10 @@ fn check_a11y(c: &mut Ctx<'_>, v: Option<&toml::Value>, disabled: bool) {
     match t.get("role") {
         Some(toml::Value::String(r)) if ROLES.binary_search(&r.as_str()).is_ok() => {}
         Some(toml::Value::String(r)) => {
-            let subject = if r.len() <= 64 { r.clone() } else { "a11y.role".to_string() };
-            c.push(ROLE, &subject, "not a role of the closed list (WAI-ARIA 1.2 role names)");
+            // Only a role-shaped value ([a-z][a-z0-9-]*, at most 64 bytes, so no control
+            // character) becomes the subject; anything else is named by its field.
+            let subject = if is_ident(r) { r.as_str() } else { "a11y.role" };
+            c.push(ROLE, subject, "not a role of the closed list (WAI-ARIA 1.2 role names)");
         }
         _ => c.at_file(ROLE, "a11y.role must be a role name string"),
     }
