@@ -2348,6 +2348,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-stats"
+version = "0.0.1"
+dependencies = [
+ "fid-num",
+ "fid-testkit",
+]
+
+[[package]]
 name = "fid-store"
 version = "0.0.1"
 dependencies = [

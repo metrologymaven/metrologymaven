@@ -264,6 +264,7 @@ python fixtures/rpt/model/tmpl/starter/make_fixtures.py --check
 python fixtures/rpt/model/tmpl/ver/make_cases.py --check
 python fixtures/rpt/output/text/check_pdf_text.py
 python fixtures/rpt/output/text/make_fixtures.py --check
+python fixtures/rpt/stats/make_cap_cases.py --check
 python fixtures/scan/cmp/make_field_golden.py --check
 python fixtures/scan/make_mesh_quality.py --check
 python fixtures/scan/meshop/make_invert_cases.py --check

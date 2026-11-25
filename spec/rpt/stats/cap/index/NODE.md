@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-stats]
+built_pr: 598
 satisfies: [REQ-RPT.STATS.CAP-001, REQ-RPT.STATS.CAP-002, REQ-RPT.STATS.CAP-003, REQ-RPT.STATS.CAP-004, REQ-RPT.STATS.CAP-005, REQ-RPT.STATS.CAP-006]
 covers: []
 depends_on: [KRN.NUM]

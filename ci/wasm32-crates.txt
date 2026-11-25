@@ -37,6 +37,7 @@ fid-scan-cmp --lib
 fid-scan-mesh
 fid-sign-core
 fid-solv
+fid-stats
 fid-surface
 fid-types
 fid-view

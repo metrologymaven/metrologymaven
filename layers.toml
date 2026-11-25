@@ -18,6 +18,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # and fid-types, below CORE so fid-replay (engine) and the WASM verifier can use it.
 "fid-rep" = "kernel"
 "fid-solv" = "kernel"
+# Statistics kernel (RPT.STATS.CAP.INDEX first): KNP-1 pure functions over fid-num only.
+"fid-stats" = "kernel"
 # Vendored conic solver (KRN.SOLV.CONIC.PATCH): Clarabel 0.11.1 patched to KNP-1, only fid-num;
 # lives in vendor/fid-clarabel/crate and is audited by `cargo xtask conic-audit`.
 "fid-clarabel" = "kernel"
