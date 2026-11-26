@@ -4,9 +4,10 @@
 Writes, next to this script:
   defects/<kind>.json   one builder script per defect kind, each with one seeded defect (AC-2)
   valid_cap50.json      a sheet body with 50 defects for the cap test (AC-4)
-  capped_band.json, capped_band_top_reversed.json
+  capped_band.json, capped_band_top_reversed.json, capped_band_flipped.json
                         a closed cylinder whose band face has an undetermined orientation,
-                        clean and with its top cap marked Reversed (REQ-004)
+                        as built, with its top cap and with its band marked Reversed: never
+                        clean, both circle edges unchecked (REQ-004, fail closed)
   valid_expected.json   the expected report of every fixture, of cube_labelled.json (AC-1) and
                         of cylinder_capped.json, as defect lists and as canonical JSON (AC-5)
 
@@ -27,7 +28,14 @@ crates/fid-geo-cad/src/topo/valid.rs) on the true geometry, not on fid-geo-cad's
   intersections, fold-backs and signed areas are decided in exact rational arithmetic;
 - PCURVE failures modelled only for the two causes the fixtures use: no edge curve and no
   pcurve (NoEdgeCurve, best deviation infinite), and an initial sample farther than the
-  tolerance from the surface (Tolerance, best deviation the largest initial sample distance).
+  tolerance from the surface (Tolerance, best deviation the largest initial sample distance);
+- fail closed: a face whose orientation cannot be told (no loops, a failed pcurve, a winding
+  loop, a zero area, no outer loop, loops that disagree with each other) never counts as
+  agreeing, and its closed-shell edges are *unchecked* with the lesser reason code; an edge
+  without a curve is unchecked for EdgeOffSurface (and for PcurveMismatch on a coedge with an
+  imported pcurve). The other fail-closed paths of valid.rs (TRIM refusing a face for another
+  reason, an evaluation or inversion fault) do not occur in these fixtures; the Rust tests
+  cover them with hand-labelled cases.
 
 Every reported measured value is checked to be exactly representable in binary64, so the
 canonical JSON (every f64 as its bit pattern, 16 lowercase hex digits) is the exact expected
@@ -36,7 +44,8 @@ output on every platform (AC-5); every threshold decision is checked to be at le
 below (`SEEDED`) and must equal what the checker finds.
 
 Canonical JSON (pinned, no whitespace, keys in ascending order):
-  {"defects":[...],"tolerance_m":"<hex>","truncated":<n>}
+  {"defects":[...],"tolerance_m":"<hex>","truncated":<n>,"unchecked":[...]}
+  unchecked item          {"check":kind,"entity":id,"reason":code}
   OpenLoop                {"gap_m":h,"kind":"OpenLoop","loop":id}
   SelfIntersectingLoop    {"kind":"SelfIntersectingLoop","loop":id}
   DanglingEdge            {"edge":id,"kind":"DanglingEdge","uses":n}
@@ -288,7 +297,7 @@ def defect_fixtures():
     return out
 
 
-def capped_band(top_sense="same"):
+def capped_band(top_sense="same", band_sense="same"):
     """Closed cylinder r 0.5, height 1: a seamless band (two circle loops, each winding once in
     u, so its orientation is undetermined) and two planar caps whose loops agree with their
     outward axes. With top_sense "reversed" the top cap disagrees with its sense."""
@@ -298,13 +307,14 @@ def capped_band(top_sense="same"):
     et = s.edge(v1, v1, (0.0, TAU), circle([0.0, 0.0, 1.0], Z, X, 0.5), "e-top")
     lb = s.loop([s.coedge(eb, "same", None, "c-band-bottom")], "l-band-bottom", outer=False)
     lt = s.loop([s.coedge(et, "reversed", None, "c-band-top")], "l-band-top", outer=False)
-    s.face(dict(type="cylinder", radius=0.5, **frame(O, Z, X)), [lb, lt], "f-band")
+    s.face(dict(type="cylinder", radius=0.5, **frame(O, Z, X)), [lb, lt], "f-band", sense=band_sense)
     s.face(plane([0.0, 0.0, 1.0]), [s.loop([s.coedge(et, "same", None, "c-cap-top")], "l-cap-top")], "f-cap-top",
            sense=top_sense)
     s.face(plane(O, [0.0, 0.0, -1.0], X), [s.loop([s.coedge(eb, "reversed", None, "c-cap-bottom")], "l-cap-bottom")],
            "f-cap-bottom")
     desc = "closed cylinder of a seamless band and two caps" + (
-        "; the top cap is marked Reversed against its loop" if top_sense == "reversed" else "")
+        "; the top cap is marked Reversed against its loop" if top_sense == "reversed" else "") + (
+        "; the band is marked Reversed" if band_sense == "reversed" else "")
     return s.body(desc, "cb0dcb0dcb0dcb0dcb0dcb0dcb0dcb0d", shells=[([0, 1, 2], True)])
 
 
@@ -354,6 +364,12 @@ SEEDED = {
     "pcurve_mismatch": [("PcurveMismatch", "c-bottom", Fraction(SHIFT))],
     "pcurve_failed": [("PcurveFailed", "c-bottom", "NoEdgeCurve", INF)],
     "seam_winding": [("SeamWinding", "l-tube", [0, 1])],
+}
+
+
+# hand-labelled unchecked items of the AC-2 fixtures (check, entity, reason)
+SEEDED_UNCHECKED = {
+    "pcurve_failed": [("EdgeOffSurface", "e-bottom", "NoEdgeCurve")],
 }
 
 
@@ -625,26 +641,51 @@ def face_intersections(body, fi):
     return hit
 
 
-def face_flipped(body, fi):
-    """True/False when the loops disagree/agree with the face sense; None when undetermined."""
-    area = Fraction(0)
-    for li in body.F[fi]["loops"]:
-        sh = loop_shape(body, li)
-        if sh[0] == "winding":
-            return None
-        if sh[0] == "circle":
-            area += sh[3] * sh[2] * sh[2] * Fraction(355, 113)  # only the sign matters; pi > 3
-        else:
-            pts = sh[1]
-            area += sum(pts[k][0] * pts[(k + 1) % len(pts)][1] - pts[(k + 1) % len(pts)][0] * pts[k][1]
-                        for k in range(len(pts)))
-    if not body.F[fi]["loops"] or area == 0:
-        return None
-    return (area > 0) != (body.F[fi]["sense"] == "same")
+def loop_area(sh):
+    """Signed area of a loop shape in the face chart (exact for polygons; circles by pi r^2)."""
+    if sh[0] == "circle":
+        return sh[3] * OR.dec_of(sh[2] * sh[2]) * PI
+    pts = sh[1]
+    a = sum(pts[k][0] * pts[(k + 1) % len(pts)][1] - pts[(k + 1) % len(pts)][0] * pts[k][1] for k in range(len(pts)))
+    return OR.dec_of(a / 2)
+
+
+def face_flipped(body, fi, failed):
+    """True/False when the loops disagree/agree with the face sense, or the reason code why it
+    cannot be told (the rules of the module documentation of valid.rs)."""
+    f = body.F[fi]
+    loops = f["loops"]
+    if not loops:
+        return "NoLoops"
+    if body.F[fi]["surface"]["type"] == "torus" or any(ci in failed for li in loops for ci in body.L[li]["coedges"]):
+        return "NoBoundary"
+    shapes = [loop_shape(body, li) for li in loops]
+    if any(sh[0] == "winding" for sh in shapes):
+        return "LoopWinds"
+    areas = [loop_area(sh) for sh in shapes]
+    if any(a == 0 for a in areas):
+        return "AreaUndecided"
+    marked = [i for i, li in enumerate(loops) if body.L[li]["outer"]]
+    if len(marked) == 1:
+        outer = marked[0]
+    elif len(loops) == 1:
+        outer = 0
+    else:
+        big = max(abs(a) for a in areas)
+        top = [i for i, a in enumerate(areas) if abs(a) == big]
+        if len(top) != 1:
+            return "OuterUnknown"
+        outer = top[0]
+    same = f["sense"] == "same"
+    ccw = [(a > 0) == same for a in areas]
+    if all(ccw[i] != ccw[outer] for i in range(len(loops)) if i != outer):
+        return not ccw[outer]
+    return "LoopsDisagree"
 
 
 def winding(body, li):
-    """Periods (u, v) a loop of circle coedges winds on a torus, by unwrapping 64 samples per coedge."""
+    """Periods (u, v) a loop of circle coedges winds on a torus or a cylinder, by unwrapping 64
+    samples per coedge."""
     surf = body.F[body.loop_face[li]]["surface"]
     total = [D(0), D(0)]
     for ci in body.L[li]["coedges"]:
@@ -657,7 +698,10 @@ def winding(body, li):
         for k in ks:
             lx, ly, lz = local(surf, curve_point(e["curve"], t0 + (t1 - t0) * k / n))
             rho = (lx * lx + ly * ly).sqrt()
-            uv = (OR.atan2(ly, lx), OR.atan2(lz, rho - D(surf["major_radius"])))
+            if surf["type"] == "torus":
+                uv = (OR.atan2(ly, lx), OR.atan2(lz, rho - D(surf["major_radius"])))
+            else:
+                uv = (OR.atan2(ly, lx), D(0))
             if prev is not None:
                 for i in range(2):
                     j = uv[i] - prev[i]
@@ -669,8 +713,9 @@ def winding(body, li):
 
 
 def check(s):
+    """(defects, unchecked) of a script, each in REQ-007 order."""
     body = Body(s)
-    out = []
+    out, skipped = [], set()
     # OpenLoop
     for li, lp in enumerate(body.L):
         cs = lp["coedges"]
@@ -695,7 +740,6 @@ def check(s):
             elif len(faces) > 2:
                 out.append(("NonManifoldEdge", body.label("E", ei), len(faces)))
     # InconsistentOrientation
-    flips = {}
     for ei in range(len(body.E)):
         u = body.uses(ei)
         if len(u) != 2:
@@ -703,15 +747,16 @@ def check(s):
         fa, fb = body.face_of(u[0]), body.face_of(u[1])
         if fa == fb or not body.S[body.face_shell[fa]]["closed"]:
             continue
-        for fi in (fa, fb):
-            if fi not in flips:
-                flips[fi] = bool(face_flipped(body, fi)) if not any(ci in failed for li in body.F[fi]["loops"]
-                                                                     for ci in body.L[li]["coedges"]) else False
-        if flips[fa] != flips[fb]:
+        xa, xb = face_flipped(body, fa, failed), face_flipped(body, fb, failed)
+        reasons = [x for x in (xa, xb) if isinstance(x, str)]
+        if reasons:
+            skipped.add(("InconsistentOrientation", body.label("E", ei), min(reasons)))
+        elif xa != xb:
             out.append(("InconsistentOrientation", body.label("E", ei)))
     # EdgeOffSurface
     for ei, e in enumerate(body.E):
         if e["curve"] is None:
+            skipped.add(("EdgeOffSurface", body.label("E", ei), "NoEdgeCurve"))
             continue
         t0, t1 = e["range"]
         for fi in sorted({body.face_of(ci) for ci in body.uses(ei)}):
@@ -725,6 +770,9 @@ def check(s):
         if c["pcurve"] is None:
             continue
         e = body.E[c["edge"]]
+        if e["curve"] is None:
+            skipped.add(("PcurveMismatch", body.label("C", ci), "NoEdgeCurve"))
+            continue
         surf = body.F[body.face_of(ci)]["surface"]
         t0, t1 = e["range"]
         dev = D(0)
@@ -738,15 +786,19 @@ def check(s):
     # PcurveFailed
     for ci, reason, best in pcurve_failures(body):
         out.append(("PcurveFailed", body.label("C", ci), reason, best))
-    # SeamWinding (doubly periodic surfaces only)
+    # SeamWinding: doubly periodic surfaces, or more than one period on a cylinder
     for li in range(len(body.L)):
-        if body.F[body.loop_face[li]]["surface"]["type"] == "torus":
+        kind = body.F[body.loop_face[li]]["surface"]["type"]
+        if kind == "torus" or (kind == "cylinder" and all(body.C[ci]["pcurve"] is None for ci in body.L[li]["coedges"])
+                               and all(body.E[body.C[ci]["edge"]]["curve"]["type"] == "circle"
+                                       for ci in body.L[li]["coedges"])):
             w = winding(body, li)
-            if w != [0, 0]:
+            if (kind == "torus" and w != [0, 0]) or any(abs(x) > 1 for x in w):
                 out.append(("SeamWinding", body.label("L", li), w))
     out.sort(key=lambda d: (KINDS.index(d[0]), d[1].encode("utf-8"), d[2].encode("utf-8")
                             if d[0] == "EdgeOffSurface" else b""))
-    return out
+    unchecked = sorted(skipped, key=lambda u: (KINDS.index(u[0]), u[1].encode("utf-8"), u[2]))
+    return out, unchecked
 
 
 def pcurve_failures(body):
@@ -802,9 +854,17 @@ def defect_json(d):
     raise ValueError(k)
 
 
-def canonical(defects, truncated):
-    return '{"defects":[%s],"tolerance_m":"%s","truncated":%d}' % (",".join(defect_json(d) for d in defects), hx(TOL),
-                                                                    truncated)
+def canonical(defects, truncated, unchecked):
+    items = ",".join('{"check":"%s","entity":%s,"reason":"%s"}' % (u[0], json.dumps(u[1]), u[2]) for u in unchecked)
+    return '{"defects":[%s],"tolerance_m":"%s","truncated":%d,"unchecked":[%s]}' % (
+        ",".join(defect_json(d) for d in defects), hx(TOL), truncated, items)
+
+
+def report(defects, unchecked, cap=None):
+    kept = defects if cap is None else defects[:cap]
+    return {"cap": cap, "defects": listed(kept), "truncated": len(defects) - len(kept),
+            "unchecked": [{"check": u[0], "entity": u[1], "reason": u[2]} for u in unchecked],
+            "canonical": canonical(kept, len(defects) - len(kept), unchecked)}
 
 
 def value_text(x):
@@ -872,10 +932,10 @@ def build_all():
     for name, s in defect_fixtures():
         files[f"defects/{name}.json"] = dump(s)
         parsed = json.loads(files[f"defects/{name}.json"], object_pairs_hook=no_dup_keys)
-        found = check(parsed)
+        found, unchecked = check(parsed)
         assert same_seeded(found, SEEDED[name]), (name, found)
-        reports[f"defects/{name}"] = {"cap": None, "defects": listed(found), "truncated": 0,
-                                      "canonical": canonical(found, 0)}
+        assert unchecked == SEEDED_UNCHECKED.get(name, []), (name, unchecked)
+        reports[f"defects/{name}"] = report(found, unchecked)
     nm = non_manifold()
     files["defects/non_manifold_edge.json"] = dump(nm)
     # AC-1: the labelled cube is clean (its lines read with swap_lines, as the Rust test does). cylinder_capped.json is unlabelled (derived IDs), so the
@@ -888,24 +948,26 @@ def build_all():
         for a, b in zip(plain[kind], labelled[kind]):
             assert {k: v for k, v in b.items() if k != "label"} == a, ("cylinder_capped drift", kind)
     for name, parsed in (("cube_labelled", cube), ("cylinder_capped", labelled)):
-        found = check(parsed)
-        assert found == [], (name, found)
-        reports[name] = {"cap": None, "defects": [], "truncated": 0, "canonical": canonical([], 0)}
-    for name, sense, seeded in (("capped_band", "same", []),
-                                ("capped_band_top_reversed", "reversed", [("InconsistentOrientation", "e-top")])):
-        files[f"{name}.json"] = dump(capped_band(sense))
-        found = check(json.loads(files[f"{name}.json"], object_pairs_hook=no_dup_keys))
-        assert found == seeded, (name, found)
-        reports[name] = {"cap": None, "defects": listed(found), "truncated": 0, "canonical": canonical(found, 0)}
+        found, unchecked = check(parsed)
+        assert found == [] and unchecked == [], (name, found, unchecked)
+        reports[name] = report(found, unchecked)
+    # The band winds, so its orientation is undetermined: both circle edges are unchecked,
+    # however the caps or the band are marked (hand-labelled, and found by the checker).
+    winds = [("InconsistentOrientation", "e-bottom", "LoopWinds"), ("InconsistentOrientation", "e-top", "LoopWinds")]
+    for name, top, band in (("capped_band", "same", "same"), ("capped_band_top_reversed", "reversed", "same"),
+                            ("capped_band_flipped", "same", "reversed")):
+        files[f"{name}.json"] = dump(capped_band(top, band))
+        found, unchecked = check(json.loads(files[f"{name}.json"], object_pairs_hook=no_dup_keys))
+        assert found == [] and unchecked == winds, (name, found, unchecked)
+        reports[name] = report(found, unchecked)
     c50 = cap50()
     files["valid_cap50.json"] = dump(c50)
-    found = check(json.loads(files["valid_cap50.json"], object_pairs_hook=no_dup_keys))
+    found, unchecked = check(json.loads(files["valid_cap50.json"], object_pairs_hook=no_dup_keys))
     assert len(found) == 50 and [d[0] for d in found] == ["OpenLoop"] * 10 + ["PcurveFailed"] * 40
+    # the 40 curveless disc edges cannot be measured against their planes (never capped)
+    assert unchecked == [("EdgeOffSurface", f"d{i:02d}-e", "NoEdgeCurve") for i in range(10, 50)], unchecked
     for cap in (None, 20):
-        kept = found if cap is None else found[:cap]
-        reports["valid_cap50" if cap is None else "valid_cap50@20"] = {
-            "cap": cap, "defects": listed(kept), "truncated": len(found) - len(kept),
-            "canonical": canonical(kept, len(found) - len(kept))}
+        reports["valid_cap50" if cap is None else "valid_cap50@20"] = report(found, unchecked, cap)
     expected = {
         "description": "GEO.CAD.TOPO.VALID expected reports at tolerance 1e-7 m; generated by make_valid_fixtures.py "
                        "(stdlib decimal and fractions on the closed-form geometry; independent of fid-geo-cad)",

@@ -45,4 +45,4 @@ pub use topo::{
     Loop, LoopIx, PairingFault, PcurveError, Pcurves, Sense, Shell, ShellIx, SurfaceDef, SurfaceParams, TopoBuildError,
     TopologyId, TrimClass, TrimCurve, TrimError, TrimIndex, TrimSeg, Undecidable, Vertex, VertexIx, DEFAULT_TOL_M,
 };
-pub use topo::{validate, Defect, DefectKind, ValidError, ValidationReport, DEFAULT_VALID_TOL_M};
+pub use topo::{validate, Defect, DefectKind, Unchecked, ValidError, ValidationReport, DEFAULT_VALID_TOL_M};

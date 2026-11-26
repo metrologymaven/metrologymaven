@@ -9,7 +9,8 @@ mod common;
 use common::{build, builder, builder_with, load, J};
 use fid_geo_cad::{
     body_digest, encode, validate, Body, BodyBuilder, CurveDef, CurveParams, Defect, DefectKind, FailReason, Frame,
-    PairingFault, Sense, SurfaceDef, SurfaceParams, TopoBuildError, TopologyId, ValidError, ValidationReport,
+    PairingFault, Sense, SurfaceDef, SurfaceParams, TopoBuildError, TopologyId, Unchecked, ValidError,
+    ValidationReport,
 };
 
 const TOL: f64 = 1e-7;
@@ -110,11 +111,19 @@ fn canonical(r: &ValidationReport) -> String {
             ),
         })
         .collect();
+    let unchecked: Vec<String> = r
+        .unchecked
+        .iter()
+        .map(|u| {
+            format!("{{\"check\":{},\"entity\":{},\"reason\":{}}}", q(u.check.code()), q(&id(&u.entity)), q(u.reason))
+        })
+        .collect();
     format!(
-        "{{\"defects\":[{}],\"tolerance_m\":{},\"truncated\":{}}}",
+        "{{\"defects\":[{}],\"tolerance_m\":{},\"truncated\":{},\"unchecked\":[{}]}}",
         defects.join(","),
         q(&hex(r.tolerance_m)),
-        r.truncated
+        r.truncated,
+        unchecked.join(",")
     )
 }
 
@@ -153,6 +162,16 @@ fn check_report(name: &str, r: &ValidationReport, exp: &J) {
         }
     }
     assert_eq!(r.truncated, exp.get("truncated").u() as u64, "{name}: truncated");
+    let skipped = exp.get("unchecked").arr();
+    assert_eq!(r.unchecked.len(), skipped.len(), "{name}: unchecked count");
+    for (u, row) in r.unchecked.iter().zip(skipped) {
+        assert_eq!(
+            (u.check.code(), id(&u.entity), u.reason),
+            (row.get("check").str(), row.get("entity").str().to_string(), row.get("reason").str()),
+            "{name}: unchecked"
+        );
+    }
+    assert_eq!(r.is_valid(), rows.is_empty() && skipped.is_empty(), "{name}: is_valid");
     assert_eq!(canonical(r), exp.get("canonical").str(), "{name}: canonical JSON (AC-5)");
 }
 
@@ -261,32 +280,133 @@ fn capped_cylinder_is_clean() {
 }
 
 #[test]
-fn an_undetermined_face_counts_as_agreeing_with_its_sense() {
-    // The band of a closed cylinder winds around its surface, so its orientation is not
-    // measured; the caps are. Oracle-checked: clean, and with the top cap marked Reversed only
-    // the top edge (a global sign error would flag the bottom edge instead).
+fn an_undetermined_face_never_counts_as_agreeing() {
+    // The band of a closed cylinder winds around its surface, so its orientation cannot be
+    // measured. Oracle-checked: as built, with the top cap marked Reversed and with the band
+    // marked Reversed, both circle edges are unchecked (LoopWinds), the report is never empty
+    // and the body is never valid.
     let exp = expected();
-    for name in ["capped_band", "capped_band_top_reversed"] {
+    for name in ["capped_band", "capped_band_top_reversed", "capped_band_flipped"] {
         let r = validate(&build(name), TOL, None).unwrap();
         check_report(name, &r, exp.get("reports").get(name));
+        assert!(!r.is_valid() && r.defects.is_empty() && r.unchecked.len() == 2, "{name}");
     }
 }
 
 #[test]
-fn other_valid_bodies_are_clean() {
-    // Hand-labelled: well-formed bodies of the MODEL and PCURVE fixtures. The bands and
-    // hemispheres wind once around a singly periodic surface, which is not a defect.
+fn other_valid_bodies_are_clean_or_unchecked() {
+    // Hand-labelled: well-formed bodies of the MODEL and PCURVE fixtures. The bands wind once
+    // around a singly periodic surface, which is not a defect. The two hemispheres form a
+    // closed shell whose loops wind, so the equator's orientation is unchecked.
     // Only the MODEL cube gives its line directions in `axis` (see common::curve_with).
-    for (name, swap) in [
-        ("cube_unlabelled", true),
-        ("sphere_hemispheres", false),
-        ("plate_with_hole_nopcurve", false),
-        ("cylinder_band", false),
-    ] {
+    for (name, swap) in [("cube_unlabelled", true), ("plate_with_hole_nopcurve", false), ("cylinder_band", false)] {
         let body = builder_with(&load(&format!("{name}.json")), swap).build().unwrap();
         let r = validate(&body, TOL, None).unwrap();
-        assert!(r.defects.is_empty(), "{name}: {:?}", r.defects);
+        assert!(r.is_valid(), "{name}: {:?} {:?}", r.defects, r.unchecked);
     }
+    let body = build("sphere_hemispheres");
+    let r = validate(&body, TOL, None).unwrap();
+    assert!(r.defects.is_empty(), "{:?}", r.defects);
+    assert_eq!(
+        r.unchecked,
+        vec![Unchecked {
+            check: DefectKind::InconsistentOrientation,
+            entity: body.edges()[0].id().clone(),
+            reason: "LoopWinds"
+        }]
+    );
+}
+
+#[test]
+fn a_loop_winding_twice_is_reported_on_a_singly_periodic_surface() {
+    // Hand-labelled: one loop of two full circles at the same height on a cylinder winds two
+    // periods in u, more than any band or cap, so SeamWinding is reported.
+    let mut b = BodyBuilder::new([9; 16]);
+    let v = b.add_vertex([0.5, 0.0, 0.0], None);
+    let circle = || {
+        CurveDef::analytic(CurveParams::Circle {
+            frame: Frame { origin: [0.0, 0.0, 0.0], axis: [0.0, 0.0, 1.0], ref_dir: [1.0, 0.0, 0.0] },
+            radius: 0.5,
+        })
+        .unwrap()
+    };
+    let tau = core::f64::consts::TAU;
+    let e0 = b.add_edge(Some(circle()), v, v, [0.0, tau], None);
+    let e1 = b.add_edge(Some(circle()), v, v, [0.0, tau], None);
+    let c0 = b.add_coedge(e0, Sense::Same, None, None);
+    let c1 = b.add_coedge(e1, Sense::Same, None, None);
+    let l = b.add_loop(vec![c0, c1], false, Some("l-twice"));
+    let cyl = SurfaceDef::analytic(SurfaceParams::Cylinder {
+        frame: Frame { origin: [0.0; 3], axis: [0.0, 0.0, 1.0], ref_dir: [1.0, 0.0, 0.0] },
+        radius: 0.5,
+    })
+    .unwrap();
+    let f = b.add_face(cyl, Sense::Same, vec![l], None);
+    b.add_shell(vec![f], false);
+    let r = validate(&b.build().unwrap(), TOL, None).unwrap();
+    assert!(r.defects.contains(&Defect::SeamWinding {
+        r#loop: TopologyId::Imported(fid_geo_cad::Label::new("l-twice").unwrap()),
+        periods: [2, 0]
+    }));
+    assert!(!r.is_valid());
+}
+
+#[test]
+fn an_imported_pcurve_that_cannot_be_evaluated_disagrees_without_bound() {
+    // Hand-labelled: the pcurve_mismatch sheet with the bottom coedge's pcurve replaced by a
+    // NURBS line whose domain [0, 0.5] stops short of the edge range [0, 1]. The disagreement
+    // cannot be evaluated, so it is infinite. PCURVE gives a loop with such a pcurve no periods
+    // (its REQ-004 rules), so TRIM cannot assemble the face (IncompleteLoop) and the
+    // self-intersection sweep is unchecked rather than passed.
+    let mut script = load("defects/pcurve_mismatch.json");
+    let J::Obj(ref mut top) = script else { panic!() };
+    let J::Arr(ref mut coedges) = top.get_mut("coedges").unwrap() else { panic!() };
+    let J::Obj(ref mut bottom) = coedges[0] else { panic!() };
+    let nurbs = |k: &str| J::Str(k.to_string());
+    let mut pc = std::collections::BTreeMap::new();
+    pc.insert("type".to_string(), nurbs("nurbs"));
+    pc.insert("degree".to_string(), J::Num(1.0));
+    pc.insert("knots".to_string(), J::Arr(vec![J::Num(0.0), J::Num(0.0), J::Num(0.5), J::Num(0.5)]));
+    pc.insert(
+        "ctrl".to_string(),
+        J::Arr(vec![J::Arr(vec![J::Num(0.0), J::Num(0.0)]), J::Arr(vec![J::Num(0.5), J::Num(0.0)])]),
+    );
+    pc.insert("weights".to_string(), J::Null);
+    pc.insert("periodic".to_string(), J::Bool(false));
+    bottom.insert("pcurve".to_string(), J::Obj(pc));
+    let body = builder(&script).build().unwrap();
+    let r = validate(&body, TOL, None).unwrap();
+    let label = |s: &str| TopologyId::Imported(fid_geo_cad::Label::new(s).unwrap());
+    assert_eq!(r.defects, vec![Defect::PcurveMismatch { coedge: label("c-bottom"), deviation_m: f64::INFINITY }]);
+    assert_eq!(
+        r.unchecked,
+        vec![Unchecked { check: DefectKind::SelfIntersectingLoop, entity: label("f"), reason: "IncompleteLoop" }]
+    );
+}
+
+#[test]
+fn a_flipped_seamed_band_is_measured_and_reported() {
+    // Hand-labelled: the capped cylinder with a seam (its side loop winds zero periods, so its
+    // orientation is measured) with the caps as built and the side face marked Reversed: the
+    // side disagrees, the caps agree, so both circle edges are inconsistent and nothing is
+    // unchecked.
+    let mut script = load("defects/inconsistent_orientation.json");
+    let J::Obj(ref mut top) = script else { panic!() };
+    let J::Arr(ref mut faces) = top.get_mut("faces").unwrap() else { panic!() };
+    for (i, sense) in [(0, "same"), (1, "reversed")] {
+        let J::Obj(ref mut f) = faces[i] else { panic!() };
+        f.insert("sense".to_string(), J::Str(sense.to_string()));
+    }
+    let r = validate(&builder(&script).build().unwrap(), TOL, None).unwrap();
+    let ids: Vec<(DefectKind, String)> = r.defects.iter().map(|d| (d.kind(), id(d.entity()))).collect();
+    assert_eq!(
+        ids,
+        vec![
+            (DefectKind::InconsistentOrientation, "cyl-e0".to_string()),
+            (DefectKind::InconsistentOrientation, "cyl-e2".to_string())
+        ]
+    );
+    assert!(r.unchecked.is_empty(), "{:?}", r.unchecked);
 }
 
 #[test]

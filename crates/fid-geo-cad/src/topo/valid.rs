@@ -2,8 +2,14 @@
 //!
 //! [`validate`] checks a built [`Body`] against the conditions the rest of GEO relies on and
 //! returns a [`ValidationReport`] listing every [`Defect`] with its entity IDs and measured
-//! value. It takes the body by shared reference and never changes it (REQ-006): there is no
-//! repair, healing or rebuild here.
+//! value, and every check it could not make as an [`Unchecked`] item. It takes the body by
+//! shared reference and never changes it (REQ-006): there is no repair, healing or rebuild.
+//!
+//! **Fail closed.** A validator never reports a body clean when it could not check it: a
+//! body is valid only when [`ValidationReport::is_valid`] holds (no defects, none truncated,
+//! nothing unchecked). A value that cannot be computed because a curve or pcurve is broken is
+//! reported as an infinite gap or deviation; a check that cannot be made for another reason
+//! is an [`Unchecked`] item `{ check, entity, reason }`.
 //!
 //! # What a built body already guarantees
 //!
@@ -20,7 +26,8 @@
 //!   (cyclically): the end point of coedge `k` is its edge curve at `t1` (`t0` for a
 //!   `Reversed` coedge), the start point of coedge `k + 1` its edge curve at `t0` (`t1`); an
 //!   edge without a curve uses its vertex. `gap_m` is the largest 3-D distance
-//!   `hypot(hypot(e0, e1), e2)` over the loop's junctions; the loop is reported once when
+//!   `hypot(hypot(e0, e1), e2)` over the loop's junctions (infinite at a junction whose curve
+//!   cannot be evaluated or whose distance overflows); the loop is reported once when
 //!   `gap_m > tol_m`.
 //! - **SelfIntersectingLoop** (REQ-002). The trimming polylines of a face are those of
 //!   [`TrimIndex`] (GEO.CAD.TOPO.TRIM, built from the pcurves [`derive_pcurves`] gives at
@@ -30,7 +37,9 @@
 //!   other in a loop and share their joining point only meet there unless they are collinear
 //!   and fold back; any other common point is an intersection. Every loop that takes part in
 //!   an intersection (with itself or with another loop of the face) is reported once. A face
-//!   whose boundary TRIM cannot assemble is not swept (its PCURVE failure is reported).
+//!   whose boundary TRIM cannot assemble cannot be swept: it is unchecked (entity the face,
+//!   reason the [`Undecidable`] code), except when TRIM's reason is a failed pcurve or a
+//!   doubly periodic winding, which are reported as PcurveFailed and SeamWinding defects.
 //! - **DanglingEdge** (REQ-003). A body is *declared solid* when at least one of its shells is
 //!   declared closed. In a solid body an edge with fewer than two coedges is dangling; `uses`
 //!   is its coedge count. (Such an edge lies in an open shell of the body: the builder refuses
@@ -39,37 +48,48 @@
 //!   faces; `uses` is the face count.
 //! - **InconsistentOrientation** (REQ-004). TRIM's convention is that the material of a face
 //!   lies left of each loop in the `(u, v)` chart for a `Same` face and right of it for a
-//!   `Reversed` face. A face's loops therefore agree with its sense when the signed area of
-//!   its closed chart polylines (shoelace over the rounded segment ends, each loop taken
-//!   relative to its first vertex) is positive for `Same` and negative for `Reversed`. The
-//!   area is used only when every loop of the face winds zero periods, TRIM assembled the
-//!   boundary and `|area| > 2^-40 sum |terms|`; otherwise the face is *undetermined* and
-//!   counts as agreeing. The builder already makes the two coedges of a closed-shell edge
-//!   opposite in sense, so they traverse the edge in the same direction relative to their
-//!   face senses exactly when one of their two faces agrees with its sense and the other does
-//!   not; such an edge of a closed shell (two coedges in two faces) is reported.
+//!   `Reversed` face. Each loop's signed area (shoelace over the rounded segment ends, relative
+//!   to the loop's first vertex) gives its turning sense. Relative to the face sense the outer
+//!   loop (the one marked outer, else the only loop, else the loop of strictly largest area)
+//!   must turn counter-clockwise and every inner loop clockwise: then the face *agrees* with
+//!   its sense; all of them the other way round, it *disagrees*. Anything else leaves the
+//!   face undetermined, with the reason `NoLoops`, `NoBoundary` (TRIM could not assemble it),
+//!   `LoopWinds` (a loop winds a period, as on a band or hemisphere), `AreaUndecided`
+//!   (`|area| <= 2^-40 sum |terms|` or not finite), `OuterUnknown` or `LoopsDisagree`. The
+//!   builder already makes the two coedges of a closed-shell edge opposite in sense, so they
+//!   traverse the edge in the same direction relative to their face senses exactly when one of
+//!   their two faces agrees and the other disagrees: such an edge (two coedges in two faces of
+//!   a closed shell) is reported. When either face is undetermined the edge is unchecked
+//!   (entity the edge, reason the lesser code of its undetermined faces); an undetermined face
+//!   never counts as agreeing.
 //! - **EdgeOffSurface** (REQ-005). For every edge with a curve and every distinct face of its
 //!   coedges, the curve at the 33 parameters `t0 + ((t1 - t0) k) / 32` (`t_32 = t1`) is
 //!   inverted onto the face surface: an analytic surface by its closed form (the distance is
 //!   used whether or not the foot is unique), a NURBS surface by GEO.NURBS.INVERT (a certified
-//!   answer, tied or not; an uncertified one gives its best known distance, an upper bound,
-//!   so a doubtful sample is never silently passed). `deviation_m` is the largest distance; a
-//!   sample whose curve point or inversion cannot be evaluated is left out.
+//!   answer, tied or not; an uncertified one gives its best known distance, an upper bound).
+//!   `deviation_m` is the largest distance; infinite when the curve cannot be evaluated at a
+//!   sample. A sample whose distance cannot be measured makes the edge unchecked
+//!   (`SurfaceInversion`), as do an edge without a curve (`NoEdgeCurve`) and a face without a
+//!   surface the evaluators know (`NoSurface`); the entity is the edge.
 //! - **PcurveMismatch** (REQ-005). For every coedge with an imported pcurve,
-//!   [`pcurve_disagreement`] (33 parameters); reported above `tol_m`. A pcurve that cannot be
-//!   evaluated has no value here (TRIM then reports the face undecidable).
+//!   [`pcurve_disagreement`] (33 parameters); reported above `tol_m`. A pcurve, curve or
+//!   surface that cannot be evaluated gives an infinite deviation; a coedge whose edge has no
+//!   3-D curve is unchecked (`NoEdgeCurve`).
 //! - **PcurveFailed**, passed through from [`derive_pcurves`] at `tol_m`: the coedge, the
 //!   [`FailReason`] and the best deviation measured (infinite when none was).
 //! - **SeamWinding**, passed through from [`derive_pcurves`] for a loop on a surface periodic
 //!   in both directions (a torus or a doubly periodic NURBS), where TRIM cannot use a winding
-//!   loop. On a surface periodic in one direction a winding loop is a valid band or cap
+//!   loop, and for a loop that winds more than one period in either direction. On a surface
+//!   periodic in one direction a loop winding once is a valid band or cap
 //!   (GEO.CAD.TOPO.PCURVE REQ-004) and is not a defect.
 //!
 //! # Order and cap (REQ-007)
 //!
 //! Defects are sorted by kind in the order of [`DefectKind`], then by ascending
 //! [`TopologyId`] of the primary entity (the face second for EdgeOffSurface). With a cap the
-//! first `cap` defects are kept and `truncated` counts the rest.
+//! first `cap` defects are kept and `truncated` counts the rest. Unchecked items are sorted by
+//! check (the same kind order), entity ID and reason, without duplicates, and are never
+//! capped.
 //!
 //! # Determinism (D0, KNP-1)
 //!
@@ -88,10 +108,11 @@ use fid_geo_nurbs::{invert_surface, InvertError};
 use super::geom::CurveDef;
 use super::model::{Body, CoedgeIx, EdgeIx, FaceIx, LoopIx, Sense, TopologyId};
 use super::pcurve::{
-    curve_point, derive_pcurves, dist3, grid, larger, pcurve_disagreement, FailReason, PcurveError, Pcurves, Surf,
+    curve_point, derive_pcurves, dist3, grid, larger, pcurve_disagreement, DisagreementError, FailReason, PcurveError,
+    Pcurves, Surf,
 };
 use super::trim::exact::{cmp, orient, Shifted};
-use super::trim::{TrimIndex, TrimSeg};
+use super::trim::{TrimIndex, TrimSeg, Undecidable};
 
 /// Default validation tolerance in metres [unverified: needs evidence from IO.CORP STEP
 /// corpora].
@@ -205,6 +226,25 @@ impl Defect {
     }
 }
 
+/// A check that could not be made on one entity, so the body is not reported clean
+/// (a validator never reports a body clean when it could not check it).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Unchecked {
+    /// The check that could not be made.
+    pub check: DefectKind,
+    /// The entity it could not be made on (see the module documentation per check).
+    pub entity: TopologyId,
+    /// Why, as a stable code.
+    pub reason: &'static str,
+}
+
+impl Unchecked {
+    /// REQ-007 order: check, then entity ID, then reason.
+    fn order(&self, o: &Unchecked) -> Ordering {
+        self.check.cmp(&o.check).then_with(|| self.entity.cmp(&o.entity)).then_with(|| self.reason.cmp(o.reason))
+    }
+}
+
 /// The result of [`validate`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct ValidationReport {
@@ -214,6 +254,34 @@ pub struct ValidationReport {
     pub defects: Vec<Defect>,
     /// Defects found beyond the cap.
     pub truncated: u64,
+    /// Every check that could not be made, in REQ-007 order; never capped.
+    pub unchecked: Vec<Unchecked>,
+}
+
+impl ValidationReport {
+    /// The body is valid only when nothing was found and nothing was left unchecked.
+    pub fn is_valid(&self) -> bool {
+        self.defects.is_empty() && self.truncated == 0 && self.unchecked.is_empty()
+    }
+}
+
+/// Defects and unchecked items while the checks run.
+#[derive(Default)]
+struct Acc {
+    defects: Vec<Defect>,
+    unchecked: Vec<Unchecked>,
+}
+
+impl Acc {
+    fn defect(&mut self, d: Defect) {
+        self.defects.push(d);
+    }
+
+    fn skip(&mut self, check: DefectKind, entity: Option<TopologyId>, reason: &'static str) {
+        if let Some(entity) = entity {
+            self.unchecked.push(Unchecked { check, entity, reason });
+        }
+    }
 }
 
 /// Why [`validate`] produced no report. Defects are data, never errors.
@@ -262,15 +330,18 @@ pub fn validate(body: &Body, tol_m: f64, cap: Option<u64>) -> Result<ValidationR
             TrimIndex::build(body, &pcurves, FaceIx::at(i)).map_err(|e| ValidError::Internal { code: e.code() })?;
         indexes.push(ix);
     }
-    let mut defects = Vec::new();
-    open_loops(body, tol_m, &mut defects);
-    self_intersections(body, &indexes, &mut defects);
-    edge_uses(body, &mut defects);
-    orientation(body, &pcurves, &indexes, &mut defects);
-    off_surface(body, tol_m, &mut defects);
-    mismatches(body, tol_m, &mut defects);
-    pcurve_reports(body, &pcurves, &mut defects);
+    let mut acc = Acc::default();
+    open_loops(body, tol_m, &mut acc);
+    self_intersections(body, &indexes, &mut acc);
+    edge_uses(body, &mut acc);
+    orientation(body, &pcurves, &indexes, &mut acc);
+    off_surface(body, tol_m, &mut acc);
+    mismatches(body, tol_m, &mut acc);
+    pcurve_reports(body, &pcurves, &mut acc);
+    let Acc { mut defects, mut unchecked } = acc;
     defects.sort_by(|a, b| a.order(b));
+    unchecked.sort_by(|a, b| a.order(b));
+    unchecked.dedup();
     let mut truncated = 0u64;
     if let Some(c) = cap {
         let keep = usize::try_from(c).unwrap_or(usize::MAX);
@@ -279,7 +350,7 @@ pub fn validate(body: &Body, tol_m: f64, cap: Option<u64>) -> Result<ValidationR
             defects.truncate(keep);
         }
     }
-    Ok(ValidationReport { tolerance_m: tol_m, defects, truncated })
+    Ok(ValidationReport { tolerance_m: tol_m, defects, truncated, unchecked })
 }
 
 // ---------------------------------------------------------------- ids
@@ -302,7 +373,8 @@ fn face_id(body: &Body, f: FaceIx) -> Option<TopologyId> {
 
 // ---------------------------------------------------------------- REQ-001 open loops
 
-/// The start (`end == false`) or end point of a coedge.
+/// The start (`end == false`) or end point of a coedge; `None` when its edge curve cannot be
+/// evaluated there (a broken curve).
 fn coedge_point(body: &Body, c: CoedgeIx, end: bool) -> Option<[f64; 3]> {
     let ce = body.coedge(c)?;
     let e = body.edge(ce.edge())?;
@@ -314,23 +386,23 @@ fn coedge_point(body: &Body, c: CoedgeIx, end: bool) -> Option<[f64; 3]> {
     }
 }
 
-fn open_loops(body: &Body, tol: f64, out: &mut Vec<Defect>) {
+fn open_loops(body: &Body, tol: f64, acc: &mut Acc) {
     for (li, lp) in body.loops().iter().enumerate() {
         let cs = lp.coedges();
         let n = cs.len();
-        let mut worst: Option<f64> = None;
+        let mut worst = 0.0;
         for k in 0..n {
             let (Some(&a), Some(&b)) = (cs.get(k), cs.get((k + 1) % n)) else { continue };
-            let (Some(p), Some(q)) = (coedge_point(body, a, true), coedge_point(body, b, false)) else { continue };
-            if let Some(d) = dist3(p, q) {
-                worst = Some(worst.map_or(d, |w| larger(w, d)));
-            }
+            // A junction that cannot be evaluated or measured is an unbounded gap.
+            let d = match (coedge_point(body, a, true), coedge_point(body, b, false)) {
+                (Some(p), Some(q)) => dist3(p, q).unwrap_or(f64::INFINITY),
+                _ => f64::INFINITY,
+            };
+            worst = larger(worst, d);
         }
-        if let Some(gap_m) = worst {
-            if gap_m > tol {
-                if let Some(id) = loop_id(body, LoopIx::at(li)) {
-                    out.push(Defect::OpenLoop { r#loop: id, gap_m });
-                }
+        if worst > tol {
+            if let Some(id) = loop_id(body, LoopIx::at(li)) {
+                acc.defect(Defect::OpenLoop { r#loop: id, gap_m: worst });
             }
         }
     }
@@ -479,15 +551,19 @@ fn face_intersections(ix: &TrimIndex) -> BTreeSet<usize> {
     hit
 }
 
-fn self_intersections(body: &Body, indexes: &[TrimIndex], out: &mut Vec<Defect>) {
+fn self_intersections(body: &Body, indexes: &[TrimIndex], acc: &mut Acc) {
     for (fi, ix) in indexes.iter().enumerate() {
-        if ix.undecidable().is_some() {
+        let Some(face) = body.face(FaceIx::at(fi)) else { continue };
+        if let Some(u) = ix.undecidable() {
+            // A failed pcurve and a doubly periodic winding are reported as defects already.
+            if !matches!(u, Undecidable::PcurveFailed { .. } | Undecidable::Winding { .. }) {
+                acc.skip(DefectKind::SelfIntersectingLoop, Some(face.id().clone()), u.code());
+            }
             continue;
         }
-        let Some(face) = body.face(FaceIx::at(fi)) else { continue };
         for pos in face_intersections(ix) {
             if let Some(id) = face.loops().get(pos).and_then(|&l| loop_id(body, l)) {
-                out.push(Defect::SelfIntersectingLoop { r#loop: id });
+                acc.defect(Defect::SelfIntersectingLoop { r#loop: id });
             }
         }
     }
@@ -511,7 +587,7 @@ fn face_of(body: &Body, c: CoedgeIx) -> Option<FaceIx> {
     body.r#loop(body.coedge(c)?.r#loop()).map(|l| l.face())
 }
 
-fn edge_uses(body: &Body, out: &mut Vec<Defect>) {
+fn edge_uses(body: &Body, acc: &mut Acc) {
     let solid = body.shells().iter().any(|s| s.closed());
     if !solid {
         return;
@@ -520,27 +596,33 @@ fn edge_uses(body: &Body, out: &mut Vec<Defect>) {
         let Some(id) = edge_id(body, EdgeIx::at(ei)) else { continue };
         let faces: BTreeSet<FaceIx> = cs.iter().filter_map(|&c| face_of(body, c)).collect();
         if cs.len() < 2 {
-            out.push(Defect::DanglingEdge { edge: id, uses: cs.len() as u64 });
+            acc.defect(Defect::DanglingEdge { edge: id, uses: cs.len() as u64 });
         } else if faces.len() > 2 {
-            out.push(Defect::NonManifoldEdge { edge: id, uses: faces.len() as u64 });
+            acc.defect(Defect::NonManifoldEdge { edge: id, uses: faces.len() as u64 });
         }
     }
 }
 
 // ---------------------------------------------------------------- REQ-004 orientation
 
-/// Whether the face's loops disagree with its sense; `None` when undetermined.
-fn flipped(body: &Body, pcurves: &Pcurves, fi: usize, ix: &TrimIndex) -> Option<bool> {
-    let face = body.face(FaceIx::at(fi))?;
-    let chart = pcurves.charts.get(fi)?;
-    if face.loops().is_empty() || ix.undecidable().is_some() {
-        return None;
+/// Whether the face's loops disagree with its sense (`Ok(true)`), agree (`Ok(false)`), or why
+/// that cannot be told (see the module documentation).
+fn flipped(body: &Body, pcurves: &Pcurves, fi: usize, ix: &TrimIndex) -> Result<bool, &'static str> {
+    let face = body.face(FaceIx::at(fi)).ok_or("NoFace")?;
+    let chart = pcurves.charts.get(fi).ok_or("NoBoundary")?;
+    if face.loops().is_empty() {
+        return Err("NoLoops");
+    }
+    if ix.undecidable().is_some() {
+        return Err("NoBoundary");
     }
     if !chart.loop_periods.iter().all(|p| *p == Some([0, 0])) {
-        return None;
+        return Err("LoopWinds");
     }
-    let mut total = 0.0;
-    let mut mag = 0.0;
+    // Signed area per loop, each relative to its first vertex.
+    let n = face.loops().len();
+    let mut area = vec![0.0f64; n];
+    let mut mag = vec![0.0f64; n];
     let mut reference: Option<(usize, [f64; 2])> = None;
     for g in ix.segments() {
         let r = match reference {
@@ -553,18 +635,64 @@ fn flipped(body: &Body, pcurves: &Pcurves, fi: usize, ix: &TrimIndex) -> Option<
         let (ax, ay, bx, by) = (g.a[0] - r[0], g.a[1] - r[1], g.b[0] - r[0], g.b[1] - r[1]);
         let left = ax * by;
         let right = ay * bx;
-        total += left - right;
-        mag += abs(left) + abs(right);
+        if let (Some(a), Some(m)) = (area.get_mut(g.loop_ix), mag.get_mut(g.loop_ix)) {
+            *a += left - right;
+            *m += abs(left) + abs(right);
+        }
     }
-    if !(total.is_finite() && mag.is_finite()) || abs(total) <= REL * mag {
-        return None;
+    let mut sign = Vec::with_capacity(n);
+    for (a, m) in area.iter().zip(&mag) {
+        if !(a.is_finite() && m.is_finite()) || abs(*a) <= REL * *m {
+            return Err("AreaUndecided");
+        }
+        sign.push(*a > 0.0);
     }
-    Some((total > 0.0) != (face.sense() == Sense::Same))
+    // The outer loop: the one marked outer, else the only loop, else the largest by area.
+    let marked: Vec<usize> = face
+        .loops()
+        .iter()
+        .enumerate()
+        .filter(|(_, &l)| body.r#loop(l).is_some_and(|x| x.outer()))
+        .map(|(i, _)| i)
+        .collect();
+    let outer = match marked.as_slice() {
+        [o] => *o,
+        [] if n == 1 => 0,
+        [] => {
+            let mut best: Option<(usize, f64)> = None;
+            let mut tie = false;
+            for (i, a) in area.iter().enumerate() {
+                let v = abs(*a);
+                match best {
+                    Some((_, b)) if v == b => tie = true,
+                    Some((_, b)) if v < b => {}
+                    _ => {
+                        best = Some((i, v));
+                        tie = false;
+                    }
+                }
+            }
+            match best {
+                Some((i, _)) if !tie => i,
+                _ => return Err("OuterUnknown"),
+            }
+        }
+        _ => return Err("OuterUnknown"),
+    };
+    // Relative to the face sense: the outer loop counter-clockwise, every inner loop clockwise.
+    let same = face.sense() == Sense::Same;
+    let ccw = |i: usize| sign.get(i).is_some_and(|&p| p == same);
+    let outer_ccw = ccw(outer);
+    if (0..n).filter(|&i| i != outer).all(|i| ccw(i) != outer_ccw) {
+        Ok(!outer_ccw)
+    } else {
+        Err("LoopsDisagree")
+    }
 }
 
-fn orientation(body: &Body, pcurves: &Pcurves, indexes: &[TrimIndex], out: &mut Vec<Defect>) {
-    let flips: Vec<bool> =
-        indexes.iter().enumerate().map(|(fi, ix)| flipped(body, pcurves, fi, ix).unwrap_or(false)).collect();
+fn orientation(body: &Body, pcurves: &Pcurves, indexes: &[TrimIndex], acc: &mut Acc) {
+    let flips: Vec<Result<bool, &'static str>> =
+        indexes.iter().enumerate().map(|(fi, ix)| flipped(body, pcurves, fi, ix)).collect();
     for (ei, cs) in edge_coedges(body).iter().enumerate() {
         let [a, b] = cs.as_slice() else { continue };
         let (Some(fa), Some(fb)) = (face_of(body, *a), face_of(body, *b)) else { continue };
@@ -575,11 +703,20 @@ fn orientation(body: &Body, pcurves: &Pcurves, indexes: &[TrimIndex], out: &mut 
         if !closed {
             continue;
         }
-        let (Some(&xa), Some(&xb)) = (flips.get(fa.index()), flips.get(fb.index())) else { continue };
-        if xa != xb {
-            if let Some(id) = edge_id(body, EdgeIx::at(ei)) {
-                out.push(Defect::InconsistentOrientation { edge: id });
+        let id = edge_id(body, EdgeIx::at(ei));
+        let xa = flips.get(fa.index()).copied().unwrap_or(Err("NoFace"));
+        let xb = flips.get(fb.index()).copied().unwrap_or(Err("NoFace"));
+        match (xa, xb) {
+            (Ok(x), Ok(y)) => {
+                if x != y {
+                    if let Some(id) = id {
+                        acc.defect(Defect::InconsistentOrientation { edge: id });
+                    }
+                }
             }
+            // Never "agrees": the edge is unchecked, with the lesser reason code.
+            (Err(r), Ok(_)) | (Ok(_), Err(r)) => acc.skip(DefectKind::InconsistentOrientation, id, r),
+            (Err(r), Err(q)) => acc.skip(DefectKind::InconsistentOrientation, id, if q < r { q } else { r }),
         }
     }
 }
@@ -599,46 +736,69 @@ fn surface_distance(s: Surf<'_>, q: [f64; 3]) -> Option<f64> {
     d.is_finite().then_some(d)
 }
 
-fn curve_deviation(s: Surf<'_>, c: &CurveDef, range: [f64; 2]) -> Option<f64> {
-    let mut worst: Option<f64> = None;
+/// The largest distance of the 33 samples; `Err(())` when a sample's distance cannot be
+/// measured (an inversion fault). A curve that cannot be evaluated is infinitely far.
+fn curve_deviation(s: Surf<'_>, c: &CurveDef, range: [f64; 2]) -> (f64, bool) {
+    let mut worst = 0.0;
+    let mut measured_all = true;
     for k in 0..EDGE_SAMPLES {
         let t = grid(range[0], range[1], k, EDGE_SAMPLES - 1);
-        let Ok(q) = curve_point(c, t) else { continue };
-        if let Some(d) = surface_distance(s, q) {
-            worst = Some(worst.map_or(d, |w| larger(w, d)));
+        let Ok(q) = curve_point(c, t) else { return (f64::INFINITY, measured_all) };
+        match surface_distance(s, q) {
+            Some(d) => worst = larger(worst, d),
+            None => measured_all = false,
         }
     }
-    worst
+    (worst, measured_all)
 }
 
-fn off_surface(body: &Body, tol: f64, out: &mut Vec<Defect>) {
+fn off_surface(body: &Body, tol: f64, acc: &mut Acc) {
     for (ei, cs) in edge_coedges(body).iter().enumerate() {
         let Some(edge) = body.edge(EdgeIx::at(ei)) else { continue };
-        let Some(curve) = edge.curve() else { continue };
+        let eid = Some(edge.id().clone());
+        let Some(curve) = edge.curve() else {
+            acc.skip(DefectKind::EdgeOffSurface, eid, "NoEdgeCurve");
+            continue;
+        };
         let faces: BTreeSet<FaceIx> = cs.iter().filter_map(|&c| face_of(body, c)).collect();
         for f in faces {
-            let Some(s) = body.face(f).and_then(|x| Surf::of(x.surface())) else { continue };
-            let Some(dev) = curve_deviation(s, curve, edge.param_range()) else { continue };
+            let Some(s) = body.face(f).and_then(|x| Surf::of(x.surface())) else {
+                acc.skip(DefectKind::EdgeOffSurface, eid.clone(), "NoSurface");
+                continue;
+            };
+            let (dev, measured_all) = curve_deviation(s, curve, edge.param_range());
+            if !measured_all {
+                acc.skip(DefectKind::EdgeOffSurface, eid.clone(), "SurfaceInversion");
+            }
             if dev > tol {
-                if let (Some(e), Some(fid)) = (edge_id(body, EdgeIx::at(ei)), face_id(body, f)) {
-                    out.push(Defect::EdgeOffSurface { edge: e, face: fid, deviation_m: dev });
+                if let (Some(e), Some(fid)) = (eid.clone(), face_id(body, f)) {
+                    acc.defect(Defect::EdgeOffSurface { edge: e, face: fid, deviation_m: dev });
                 }
             }
         }
     }
 }
 
-fn mismatches(body: &Body, tol: f64, out: &mut Vec<Defect>) {
+fn mismatches(body: &Body, tol: f64, acc: &mut Acc) {
     for (ci, ce) in body.coedges().iter().enumerate() {
         if ce.pcurve().is_none() {
             continue;
         }
         let c = CoedgeIx::at(ci);
-        if let Ok(d) = pcurve_disagreement(body, c) {
-            if d > tol {
-                if let Some(id) = coedge_id(body, c) {
-                    out.push(Defect::PcurveMismatch { coedge: id, deviation_m: d });
-                }
+        let id = coedge_id(body, c);
+        let d = match pcurve_disagreement(body, c) {
+            Ok(d) => d,
+            // Nothing in 3-D to compare the pcurve with.
+            Err(DisagreementError::NoEdgeCurve) => {
+                acc.skip(DefectKind::PcurveMismatch, id, "NoEdgeCurve");
+                continue;
+            }
+            // A pcurve, curve or surface that cannot be evaluated disagrees without bound.
+            Err(_) => f64::INFINITY,
+        };
+        if d > tol {
+            if let Some(id) = id {
+                acc.defect(Defect::PcurveMismatch { coedge: id, deviation_m: d });
             }
         }
     }
@@ -646,11 +806,11 @@ fn mismatches(body: &Body, tol: f64, out: &mut Vec<Defect>) {
 
 // ---------------------------------------------------------------- PCURVE pass-through
 
-fn pcurve_reports(body: &Body, pcurves: &Pcurves, out: &mut Vec<Defect>) {
+fn pcurve_reports(body: &Body, pcurves: &Pcurves, acc: &mut Acc) {
     for r in &pcurves.curves {
         if let Err(PcurveError::PcurveFailed { coedge, best_deviation_m, reason }) = r {
             if let Some(id) = coedge_id(body, *coedge) {
-                out.push(Defect::PcurveFailed { coedge: id, reason: *reason, best_deviation_m: *best_deviation_m });
+                acc.defect(Defect::PcurveFailed { coedge: id, reason: *reason, best_deviation_m: *best_deviation_m });
             }
         }
     }
@@ -658,9 +818,10 @@ fn pcurve_reports(body: &Body, pcurves: &Pcurves, out: &mut Vec<Defect>) {
         let PcurveError::SeamWinding { r#loop, periods } = w else { continue };
         let Some(face) = body.r#loop(*r#loop).map(|l| l.face()) else { continue };
         let doubly = pcurves.charts.get(face.index()).is_some_and(|c| c.period_u.is_some() && c.period_v.is_some());
-        if doubly {
+        let more_than_once = periods.iter().any(|p| p.unsigned_abs() > 1);
+        if doubly || more_than_once {
             if let Some(id) = loop_id(body, *r#loop) {
-                out.push(Defect::SeamWinding { r#loop: id, periods: *periods });
+                acc.defect(Defect::SeamWinding { r#loop: id, periods: *periods });
             }
         }
     }

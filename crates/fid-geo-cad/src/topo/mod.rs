@@ -37,4 +37,6 @@ pub use pcurve::{
     PcurveError, Pcurves, TrimCurve, DEFAULT_TOL_M,
 };
 pub use trim::{classify_uv, TrimClass, TrimError, TrimIndex, TrimSeg, Undecidable};
-pub use valid::{validate, Defect, DefectKind, ValidError, ValidationReport, DEFAULT_VALID_TOL_M, EDGE_SAMPLES};
+pub use valid::{
+    validate, Defect, DefectKind, Unchecked, ValidError, ValidationReport, DEFAULT_VALID_TOL_M, EDGE_SAMPLES,
+};
