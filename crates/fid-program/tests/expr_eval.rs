@@ -206,7 +206,7 @@ fn code_only(src: &str) -> String {
         let c = b[i];
         let next = at(i + 1);
         let prev = if i == 0 { None } else { at(i - 1) };
-        let boundary = |p: Option<char>| !p.is_some_and(is_ident);
+        let boundary = |p: Option<char>| p.is_none_or(|c| !is_ident(c));
         let raw_start =
             c == 'r' && (boundary(prev) || (prev == Some('b') && boundary(if i < 2 { None } else { at(i - 2) })));
         let mut j = i + 1;
@@ -342,7 +342,7 @@ fn lint(name: &str, src: &str) -> Vec<String> {
     // No renames in `use` (`use std as f;` would make an allowed root name anything).
     let mut rest = code.as_str();
     while let Some(p) = rest.find("use ") {
-        let boundary = p == 0 || !rest[..p].chars().last().is_some_and(is_ident);
+        let boundary = rest[..p].chars().next_back().is_none_or(|c| !is_ident(c));
         let stmt_end = rest[p..].find(';').map_or(rest.len(), |e| p + e);
         let stmt = &rest[p..stmt_end];
         if boundary && stmt.split(|c: char| !is_ident(c)).any(|w| w == "as") {
@@ -410,7 +410,7 @@ fn lint(name: &str, src: &str) -> Vec<String> {
         // A `::` with no path segment before it (`::std::fs`) is a root of its own.
         if chars[i] == ':' && chars.get(i + 1) == Some(&':') {
             let before = if i == 0 { None } else { chars.get(i - 1).copied() };
-            if !before.is_some_and(|c| is_ident(c) || c == '>') {
+            if before.is_none_or(|c| !(is_ident(c) || c == '>')) {
                 problems.push(format!("{name}: leading ::"));
             }
             i += 2;
