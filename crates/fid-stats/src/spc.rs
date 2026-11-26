@@ -50,7 +50,7 @@ pub const SPC_MAX_N: u8 = 25;
 
 /// The released table, canonical JSON (sorted keys, no whitespace, every stored value a decimal
 /// string), as embedded at build time (AC-4).
-pub const SPC_TABLE_JSON: &[u8] = include_bytes!("../data/spc_constants_normal_v1.json");
+pub const SPC_TABLE_JSON: &[u8] = include_bytes!("spc_constants_normal_v1.json");
 
 /// One stored constant: the decimal text the table holds and the nearest `f64` to it.
 #[derive(Debug, Clone, Copy, PartialEq)]
