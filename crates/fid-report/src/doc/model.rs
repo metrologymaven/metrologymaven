@@ -448,6 +448,31 @@ impl Report {
         Ok(())
     }
 
+    /// The page that holds the live block `block`, if any.
+    pub(crate) fn page_of_block(&self, block: &Uuid) -> Option<PageId> {
+        let (pi, _) = self.block_position(block)?;
+        self.pages.get(pi).map(|p| p.id)
+    }
+
+    /// Moves a live block to the end of the live page `page`, keeping its ID, kind and
+    /// payload (`report.move_block_layout@1`, RPT.DESIGN.PLACE.FRAME REQ-005: page
+    /// membership only). Moving a block to the page that already holds it changes nothing.
+    pub(crate) fn move_block_to_page(&mut self, block: &Uuid, page: &Uuid) -> Result<(), ReportError> {
+        let (pi, bi) = self.block_position(block).ok_or(ReportError::NotFound(*block))?;
+        let ti = self.page_index(page).ok_or(ReportError::NotFound(*page))?;
+        if pi == ti {
+            return Ok(());
+        }
+        let from = self.pages.get_mut(pi).ok_or(ReportError::NotFound(*block))?;
+        if bi >= from.blocks.len() {
+            return Err(ReportError::NotFound(*block));
+        }
+        let moved = from.blocks.remove(bi);
+        let to = self.pages.get_mut(ti).ok_or(ReportError::NotFound(*page))?;
+        to.blocks.push(moved);
+        Ok(())
+    }
+
     /// Removes a block and retires its ID (REQ-004).
     pub(crate) fn remove_block(&mut self, block: &Uuid) -> Result<(), ReportError> {
         let (pi, bi) = self.block_position(block).ok_or(ReportError::NotFound(*block))?;

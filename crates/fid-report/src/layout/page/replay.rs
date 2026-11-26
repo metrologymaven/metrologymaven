@@ -38,7 +38,8 @@ pub struct LayoutReplayRun {
     pub layouts: BTreeMap<ReportId, ReportLayout>,
 }
 
-enum Step {
+/// The outcome of replaying one event (shared with [`crate::layout::frame::replay_exact`]).
+pub(crate) enum Step {
     Ok,
     NotReplayable,
     Divergent,
@@ -66,7 +67,7 @@ pub fn replay_exact(events: &[CValue], kinds: &KindRegistry, project: Uuid) -> L
     LayoutReplayRun { outcome: ReplayOutcome::Identical, first_mismatch: None, reports, layouts }
 }
 
-fn report_step(
+pub(crate) fn report_step(
     v: &CValue,
     kinds: &KindRegistry,
     project: Uuid,
@@ -94,7 +95,7 @@ fn report_step(
     }
 }
 
-fn layout_step(
+pub(crate) fn layout_step(
     v: &CValue,
     reports: &BTreeMap<ReportId, (Report, Digest)>,
     layouts: &mut BTreeMap<ReportId, ReportLayout>,

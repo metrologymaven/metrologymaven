@@ -92,6 +92,13 @@ impl MemoryBackend {
     pub fn stored(&self, id: &ReportId) -> Option<&StoredReport> {
         self.docs.get(id)
     }
+
+    /// Replaces a stored report without a report event: the page move of
+    /// `report.move_block_layout@1` (RPT.DESIGN.PLACE.FRAME), whose own event the layout
+    /// journal records.
+    pub(crate) fn put_stored(&mut self, id: ReportId, stored: StoredReport) {
+        self.docs.insert(id, stored);
+    }
 }
 
 impl ReportBackend for MemoryBackend {

@@ -111,14 +111,16 @@ fn unc_defs() -> Result<Vec<CommandDef>, DefError> {
 /// The six document commands of RPT.MODEL.DOC, the four template commands of
 /// RPT.MODEL.TMPL.VER (`report.save_template@1`, `report.apply_template@1`,
 /// `report.show_template@1`, `report.list_template@1`), the six balloon register commands
-/// of RPT.BALLOON.REG (`report.add_balloon@1` ... `report.list_balloon@1`) and the two
+/// of RPT.BALLOON.REG (`report.add_balloon@1` ... `report.list_balloon@1`), the two
 /// page-setup commands of RPT.DESIGN.PAGE (`report.set_page_layout@1`,
-/// `report.show_page_layout@1`).
+/// `report.show_page_layout@1`) and the block placement command of RPT.DESIGN.PLACE.FRAME
+/// (`report.move_block_layout@1`).
 fn report_defs() -> Result<Vec<CommandDef>, DefError> {
     let mut defs = fid_report::doc::command_defs()?;
     defs.extend(fid_report::tmpl::ver::command_defs()?);
     defs.extend(fid_report::balloon::register::command_defs()?);
     defs.extend(fid_report::layout::page::command_defs()?);
+    defs.extend(fid_report::layout::frame::command_defs()?);
     Ok(defs)
 }
 
@@ -177,12 +179,14 @@ impl fmt::Debug for SettingsSource {
 /// Every crate on main that declares settings, sorted by crate name: `fid-bus` declares the
 /// approved file roots `bus.fs_roots` (CORE.BUS.POL.FS); `fid-catalog` the results catalog
 /// location `stats.catalog_path` (RPT.CATALOG.STORE.SCHEMA); `fid-journal` the Activity Log
-/// rotation settings `journal.activity_log_*` (CORE.JRN.STREAM.ALOG); `fid-store` the telemetry
+/// rotation settings `journal.activity_log_*` (CORE.JRN.STREAM.ALOG); `fid-report` the report
+/// designer grid pitch `report.grid_pitch` (RPT.DESIGN.PLACE.FRAME); `fid-store` the telemetry
 /// consent record `privacy.telemetry_consent` (CORE.STO.PRIV).
-pub const SETTINGS_SOURCES: [SettingsSource; 4] = [
+pub const SETTINGS_SOURCES: [SettingsSource; 5] = [
     SettingsSource { krate: "fid-bus", settings: fid_bus::policy::fs::fs_settings },
     SettingsSource { krate: "fid-catalog", settings: fid_catalog::catalog_settings },
     SettingsSource { krate: "fid-journal", settings: fid_journal::stream::activity_settings },
+    SettingsSource { krate: "fid-report", settings: fid_report::layout::frame::report_settings },
     SettingsSource { krate: "fid-store", settings: fid_store::privacy::privacy_settings },
 ];
 

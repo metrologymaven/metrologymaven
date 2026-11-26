@@ -275,6 +275,7 @@ python fixtures/rpt/balloon/auto/make_fixtures.py --check
 python fixtures/rpt/balloon/two_sheet_drawing/make_fixture.py --check
 python fixtures/rpt/catalog/check/make_cases.py --check
 python fixtures/rpt/catalog/make_schema_fixtures.py --check
+python fixtures/rpt/design/frame/make_cases.py --check
 python fixtures/rpt/design/page/make_cases.py --check
 python fixtures/rpt/model/bind/expand/make_fixtures.py --check
 python fixtures/rpt/model/bracket_3stage/make_fixtures.py --check
