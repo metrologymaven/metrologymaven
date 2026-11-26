@@ -1,6 +1,6 @@
 [package]
 name = "fid-align-solve"
-description = "Metrology Maven alignment kernel: the ResidualReport every alignment solver writes, its builder, fixed-order statistics and digest (ALN.QA.REPORT); degree-of-freedom locks, pose parameterisation, reduced Jacobian and weights for best-fit (ALN.BFIT.CONSTR); conditioning and weak-DoF diagnostics (ALN.QA.COND); best-fit stopping criteria and non-convergence handling (ALN.BFIT.STOP)"
+description = "Metrology Maven alignment kernel: the ResidualReport every alignment solver writes, its builder, fixed-order statistics and digest (ALN.QA.REPORT); degree-of-freedom locks, pose parameterisation, reduced Jacobian and weights for best-fit (ALN.BFIT.CONSTR); conditioning and weak-DoF diagnostics (ALN.QA.COND); best-fit stopping criteria and non-convergence handling (ALN.BFIT.STOP); point-to-point and point-to-plane ICP residual rows and Jacobians (ALN.BFIT.ICP.METRIC)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
