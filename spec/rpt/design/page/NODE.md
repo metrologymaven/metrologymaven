@@ -57,11 +57,12 @@ Sets the page format of a report or template: page size, orientation, margins an
 ## Design
 
 - **Registry commands:**
-  - `report.set_page_layout@1(report: ReportId, page: Option<PageId>, size: PagePreset | Custom{width: Length, height: Length}, orientation: Portrait|Landscape, margins: [Length; 4] (top, right, bottom, left), header: Length, footer: Length) -> PageLayout` (W2)
+  - `report.set_page_layout@1(report: ReportId, page: Option<PageId>, size: PagePreset | Custom{width: Length, height: Length}, orientation: Portrait|Landscape, margins: String (one string `top,right,bottom,left`; the CLI appends array flags one at a time, so a four-element array cannot be passed), header: Length, footer: Length) -> PageLayout` (W2)
   - `report.show_page_layout@1(report: ReportId) -> Vec<EffectivePageLayout>` (R0)
 - **Data structures:** `Length` is an `i64` count of 0.01 mm; `PageLayout { size_w, size_h, orientation, margins, header, footer }`; the report stores `default_layout` and `overrides: BTreeMap<PageId, PageLayout>`.
 - **Algorithm:** parse decimal length strings with a unit suffix (`mm` or `in`) using integer arithmetic only (1 in = 2540 units exactly); landscape swaps width and height; body = page − margins, with the header area at the top and the footer area at the bottom inside the margins.
-- **Errors:** `report.layout_invalid { field, reason }`, `report.not_found`.
+- **Errors:** `report.layout_invalid { field, reason }`, `report.not_found`, and the crate-wide `report.bad_params` for badly shaped parameters (for example a `margins` string that is not four comma-separated lengths).
+- **Defaults and omitted parameters:** a report's default page layout is A4 portrait with 20 mm margins and no header or footer. Parameters left out of a `report.set_page_layout@1` call keep the value already in effect; only `size` is required.
 - **Determinism:** D0; integer arithmetic only, no floating point.
 - **Performance budget:** trivial (< 1 ms per command) [unverified until measured].
 - **Crate:** `fid-report` (module `layout::page`).
@@ -85,6 +86,11 @@ Sets the page format of a report or template: page size, orientation, margins an
 ## Open questions
 
 - Should page layout live on the template only, or also on each report? Assumed both: a report copies its template's layout and may override it.
+- **For `RPT.MODEL.TMPL`:** a template shall carry a page layout (this node no longer states that obligation, because a template is not defined here). `RPT.MODEL.TMPL` should add the requirement and say how a report copies it.
+
+## Change log
+
+- 2026-11-25 (maintainer decision, recording what #631 built): added the crate-wide `report.bad_params` error; `margins` is passed as one string `top,right,bottom,left` (the CLI appends array flags one at a time), replacing `[Length; 4]`; the default layout is A4 portrait, 20 mm margins, no header or footer; omitted parameters keep the value in effect and only `size` is required; the obligation that a template carries a page layout moved to an open question for `RPT.MODEL.TMPL`. No REQ ID was renumbered.
 
 ## Children
 
