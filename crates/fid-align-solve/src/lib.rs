@@ -25,10 +25,14 @@
 //!   validation, the per-iteration [`StopMonitor`] and its [`Verdict`] naming the rule that
 //!   fired, the mapping of a stopped run to status `not_converged` with the lowest-objective
 //!   pose ([`StopOutcome`]), and the registry-manifest declaration [`STOP_CRITERIA_DECL`].
+//! - `ALN.BFIT.ICP.METRIC`: [`icp`], [`build_rows`] of the point-to-point and point-to-plane
+//!   metrics: weighted residual rows, their twist Jacobian reduced to the free columns through
+//!   `ALN.BFIT.CONSTR`, and the metric's algorithm ID ([`Metric`]).
 
 pub mod cond;
 pub mod constr;
 pub mod hist;
+pub mod icp;
 pub mod matrix;
 pub mod report;
 pub mod rps321;
@@ -47,6 +51,10 @@ pub use constr::{
 pub use hist::{
     ConvergenceHistory, HistError, HistoryRecorder, IterationRow, Outcome, StoppedBy, MAX_CRITERION_BYTES,
     MAX_ITERATIONS,
+};
+pub use icp::{
+    build_rows, CorrReason, Correspondences, InputField, Metric, MetricError, Rows, NORMAL_TOL,
+    POINT_TO_PLANE_ALGORITHM_ID, POINT_TO_POINT_ALGORITHM_ID,
 };
 pub use matrix::{
     solve_matrix, MatrixError, MatrixInput, MatrixOrder, MatrixSolution, RotationInput, TransformDirection, DET_TOL,

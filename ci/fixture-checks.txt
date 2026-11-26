@@ -24,6 +24,7 @@ python fixtures/agent/harness/runs/make_runs.py --check
 python fixtures/agent/local/make_fixtures.py --check
 python fixtures/agent/propose/make_fixtures.py --check
 python fixtures/agent/propose/make_impact_fixtures.py --check
+python fixtures/aln/bfit/icp/make_metric_fixtures.py --check
 python fixtures/aln/bfit/make_constr_fixtures.py --check
 python fixtures/aln/bfit/make_stop_traces.py --check
 python fixtures/aln/datum/sys/make_gate_fixtures.py --check
