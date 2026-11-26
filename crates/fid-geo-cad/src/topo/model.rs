@@ -138,6 +138,13 @@ macro_rules! dense_index {
             pub fn index(self) -> usize {
                 self.0 as usize
             }
+
+            /// The index at canonical position `i` (callers pass positions of an existing
+            /// body, which are below [`MAX_ENTITIES`]).
+            #[allow(dead_code)]
+            pub(crate) fn at(i: usize) -> $name {
+                $name(ix32(i))
+            }
         }
     };
 }

@@ -1,0 +1,97 @@
+{
+ "description": "disc sheet on the plane z = 0 whose circle edge lies 2^-12 m above it",
+ "license": "CC-BY-4.0",
+ "body_id": "0ff50ff50ff50ff50ff50ff50ff50ff5",
+ "vertices": [
+  {
+   "point": [
+    1.0,
+    0.5,
+    0.000244140625
+   ],
+   "label": "v"
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.5,
+    "origin": [
+     0.5,
+     0.5,
+     0.000244140625
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0
+   ],
+   "outer": true,
+   "label": "l"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    0
+   ],
+   "label": "f"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0
+   ],
+   "closed": false
+  }
+ ]
+}

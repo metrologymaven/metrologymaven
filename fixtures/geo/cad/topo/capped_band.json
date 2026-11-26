@@ -1,0 +1,226 @@
+{
+ "description": "closed cylinder of a seamless band and two caps",
+ "license": "CC-BY-4.0",
+ "body_id": "cb0dcb0dcb0dcb0dcb0dcb0dcb0dcb0d",
+ "vertices": [
+  {
+   "point": [
+    0.5,
+    0.0,
+    0.0
+   ],
+   "label": "v-bottom"
+  },
+  {
+   "point": [
+    0.5,
+    0.0,
+    1.0
+   ],
+   "label": "v-top"
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.5,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-bottom"
+  },
+  {
+   "start": 1,
+   "end": 1,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.5,
+    "origin": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-top"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-band-bottom"
+  },
+  {
+   "edge": 1,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-band-top"
+  },
+  {
+   "edge": 1,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-cap-top"
+  },
+  {
+   "edge": 0,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-cap-bottom"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0
+   ],
+   "outer": false,
+   "label": "l-band-bottom"
+  },
+  {
+   "coedges": [
+    1
+   ],
+   "outer": false,
+   "label": "l-band-top"
+  },
+  {
+   "coedges": [
+    2
+   ],
+   "outer": true,
+   "label": "l-cap-top"
+  },
+  {
+   "coedges": [
+    3
+   ],
+   "outer": true,
+   "label": "l-cap-bottom"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "cylinder",
+    "radius": 0.5,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    0,
+    1
+   ],
+   "label": "f-band"
+  },
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    2
+   ],
+   "label": "f-cap-top"
+  },
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    3
+   ],
+   "label": "f-cap-bottom"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0,
+    1,
+    2
+   ],
+   "closed": true
+  }
+ ]
+}

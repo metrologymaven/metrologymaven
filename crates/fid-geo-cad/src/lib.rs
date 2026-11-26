@@ -24,8 +24,12 @@
 //! definition entity's ID); the sorted two-way [`InstanceIndex`]; and [`InstanceView`], the
 //! definition geometry plus the instance frame, never a transformed copy.
 //!
-//! Geometric validation (`GEO.CAD.TOPO.VALID`) and the commands (`GEO.CAD.TOPO.CMD`) are
-//! other leaves.
+//! Implemented leaf: `GEO.CAD.TOPO.VALID` (see [`topo::valid`]): [`validate`], every defect
+//! of a built body (open or self-intersecting loops, dangling and non-manifold edges,
+//! inconsistent orientation, edge curves off their surfaces, pcurve disagreement, PCURVE
+//! failures and doubly periodic windings) by kind and entity ID, without changing the body.
+//!
+//! The commands (`GEO.CAD.TOPO.CMD`) are another leaf.
 
 pub mod assy;
 pub mod topo;
@@ -41,3 +45,4 @@ pub use topo::{
     Loop, LoopIx, PairingFault, PcurveError, Pcurves, Sense, Shell, ShellIx, SurfaceDef, SurfaceParams, TopoBuildError,
     TopologyId, TrimClass, TrimCurve, TrimError, TrimIndex, TrimSeg, Undecidable, Vertex, VertexIx, DEFAULT_TOL_M,
 };
+pub use topo::{validate, Defect, DefectKind, ValidError, ValidationReport, DEFAULT_VALID_TOL_M};

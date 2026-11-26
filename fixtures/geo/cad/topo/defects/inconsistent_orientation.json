@@ -1,0 +1,306 @@
+{
+ "body_id": "1c0a1c0a1c0a1c0a1c0a1c0a1c0a1c0a",
+ "vertices": [
+  {
+   "point": [
+    0.5,
+    0.0,
+    1.0
+   ],
+   "label": "cyl-v0"
+  },
+  {
+   "point": [
+    0.5,
+    0.0,
+    0.0
+   ],
+   "label": "cyl-v1"
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "origin": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     -0.0,
+     0.0
+    ],
+    "radius": 0.5
+   },
+   "label": "cyl-e0"
+  },
+  {
+   "start": 1,
+   "end": 0,
+   "range": [
+    0.0,
+    1.0
+   ],
+   "curve": {
+    "type": "nurbs",
+    "degree": 1,
+    "knots": [
+     0.0,
+     0.0,
+     1.0,
+     1.0
+    ],
+    "ctrl": [
+     [
+      0.5,
+      0.0,
+      0.0
+     ],
+     [
+      0.5,
+      0.0,
+      1.0
+     ]
+    ],
+    "weights": null,
+    "periodic": false
+   },
+   "label": "cyl-e1"
+  },
+  {
+   "start": 1,
+   "end": 1,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     -0.0,
+     0.0
+    ],
+    "radius": 0.5
+   },
+   "label": "cyl-e2"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 2,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.0
+    ],
+    "dir": [
+     1.0,
+     0.0
+    ]
+   },
+   "label": "cyl-c0"
+  },
+  {
+   "edge": 1,
+   "sense": "same",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     6.283185307179586,
+     0.0
+    ],
+    "dir": [
+     0.0,
+     1.0
+    ]
+   },
+   "label": "cyl-c1"
+  },
+  {
+   "edge": 0,
+   "sense": "reversed",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     1.0
+    ],
+    "dir": [
+     1.0,
+     0.0
+    ]
+   },
+   "label": "cyl-c2"
+  },
+  {
+   "edge": 1,
+   "sense": "reversed",
+   "pcurve": {
+    "type": "line2",
+    "origin": [
+     0.0,
+     0.0
+    ],
+    "dir": [
+     0.0,
+     1.0
+    ]
+   },
+   "label": "cyl-c3"
+  },
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null,
+   "label": "cyl-c4"
+  },
+  {
+   "edge": 2,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "cyl-c5"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    4
+   ],
+   "outer": true,
+   "label": "cyl-l0"
+  },
+  {
+   "coedges": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "outer": true,
+   "label": "cyl-l1"
+  },
+  {
+   "coedges": [
+    5
+   ],
+   "outer": true,
+   "label": "cyl-l2"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "reversed",
+   "loops": [
+    0
+   ],
+   "label": "cyl-f0"
+  },
+  {
+   "surface": {
+    "type": "cylinder",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.5
+   },
+   "sense": "same",
+   "loops": [
+    1
+   ],
+   "label": "cyl-f1"
+  },
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    2
+   ],
+   "label": "cyl-f2"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    1,
+    0,
+    2
+   ],
+   "closed": true
+  }
+ ],
+ "description": "labelled capped cylinder whose top cap is marked Reversed while its loop still runs counter-clockwise about the cap's outward axis",
+ "license": "CC-BY-4.0"
+}

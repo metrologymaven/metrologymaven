@@ -218,10 +218,24 @@ pub fn nurbs_curve(g: &J) -> NurbsCurve {
 }
 
 pub fn curve(g: &J) -> Option<CurveDef> {
+    curve_with(g, false)
+}
+
+/// `swap_lines`: the GEO.CAD.TOPO.MODEL scripts (cube) give a line's direction in `axis` and a
+/// perpendicular in `ref_dir`, while GEO.NURBS.ANALYTIC's line runs along `ref_dir`; swap them
+/// to read those scripts as geometry (as the GEO.DIST.FACE tests do).
+pub fn curve_with(g: &J, swap_lines: bool) -> Option<CurveDef> {
     if g.is_null() {
         return None;
     }
     Some(match g.get("type").str() {
+        "line" if swap_lines => {
+            let f = frame(g);
+            CurveDef::analytic(CurveParams::Line {
+                frame: Frame { origin: f.origin, axis: f.ref_dir, ref_dir: f.axis },
+            })
+            .unwrap()
+        }
         "line" => CurveDef::analytic(CurveParams::Line { frame: frame(g) }).unwrap(),
         "circle" => CurveDef::analytic(CurveParams::Circle { frame: frame(g), radius: g.get("radius").f() }).unwrap(),
         "ellipse" => CurveDef::analytic(CurveParams::Ellipse {
@@ -272,6 +286,11 @@ pub fn sense(j: &J) -> Sense {
 }
 
 pub fn builder(script: &J) -> BodyBuilder {
+    builder_with(script, false)
+}
+
+/// [`builder`], reading lines with [`curve_with`]'s `swap_lines`.
+pub fn builder_with(script: &J, swap_lines: bool) -> BodyBuilder {
     let id: [u8; 16] = unhex(script.get("body_id").str()).try_into().unwrap();
     let mut b = BodyBuilder::new(id);
     for v in script.get("vertices").arr() {
@@ -279,7 +298,7 @@ pub fn builder(script: &J) -> BodyBuilder {
     }
     for e in script.get("edges").arr() {
         let r = e.get("range").v2();
-        b.add_edge(curve(e.get("curve")), e.get("start").u(), e.get("end").u(), r, e.label());
+        b.add_edge(curve_with(e.get("curve"), swap_lines), e.get("start").u(), e.get("end").u(), r, e.label());
     }
     for c in script.get("coedges").arr() {
         b.add_coedge(c.get("edge").u(), sense(c.get("sense")), pcurve(c.get("pcurve")), c.label());

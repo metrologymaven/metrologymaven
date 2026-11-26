@@ -9,6 +9,8 @@
 //!   for every face (`GEO.CAD.TOPO.PCURVE`).
 //! - [`trim`]: [`TrimIndex`] and [`classify_uv`], inside, outside or on the boundary of a
 //!   trimmed face (`GEO.CAD.TOPO.TRIM`).
+//! - [`valid`]: [`validate`], every defect of a built body, never a repair
+//!   (`GEO.CAD.TOPO.VALID`).
 //!
 //! The pinned encoding and check order are documented in `spec/geo/cad/topo/model/NODE.md`
 //! (Design) and implemented independently by `fixtures/geo/cad/topo/make_topo_fixtures.py`.
@@ -20,6 +22,7 @@ pub mod model;
 pub mod pcurve;
 pub mod trim;
 pub(crate) mod uuid;
+pub mod valid;
 
 pub use adj::{AdjError, Adjacency};
 pub use encode::{body_digest, decode, encode, DecodeError, MAX_ENCODED_BYTES, VERSION};
@@ -34,3 +37,4 @@ pub use pcurve::{
     PcurveError, Pcurves, TrimCurve, DEFAULT_TOL_M,
 };
 pub use trim::{classify_uv, TrimClass, TrimError, TrimIndex, TrimSeg, Undecidable};
+pub use valid::{validate, Defect, DefectKind, ValidError, ValidationReport, DEFAULT_VALID_TOL_M, EDGE_SAMPLES};
