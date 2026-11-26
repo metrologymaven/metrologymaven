@@ -1,0 +1,206 @@
+{
+  "schema": "uncertainty-model/v1",
+  "name": "affine-tan",
+  "semver": "1.0.0",
+  "inputs": [
+    {
+      "id": "x0",
+      "quantity_kind": "length",
+      "unit": "si:m",
+      "distribution": {
+        "kind": "normal",
+        "params": {
+          "mu": "3f889374bc6a7efa",
+          "sigma": "3eb0c6f7a0b5ed8d"
+        }
+      },
+      "source": {
+        "kind": "declared",
+        "digest": "sha256:ec62856f2706490bc497d29c41da74766ab2902f7031107c981a3e81db048d2b",
+        "author": "metrology-maven fixtures"
+      }
+    },
+    {
+      "id": "x1",
+      "quantity_kind": "length",
+      "unit": "si:m",
+      "distribution": {
+        "kind": "normal",
+        "params": {
+          "mu": "bfa16872b020c49c",
+          "sigma": "3eb0c6f7a0b5ed8d"
+        }
+      },
+      "source": {
+        "kind": "declared",
+        "digest": "sha256:bb1c4ac5fc2ecfdf545f4f55af9a2111f59c91ce2e996b57820890e237e0f7c4",
+        "author": "metrology-maven fixtures"
+      }
+    },
+    {
+      "id": "x2",
+      "quantity_kind": "length",
+      "unit": "si:m",
+      "distribution": {
+        "kind": "normal",
+        "params": {
+          "mu": "3facac083126e979",
+          "sigma": "3eb0c6f7a0b5ed8d"
+        }
+      },
+      "source": {
+        "kind": "declared",
+        "digest": "sha256:6ee2dd49392b63a937a8ec9e3a6acf6e9302ad103f66d23e3c366a2c0bef1534",
+        "author": "metrology-maven fixtures"
+      }
+    }
+  ],
+  "operators": [
+    {
+      "id": "aff",
+      "algorithm_id": "test.affine.map",
+      "algorithm_version": "1.1.0",
+      "params": {
+        "a": [
+          [
+            "3ff4000000000000",
+            "bfd8000000000000",
+            "4000800000000000"
+          ],
+          [
+            "0000000000000000",
+            "400c000000000000",
+            "bff2000000000000"
+          ],
+          [
+            "bfea000000000000",
+            "3fdc000000000000",
+            "3ffc000000000000"
+          ]
+        ],
+        "b": [
+          "3f50624dd2f1a9fc",
+          "bf60624dd2f1a9fc",
+          "3f40624dd2f1a9fc"
+        ]
+      },
+      "ports_in": [
+        {
+          "name": "x0",
+          "quantity_kind": "length",
+          "unit": "si:m",
+          "arity": "1"
+        },
+        {
+          "name": "x1",
+          "quantity_kind": "length",
+          "unit": "si:m",
+          "arity": "1"
+        },
+        {
+          "name": "x2",
+          "quantity_kind": "length",
+          "unit": "si:m",
+          "arity": "1"
+        }
+      ],
+      "ports_out": [
+        {
+          "name": "y0",
+          "quantity_kind": "length",
+          "unit": "si:m"
+        },
+        {
+          "name": "y1",
+          "quantity_kind": "length",
+          "unit": "si:m"
+        },
+        {
+          "name": "y2",
+          "quantity_kind": "length",
+          "unit": "si:m"
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "id": "y0",
+      "quantity_kind": "length",
+      "unit": "si:m"
+    },
+    {
+      "id": "y1",
+      "quantity_kind": "length",
+      "unit": "si:m"
+    },
+    {
+      "id": "y2",
+      "quantity_kind": "length",
+      "unit": "si:m"
+    }
+  ],
+  "edges": [
+    {
+      "from": {
+        "node": "x0",
+        "port": "value"
+      },
+      "to": {
+        "node": "aff",
+        "port": "x0"
+      }
+    },
+    {
+      "from": {
+        "node": "x1",
+        "port": "value"
+      },
+      "to": {
+        "node": "aff",
+        "port": "x1"
+      }
+    },
+    {
+      "from": {
+        "node": "x2",
+        "port": "value"
+      },
+      "to": {
+        "node": "aff",
+        "port": "x2"
+      }
+    },
+    {
+      "from": {
+        "node": "aff",
+        "port": "y0"
+      },
+      "to": {
+        "node": "y0",
+        "port": "value"
+      }
+    },
+    {
+      "from": {
+        "node": "aff",
+        "port": "y1"
+      },
+      "to": {
+        "node": "y1",
+        "port": "value"
+      }
+    },
+    {
+      "from": {
+        "node": "aff",
+        "port": "y2"
+      },
+      "to": {
+        "node": "y2",
+        "port": "value"
+      }
+    }
+  ],
+  "correlations": []
+}

@@ -16,8 +16,11 @@
 //! outputs from samples, see [`prop::mcm::interval`]), `UNC.PROP.MCM.ADAPT` (the adaptive
 //! stopping rule `mcm-adapt@1` and trial cap, see [`prop::mcm::adapt`]),
 //! `UNC.PROP.MCM.SAMP` (retained sample sets `mcm-samples@1` and their digest, see
-//! [`prop::mcm::samples`]) and `UNC.PROP.VALID` (validation of LPU against Monte Carlo,
-//! `unc.prop.validate_lpu@1.0.0`, see [`prop::valid`]).
+//! [`prop::mcm::samples`]), `UNC.PROP.VALID` (validation of LPU against Monte Carlo,
+//! `unc.prop.validate_lpu@1.0.0`, see [`prop::valid`]) and `UNC.PROP.LPU.TAN` (the operator
+//! tangent contract, the tangent table and the `tangent-coverage@1` report, see
+//! [`prop::lpu::tan`]; its test-only central-difference harness is `tangent_harness`, behind
+//! the `tangent-harness` feature).
 //!
 //! The `statement` module never computes an uncertainty. It holds what other nodes computed
 //! or a person declared, and refuses any statement that breaks the invariants.
@@ -26,6 +29,8 @@ pub mod dist;
 pub mod model;
 pub mod prop;
 pub mod statement;
+#[cfg(feature = "tangent-harness")]
+pub mod tangent_harness;
 pub mod uec;
 
 pub use statement::{

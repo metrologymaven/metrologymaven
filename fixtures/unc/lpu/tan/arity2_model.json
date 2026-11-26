@@ -1,0 +1,137 @@
+{
+  "schema": "uncertainty-model/v1",
+  "name": "arity2-order",
+  "semver": "1.0.0",
+  "inputs": [
+    {
+      "id": "a",
+      "quantity_kind": "length",
+      "unit": "si:m",
+      "distribution": {
+        "kind": "normal",
+        "params": {
+          "mu": "3ff0000000000000",
+          "sigma": "3e112e0be826d695"
+        }
+      },
+      "source": {
+        "kind": "declared",
+        "digest": "sha256:fa6d67df6c5522d00e2c3ba5f59ae16840d7984157ae622498727a2409669a73",
+        "author": "metrology-maven fixtures"
+      }
+    },
+    {
+      "id": "b",
+      "quantity_kind": "length",
+      "unit": "si:m",
+      "distribution": {
+        "kind": "normal",
+        "params": {
+          "mu": "4000000000000000",
+          "sigma": "3e112e0be826d695"
+        }
+      },
+      "source": {
+        "kind": "declared",
+        "digest": "sha256:124320a7f1ea9c80f52faadca4955f8b9768f5e35e15db97e8dee82bfcd6ef7e",
+        "author": "metrology-maven fixtures"
+      }
+    },
+    {
+      "id": "c",
+      "quantity_kind": "length",
+      "unit": "si:m",
+      "distribution": {
+        "kind": "normal",
+        "params": {
+          "mu": "4008000000000000",
+          "sigma": "3e112e0be826d695"
+        }
+      },
+      "source": {
+        "kind": "declared",
+        "digest": "sha256:a5d9cf916f50c81a610277b47d536461f144a187f68eada802e1b7806cfe0fc3",
+        "author": "metrology-maven fixtures"
+      }
+    }
+  ],
+  "operators": [
+    {
+      "id": "op",
+      "algorithm_id": "test.affine.map",
+      "algorithm_version": "1.0.0",
+      "params": {},
+      "ports_in": [
+        {
+          "name": "p",
+          "quantity_kind": "length",
+          "unit": "si:m",
+          "arity": "2"
+        },
+        {
+          "name": "q",
+          "quantity_kind": "length",
+          "unit": "si:m",
+          "arity": "1"
+        }
+      ],
+      "ports_out": [
+        {
+          "name": "y",
+          "quantity_kind": "length",
+          "unit": "si:m"
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "id": "out",
+      "quantity_kind": "length",
+      "unit": "si:m"
+    }
+  ],
+  "edges": [
+    {
+      "from": {
+        "node": "b",
+        "port": "value"
+      },
+      "to": {
+        "node": "op",
+        "port": "p"
+      }
+    },
+    {
+      "from": {
+        "node": "c",
+        "port": "value"
+      },
+      "to": {
+        "node": "op",
+        "port": "q"
+      }
+    },
+    {
+      "from": {
+        "node": "a",
+        "port": "value"
+      },
+      "to": {
+        "node": "op",
+        "port": "p"
+      }
+    },
+    {
+      "from": {
+        "node": "op",
+        "port": "y"
+      },
+      "to": {
+        "node": "out",
+        "port": "value"
+      }
+    }
+  ],
+  "correlations": []
+}
