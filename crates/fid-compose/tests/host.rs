@@ -247,11 +247,14 @@ fn ac8_the_lock_lives_as_long_as_the_transport() {
     h.open_project(ProjectRef::Handle("root:work/p".into()), OpenMode::Write).unwrap();
     let t = h.into_transport();
     assert!(t.has_project());
-    assert!(lock_record(&dir).contains(&std::process::id().to_string()), "{}", lock_record(&dir));
+    let pid_line = format!("pid={}
+", std::process::id());
+    assert!(lock_record(&dir).lines().any(|l| l == pid_line.trim_end()), "{}", lock_record(&dir));
     let e = ProjectLocation::open(&dir, OpenMode::Write).unwrap_err();
     assert_eq!(e.code(), "locked");
     drop(t);
     assert_eq!(lock_record(&dir).trim(), "");
+    assert!(dir.join("lock").is_file(), "the lock entry is store-managed and never deleted");
     drop(ProjectLocation::open(&dir, OpenMode::Write).unwrap());
 
     let mut h = host(plain_host(), PortKind::Cli, roots("work", "export", &base));
