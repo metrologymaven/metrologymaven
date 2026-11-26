@@ -302,12 +302,12 @@ jobs:
       - name: CLI smoke test
         shell: bash
         run: |
-          out=$(echo '{"b":1,"a":[1e21,0.1]}' | cargo run -q -p fid-cli -- canon)
+          out=$(echo '{"b":1,"a":[1e21,0.1]}' | cargo run -q --bin fid -- canon)
           test "$out" = '{"a":[1e+21,0.1],"b":1}'
-          echo '{"b":1}' | cargo run -q -p fid-cli -- canon --json > ok.json
+          echo '{"b":1}' | cargo run -q --bin fid -- canon --json > ok.json
           cat ok.json
           grep -q '"outcome":"computed"' ok.json
-          if echo '{"a":1,"a":2}' | cargo run -q -p fid-cli -- canon --json > bad.json; then exit 1; fi
+          if echo '{"a":1,"a":2}' | cargo run -q --bin fid -- canon --json > bad.json; then exit 1; fi
           grep -q '"canon_error":"duplicate_key"' bad.json
       - uses: actions/setup-python@v5
         with:
@@ -433,7 +433,7 @@ jobs:
           cargo xtask lint-crate-graph
           node fixtures/core/jrn/canon/runner.mjs
           node fixtures/core/reg/manifest/check_digests.mjs
-          out=$(echo '{"b":1,"a":[1e21,0.1]}' | cargo run -q -p fid-cli -- canon)
+          out=$(echo '{"b":1,"a":[1e21,0.1]}' | cargo run -q --bin fid -- canon)
           test "$out" = '{"a":[1e+21,0.1],"b":1}'
 
   test-macos:
@@ -516,7 +516,7 @@ jobs:
           cargo xtask lint-crate-graph
           node fixtures/core/jrn/canon/runner.mjs
           node fixtures/core/reg/manifest/check_digests.mjs
-          out=$(echo '{"b":1,"a":[1e21,0.1]}' | cargo run -q -p fid-cli -- canon)
+          out=$(echo '{"b":1,"a":[1e21,0.1]}' | cargo run -q --bin fid -- canon)
           test "$out" = '{"a":[1e+21,0.1],"b":1}'
 
   verify-guide:

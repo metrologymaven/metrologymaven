@@ -24,7 +24,7 @@ The internal command and crate prefix `fid` comes from *fiducial*, a reference m
 
 ```bash
 cargo test --workspace                          # Rust crates
-echo '{"b":1,"a":2}' | cargo run -q -p fid-cli -- canon
+echo '{"b":1,"a":2}' | cargo run -q --bin fid -- canon
 python site/build.py                            # website into site/dist/
 ```
 

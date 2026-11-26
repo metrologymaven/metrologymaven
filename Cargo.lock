@@ -1268,6 +1268,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-compose"
+version = "0.0.1"
+dependencies = [
+ "fid-bus",
+ "fid-bus-api",
+ "fid-canon",
+ "fid-cli",
+ "fid-ctrl",
+ "fid-ctrl-acl",
+ "fid-journal",
+ "fid-project",
+ "fid-project-cmd",
+ "fid-registry",
+ "fid-registry-build",
+ "fid-store",
+ "fid-surface",
+ "fid-types",
+ "rustix 1.1.6",
+]
+
+[[package]]
 name = "fid-construct"
 version = "0.0.1"
 dependencies = [

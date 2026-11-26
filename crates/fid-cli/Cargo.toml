@@ -1,15 +1,14 @@
 [package]
 name = "fid-cli"
-description = "The `fid` command-line interface of Metrology Maven"
+description = "The `fid` command-line interface library of Metrology Maven (argv, help, dispatch and rendering; the executable is built by fid-compose)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
-[[bin]]
-name = "fid"
-path = "src/main.rs"
+# The `fid` executable is the bin target of `fid-compose` (AUTO.SURF.COMPOSE REQ-015); this crate
+# is its library: argv, help and rendering.
 
 [dependencies]
 fid-canon = { path = "../fid-canon" }

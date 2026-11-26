@@ -1,0 +1,4 @@
+Synthetic, project-authored test fixtures for spec node AUTO.SURF.COMPOSE (the presence-provider
+scan, AC-6). Two tiny source trees, not Cargo packages: `shipped/` implements `HumanPresence` in
+shipped code; `tests_only/` implements it only under `tests/` and inside a `#[cfg(test)]` module.
+Licensed under CC-BY-4.0.

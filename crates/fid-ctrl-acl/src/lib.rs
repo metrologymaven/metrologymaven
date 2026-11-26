@@ -138,7 +138,9 @@ pub fn file_id(file: &File) -> io::Result<FileId> {
     ffi::file_id(file)
 }
 
-/// The SID string (`S-1-5-21-...`) of the process user, for diagnostics and tests. Never secret.
+/// The SID string (`S-1-5-21-...`) of the process token user. Never secret. It is the OS user
+/// of every session on Windows (AUTO.SURF.COMPOSE REQ-007, `fid_compose::process_os_user`), so
+/// it must come from the process token and nothing else.
 pub fn current_user_sid_string() -> io::Result<String> {
     ffi::user_sid().map(|s| s.to_string_form())
 }

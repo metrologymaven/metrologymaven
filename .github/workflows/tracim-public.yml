@@ -62,7 +62,7 @@ jobs:
           python-version: "3.12"
       - uses: dtolnay/rust-toolchain@stable
       - name: Build release-candidate fid binary
-        run: cargo build --release --locked -p fid-cli
+        run: cargo build --release --locked --bin fid
       - name: Preflight check for TRACIM_PUBLIC_KEY and fid rdl submit-tracim dispatch
         id: preflight
         shell: bash
