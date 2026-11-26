@@ -1,0 +1,163 @@
+{
+ "branches": [
+  {
+   "created_from": null,
+   "name": "main"
+  },
+  {
+   "created_from": "sha256:74792894593bb461bb7ce7679f49de4cf530481b03bdd2a9061e2a9cac73676c",
+   "name": "agent/s1"
+  }
+ ],
+ "entries": [
+  {
+   "branch": "main",
+   "hash": "sha256:f63eeba430fcda91c193974ddb218528482eabd9b0271fa918b1e2a7105bcab3",
+   "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"hash\":\"sha256:f63eeba430fcda91c193974ddb218528482eabd9b0271fa918b1e2a7105bcab3\",\"kind\":\"session_header\",\"logical_parent\":null,\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"principal\":{\"commit\":\"sha256:9bedb48e3b5741b5fc72f7ab483601fc2c231ccc2777a5749c45fd9a4aff63f4\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"1\",\"session\":{\"app_version\":\"0.1.0\",\"session_id\":\"s-0001\"},\"stream\":\"record\",\"time\":{\"mono_ns\":\"1000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-25T10:01:00Z\"}}",
+   "kind": "session_header",
+   "prev_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+   "refs": [
+    [
+     "payload",
+     "sha256:6eea669bf3561ac9bf504b7683d5222675181e4c356a1d15f9b857c2ed30c5b1"
+    ]
+   ],
+   "seq": 1,
+   "stream": "record"
+  },
+  {
+   "branch": "main",
+   "hash": "sha256:c162138117a007fbddf9752b2550a1e6183edd76aa5bb9dddcb3027b2b516b7d",
+   "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:f4f259892bb93e2fd369f55892ac8842ff658ca6b2f162c71916acaa14b73d29\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:f99d4a80833cd52804163129f9b1223747f38d4ed30bfd9072ef8c6b64b071f4\",\"id\":\"project.add_features\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:f9c8b5624a905fc26378a6aa8685df342b4be6735bb6be64b54590b0c03d1b21\",\"entity\":\"01900000-0000-7000-8000-0000000000f1\"},{\"digest\":\"sha256:482122444742492a1deccb26114199d61b0e17c2fa536f1fe7a2cec1e86b58be\",\"entity\":\"01900000-0000-7000-8000-0000000000f9\"}],\"seed\":\"2\"},\"hash\":\"sha256:c162138117a007fbddf9752b2550a1e6183edd76aa5bb9dddcb3027b2b516b7d\",\"kind\":\"command\",\"logical_parent\":null,\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:f63eeba430fcda91c193974ddb218528482eabd9b0271fa918b1e2a7105bcab3\",\"principal\":{\"commit\":\"sha256:f7bc31df95000fd2c69c9eb62685ad9aea09afe8dd2d89a03abdfeca5c13a301\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"2\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"2000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-25T10:02:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:f63eeba430fcda91c193974ddb218528482eabd9b0271fa918b1e2a7105bcab3",
+   "refs": [
+    [
+     "payload",
+     "sha256:d2a81b0b3d1ea58bbafcd5e3e10e6ec1ac4c0f7e901ecc7cffdcd5a30a1f416a"
+    ]
+   ],
+   "seq": 2,
+   "stream": "record"
+  },
+  {
+   "branch": "main",
+   "hash": "sha256:74792894593bb461bb7ce7679f49de4cf530481b03bdd2a9061e2a9cac73676c",
+   "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:8cd7cefd234f484824035192b72109701082bdf97ca52b5b61ed7c40f7bb0f4c\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:20e95a1838be478114221b0821e934363146e589de6e6d440c8361cc22d6aafa\",\"id\":\"gdt.eval_flatness\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:8f847b6c73805f0a699a9b0f2d9a8f6046e508cac89c1a929930ff4064ea57d0\",\"entity\":\"01900000-0000-7000-8000-0000000000c1\"},{\"digest\":\"sha256:549dacd256c12b668c0b459d10abd0f6b91e0844c2bb49d60e7ef0bbe4d39c5b\",\"entity\":\"01900000-0000-7000-8000-0000000000c2\"},{\"digest\":\"sha256:2c710cc8e9f3e96b4a5e2e9d30200d32fd3f82643bfb5e1bbc689d692c3bebbc\",\"entity\":\"01900000-0000-7000-8000-0000000000c3\"}],\"seed\":\"3\"},\"hash\":\"sha256:74792894593bb461bb7ce7679f49de4cf530481b03bdd2a9061e2a9cac73676c\",\"kind\":\"command\",\"logical_parent\":\"sha256:c162138117a007fbddf9752b2550a1e6183edd76aa5bb9dddcb3027b2b516b7d\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:c162138117a007fbddf9752b2550a1e6183edd76aa5bb9dddcb3027b2b516b7d\",\"principal\":{\"commit\":\"sha256:2328177d85478337dc35e038d0d975aac9e2056333e951f166f82db6aad35882\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"3\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"3000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-25T10:03:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:c162138117a007fbddf9752b2550a1e6183edd76aa5bb9dddcb3027b2b516b7d",
+   "refs": [
+    [
+     "payload",
+     "sha256:a837b2378542e78a8344462f425a37a6c555f03d843a911d9200d2ab2a597dd5"
+    ]
+   ],
+   "seq": 3,
+   "stream": "record"
+  },
+  {
+   "branch": "main",
+   "hash": "sha256:cc9485429f2f6275aefb77ae62a8b17eaf12084f2976642244828c27a2a98c73",
+   "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:18fff04d774795063f1c36d37ef06134ebc00a029a487787425b3edfddf4c172\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:a615d8e6ef428ad68757641941cf4ac0ace5d9f5c4953af520e3e327800b403d\",\"id\":\"journal.create_branch\",\"inputs\":[],\"major\":1,\"outputs\":[],\"seed\":\"4\"},\"hash\":\"sha256:cc9485429f2f6275aefb77ae62a8b17eaf12084f2976642244828c27a2a98c73\",\"kind\":\"command\",\"logical_parent\":\"sha256:74792894593bb461bb7ce7679f49de4cf530481b03bdd2a9061e2a9cac73676c\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:74792894593bb461bb7ce7679f49de4cf530481b03bdd2a9061e2a9cac73676c\",\"principal\":{\"commit\":\"sha256:f9c832a86b5269632782745782eaa06174bbd032b0ee8eb746d042ff9750802e\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"4\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"4000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-25T10:04:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:74792894593bb461bb7ce7679f49de4cf530481b03bdd2a9061e2a9cac73676c",
+   "refs": [
+    [
+     "payload",
+     "sha256:93e36de797564e8a5b21bdd05c56afd643e3ea019a73d42bd77ebea27c331e47"
+    ]
+   ],
+   "seq": 4,
+   "stream": "record"
+  },
+  {
+   "branch": "agent/s1",
+   "hash": "sha256:3198a528dfef214c3ce24c5e96a98c4872dd31959d7024429b5786e09b075d8c",
+   "header": "{\"ai_assistance\":\"authored\",\"branch\":\"agent/s1\",\"hash\":\"sha256:3198a528dfef214c3ce24c5e96a98c4872dd31959d7024429b5786e09b075d8c\",\"kind\":\"session_header\",\"logical_parent\":null,\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:cc9485429f2f6275aefb77ae62a8b17eaf12084f2976642244828c27a2a98c73\",\"principal\":{\"commit\":\"sha256:f648200d3b8b7a11b89efc67b42ae7a56e1f60a936be778456da137033e8c052\",\"kind\":\"agent\"},\"schema_version\":1,\"seq\":\"5\",\"session\":{\"app_version\":\"0.1.0\",\"session_id\":\"s-0005\"},\"stream\":\"record\",\"time\":{\"mono_ns\":\"5000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-25T10:05:00Z\"}}",
+   "kind": "session_header",
+   "prev_hash": "sha256:cc9485429f2f6275aefb77ae62a8b17eaf12084f2976642244828c27a2a98c73",
+   "refs": [
+    [
+     "payload",
+     "sha256:f8c29732888cff5995689ee68477041a70ea612423e68cc078e02519d5021a34"
+    ]
+   ],
+   "seq": 5,
+   "stream": "record"
+  },
+  {
+   "branch": "agent/s1",
+   "hash": "sha256:c10de7b6889ec13ac39cda0cd8ae6b1cde91d9467177ce1c0ddb7e0fc85e39f8",
+   "header": "{\"ai_assistance\":\"authored\",\"branch\":\"agent/s1\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:d6beddcadcd71e6c17e9f48ca9e8d525244f0440db91a73ff17dfba7c5ca8b41\",\"class\":\"W1\",\"determinism\":\"D0\",\"events_commit\":\"sha256:684c747a4eab5f37886f09d62d5741880db63ad7d4756ef07d3f3295de667df8\",\"id\":\"align.refit_feature\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:668ba92adae1f874b370b50e08e84e6af8bb6d22e08d9efa41b86003c6814be8\",\"entity\":\"01900000-0000-7000-8000-0000000000f1\"}],\"seed\":\"6\"},\"hash\":\"sha256:c10de7b6889ec13ac39cda0cd8ae6b1cde91d9467177ce1c0ddb7e0fc85e39f8\",\"kind\":\"command\",\"logical_parent\":\"sha256:74792894593bb461bb7ce7679f49de4cf530481b03bdd2a9061e2a9cac73676c\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:3198a528dfef214c3ce24c5e96a98c4872dd31959d7024429b5786e09b075d8c\",\"principal\":{\"commit\":\"sha256:5539b28297e67e8ee55969943b03a661ddf7f327d0d1d309edbe0ef5bcea8ad5\",\"kind\":\"agent\"},\"schema_version\":1,\"seq\":\"6\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"6000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-25T10:06:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:3198a528dfef214c3ce24c5e96a98c4872dd31959d7024429b5786e09b075d8c",
+   "refs": [
+    [
+     "payload",
+     "sha256:e2b3967debfc1c18df8b5574ed4ab303674f823aa9a7cfafda73d57223608170"
+    ]
+   ],
+   "seq": 6,
+   "stream": "record"
+  },
+  {
+   "branch": "agent/s1",
+   "hash": "sha256:ad92d12b8dfbc2c4c9a62cf8d9886a8a93a79a6199db16f058f0a910d752b005",
+   "header": "{\"ai_assistance\":\"authored\",\"branch\":\"agent/s1\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:9351b4d23f053ada80981bc6ba95fb75e57a3d84386ae14571db25583f000be6\",\"class\":\"W1\",\"determinism\":\"D0\",\"events_commit\":\"sha256:ae206e45c0316ce89f67bcdae92e84bdc93a0f3113b5de73d62433f0ee995531\",\"id\":\"gdt.eval_flatness\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:b9f16cb9d03ebd258860eefd382e84f48c519698ebc5ac7c09023d38de2cd24a\",\"entity\":\"01900000-0000-7000-8000-0000000000c1\"},{\"digest\":\"sha256:394e6d841e5ba39cb72fadcf85c06821441816cc8c2d3f9b0fb11f238e491c5e\",\"entity\":\"01900000-0000-7000-8000-0000000000c2\"},{\"digest\":\"sha256:3956d4d17d1487723eff6a0d193e2bf660f80216e55f3fe25fa55359df6d5448\"}],\"seed\":\"7\"},\"hash\":\"sha256:ad92d12b8dfbc2c4c9a62cf8d9886a8a93a79a6199db16f058f0a910d752b005\",\"kind\":\"command\",\"logical_parent\":\"sha256:c10de7b6889ec13ac39cda0cd8ae6b1cde91d9467177ce1c0ddb7e0fc85e39f8\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:c10de7b6889ec13ac39cda0cd8ae6b1cde91d9467177ce1c0ddb7e0fc85e39f8\",\"principal\":{\"commit\":\"sha256:3d90d57e78cdedea502d8365b2e43f34f461d42ffc0e760fc3812b7a4a62232d\",\"kind\":\"agent\"},\"schema_version\":1,\"seq\":\"7\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"7000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-25T10:07:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:c10de7b6889ec13ac39cda0cd8ae6b1cde91d9467177ce1c0ddb7e0fc85e39f8",
+   "refs": [
+    [
+     "payload",
+     "sha256:5a2e5ef1794970945d26fa5380d7879ad3d80442842fc3846724275022565b0e"
+    ]
+   ],
+   "seq": 7,
+   "stream": "record"
+  },
+  {
+   "branch": "main",
+   "hash": "sha256:46ff2a4dcb17688b25c873517ca8dc325fb3abee097e354756c5c413a762e319",
+   "header": "{\"ai_assistance\":\"none\",\"branch\":\"main\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:10e9b265525cb31e4dee078070873a7de9176ea522e438db629a65a30ad43045\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:05dfbcb6053b622f76e334dd5b4566ff8a9556b3d46e7f42d74899896a7654c5\",\"id\":\"feature.set_nominal\",\"inputs\":[],\"major\":1,\"outputs\":[{\"digest\":\"sha256:241db7c9b11d11da0365fed3752f786eb3c9940f558a85b9aeecf661d9e79888\",\"entity\":\"01900000-0000-7000-8000-0000000000f9\"}],\"seed\":\"8\"},\"hash\":\"sha256:46ff2a4dcb17688b25c873517ca8dc325fb3abee097e354756c5c413a762e319\",\"kind\":\"command\",\"logical_parent\":\"sha256:cc9485429f2f6275aefb77ae62a8b17eaf12084f2976642244828c27a2a98c73\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:ad92d12b8dfbc2c4c9a62cf8d9886a8a93a79a6199db16f058f0a910d752b005\",\"principal\":{\"commit\":\"sha256:3cc6bd6fb645dd4fce5999a8180255c65243a521eee07da27519b880ec0b24fe\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"8\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"8000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-25T10:08:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:ad92d12b8dfbc2c4c9a62cf8d9886a8a93a79a6199db16f058f0a910d752b005",
+   "refs": [
+    [
+     "payload",
+     "sha256:c4770370d11fec79432fe945c849ba176b4bbb3ce31512f661e4b3f376bc0a8b"
+    ]
+   ],
+   "seq": 8,
+   "stream": "record"
+  },
+  {
+   "branch": "agent/s1",
+   "hash": "sha256:441f0ebc6ccc5bb3a3e986088c65b63c70fecb65af53f62d3f50da688d2e65d2",
+   "header": "{\"ai_assistance\":\"none\",\"branch\":\"agent/s1\",\"command\":{\"algorithms\":[],\"args_commit\":\"sha256:4a4f4302ed8295308377fc64658453c7f6a06dfbe2a2425cfa70824b36d140d8\",\"class\":\"W2\",\"determinism\":\"D0\",\"events_commit\":\"sha256:11af529a0ce335fb471931a770346e729a7f6c24765e246e1943cebeadf97430\",\"id\":\"report.add_note\",\"inputs\":[],\"major\":1,\"outputs\":[],\"seed\":\"9\"},\"hash\":\"sha256:441f0ebc6ccc5bb3a3e986088c65b63c70fecb65af53f62d3f50da688d2e65d2\",\"kind\":\"command\",\"logical_parent\":\"sha256:ad92d12b8dfbc2c4c9a62cf8d9886a8a93a79a6199db16f058f0a910d752b005\",\"manifests\":{\"kernel\":\"sha256:5bf2be5c36b9d800533dab97aa7d165e0ac4e36d38b2de380700847be076c0e4\",\"registry\":\"sha256:394784942a994228af453d977670d5762fd2c1602264091365342efa0091c857\"},\"prev\":\"sha256:46ff2a4dcb17688b25c873517ca8dc325fb3abee097e354756c5c413a762e319\",\"principal\":{\"commit\":\"sha256:6cf580c7b7269ba86ee83d66b93a85f9c3574bea6de476ebc584f38cbd24ee87\",\"kind\":\"human\"},\"schema_version\":1,\"seq\":\"9\",\"stream\":\"record\",\"time\":{\"mono_ns\":\"9000000000\",\"sync\":\"synced\",\"utc\":\"2026-11-25T10:09:00Z\"}}",
+   "kind": "command",
+   "prev_hash": "sha256:46ff2a4dcb17688b25c873517ca8dc325fb3abee097e354756c5c413a762e319",
+   "refs": [
+    [
+     "payload",
+     "sha256:6bce443bc8ec70e7c8a4e7212a4dd979d4363b0a6bbd225d7860861d1e06f9f4"
+    ]
+   ],
+   "seq": 9,
+   "stream": "record"
+  }
+ ],
+ "license": "CC0-1.0",
+ "objects": {
+  "sha256:241db7c9b11d11da0365fed3752f786eb3c9940f558a85b9aeecf661d9e79888": "{\"name\":\"F9\",\"schema\":\"fid.test-feature/1\",\"version\":2}",
+  "sha256:2c710cc8e9f3e96b4a5e2e9d30200d32fd3f82643bfb5e1bbc689d692c3bebbc": "{\"algorithm\":\"gdt.form.flatness.minzone@1.0.0\",\"characteristic\":\"C3\",\"decision\":{\"basis\":{\"claimed\":false,\"class\":\"UEC-2\",\"declared_input\":false,\"method\":\"LPU\",\"statement\":null,\"uncharacterized_input\":false},\"outcome\":\"CONFORMS\",\"reason\":null,\"rule\":\"dr:simple-acceptance@1\",\"source\":\"unc\"},\"dmt_digest\":\"sha256:863bdd0bfc7a1c09c10965970c7e3f2dcd410ec8cefb24a17cdacd973802f20c\",\"dmt_row\":\"dmt:asme/flatness/none@1\",\"evaluation_basis\":\"POINTS\",\"input_digests\":[\"sha256:c7d1a52bf8251fa3f59ecc317bace59c523e98de9c07f1dbc307441939209740\"],\"interpretation\":\"signed_off\",\"interpretation_register\":\"sha256:87780fa5de684e87cb92b279f0bc07b14f572851e73b8943a097c1770a5f38e6\",\"interpretation_rules\":[{\"content_digest\":\"sha256:b2e9cfd512376d78fff016ea1ce3401ff0fad1fae7376d6d5572c6c21b73c8f5\",\"kind\":\"dmt_row\",\"reason\":null,\"revision\":1,\"rule\":\"dmt:asme/flatness/none@1\",\"status\":\"signed_off\"}],\"journal_entry\":\"sha256:ae680ec422625df3bbaa8d91f6ab581af1aa70013a22a3d1bc393781f3c16b55\",\"kernel_version\":\"0.1.0\",\"measurand\":\"flatness of face C3\",\"operator_chain_digest\":\"sha256:245d585be186c54533c1cfee3e978d6ee962d2e1f6abe0d7df5f49bf46601b85\",\"run\":\"R1\",\"schema\":\"fid.gdt-result/2\",\"spec\":{\"defaults_profile\":\"dp:invented@1\",\"dialect\":\"ASME\",\"inherited_from\":\"explicit\",\"standards\":[\"ASME Y14.5-2018\"]},\"uncertainty\":{\"claimed\":false,\"class\":\"UEC-2\",\"declared_input\":false,\"expanded\":{\"U\":\"0x3ed0c6f7a0b5ed8e\",\"k\":\"0x4000000000000000\"},\"interval\":null,\"method\":\"LPU\",\"statement\":null,\"u_std\":null,\"uec0_reason\":null,\"uncharacterized_input\":false,\"unit\":\"si:m\"},\"value\":{\"unit\":\"si:m\",\"value\":\"0x3f04f8b588e368f1\"}}",
+  "sha256:394e6d841e5ba39cb72fadcf85c06821441816cc8c2d3f9b0fb11f238e491c5e": "{\"algorithm\":\"gdt.form.flatness.minzone@1.0.0\",\"characteristic\":\"C2\",\"decision\":{\"basis\":{\"claimed\":false,\"class\":\"UEC-2\",\"declared_input\":false,\"method\":\"LPU\",\"statement\":null,\"uncharacterized_input\":false},\"outcome\":\"CONFORMS\",\"reason\":null,\"rule\":\"dr:simple-acceptance@1\",\"source\":\"unc\"},\"dmt_digest\":\"sha256:863bdd0bfc7a1c09c10965970c7e3f2dcd410ec8cefb24a17cdacd973802f20c\",\"dmt_row\":\"dmt:asme/flatness/none@1\",\"evaluation_basis\":\"POINTS\",\"input_digests\":[\"sha256:ec0b748c7e409a38ff531c0cb9e7a9a22dc5b73c58dcbb3c1db10aa40081215f\"],\"interpretation\":\"signed_off\",\"interpretation_register\":\"sha256:87780fa5de684e87cb92b279f0bc07b14f572851e73b8943a097c1770a5f38e6\",\"interpretation_rules\":[{\"content_digest\":\"sha256:b2e9cfd512376d78fff016ea1ce3401ff0fad1fae7376d6d5572c6c21b73c8f5\",\"kind\":\"dmt_row\",\"reason\":null,\"revision\":1,\"rule\":\"dmt:asme/flatness/none@1\",\"status\":\"signed_off\"}],\"journal_entry\":\"sha256:b675574f641cf6bab74a31953600c75c441f40c31a9bc722464636659a311f20\",\"kernel_version\":\"0.1.0\",\"measurand\":\"flatness of face C2\",\"operator_chain_digest\":\"sha256:245d585be186c54533c1cfee3e978d6ee962d2e1f6abe0d7df5f49bf46601b85\",\"run\":\"R1\",\"schema\":\"fid.gdt-result/2\",\"spec\":{\"defaults_profile\":\"dp:invented@1\",\"dialect\":\"ASME\",\"inherited_from\":\"explicit\",\"standards\":[\"ASME Y14.5-2018\"]},\"uncertainty\":{\"claimed\":false,\"class\":\"UEC-2\",\"declared_input\":false,\"expanded\":{\"U\":\"0x3ec6052502eec7ca\",\"k\":\"0x4000000000000000\"},\"interval\":null,\"method\":\"LPU\",\"statement\":null,\"u_std\":null,\"uec0_reason\":null,\"uncharacterized_input\":false,\"unit\":\"si:m\"},\"value\":{\"unit\":\"si:m\",\"value\":\"0x3efb866e43aa79bc\"}}",
+  "sha256:482122444742492a1deccb26114199d61b0e17c2fa536f1fe7a2cec1e86b58be": "{\"name\":\"F9\",\"schema\":\"fid.test-feature/1\",\"version\":1}",
+  "sha256:549dacd256c12b668c0b459d10abd0f6b91e0844c2bb49d60e7ef0bbe4d39c5b": "{\"algorithm\":\"gdt.form.flatness.minzone@1.0.0\",\"characteristic\":\"C2\",\"decision\":{\"basis\":{\"claimed\":false,\"class\":\"UEC-2\",\"declared_input\":false,\"method\":\"LPU\",\"statement\":null,\"uncharacterized_input\":false},\"outcome\":\"CONFORMS\",\"reason\":null,\"rule\":\"dr:simple-acceptance@1\",\"source\":\"unc\"},\"dmt_digest\":\"sha256:863bdd0bfc7a1c09c10965970c7e3f2dcd410ec8cefb24a17cdacd973802f20c\",\"dmt_row\":\"dmt:asme/flatness/none@1\",\"evaluation_basis\":\"POINTS\",\"input_digests\":[\"sha256:ec0b748c7e409a38ff531c0cb9e7a9a22dc5b73c58dcbb3c1db10aa40081215f\"],\"interpretation\":\"signed_off\",\"interpretation_register\":\"sha256:87780fa5de684e87cb92b279f0bc07b14f572851e73b8943a097c1770a5f38e6\",\"interpretation_rules\":[{\"content_digest\":\"sha256:b2e9cfd512376d78fff016ea1ce3401ff0fad1fae7376d6d5572c6c21b73c8f5\",\"kind\":\"dmt_row\",\"reason\":null,\"revision\":1,\"rule\":\"dmt:asme/flatness/none@1\",\"status\":\"signed_off\"}],\"journal_entry\":\"sha256:b201a3082892f648833d24ac8288069a509f1ebe64518f3da28a450df07746dd\",\"kernel_version\":\"0.1.0\",\"measurand\":\"flatness of face C2\",\"operator_chain_digest\":\"sha256:245d585be186c54533c1cfee3e978d6ee962d2e1f6abe0d7df5f49bf46601b85\",\"run\":\"R1\",\"schema\":\"fid.gdt-result/2\",\"spec\":{\"defaults_profile\":\"dp:invented@1\",\"dialect\":\"ASME\",\"inherited_from\":\"explicit\",\"standards\":[\"ASME Y14.5-2018\"]},\"uncertainty\":{\"claimed\":false,\"class\":\"UEC-2\",\"declared_input\":false,\"expanded\":{\"U\":\"0x3ec4f8b588e368f1\",\"k\":\"0x4000000000000000\"},\"interval\":null,\"method\":\"LPU\",\"statement\":null,\"u_std\":null,\"uec0_reason\":null,\"uncharacterized_input\":false,\"unit\":\"si:m\"},\"value\":{\"unit\":\"si:m\",\"value\":\"0x3efa36e2eb1c432d\"}}",
+  "sha256:668ba92adae1f874b370b50e08e84e6af8bb6d22e08d9efa41b86003c6814be8": "{\"name\":\"F1\",\"schema\":\"fid.test-feature/1\",\"version\":2}",
+  "sha256:8f847b6c73805f0a699a9b0f2d9a8f6046e508cac89c1a929930ff4064ea57d0": "{\"algorithm\":\"gdt.form.flatness.minzone@1.0.0\",\"characteristic\":\"C1\",\"decision\":{\"basis\":{\"claimed\":false,\"class\":\"UEC-2\",\"declared_input\":false,\"method\":\"LPU\",\"statement\":null,\"uncharacterized_input\":false},\"outcome\":\"CONFORMS\",\"reason\":null,\"rule\":\"dr:simple-acceptance@1\",\"source\":\"unc\"},\"dmt_digest\":\"sha256:863bdd0bfc7a1c09c10965970c7e3f2dcd410ec8cefb24a17cdacd973802f20c\",\"dmt_row\":\"dmt:asme/flatness/none@1\",\"evaluation_basis\":\"POINTS\",\"input_digests\":[\"sha256:f1229909582f6feaaf715079da4001cb2db663cd60373788c38d630ae39f1ef2\"],\"interpretation\":\"signed_off\",\"interpretation_register\":\"sha256:87780fa5de684e87cb92b279f0bc07b14f572851e73b8943a097c1770a5f38e6\",\"interpretation_rules\":[{\"content_digest\":\"sha256:b2e9cfd512376d78fff016ea1ce3401ff0fad1fae7376d6d5572c6c21b73c8f5\",\"kind\":\"dmt_row\",\"reason\":null,\"revision\":1,\"rule\":\"dmt:asme/flatness/none@1\",\"status\":\"signed_off\"}],\"journal_entry\":\"sha256:3c287a1a82401ee228d82702dc20001b20e0e1107675f040dde63126a5540226\",\"kernel_version\":\"0.1.0\",\"measurand\":\"flatness of face C1\",\"operator_chain_digest\":\"sha256:245d585be186c54533c1cfee3e978d6ee962d2e1f6abe0d7df5f49bf46601b85\",\"run\":\"R1\",\"schema\":\"fid.gdt-result/2\",\"spec\":{\"defaults_profile\":\"dp:invented@1\",\"dialect\":\"ASME\",\"inherited_from\":\"explicit\",\"standards\":[\"ASME Y14.5-2018\"]},\"uncertainty\":{\"claimed\":false,\"class\":\"UEC-2\",\"declared_input\":false,\"expanded\":{\"U\":\"0x3eb4f8b588e368f1\",\"k\":\"0x4000000000000000\"},\"interval\":null,\"method\":\"LPU\",\"statement\":null,\"u_std\":null,\"uec0_reason\":null,\"uncharacterized_input\":false,\"unit\":\"si:m\"},\"value\":{\"unit\":\"si:m\",\"value\":\"0x3eea36e2eb1c432d\"}}",
+  "sha256:b9f16cb9d03ebd258860eefd382e84f48c519698ebc5ac7c09023d38de2cd24a": "{\"algorithm\":\"gdt.form.flatness.minzone@1.0.0\",\"characteristic\":\"C1\",\"decision\":{\"basis\":{\"claimed\":false,\"class\":\"UEC-2\",\"declared_input\":false,\"method\":\"LPU\",\"statement\":null,\"uncharacterized_input\":false},\"outcome\":\"NONCONFORMS\",\"reason\":null,\"rule\":\"dr:simple-acceptance@1\",\"source\":\"unc\"},\"dmt_digest\":\"sha256:863bdd0bfc7a1c09c10965970c7e3f2dcd410ec8cefb24a17cdacd973802f20c\",\"dmt_row\":\"dmt:asme/flatness/none@1\",\"evaluation_basis\":\"POINTS\",\"input_digests\":[\"sha256:f1229909582f6feaaf715079da4001cb2db663cd60373788c38d630ae39f1ef2\"],\"interpretation\":\"provisional\",\"interpretation_register\":\"sha256:87780fa5de684e87cb92b279f0bc07b14f572851e73b8943a097c1770a5f38e6\",\"interpretation_rules\":[{\"content_digest\":\"sha256:b2e9cfd512376d78fff016ea1ce3401ff0fad1fae7376d6d5572c6c21b73c8f5\",\"kind\":\"dmt_row\",\"reason\":null,\"revision\":1,\"rule\":\"dmt:asme/flatness/none@1\",\"status\":\"provisional\"}],\"journal_entry\":\"sha256:9bd604b0dcda7b7157f78830f8ec003db4fa39508818c8e08ac650ffb397687c\",\"kernel_version\":\"0.1.0\",\"measurand\":\"flatness of face C1\",\"operator_chain_digest\":\"sha256:245d585be186c54533c1cfee3e978d6ee962d2e1f6abe0d7df5f49bf46601b85\",\"run\":\"R1\",\"schema\":\"fid.gdt-result/2\",\"spec\":{\"defaults_profile\":\"dp:invented@1\",\"dialect\":\"ASME\",\"inherited_from\":\"explicit\",\"standards\":[\"ASME Y14.5-2018\"]},\"uncertainty\":{\"claimed\":false,\"class\":\"UEC-2\",\"declared_input\":false,\"expanded\":{\"U\":\"0x3ecf75104d551d68\",\"k\":\"0x4000000000000000\"},\"interval\":null,\"method\":\"LPU\",\"statement\":null,\"u_std\":null,\"uec0_reason\":null,\"uncharacterized_input\":false,\"unit\":\"si:m\"},\"value\":{\"unit\":\"si:m\",\"value\":\"0x3f03a92a30553261\"}}",
+  "sha256:f9c8b5624a905fc26378a6aa8685df342b4be6735bb6be64b54590b0c03d1b21": "{\"name\":\"F1\",\"schema\":\"fid.test-feature/1\",\"version\":1}"
+ },
+ "schema": "agent-propose-impact-project/v1",
+ "stream": "record"
+}
