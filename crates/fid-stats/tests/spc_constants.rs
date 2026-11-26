@@ -190,6 +190,19 @@ fn every_row_unverified_with_honest_citation() {
     }
 }
 
+/// Every released version and its digest, as literals (REQ-007). A released entry never changes;
+/// a new table is a new version with a new entry and a new pin file.
+const RELEASED: &[(&str, &str)] =
+    &[("1.0.0", "sha256:4e1161ea7b62c9e597a96850628c0118fcf9c34e58004f1be71b90e78fd1e4f8")];
+
+/// REQ-007: the embedded table is the one released under its version.
+#[test]
+fn released_version_digest_is_unchanged() {
+    let entry = RELEASED.iter().find(|(v, _)| *v == SPC_TABLE_VERSION);
+    let (_, digest) = entry.unwrap_or_else(|| panic!("version {SPC_TABLE_VERSION} is not in RELEASED"));
+    assert_eq!(fid_testkit::sha256_hex(SPC_TABLE_JSON), *digest);
+}
+
 /// AC-4: the embedded table hashes to the released digest.
 #[test]
 fn ac4_embedded_table_matches_released_digest() {

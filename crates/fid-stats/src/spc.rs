@@ -24,8 +24,9 @@
 //! d2 and d3 are stored to 3 decimals, c4 to 4 decimals, the chart factors to 3 decimals. The
 //! factors are computed from the *stored* base constants with the formulas of REQ-005 and then
 //! rounded, so every stored factor agrees with its formula within half a unit in its last digit
-//! (AC-1). A factor rounded from unrounded base constants can differ from it in the last digit
-//! (for example A2 at n = 2 is 1.881 here, from 3 / (1.128 √2)).
+//! (AC-1). The same factor rounded from unrounded base constants can differ: in 1.0.0, 27 of the
+//! 145 factor values differ by up to 2 last-digit units, in 10 rows (n = 2, 3, 11–14, 19, 20,
+//! 22, 25). For example A2 at n = 2 is 1.881 here, from 3 / (1.128 √2), and D4 at n = 2 is 3.269.
 //!
 //! # Determinism (D0)
 //!
