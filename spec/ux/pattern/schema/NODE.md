@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-design]
+built_pr: 649
 satisfies: [REQ-UX.PATTERN-001]
 covers: []
 depends_on: [UX.SYSTEM.PKG, UX.COMP.SCHEMA]
