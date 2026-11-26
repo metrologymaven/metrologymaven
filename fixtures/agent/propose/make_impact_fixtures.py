@@ -26,23 +26,28 @@ The rules this reference implements (pinned in `fid_agent::impact`):
 - Rows. Only deltas whose `source_commands` is non-empty count (the agent's own commands):
   old = the target's digest, new = the source's digest (None when absent or deleted). Each
   present digest is read from the object store: absent is `record_missing{digest}`; bytes
-  whose SHA-256 is not the digest are `record_invalid`. An object over 16 MiB is not a
-  ResultRecord. An object is a ResultRecord when its bytes contain the canonical member
+  whose SHA-256 is not the digest are `record_invalid` (checked before any size rule). An
+  object over 16 MiB is not a ResultRecord. An object is a ResultRecord when its bytes contain the canonical member
   `"schema":"fid.gdt-result/` or it parses as a JSON object (depth 8, no duplicate keys)
   whose `schema` is a string starting with `fid.gdt-result/`; any other object is not a
   characteristic and is skipped. A ResultRecord
   must be canonical, of schema `/1` or `/2`, and carry `characteristic`, `value.value`
-  (`0x` + 16 hex), `value.unit`, `uncertainty.class` (UEC-0..UEC-3) and `decision.outcome`
-  (one of the four), else `record_invalid`. Old and new must both be records (or one
+  (`0x` + 16 hex), `value.unit`, `uncertainty.class` (UEC-0..UEC-3), the evidence facts
+  `uncertainty.claimed`, `uncertainty.declared_input`, `uncertainty.uncharacterized_input`
+  (booleans) and `decision.outcome` (one of the four), else `record_invalid`. Old and new must both be records (or one
   absent) and name the same characteristic, else `record_invalid`.
-- Listing. Added (old absent), removed (new absent), or changed in outcome, UEC class or
-  value (bits or unit); nothing else is listed. Sorted by entity ID bytes.
+- Listing. Added (old absent), removed (new absent), or changed in outcome, UEC class, value
+  (bits or unit), interpretation label or any evidence fact; nothing else is listed. Each row
+  carries both sides' facts as stored and the flags `value_changed`,
+  `interpretation_changed` and `evidence_changed` (all true when a side is absent). Sorted
+  by entity ID bytes.
 - Moves. A changed row whose outcome differs adds 1 at (old, new) of the 4x4 matrix over
   CONFORMS, NONCONFORMS, INDETERMINATE, NOT_DECIDABLE; added and removed rows are counted
   separately.
 - Entries. `entry_count` is the number of `command` rows on B with a sequence above the
-  `created_from` row's; `classes` is the set of their header `command.class`, in the order
-  R0 R1 W1 W2 W3 X1 I1 D1 M1 S1 A0.
+  `created_from` row's. Each one's header `command.id@major` must be in the project's
+  registry table (`commands`) with the same class as the header, else `invariant_violated`;
+  `classes` is the set of those registry classes, in the order R0 R1 W1 W2 W3 X1 I1 D1 M1 S1 A0.
 - Interpretation (D-045). Each row carries `old_interpretation` / `new_interpretation`:
   `signed_off` only for a canonical `/2` record whose `interpretation` is `signed_off` and
   whose `interpretation_rules` are non-empty and all `signed_off`; otherwise
@@ -72,6 +77,7 @@ MAX_RECORD_BYTES = 16 * 1024 * 1024
 MAX_RECORD_DEPTH = 8
 RESULT_SCHEMA = "fid.proposal-impact/1"
 MARKER = b'"schema":"fid.gdt-result/'
+EVIDENCE = ("claimed", "declared_input", "uncharacterized_input")
 
 
 # ------------------------------------------------------------------ RFC 8785 (own writer)
@@ -162,7 +168,8 @@ C1, C2, C3, C4 = uuid("c1"), uuid("c2"), uuid("c3"), uuid("c4")
 F1, F9 = uuid("f1"), uuid("f9")
 
 
-def record(char, outcome, uec, value, unit="si:m", interp="signed_off", schema=2, run="R1"):
+def record(char, outcome, uec, value, unit="si:m", interp="signed_off", schema=2, run="R1", claimed=False,
+           declared=False, uncharacterized=False):
     """An invented `fid.gdt-result` record in the documented wire form."""
     expanded = None if uec == "UEC-0" else {"U": bits(value / 10.0), "k": bits(2.0)}
     r = {
@@ -174,11 +181,11 @@ def record(char, outcome, uec, value, unit="si:m", interp="signed_off", schema=2
         "value": {"value": bits(value), "unit": unit},
         "uncertainty": {"class": uec, "uec0_reason": "not_evaluated" if uec == "UEC-0" else None,
                         "method": None if uec == "UEC-0" else "LPU", "statement": None, "unit": unit,
-                        "u_std": None, "expanded": expanded, "interval": None, "claimed": False,
-                        "declared_input": False, "uncharacterized_input": False},
+                        "u_std": None, "expanded": expanded, "interval": None, "claimed": claimed,
+                        "declared_input": declared, "uncharacterized_input": uncharacterized},
         "decision": {"source": "unc", "rule": "dr:simple-acceptance@1", "outcome": outcome, "reason": None,
-                     "basis": {"class": uec, "method": "LPU", "claimed": False, "declared_input": False,
-                               "uncharacterized_input": False, "statement": None}},
+                     "basis": {"class": uec, "method": "LPU", "claimed": claimed, "declared_input": declared,
+                               "uncharacterized_input": uncharacterized, "statement": None}},
         "spec": {"dialect": "ASME", "standards": ["ASME Y14.5-2018"], "defaults_profile": "dp:invented@1",
                  "inherited_from": "explicit"},
         "algorithm": "gdt.form.flatness.minzone@1.0.0",
@@ -204,6 +211,16 @@ def feature(name, version):
 # ------------------------------------------------------------------ journal builder
 
 REGISTRY = sha(b"registry manifest v1")
+# The registry's side-effect class of each invented command (`id@major`).
+REG_CLASSES = {
+    "align.refit_feature@1": "W2",
+    "feature.set_nominal@1": "W2",
+    "gdt.accept_result@1": "W3",
+    "gdt.eval_flatness@1": "W2",
+    "journal.create_branch@1": "W2",
+    "project.add_features@1": "W2",
+    "report.add_note@1": "W1",
+}
 KERNEL = sha(b"kernel manifest v1")
 
 
@@ -215,13 +232,14 @@ class Project:
         self.hashes = {}
         self.branches = [{"name": "main", "created_from": None}]
         self.objects = {}
+        self.commands = dict(REG_CLASSES)
 
     def put(self, data):
         d = sha(data)
         self.objects[d] = data
         return d
 
-    def add(self, seq, branch, pk, kind, cid=None, cls="W2", parent=None, outputs=()):
+    def add(self, seq, branch, pk, kind, cid=None, parent=None, outputs=()):
         assert seq == len(self.rows) + 1
         prev = self.rows[-1]["hash"] if self.rows else ZERO
         h = {
@@ -247,7 +265,7 @@ class Project:
                     o["entity"] = ent
                 outs.append(o)
             h["command"] = {
-                "id": cid, "major": 1, "class": cls, "determinism": "D0", "seed": str(seq),
+                "id": cid, "major": 1, "class": REG_CLASSES[cid + "@1"], "determinism": "D0", "seed": str(seq),
                 "args_commit": sha(b"args %d" % seq), "events_commit": sha(b"events %d" % seq),
                 "inputs": [], "outputs": outs, "algorithms": [],
             }
@@ -267,36 +285,37 @@ class Project:
             "entries": self.rows,
             "branches": self.branches,
             "objects": {d: b.decode("utf-8") for d, b in sorted(self.objects.items())},
+            "commands": dict(sorted(self.commands.items())),
         }
 
 
 def base_main(p):
     """main: features F1, F9; records C1, C2, C3 (all CONFORMS, UEC-2, signed off)."""
     p.add(1, "main", "human", "session_header")
-    p.add(2, "main", "human", "command", "project.add_features", "W2", None,
+    p.add(2, "main", "human", "command", "project.add_features", None,
           [(F1, p.put(feature("F1", 1))), (F9, p.put(feature("F9", 1)))])
-    p.add(3, "main", "human", "command", "gdt.eval_flatness", "W2", 2,
+    p.add(3, "main", "human", "command", "gdt.eval_flatness", 2,
           [(C1, p.put(record("C1", "CONFORMS", "UEC-2", 1.25e-5))),
            (C2, p.put(record("C2", "CONFORMS", "UEC-2", 2.5e-5))),
            (C3, p.put(record("C3", "CONFORMS", "UEC-2", 4.0e-5)))])
-    p.add(4, "main", "human", "command", "journal.create_branch", "W2", 3, [])
+    p.add(4, "main", "human", "command", "journal.create_branch", 3, [])
 
 
 def two_moves():
     """AC-1: agent/s1 refits F1, which turns C1 CONFORMS -> NONCONFORMS (its new record is
-    provisional) and changes C2's value only. A human co-edit on the branch adds class W2;
+    provisional) and changes C2's value only. A human co-edit on the branch adds class W1;
     main moves F9 meanwhile (not the agent's change, so not listed)."""
     p = Project()
     base_main(p)
     p.branch("agent/s1", 3)
     p.add(5, "agent/s1", "agent", "session_header")
-    p.add(6, "agent/s1", "agent", "command", "align.refit_feature", "W1", 3, [(F1, p.put(feature("F1", 2)))])
-    p.add(7, "agent/s1", "agent", "command", "gdt.eval_flatness", "W1", 6,
+    p.add(6, "agent/s1", "agent", "command", "align.refit_feature", 3, [(F1, p.put(feature("F1", 2)))])
+    p.add(7, "agent/s1", "agent", "command", "gdt.eval_flatness", 6,
           [(C1, p.put(record("C1", "NONCONFORMS", "UEC-2", 3.75e-5, interp="provisional"))),
            (C2, p.put(record("C2", "CONFORMS", "UEC-2", 2.625e-5))),
            (None, sha(b"report of entry 7"))])
-    p.add(8, "main", "human", "command", "feature.set_nominal", "W2", 4, [(F9, p.put(feature("F9", 2)))])
-    p.add(9, "agent/s1", "human", "command", "report.add_note", "W2", 7, [])
+    p.add(8, "main", "human", "command", "feature.set_nominal", 4, [(F9, p.put(feature("F9", 2)))])
+    p.add(9, "agent/s1", "human", "command", "report.add_note", 7, [])
     return p
 
 
@@ -315,10 +334,10 @@ def add_remove():
     p = Project()
     base_main(p)
     p.branch("agent/s2", 4)
-    p.add(5, "agent/s2", "agent", "command", "gdt.eval_flatness", "W1", 4,
+    p.add(5, "agent/s2", "agent", "command", "gdt.eval_flatness", 4,
           [(C1, p.put(record("C1", "CONFORMS", "UEC-2", 1.25e-5, run="R2"))),
            (uuid("b1"), p.put(b"\x00binary point cloud, not JSON"))])
-    p.add(6, "agent/s2", "agent", "command", "gdt.eval_flatness", "W1", 5,
+    p.add(6, "agent/s2", "agent", "command", "gdt.eval_flatness", 5,
           [(C4, p.put(record("C4", "INDETERMINATE", "UEC-1", 9.0e-6, schema=1))),
            (C3, TOMBSTONE),
            (C2, p.put(record("C2", "CONFORMS", "UEC-1", 2.5e-5)))])
@@ -328,15 +347,15 @@ def add_remove():
 def unit_and_moves():
     """C1 CONFORMS -> NOT_DECIDABLE (UEC-0), C2 unit only (same bits), and C3, which main
     changed to INDETERMINATE after the fork, set to NONCONFORMS by the agent: the old side
-    is the target's value. Classes W1 and W3 (out of the fixed order on purpose)."""
+    is the target's value. Classes W3 then W2 (out of the fixed order on purpose)."""
     p = Project()
     base_main(p)
     p.branch("agent/s4", 4)
-    p.add(5, "main", "human", "command", "gdt.eval_flatness", "W2", 4,
+    p.add(5, "main", "human", "command", "gdt.eval_flatness", 4,
           [(C3, p.put(record("C3", "INDETERMINATE", "UEC-2", 4.5e-5)))])
-    p.add(6, "agent/s4", "agent", "command", "gdt.eval_flatness", "W3", 4,
+    p.add(6, "agent/s4", "agent", "command", "gdt.accept_result", 4,
           [(C3, p.put(record("C3", "NONCONFORMS", "UEC-2", 5.0e-5)))])
-    p.add(7, "agent/s4", "agent", "command", "gdt.eval_flatness", "W1", 6,
+    p.add(7, "agent/s4", "agent", "command", "gdt.eval_flatness", 6,
           [(C1, p.put(record("C1", "NOT_DECIDABLE", "UEC-0", 1.25e-5))),
            (C2, p.put(record("C2", "CONFORMS", "UEC-2", 2.5e-5, unit="si:mm")))])
     return p
@@ -500,7 +519,10 @@ def read_record(objects, d):
         unit = v["value"]["unit"]
         uec = v["uncertainty"]["class"]
         outcome = v["decision"]["outcome"]
+        evidence = {k: v["uncertainty"][k] for k in EVIDENCE}
     except (KeyError, TypeError):
+        raise bad
+    if not all(isinstance(x, bool) for x in evidence.values()):
         raise bad
     hexdigits = "0123456789abcdef"
     if not (isinstance(char, str) and char and isinstance(unit, str) and isinstance(val, str)
@@ -511,7 +533,7 @@ def read_record(objects, d):
     signed = (schema == "fid.gdt-result/2" and v.get("interpretation") == "signed_off" and isinstance(rules, list)
               and len(rules) > 0 and all(isinstance(r, dict) and r.get("status") == "signed_off" for r in rules))
     return {"characteristic": char, "value": {"unit": unit, "value": val}, "uec": uec, "outcome": outcome,
-            "interpretation": "signed_off" if signed else "provisional"}
+            "evidence": evidence, "interpretation": "signed_off" if signed else "provisional"}
 
 
 def impact(m, branch):
@@ -552,8 +574,12 @@ def impact(m, branch):
             change = "removed"
         else:
             change = "changed"
-        value_changed = old is None or new is None or old["value"] != new["value"]
-        if change == "changed" and not value_changed and old["outcome"] == new["outcome"] and old["uec"] == new["uec"]:
+        absent = old is None or new is None
+        value_changed = absent or old["value"] != new["value"]
+        interpretation_changed = absent or old["interpretation"] != new["interpretation"]
+        evidence_changed = absent or old["evidence"] != new["evidence"]
+        if not (absent or value_changed or interpretation_changed or evidence_changed
+                or old["outcome"] != new["outcome"] or old["uec"] != new["uec"]):
             continue
         if change == "added":
             added += 1
@@ -573,13 +599,19 @@ def impact(m, branch):
             "old_value": g(old, "value"), "new_value": g(new, "value"),
             "value_changed": value_changed,
             "old_interpretation": g(old, "interpretation"), "new_interpretation": g(new, "interpretation"),
+            "interpretation_changed": interpretation_changed,
+            "old_evidence": g(old, "evidence"), "new_evidence": g(new, "evidence"),
+            "evidence_changed": evidence_changed,
         })
     count = 0
     classes = set()
     for h in headers:
         if h["branch"] == branch and h["kind"] == "command" and int(h["seq"]) > fork_seq:
+            key = "%s@%d" % (h["command"]["id"], h["command"]["major"])
+            if key not in m["commands"] or m["commands"][key] != h["command"]["class"]:
+                raise invariant()
             count += 1
-            classes.add(h["command"]["class"])
+            classes.add(m["commands"][key])
     labels = [x for r in rows for x in (r["old_interpretation"], r["new_interpretation"]) if x is not None]
     interp = "none" if not rows else ("provisional" if "provisional" in labels else "signed_off")
     return {
@@ -651,11 +683,11 @@ def cases():
     assert r["moves"] == [[0, 0, 0, 1], [0] * 4, [0, 1, 0, 0], [0] * 4], r["moves"]
     assert r["characteristics"][1]["value_changed"] and r["characteristics"][1]["old_value"]["value"] == \
         r["characteristics"][1]["new_value"]["value"]
-    assert r["classes"] == ["W1", "W3"] and r["interpretation"] == "signed_off"
+    assert r["classes"] == ["W2", "W3"] and r["interpretation"] == "signed_off"
 
     nested = two_moves()
     nested.branch("agent/s3", 7)
-    nested.add(10, "agent/s3", "agent", "command", "gdt.eval_flatness", "W1", 7, [])
+    nested.add(10, "agent/s3", "agent", "command", "gdt.eval_flatness", 7, [])
     assert case("forked_from_agent_branch", nested, "agent/s3")["error"]["code"] == "no_target"
 
     m = copy.deepcopy(tm)
@@ -674,26 +706,26 @@ def cases():
     assert bad.startswith(b'{ "algorithm"')
     base_main(p)
     p.branch("agent/s1", 3)
-    p.add(5, "agent/s1", "agent", "command", "gdt.eval_flatness", "W1", 3, [(C2, p.put(bad))])
+    p.add(5, "agent/s1", "agent", "command", "gdt.eval_flatness", 3, [(C2, p.put(bad))])
     assert case("record_not_canonical", p, "agent/s1")["error"]["code"] == "record_invalid"
 
     p = Project()
     base_main(p)
     p.branch("agent/s1", 3)
-    p.add(5, "agent/s1", "agent", "command", "gdt.eval_flatness", "W1", 3,
+    p.add(5, "agent/s1", "agent", "command", "gdt.eval_flatness", 3,
           [(C2, p.put(record("C9", "CONFORMS", "UEC-2", 2.5e-5)))])
     assert case("record_names_other_characteristic", p, "agent/s1")["error"]["code"] == "record_invalid"
 
     p = Project()
     base_main(p)
     p.branch("agent/s1", 3)
-    p.add(5, "agent/s1", "agent", "command", "gdt.eval_flatness", "W1", 3, [(C2, p.put(feature("C2", 9)))])
+    p.add(5, "agent/s1", "agent", "command", "gdt.eval_flatness", 3, [(C2, p.put(feature("C2", 9)))])
     assert case("record_replaced_by_non_record", p, "agent/s1")["error"]["code"] == "record_invalid"
 
     p = Project()
     base_main(p)
     p.branch("agent/s1", 3)
-    p.add(5, "agent/s1", "agent", "command", "gdt.eval_flatness", "W1", 3,
+    p.add(5, "agent/s1", "agent", "command", "gdt.eval_flatness", 3,
           [(C2, p.put(record("C2", "PASS", "UEC-2", 2.5e-5)))])
     assert case("record_bad_outcome", p, "agent/s1")["error"]["code"] == "record_invalid"
 
@@ -702,15 +734,61 @@ def cases():
     p.branch("agent/s1", 3)
     dup = record("C2", "CONFORMS", "UEC-2", 2.5e-5).replace(b'{"algorithm"', b'{"run":"R9","algorithm"')
     assert dup.startswith(b'{"run":"R9","algorithm"')
-    p.add(5, "agent/s1", "agent", "command", "gdt.eval_flatness", "W1", 3, [(C2, p.put(dup))])
+    p.add(5, "agent/s1", "agent", "command", "gdt.eval_flatness", 3, [(C2, p.put(dup))])
     assert case("record_duplicate_key", p, "agent/s1")["error"]["code"] == "record_invalid"
 
     p = Project()
     base_main(p)
     p.branch("agent/s1", 3)
-    p.add(5, "agent/s1", "agent", "command", "gdt.eval_flatness", "W1", 3,
+    p.add(5, "agent/s1", "agent", "command", "gdt.eval_flatness", 3,
           [(C2, p.put(record("C2", "CONFORMS", "UEC-2", 2.5e-5, schema=9)))])
     assert case("record_unknown_schema_version", p, "agent/s1")["error"]["code"] == "record_invalid"
+
+    # A label-only change: C3 signed_off -> provisional, nothing else.
+    p = Project()
+    base_main(p)
+    p.branch("agent/s5", 4)
+    p.add(5, "agent/s5", "agent", "command", "gdt.eval_flatness", 4,
+          [(C3, p.put(record("C3", "CONFORMS", "UEC-2", 4.0e-5, interp="provisional")))])
+    r = case("label_only_change", p, "agent/s5")["result"]
+    (row3,) = r["characteristics"]
+    assert row3["interpretation_changed"] and not row3["value_changed"] and not row3["evidence_changed"]
+    assert row3["old_outcome"] == row3["new_outcome"] and r["interpretation"] == "provisional"
+
+    # Evidence-only changes: C2 becomes claimed, C1 rests on a declared input.
+    p = Project()
+    base_main(p)
+    p.branch("agent/s6", 4)
+    p.add(5, "agent/s6", "agent", "command", "gdt.eval_flatness", 4,
+          [(C2, p.put(record("C2", "CONFORMS", "UEC-2", 2.5e-5, claimed=True))),
+           (C1, p.put(record("C1", "CONFORMS", "UEC-2", 1.25e-5, declared=True, uncharacterized=True)))])
+    r = case("evidence_only_change", p, "agent/s6")["result"]
+    assert [x["evidence_changed"] for x in r["characteristics"]] == [True, True]
+    assert not any(x["value_changed"] or x["interpretation_changed"] for x in r["characteristics"])
+
+    # Every off-diagonal move cell once: twelve characteristics, each moved to another outcome.
+    p = Project()
+    pairs = [(a, b) for a in OUTCOMES for b in OUTCOMES if a != b]
+    ids = [uuid("a%02d" % i) for i in range(len(pairs))]
+    p.add(1, "main", "human", "session_header")
+    p.add(2, "main", "human", "command", "gdt.eval_flatness", None,
+          [(e, p.put(record("M%02d" % i, a, "UEC-2", 1.0e-5 * (i + 1)))) for i, (e, (a, _)) in
+           enumerate(zip(ids, pairs))])
+    p.add(3, "main", "human", "command", "journal.create_branch", 2, [])
+    p.branch("agent/m1", 2)
+    p.add(4, "agent/m1", "agent", "command", "gdt.eval_flatness", 2,
+          [(e, p.put(record("M%02d" % i, b, "UEC-2", 1.0e-5 * (i + 1)))) for i, (e, (_, b)) in
+           enumerate(zip(ids, pairs))])
+    r = case("all_twelve_moves", p, "agent/m1")["result"]
+    assert r["moves"] == [[0 if i == j else 1 for j in range(4)] for i in range(4)], r["moves"]
+
+    # The registry disagrees with a verified header's class, or does not know the command.
+    m = copy.deepcopy(tm)
+    m["commands"]["report.add_note@1"] = "W3"
+    assert case("registry_class_mismatch", m, "agent/s1")["error"]["code"] == "invariant_violated"
+    m = copy.deepcopy(tm)
+    del m["commands"]["align.refit_feature@1"]
+    assert case("command_not_in_registry", m, "agent/s1")["error"]["code"] == "invariant_violated"
 
     m = copy.deepcopy(tm)
     set_class_no_relink(m, 7, "W3")

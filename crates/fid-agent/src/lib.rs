@@ -20,9 +20,10 @@ pub use catalog::{
     CATALOG_FORMAT, CORE_PROFILE, MIN_APP_WORKFLOWS,
 };
 pub use impact::{
-    compute_impact, compute_impact_command_def, invoke_compute_impact_cli, invoke_compute_impact_mcp, Change,
-    ImpactError, ImpactProject, ImpactRow, Label, MemoryObjects, ObjectRead, ObjectSource, Outcome, ProposalImpact,
-    RecordFacts, StoredValue, Uec, CLI_COMPUTE_IMPACT, COMPUTE_IMPACT, IMPACT_SCHEMA, MCP_COMPUTE_IMPACT,
+    class_table, compute_impact, compute_impact_command_def, invoke_compute_impact_cli, invoke_compute_impact_mcp,
+    Change, CommandClasses, Evidence, ImpactError, ImpactProject, ImpactRow, Label, MemoryObjects, ObjectRead,
+    ObjectSource, Outcome, ProposalImpact, RecordFacts, StoredValue, Uec, CLI_COMPUTE_IMPACT, COMPUTE_IMPACT,
+    IMPACT_SCHEMA, MCP_COMPUTE_IMPACT,
 };
 pub use propose::{
     attach_brief, attach_brief_command_def, brief_schema, command_defs, invoke_attach_brief_cli,

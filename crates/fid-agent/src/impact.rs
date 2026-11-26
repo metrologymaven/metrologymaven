@@ -21,7 +21,10 @@
 //!   since the ancestor counts (a non-empty `source_commands`): changes made on the target
 //!   alone are not the proposal's. Old is the target's digest, new the source's (`None` when
 //!   absent or deleted). Each present digest is read from the store: absent is
-//!   `record_missing{digest}`; bytes whose SHA-256 is not the digest are `record_invalid`.
+//!   `record_missing{digest}`; a store that reports the object corrupt, or bytes whose
+//!   SHA-256 is not the digest, are `record_invalid` (the digest check runs before any size
+//!   rule, so wrong oversize bytes are refused, never skipped); an unreadable store is
+//!   `internal/storage`.
 //! - **What is a ResultRecord.** An object over [`MAX_RECORD_BYTES`] is not one (the record
 //!   builder's fields are bounded far below that, and `fid_gdt`'s label reader reads no
 //!   more). An object is a ResultRecord when its bytes contain the canonical member
@@ -30,26 +33,38 @@
 //!   mesh) is not a characteristic and is skipped. A ResultRecord must be RFC 8785 canonical,
 //!   of schema `fid.gdt-result/1` or `/2`, and carry `characteristic` (non-empty),
 //!   `value.value` (`0x` + 16 lowercase hex digits), `value.unit`, `uncertainty.class`
-//!   (`UEC-0` .. `UEC-3`) and `decision.outcome` (one of the four), else `record_invalid`.
+//!   (`UEC-0` .. `UEC-3`), the evidence facts `uncertainty.claimed`,
+//!   `uncertainty.declared_input` and `uncertainty.uncharacterized_input` (booleans) and
+//!   `decision.outcome` (one of the four), else `record_invalid`.
 //!   If one side is a record, the other side must be a record naming the same
 //!   characteristic, or absent; else `record_invalid`.
 //! - **Listing (REQ-002).** A row is `added` (old absent), `removed` (new absent), or
-//!   `changed` when the outcome, the UEC class or the value differs; nothing else is listed.
-//!   `value_changed` compares the stored bits and unit, never a recomputed value (REQ-006).
-//!   Rows are sorted by entity ID bytes.
+//!   `changed` when the outcome, the UEC class, the value, the D-045 interpretation label or
+//!   any evidence fact differs (maintainer decision: a label-only or evidence-only change is
+//!   listed, so a claimed or provisional record never slips in unseen); nothing else is
+//!   listed. Each side carries its facts as stored. `value_changed` compares the stored bits
+//!   and unit, never a recomputed value (REQ-006); `interpretation_changed` and
+//!   `evidence_changed` compare the label and the three facts. All three flags are true when
+//!   a side is absent. Rows are sorted by entity ID bytes.
 //! - **Moves (REQ-003).** A changed row whose outcome differs adds one at (old, new) of the
 //!   4x4 matrix over [`Outcome::ALL`]; the diagonal stays zero. Added and removed rows are
 //!   counted apart.
 //! - **Entries (REQ-004).** `entry_count` counts the `command` rows on `B` whose sequence is
-//!   above the `created_from` row's (the fork point); `classes` is the set of their verified
-//!   header `command.class`, in [`SideEffect`] order (`R0 R1 W1 W2 W3 X1 I1 D1 M1 S1 A0`).
-//!   Session headers and head moves declare no class and are not counted.
+//!   above the `created_from` row's (the fork point). Each one's `command.id@major` is looked
+//!   up in the registry ([`CommandClasses`], built from the manifest's definitions with
+//!   [`class_table`]); a command the registry does not define, or a verified header whose
+//!   `command.class` differs from the definition, is `invariant_violated`. `classes` is the
+//!   set of the definitions' classes (as the Design says), in [`SideEffect`] order
+//!   (`R0 R1 W1 W2 W3 X1 I1 D1 M1 S1 A0`). Session headers and head moves declare no class
+//!   and are not counted.
 //! - **Heads (REQ-005).** `source_head` and `target_head` are the heads the diff used.
 //! - **Interpretation (D-045).** Every row side carries the record's interpretation label,
 //!   decided by [`fid_gdt::requires_provisional_label_bytes`] on the stored bytes (so a `/1`
 //!   record is `provisional`). The result's `interpretation` is `provisional` when any row
 //!   side is, `signed_off` when there are rows and none is, and `none` without rows. No
 //!   surface may drop it.
+//! - **Output.** The CLI's only output form is the canonical JSON result: `--json` is
+//!   accepted and is currently the default and only form (there is no text rendering yet).
 //! - **Bounds.** The diff's own bounds ([`DiffOptions`]; MCP callers get the agent bounds),
 //!   one object in memory at a time, checked counters, no panics, no `HashMap`.
 
@@ -132,6 +147,8 @@ pub enum ImpactError {
     RecordInvalid { digest: Digest, reason: String },
     /// The diff refused, or a verified header contradicts the rules: the diff's bus error.
     Journal(DiffError),
+    /// The object store could not be read (`internal/storage`).
+    Storage(String),
     /// Malformed CLI or MCP parameters (`validation/schema`).
     BadParams(String),
     /// A counter or payload over its bound (`validation/input_limit`).
@@ -149,6 +166,7 @@ impl ImpactError {
             ImpactError::RecordMissing { .. } => "record_missing",
             ImpactError::RecordInvalid { .. } => "record_invalid",
             ImpactError::Journal(e) => e.bus_code().1,
+            ImpactError::Storage(_) => "storage",
             ImpactError::BadParams(_) => "bad_params",
             ImpactError::InputLimit(_) => "input_limit",
             ImpactError::Internal(_) => "internal",
@@ -162,6 +180,7 @@ impl ImpactError {
             ImpactError::NoTarget(_) => ("precondition", "false"),
             ImpactError::RecordMissing { .. } | ImpactError::RecordInvalid { .. } => ("internal", "invariant_violated"),
             ImpactError::Journal(e) => e.bus_code(),
+            ImpactError::Storage(_) => ("internal", "storage"),
             ImpactError::BadParams(_) => ("validation", "schema"),
             ImpactError::InputLimit(_) => ("validation", "input_limit"),
             ImpactError::Internal(_) => ("internal", "handler_failed"),
@@ -185,6 +204,7 @@ impl fmt::Display for ImpactError {
             ImpactError::RecordMissing { digest } => write!(f, "record_missing: no stored object {digest}"),
             ImpactError::RecordInvalid { digest, reason } => write!(f, "record_invalid: {digest}: {reason}"),
             ImpactError::Journal(e) => write!(f, "{e}"),
+            ImpactError::Storage(m) => write!(f, "storage: {m}"),
             ImpactError::BadParams(m) => write!(f, "bad_params: {m}"),
             ImpactError::InputLimit(m) => write!(f, "input_limit: {m}"),
             ImpactError::Internal(m) => write!(f, "internal: {m}"),
@@ -204,13 +224,23 @@ fn invalid(digest: Digest, reason: &str) -> ImpactError {
 
 // ------------------------------------------------------------------ the object store
 
-/// What reading one object gave.
+/// What reading one object gave. A store-backed source maps `fid_store`'s
+/// `BlobStore::read_object` errors as follows: `CasError::NotFound` is [`ObjectRead::Missing`]
+/// (`record_missing`); `CasError::OutOfRange` (the object is longer than `max_len`) is
+/// [`ObjectRead::TooLarge`] (not a record); `CasError::Integrity` and
+/// `CasError::ManifestInvalid` are [`ObjectRead::Corrupt`] (`record_invalid`); `CasError::Io`
+/// is [`ObjectRead::Unavailable`] (`internal/storage`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ObjectRead {
     /// No object with that digest.
     Missing,
     /// The object is longer than the bound the caller passed (not read).
     TooLarge,
+    /// The store holds something under the digest that is not the object (its bytes do not
+    /// hash to it, or a chunk manifest is malformed).
+    Corrupt(String),
+    /// The store could not be read (I/O).
+    Unavailable(String),
     /// The object's bytes.
     Bytes(Vec<u8>),
 }
@@ -269,14 +299,34 @@ impl ObjectSource for MemoryObjects {
     }
 }
 
+/// The registry's side-effect class of each command, by `id@major` (`CORE.REG.MAN`).
+pub trait CommandClasses {
+    /// The class the registry defines for `command` (`id@major`), `None` when it defines none.
+    fn class_of(&self, command: &str) -> Option<SideEffect>;
+}
+
+impl CommandClasses for BTreeMap<String, SideEffect> {
+    fn class_of(&self, command: &str) -> Option<SideEffect> {
+        self.get(command).copied()
+    }
+}
+
+/// The `id@major` to class table of a set of registry definitions (for example the workspace
+/// manifest's).
+pub fn class_table(defs: &[CommandDef]) -> BTreeMap<String, SideEffect> {
+    defs.iter().map(|d| (format!("{}@{}", d.id, d.major), d.side_effect)).collect()
+}
+
 /// What the command reads: one journal stream's stored rows (sequence order, from 1), the
-/// origin-bound branch table (`CORE.JRN.BR.NAME`) and the object store.
+/// origin-bound branch table (`CORE.JRN.BR.NAME`), the object store and the registry's
+/// command classes.
 #[derive(Clone, Copy)]
 pub struct ImpactProject<'a> {
     pub stream: &'a str,
     pub rows: &'a [StoredEntry],
     pub branches: &'a Branches,
     pub objects: &'a dyn ObjectSource,
+    pub commands: &'a dyn CommandClasses,
 }
 
 impl fmt::Debug for ImpactProject<'_> {
@@ -383,6 +433,25 @@ impl StoredValue {
     }
 }
 
+/// The evidence facts of a record's uncertainty statement, as stored (`claimed values never
+/// look measured`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Evidence {
+    pub claimed: bool,
+    pub declared_input: bool,
+    pub uncharacterized_input: bool,
+}
+
+impl Evidence {
+    fn to_value(self) -> CValue {
+        obj([
+            ("claimed", CValue::Bool(self.claimed)),
+            ("declared_input", CValue::Bool(self.declared_input)),
+            ("uncharacterized_input", CValue::Bool(self.uncharacterized_input)),
+        ])
+    }
+}
+
 /// The facts the impact reads from one stored ResultRecord.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordFacts {
@@ -391,6 +460,7 @@ pub struct RecordFacts {
     pub outcome: Outcome,
     pub uec: Uec,
     pub value: StoredValue,
+    pub evidence: Evidence,
     pub interpretation: Label,
 }
 
@@ -415,6 +485,28 @@ fn str_at<'a>(o: &'a Obj, path: &[&str]) -> Option<&'a str> {
     }
 }
 
+fn str_obj<'a>(o: &'a Obj, k: &str) -> Option<&'a Obj> {
+    match member(o, k)? {
+        CValue::Obj(m) => Some(m),
+        _ => None,
+    }
+}
+
+fn bool_at(o: &Obj, path: &[&str]) -> Option<bool> {
+    let (last, init) = path.split_last()?;
+    let mut cur = o;
+    for k in init {
+        match member(cur, k)? {
+            CValue::Obj(m) => cur = m,
+            _ => return None,
+        }
+    }
+    match member(cur, last)? {
+        CValue::Bool(b) => Some(*b),
+        _ => None,
+    }
+}
+
 fn parse_bits(s: &str) -> Option<u64> {
     let hex = s.strip_prefix("0x")?;
     if hex.len() != 16 || !hex.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) {
@@ -433,13 +525,16 @@ fn read_record(objects: &dyn ObjectSource, digest: Digest) -> Result<Option<Reco
     let bytes = match objects.read_object(&digest, MAX_RECORD_BYTES) {
         ObjectRead::Missing => return Err(ImpactError::RecordMissing { digest }),
         ObjectRead::TooLarge => return Ok(None),
+        ObjectRead::Corrupt(why) => return Err(invalid(digest, &format!("store reports corruption: {why}"))),
+        ObjectRead::Unavailable(why) => return Err(ImpactError::Storage(why)),
         ObjectRead::Bytes(b) => b,
     };
-    if bytes.len() > MAX_RECORD_BYTES {
-        return Ok(None);
-    }
+    // The digest check comes first: oversize bytes that are not the object are refused.
     if Digest::from_bytes(digest_bytes(&bytes).0) != digest {
         return Err(invalid(digest, "stored bytes do not hash to their digest"));
+    }
+    if bytes.len() > MAX_RECORD_BYTES {
+        return Ok(None);
     }
     let marked = contains(&bytes, RECORD_MARKER);
     let not_record = |why: &str| if marked { Err(invalid(digest, why)) } else { Ok(None) };
@@ -471,9 +566,23 @@ fn read_record(objects: &dyn ObjectSource, digest: Digest) -> Result<Option<Reco
     let outcome = str_at(o, &["decision", "outcome"])
         .and_then(Outcome::parse)
         .ok_or_else(|| invalid(digest, "decision.outcome"))?;
+    let fact = |k: &'static str| bool_at(o, &["uncertainty", k]).ok_or_else(|| invalid(digest, k));
+    let evidence = Evidence {
+        claimed: fact("claimed")?,
+        declared_input: fact("declared_input")?,
+        uncharacterized_input: fact("uncharacterized_input")?,
+    };
     let interpretation =
         if fid_gdt::requires_provisional_label_bytes(&bytes) { Label::Provisional } else { Label::SignedOff };
-    Ok(Some(RecordFacts { digest, characteristic, outcome, uec, value: StoredValue { bits, unit }, interpretation }))
+    Ok(Some(RecordFacts {
+        digest,
+        characteristic,
+        outcome,
+        uec,
+        value: StoredValue { bits, unit },
+        evidence,
+        interpretation,
+    }))
 }
 
 // ------------------------------------------------------------------ result
@@ -509,6 +618,10 @@ pub struct ImpactRow {
     pub new: Option<RecordFacts>,
     /// Stored bits or unit differ (always true when added or removed).
     pub value_changed: bool,
+    /// The D-045 label differs (always true when added or removed).
+    pub interpretation_changed: bool,
+    /// Any evidence fact differs (always true when added or removed).
+    pub evidence_changed: bool,
 }
 
 impl ImpactRow {
@@ -520,15 +633,20 @@ impl ImpactRow {
         let uec = |r: Option<&RecordFacts>| opt_text(r.map(|r| r.uec.as_str()));
         let value = |r: Option<&RecordFacts>| r.map_or(CValue::Null, |r| r.value.to_value());
         let label = |r: Option<&RecordFacts>| opt_text(r.map(|r| r.interpretation.as_str()));
+        let evidence = |r: Option<&RecordFacts>| r.map_or(CValue::Null, |r| r.evidence.to_value());
         obj([
             ("change", text(self.change.as_str())),
             ("characteristic", text(&self.characteristic)),
+            ("evidence_changed", CValue::Bool(self.evidence_changed)),
             ("id", text(&self.id)),
+            ("interpretation_changed", CValue::Bool(self.interpretation_changed)),
+            ("new_evidence", evidence(n)),
             ("new_interpretation", label(n)),
             ("new_outcome", outcome(n)),
             ("new_record", rec(n)),
             ("new_uec", uec(n)),
             ("new_value", value(n)),
+            ("old_evidence", evidence(o)),
             ("old_interpretation", label(o)),
             ("old_outcome", outcome(o)),
             ("old_record", rec(o)),
@@ -637,10 +755,29 @@ fn entries_of(
         let h = parse_with_limits(&r.header, MAX_HEADER_BYTES, MAX_DEPTH)
             .map_err(|e| invariant(format!("verified header {} does not parse: {}", r.seq, e.code())))?;
         let CValue::Obj(h) = h else { return Err(invariant("a verified header is not an object")) };
-        let class = str_at(&h, &["command", "class"])
+        let header_class = str_at(&h, &["command", "class"])
             .ok_or_else(|| invariant(format!("verified header {} has no command.class", r.seq)))?;
-        let class = SideEffect::parse(class)
-            .map_err(|_| invariant(format!("verified header {} has an unknown class", r.seq)))?;
+        let id = str_at(&h, &["command", "id"])
+            .ok_or_else(|| invariant(format!("verified header {} has no command.id", r.seq)))?;
+        let major = match str_obj(&h, "command").and_then(|c| c.get("major")) {
+            Some(CValue::Num(m)) if m.fract() == 0.0 && *m >= 0.0 && *m <= f64::from(u32::MAX) => *m as u32,
+            Some(CValue::U64(m)) => u32::try_from(*m)
+                .map_err(|_| invariant(format!("verified header {} has a command.major out of range", r.seq)))?,
+            _ => return Err(invariant(format!("verified header {} has no integer command.major", r.seq))),
+        };
+        let command = format!("{id}@{major}");
+        let class = project.commands.class_of(&command).ok_or_else(|| {
+            invariant(format!("entry {} runs {}, which the registry does not define", r.seq, truncate(&command)))
+        })?;
+        if class.as_str() != header_class {
+            return Err(invariant(format!(
+                "entry {} declares class {} but the registry defines {} as {}",
+                r.seq,
+                truncate(header_class),
+                truncate(&command),
+                class.as_str()
+            )));
+        }
         bump(&mut n, "entry count")?;
         classes.insert(class);
     }
@@ -661,22 +798,32 @@ fn row_of(project: &ImpactProject<'_>, d: &EntityDelta) -> Result<Option<ImpactR
         }
         (o, n) => (o.and_then(|(_, r)| r), n.and_then(|(_, r)| r)),
     };
-    let (change, value_changed, characteristic) = match (&old, &new) {
-        (None, Some(n)) => (Change::Added, true, n.characteristic.clone()),
-        (Some(o), None) => (Change::Removed, true, o.characteristic.clone()),
+    let (change, flags, characteristic) = match (&old, &new) {
+        (None, Some(n)) => (Change::Added, (true, true, true), n.characteristic.clone()),
+        (Some(o), None) => (Change::Removed, (true, true, true), o.characteristic.clone()),
         (Some(o), Some(n)) => {
             if o.characteristic != n.characteristic {
                 return Err(invalid(n.digest, "record names another characteristic than the one it replaces"));
             }
-            let vc = o.value != n.value;
-            if !vc && o.outcome == n.outcome && o.uec == n.uec {
+            let flags = (o.value != n.value, o.interpretation != n.interpretation, o.evidence != n.evidence);
+            if !(flags.0 || flags.1 || flags.2 || o.outcome != n.outcome || o.uec != n.uec) {
                 return Ok(None);
             }
-            (Change::Changed, vc, n.characteristic.clone())
+            (Change::Changed, flags, n.characteristic.clone())
         }
         (None, None) => return Ok(None),
     };
-    Ok(Some(ImpactRow { id: d.id.clone(), characteristic, change, old, new, value_changed }))
+    let (value_changed, interpretation_changed, evidence_changed) = flags;
+    Ok(Some(ImpactRow {
+        id: d.id.clone(),
+        characteristic,
+        change,
+        old,
+        new,
+        value_changed,
+        interpretation_changed,
+        evidence_changed,
+    }))
 }
 
 /// `agent.compute_impact@1` (module documentation, Pinned rules).
@@ -729,7 +876,8 @@ pub fn compute_impact(
 
 /// CLI handler for `fid agent compute-impact --branch <name> [--json]`. `caller` is the
 /// principal kind the bus derived (never a parameter); it picks the diff bounds. Returns
-/// the canonical JSON of the result.
+/// the canonical JSON of the result: that is currently the only output form, so `--json` is
+/// accepted but changes nothing (there is no text rendering yet).
 pub fn invoke_compute_impact_cli(
     project: &ImpactProject<'_>,
     caller: PrincipalKind,
@@ -832,6 +980,18 @@ fn value_schema() -> CValue {
     )
 }
 
+fn flag(description: &str) -> CValue {
+    obj([("type", text("boolean")), ("description", text(description))])
+}
+
+fn evidence_schema() -> CValue {
+    let b = || obj([("type", text("boolean"))]);
+    object(
+        &["claimed", "declared_input", "uncharacterized_input"],
+        obj([("claimed", b()), ("declared_input", b()), ("uncharacterized_input", b())]),
+    )
+}
+
 fn row_schema() -> CValue {
     let outcomes: Vec<&str> = Outcome::ALL.iter().map(|o| o.as_str()).collect();
     let uecs: Vec<&str> = Uec::ALL.iter().map(|u| u.as_str()).collect();
@@ -840,12 +1000,16 @@ fn row_schema() -> CValue {
         &[
             "change",
             "characteristic",
+            "evidence_changed",
             "id",
+            "interpretation_changed",
+            "new_evidence",
             "new_interpretation",
             "new_outcome",
             "new_record",
             "new_uec",
             "new_value",
+            "old_evidence",
             "old_interpretation",
             "old_outcome",
             "old_record",
@@ -856,12 +1020,16 @@ fn row_schema() -> CValue {
         obj([
             ("change", one_of(&["added", "changed", "removed"])),
             ("characteristic", untrusted(1024.0, "Characteristic ID the stored record names.")),
+            ("evidence_changed", flag("Any evidence fact differs; true when a side is absent.")),
             ("id", untrusted(1_048_576.0, "Stable entity ID, as the journal headers name it.")),
+            ("interpretation_changed", flag("The D-045 label differs; true when a side is absent.")),
+            ("new_evidence", or_null(evidence_schema(), "Stored evidence facts of the new record.")),
             ("new_interpretation", or_null(one_of(&labels), "D-045 label of the new record; null when removed.")),
             ("new_outcome", or_null(one_of(&outcomes), "Stored decision outcome of the new record.")),
             ("new_record", or_null(pattern(DIGEST_PATTERN, 71.0), "Digest of the new record.")),
             ("new_uec", or_null(one_of(&uecs), "Stored UEC class of the new record.")),
             ("new_value", or_null(value_schema(), "Stored value of the new record.")),
+            ("old_evidence", or_null(evidence_schema(), "Stored evidence facts of the old record.")),
             ("old_interpretation", or_null(one_of(&labels), "D-045 label of the old record; null when added.")),
             ("old_outcome", or_null(one_of(&outcomes), "Stored decision outcome of the old record.")),
             ("old_record", or_null(pattern(DIGEST_PATTERN, 71.0), "Digest of the old record.")),

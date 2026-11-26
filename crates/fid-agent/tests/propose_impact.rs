@@ -9,8 +9,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_agent::{
-    command_defs, compute_impact, compute_impact_command_def, invoke_compute_impact_cli, invoke_compute_impact_mcp,
-    ImpactError, ImpactProject, MemoryObjects, ObjectRead, ObjectSource, COMPUTE_IMPACT,
+    class_table, command_defs, compute_impact, compute_impact_command_def, invoke_compute_impact_cli,
+    invoke_compute_impact_mcp, ImpactError, ImpactProject, MemoryObjects, ObjectRead, ObjectSource, COMPUTE_IMPACT,
 };
 use fid_bus::error::{BusError, Detail, ValidationReason};
 use fid_bus::unit::Normalised;
@@ -71,11 +71,18 @@ struct Model {
     rows: Vec<StoredEntry>,
     branches: Branches,
     objects: MemoryObjects,
+    commands: BTreeMap<String, SideEffect>,
 }
 
 impl Model {
     fn project(&self) -> ImpactProject<'_> {
-        ImpactProject { stream: &self.stream, rows: &self.rows, branches: &self.branches, objects: &self.objects }
+        ImpactProject {
+            stream: &self.stream,
+            rows: &self.rows,
+            branches: &self.branches,
+            objects: &self.objects,
+            commands: &self.commands,
+        }
     }
 }
 
@@ -144,7 +151,14 @@ fn model_of(v: &CValue) -> Model {
         let CValue::Str(text) = text else { panic!() };
         objects.insert(Digest::parse(d).unwrap(), text.as_bytes().to_vec());
     }
-    Model { stream: st(f, "stream").to_string(), rows, branches, objects }
+    let commands = obj(f.get("commands").unwrap())
+        .iter()
+        .map(|(k, v)| match v {
+            CValue::Str(c) => (k.clone(), SideEffect::parse(c).unwrap()),
+            _ => panic!(),
+        })
+        .collect();
+    Model { stream: st(f, "stream").to_string(), rows, branches, objects, commands }
 }
 
 fn fixture(name: &str) -> (Model, Vec<u8>) {
@@ -237,7 +251,7 @@ fn ac4_two_runs_are_byte_identical() {
 fn every_oracle_case_matches() {
     let v = load("fixtures/agent/propose/impact-cases.json");
     let cases = arr(obj(&v), "cases");
-    assert!(cases.len() >= 18);
+    assert_eq!(cases.len(), 23);
     for c in cases {
         let c = obj(c);
         let name = st(c, "name");
@@ -278,6 +292,7 @@ fn every_bus_code_is_in_catalogue_v3() {
         ImpactError::NoTarget("x".into()),
         ImpactError::RecordMissing { digest: d },
         ImpactError::RecordInvalid { digest: d, reason: "r".into() },
+        ImpactError::Storage("s".into()),
         ImpactError::BadParams("p".into()),
         ImpactError::InputLimit("l"),
         ImpactError::Internal("i"),
@@ -329,6 +344,60 @@ fn an_oversize_object_is_not_a_record() {
     let e = compute_impact(&p, "agent/s1", &DiffOptions::default()).unwrap_err();
     assert_eq!(e.code(), "record_invalid");
     assert_eq!(e.digest(), Some(c2_new));
+}
+
+/// A store that answers one digest with a fixed read.
+struct Fixed<'a> {
+    inner: &'a MemoryObjects,
+    digest: Digest,
+    read: ObjectRead,
+}
+
+impl ObjectSource for Fixed<'_> {
+    fn read_object(&self, digest: &Digest, max_len: usize) -> ObjectRead {
+        if *digest == self.digest {
+            return self.read.clone();
+        }
+        self.inner.read_object(digest, max_len)
+    }
+}
+
+#[test]
+fn store_corruption_wrong_oversize_bytes_and_io_errors_are_refused() {
+    let (m, _) = fixture("impact-two-moves");
+    let c2_new = output_digest(&m, 7, 1);
+    let f1_new = output_digest(&m, 6, 0);
+    let run = |digest: Digest, read: ObjectRead| {
+        let src = Fixed { inner: &m.objects, digest, read };
+        let p = ImpactProject { objects: &src, ..m.project() };
+        compute_impact(&p, "agent/s1", &DiffOptions::default()).unwrap_err()
+    };
+    // The store reports an integrity failure (`CasError::Integrity`): record_invalid.
+    let e = run(c2_new, ObjectRead::Corrupt("integrity".into()));
+    assert_eq!((e.code(), e.digest()), ("record_invalid", Some(c2_new)));
+    // Bytes over 16 MiB that do not hash to the digest are refused, not skipped as oversize,
+    // for a record and for a feature alike.
+    let big = vec![b' '; fid_agent::impact::MAX_RECORD_BYTES + 1];
+    for d in [c2_new, f1_new] {
+        let e = run(d, ObjectRead::Bytes(big.clone()));
+        assert_eq!((e.code(), e.digest()), ("record_invalid", Some(d)));
+    }
+    // An I/O failure (`CasError::Io`): internal/storage.
+    let e = run(c2_new, ObjectRead::Unavailable("disk".into()));
+    assert_eq!(e.bus_code(), ("internal", "storage"));
+}
+
+#[test]
+fn the_registry_classes_come_from_definitions() {
+    let table = class_table(&command_defs().unwrap());
+    assert_eq!(table.get(COMPUTE_IMPACT), Some(&SideEffect::R1));
+    assert_eq!(table.get("agent.attach_brief@1"), Some(&SideEffect::W1));
+    // The fixture's registry table decides the classes; a header that disagrees is refused
+    // (oracle cases registry_class_mismatch and command_not_in_registry).
+    let (mut m, _) = fixture("impact-two-moves");
+    m.commands.insert("report.add_note@1".into(), SideEffect::W2);
+    let e = compute_impact(&m.project(), "agent/s1", &DiffOptions::default()).unwrap_err();
+    assert_eq!(e.bus_code(), ("internal", "invariant_violated"));
 }
 
 #[test]

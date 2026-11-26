@@ -9,6 +9,15 @@
    "name": "agent/e1"
   }
  ],
+ "commands": {
+  "align.refit_feature@1": "W2",
+  "feature.set_nominal@1": "W2",
+  "gdt.accept_result@1": "W3",
+  "gdt.eval_flatness@1": "W2",
+  "journal.create_branch@1": "W2",
+  "project.add_features@1": "W2",
+  "report.add_note@1": "W1"
+ },
  "entries": [
   {
    "branch": "main",
