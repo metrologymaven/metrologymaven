@@ -244,13 +244,20 @@ pub enum StatsError {
         /// Which rule the input broke.
         reason: BadInput,
     },
+    /// `stats.subgroup_size_unsupported{n}`: no control-chart constants for this subgroup size
+    /// (REQ-RPT.STATS.SPC.CONST-004; the table covers 2..=25).
+    SubgroupSizeUnsupported {
+        /// The subgroup size asked for.
+        n: u8,
+    },
 }
 
 impl StatsError {
-    /// The error code, `stats.bad_capability_input`.
+    /// The error code: `stats.bad_capability_input` or `stats.subgroup_size_unsupported`.
     pub fn code(self) -> &'static str {
         match self {
             StatsError::BadCapabilityInput { .. } => "stats.bad_capability_input",
+            StatsError::SubgroupSizeUnsupported { .. } => "stats.subgroup_size_unsupported",
         }
     }
 }
@@ -259,6 +266,7 @@ impl fmt::Display for StatsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             StatsError::BadCapabilityInput { reason } => write!(f, "{}: {}", self.code(), reason.as_str()),
+            StatsError::SubgroupSizeUnsupported { n } => write!(f, "{}: n = {n}", self.code()),
         }
     }
 }

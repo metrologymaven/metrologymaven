@@ -233,3 +233,5 @@ fixtures/hal/idl/sens/line/** -text
 fixtures/hal/idl/sens/gauenv/** -text
 # IO.CAD.IGES.SECT fixtures: digested in iges.toml and compared byte for byte (one uses CRLF).
 fixtures/io/cad/iges/sect/** -text
+# RPT.STATS.SPC.CONST released table: digested byte for byte (fixtures/rpt/stats/spc_constants_v1.sha256).
+crates/fid-stats/src/spc_constants_normal_v1.json -text
