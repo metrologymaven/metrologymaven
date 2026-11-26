@@ -715,8 +715,7 @@ fn arity2_columns_follow_the_mcm_block_blob_order() {
     let cards =
         fid_kci::CardRegistry::new(vec![fid_kci::parse_card(&card("test.affine.map@1.0.0", "2")).unwrap()]).unwrap();
     let algs: Vec<Box<dyn fid_kci::KernelAlgorithm>> = vec![Box::new(Recorder { seen: seen.clone() })];
-    let table =
-        fid_kci::AlgorithmTable::new(algs, cards).unwrap().with_manifest_core_digest(manifest.core_digest().clone());
+    let table = fid_kci::AlgorithmTable::new(algs, cards).unwrap().with_manifest_core_digest(*manifest.core_digest());
     let bm = BlockModel::prepare(&valid, &manifest, &table).unwrap();
     let plan = SamplingPlan::new(&valid).unwrap();
     let spec = BlockSpec {
