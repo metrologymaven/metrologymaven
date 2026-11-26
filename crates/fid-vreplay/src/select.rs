@@ -57,6 +57,12 @@
 //!
 //! Record IDs must be unique: a repeated ID is `pkg.malformed` `duplicate_record_id`.
 //!
+//! **No kernel attested.** A package whose `kernel_manifest_digest` is the reserved
+//! [`NO_KERNEL_MANIFEST`] (`CORE.JRN.ENTRY`) is refused as `pkg.malformed` `kernel_unattested`
+//! before any member is read or [`ArtifactSource::is_available`] is called: it attests no
+//! kernel to replay under. A kernel call recorded under the reserved digest was not recorded
+//! under the packaged kernel (rule 3, `kernel_manifest_mismatch`).
+//!
 //! # What is trusted
 //!
 //! Which results are replayable never rests on a class the package declares. A step is a
@@ -102,6 +108,13 @@ pub const MAX_SEGMENT_BYTES: u64 = 256 * 1024 * 1024;
 pub const MAX_LINE_BYTES: usize = 16 * 1024 * 1024;
 /// Largest `kernel/manifest.json`, in bytes (the kernel manifest's own input limit).
 pub const MAX_KERNEL_MANIFEST_BYTES: u64 = 4 * 1024 * 1024;
+/// The reserved `manifests.kernel` digest meaning "no kernel manifest attested" (spec node
+/// `CORE.JRN.ENTRY`, `fid_journal::NO_KERNEL_MANIFEST`): the SHA-256 of the empty string.
+/// Repeated here so the verifier does not link the journal crate; a test pins it.
+pub const NO_KERNEL_MANIFEST: Digest = Digest::from_bytes([
+    0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41,
+    0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55,
+]);
 /// Most ResultRecords in a package.
 pub const MAX_RECORDS: usize = 1_000_000;
 /// Most entries in a segment.
@@ -915,6 +928,13 @@ pub fn plan_with(
         other => return Err(bad("manifest.json", "evidence_tier", format!("{other:?}"))),
     };
     let kernel_digest = pkg.kernel_manifest_digest();
+    if kernel_digest == NO_KERNEL_MANIFEST {
+        return Err(bad(
+            "manifest.json",
+            "kernel_unattested",
+            "kernel_manifest_digest is the reserved no-kernel digest: no kernel is attested",
+        ));
+    }
     let members = pkg.members();
     let listed: BTreeSet<String> = members.iter().map(|m| m.path.clone()).collect();
     let points = packaged_points(&members)?;
@@ -1141,7 +1161,7 @@ impl<'a> Walker<'a> {
             if !self.algorithms.is_some_and(|a| a.contains(alg)) {
                 add(Reason::AlgorithmUnknown, alg.to_string());
             }
-            if entry.kernel != self.kernel_digest {
+            if entry.kernel != self.kernel_digest || entry.kernel == NO_KERNEL_MANIFEST {
                 add(Reason::KernelUnavailable, format!("kernel_manifest_mismatch:{}", entry.hash));
             }
             match &c.args {
@@ -1190,7 +1210,8 @@ impl<'a> Walker<'a> {
         match self.available {
             Some(a) => a,
             None => {
-                let a = self.artifacts.is_available(&self.kernel_digest);
+                // `plan_with` refuses the reserved digest first; never ask a source for it.
+                let a = self.kernel_digest != NO_KERNEL_MANIFEST && self.artifacts.is_available(&self.kernel_digest);
                 self.available = Some(a);
                 a
             }

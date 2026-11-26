@@ -664,6 +664,224 @@
     "migrator": null,
     "seq": 637
    }
+  },
+  {
+   "ac": "NO_KERNEL",
+   "expect": {
+    "entry_seq": 637,
+    "notes": [],
+    "primary": "input",
+    "secondary": [
+     "kernel"
+    ]
+   },
+   "name": "both unattested, input differs",
+   "recorded": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     {
+      "digest": "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+      "tag": "entity"
+     },
+     {
+      "digest": "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8",
+      "tag": "param"
+     }
+    ],
+    "kernel_manifest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "migrator": null,
+    "seq": 637
+   },
+   "replayed": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     {
+      "digest": "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+      "tag": "entity"
+     },
+     {
+      "digest": "sha256:e6217d00b6b1788e36635acf625a8b6d7533a2fa40e5a3462081b079a85d211b",
+      "tag": "param"
+     }
+    ],
+    "kernel_manifest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "migrator": null,
+    "seq": 637
+   }
+  },
+  {
+   "ac": "NO_KERNEL",
+   "expect": {
+    "entry_seq": 637,
+    "notes": [],
+    "primary": "kernel",
+    "secondary": []
+   },
+   "name": "both unattested, nothing else differs",
+   "recorded": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     {
+      "digest": "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+      "tag": "entity"
+     },
+     {
+      "digest": "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8",
+      "tag": "param"
+     }
+    ],
+    "kernel_manifest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "migrator": null,
+    "seq": 637
+   },
+   "replayed": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     {
+      "digest": "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+      "tag": "entity"
+     },
+     {
+      "digest": "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8",
+      "tag": "param"
+     }
+    ],
+    "kernel_manifest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "migrator": null,
+    "seq": 637
+   }
+  },
+  {
+   "ac": "NO_KERNEL",
+   "expect": {
+    "entry_seq": 637,
+    "notes": [],
+    "primary": "kernel",
+    "secondary": []
+   },
+   "name": "recorded unattested, replayed attested",
+   "recorded": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     {
+      "digest": "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+      "tag": "entity"
+     },
+     {
+      "digest": "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8",
+      "tag": "param"
+     }
+    ],
+    "kernel_manifest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "migrator": null,
+    "seq": 637
+   },
+   "replayed": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     {
+      "digest": "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+      "tag": "entity"
+     },
+     {
+      "digest": "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8",
+      "tag": "param"
+     }
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   }
+  },
+  {
+   "ac": "NO_KERNEL",
+   "expect": {
+    "entry_seq": 637,
+    "notes": [],
+    "primary": "kernel",
+    "secondary": []
+   },
+   "name": "recorded attested, replayed unattested",
+   "recorded": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     {
+      "digest": "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+      "tag": "entity"
+     },
+     {
+      "digest": "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8",
+      "tag": "param"
+     }
+    ],
+    "kernel_manifest": "sha256:d31199c900109279eee225716676702c744a5bb74a328a0a92f187c102d6499f",
+    "migrator": null,
+    "seq": 637
+   },
+   "replayed": {
+    "arguments": [
+     "sha256:c55b8ad3e7f91216912672b90c26156bcd858ed05e2dd16e8cf599b038e08bbf",
+     "sha256:51fc50a71420b86ad9b9dd0bb88d3921ec3e839964138c25395d758b86e61e9c",
+     "sha256:98330f74e869f9266ea62856d210a2d1a596bd234954e701bd7eda5b500c1fdd"
+    ],
+    "command": "geo.fit.circle@2",
+    "defaults_profile": "sha256:11a09a70341922b38074d13229641baa2d6ba397b667864d6fc2b69cdfdf2865",
+    "inputs": [
+     {
+      "digest": "sha256:deab85e0d3426264f1a8df73f577faece36d6eb45368d3d018ebc51ecbcb2305",
+      "tag": "entity"
+     },
+     {
+      "digest": "sha256:45f9f859637ef0c658417776ce8be5a620588166ddb4ff157a8245b03e85d8f8",
+      "tag": "param"
+     }
+    ],
+    "kernel_manifest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "migrator": null,
+    "seq": 637
+   }
   }
  ],
  "license": "CC-BY-4.0",

@@ -51,6 +51,15 @@ pub const TOMBSTONE: Digest = Digest([0; 32]);
 /// `prev` of sequence 1, the first entry of a stream: also `sha256:` followed by 64 zeros
 /// (`CORE.JRN.CHAIN.APPEND` REQ-002). `prev` is always a digest, never null.
 pub const GENESIS_PREV: Digest = Digest([0; 32]);
+/// Reserved `manifests.kernel` value meaning "no kernel manifest attested": the SHA-256 of
+/// the empty string (`sha256:e3b0c442...b855`), a value no kernel manifest can have. An entry
+/// recording it attests no kernel; readers take the kernel only through
+/// [`Manifests::kernel_attestation`], never from the raw digest. Re-exported as
+/// `fid_compose::NO_KERNEL_MANIFEST`.
+pub const NO_KERNEL_MANIFEST: Digest = Digest([
+    0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41,
+    0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55,
+]);
 /// The first sequence number of a stream.
 pub const FIRST_SEQ: u64 = 1;
 /// Input-digest tag of a consumed R1 result (REQ-008, D-031).
@@ -328,6 +337,63 @@ pub struct EntryTime {
 pub struct Manifests {
     pub registry: Digest,
     pub kernel: Digest,
+}
+
+/// What an entry's `manifests.kernel` attests about the kernel it ran under.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KernelAttestation {
+    /// The header records [`NO_KERNEL_MANIFEST`]: no kernel manifest was in force.
+    Unattested,
+    /// The header attests the kernel manifest with this digest.
+    Attested(Digest),
+}
+
+impl KernelAttestation {
+    /// Reads a recorded `manifests.kernel` digest: [`NO_KERNEL_MANIFEST`] is
+    /// [`KernelAttestation::Unattested`], anything else an attestation of that digest.
+    pub fn of(kernel: &Digest) -> KernelAttestation {
+        if *kernel == NO_KERNEL_MANIFEST {
+            KernelAttestation::Unattested
+        } else {
+            KernelAttestation::Attested(*kernel)
+        }
+    }
+
+    /// The attested kernel manifest digest, `None` when no kernel is attested.
+    pub fn digest(&self) -> Option<Digest> {
+        match self {
+            KernelAttestation::Unattested => None,
+            KernelAttestation::Attested(d) => Some(*d),
+        }
+    }
+
+    /// Whether a kernel manifest is attested.
+    pub fn is_attested(&self) -> bool {
+        matches!(self, KernelAttestation::Attested(_))
+    }
+}
+
+impl Manifests {
+    /// What `kernel` attests: [`KernelAttestation::Unattested`] for [`NO_KERNEL_MANIFEST`].
+    pub fn kernel_attestation(&self) -> KernelAttestation {
+        KernelAttestation::of(&self.kernel)
+    }
+
+    /// The attested kernel manifest digest, `None` when the entry attests no kernel.
+    pub fn attested_kernel(&self) -> Option<Digest> {
+        self.kernel_attestation().digest()
+    }
+}
+
+/// Whether a replay ran under the same attested kernel as its recording: both digests
+/// attest a kernel and they are equal. [`NO_KERNEL_MANIFEST`] on either side is never the
+/// same kernel, not even as itself, because it says nothing about the code that ran; a
+/// replay must then not claim the bit-identity owed to the same kernel.
+pub fn same_attested_kernel(recorded: &Digest, replayed: &Digest) -> bool {
+    match (KernelAttestation::of(recorded), KernelAttestation::of(replayed)) {
+        (KernelAttestation::Attested(a), KernelAttestation::Attested(b)) => a == b,
+        _ => false,
+    }
 }
 
 /// An input digest with its role tag, e.g. `param`, `entity` or `r1_result`.

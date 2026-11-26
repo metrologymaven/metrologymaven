@@ -10,6 +10,7 @@
 //! Everything here is D0: no clocks, no randomness, no hash-ordered collections.
 
 use crate::classify::ReplayOutcome;
+use crate::subst::NO_KERNEL;
 use fid_canon::{CValue, CanonError};
 use fid_types::{CommandId, Digest};
 use std::collections::BTreeMap;
@@ -249,8 +250,10 @@ pub struct Attribution {
 /// Compared items: input digests (`input`), argument commitments (`parameter`),
 /// defaults-profile digest (`defaults_profile`), command ID or migrator
 /// (`command_migration`) and kernel manifest digest (`kernel`). The first differing item
-/// in that order is primary, the others are secondary. When nothing differs the primary
-/// cause is `kernel` with note `no_input_difference`. `entry_seq` is `recorded.seq`;
+/// in that order is primary, the others are secondary. The kernel differs also when both
+/// sides record the reserved `fid_journal::NO_KERNEL_MANIFEST`: an unattested kernel is never
+/// the same kernel. When nothing differs the primary cause is `kernel` with note
+/// `no_input_difference`. `entry_seq` is `recorded.seq`;
 /// `replayed.seq` is ignored, since the replayed copy describes the same journal entry.
 pub fn attribute(recorded: &EntryFacts, replayed: &EntryFacts) -> Attribution {
     let differs = |c: Cause| match c {
@@ -258,7 +261,9 @@ pub fn attribute(recorded: &EntryFacts, replayed: &EntryFacts) -> Attribution {
         Cause::Parameter => recorded.arguments != replayed.arguments,
         Cause::DefaultsProfile => recorded.defaults_profile != replayed.defaults_profile,
         Cause::CommandMigration => recorded.command != replayed.command || recorded.migrator != replayed.migrator,
-        Cause::Kernel => recorded.kernel_manifest != replayed.kernel_manifest,
+        // The reserved "no kernel attested" digest is never the same kernel, not even as
+        // itself (CORE.JRN.ENTRY).
+        Cause::Kernel => recorded.kernel_manifest != replayed.kernel_manifest || recorded.kernel_manifest == NO_KERNEL,
     };
     let mut matching = Cause::ALL.iter().copied().filter(|c| differs(*c));
     match matching.next() {

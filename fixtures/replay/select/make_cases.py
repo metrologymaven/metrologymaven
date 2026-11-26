@@ -140,6 +140,10 @@ def kernel_manifest(algorithm_ids, name="synthetic-test-kernel"):
 KERNEL = kernel_manifest([FIT, DIST])
 KERNEL_DIGEST = sha(KERNEL.encode("utf-8"))
 OTHER_KERNEL_DIGEST = sha(kernel_manifest([FIT, DIST], name="another-kernel").encode("utf-8"))
+# CORE.JRN.ENTRY reserves the SHA-256 of the empty string as "no kernel attested". A package
+# that names it is refused (`kernel_unattested`) before any artifact lookup; an entry recorded
+# under it was not recorded under the packaged kernel (`kernel_manifest_mismatch`).
+NO_KERNEL = sha(b"")
 
 
 # --------------------------------------------------------------- journal
@@ -247,6 +251,7 @@ def select(case, available=True, max_calls=MAX_PLAN_CALLS, work_budget=WORK_BUDG
     points = set(case["points"])
     algs = case["algorithms"]
     kdigest = case["kernel_digest"]
+    assert kdigest != NO_KERNEL, "a package naming the reserved digest is refused, never selected"
     by_hash = {e["header"]["hash"]: i for i, e in enumerate(entries)}
     producers = {}
     for i, e in enumerate(entries):
@@ -331,7 +336,7 @@ def select(case, available=True, max_calls=MAX_PLAN_CALLS, work_budget=WORK_BUDG
             alg = c["algorithms"][0]
             if algs is None or alg not in algs:
                 fails.setdefault("ALGORITHM_UNKNOWN", set()).add(alg)
-            if h["manifests"]["kernel"] != kdigest:
+            if h["manifests"]["kernel"] != kdigest or h["manifests"]["kernel"] == NO_KERNEL:
                 fails.setdefault("KERNEL_UNAVAILABLE", set()).add("kernel_manifest_mismatch:" + h["hash"])
             p = entries[e]["payload"]
             if p is None or "args" not in p or "args" not in p.get("salts", {}):
@@ -546,6 +551,16 @@ def case_reasons():
     return c
 
 
+def case_no_kernel():
+    """An entry recorded with the reserved "no kernel attested" digest, beside an attested one."""
+    c = base_case()
+    p = add_points(c, "probe")
+    hok, _ = fit(c, p, "attested")
+    hnk, _ = fit(c, p, "unattested", kernel=NO_KERNEL)
+    c["records"] = [record("attested", "POINTS", FIT, hok), record("unattested", "POINTS", FIT, hnk)]
+    return c
+
+
 def case_shadow():
     """Review probe: a kernel fit at 2, a non-kernel step re-emitting its output C at 4 (C
     packaged), the distance at 5. The fit is planned and C comes from it, not the package."""
@@ -570,6 +585,7 @@ CASES = {
     "unknown-algo": case_unknown_algo,
     "reasons": case_reasons,
     "shadow": case_shadow,
+    "no-kernel": case_no_kernel,
 }
 
 # Variants: (case, variant name, select() keyword arguments).
@@ -610,6 +626,7 @@ LABELS = {
         "algorithm-unknown": "ALGORITHM_UNKNOWN",
     },
     "shadow": {"distance": ("ok", [2, 5]), "circle": ("ok", [2])},
+    "no-kernel": {"attested": ("ok", [2]), "unattested": "KERNEL_UNAVAILABLE"},
     "points.unavailable": {"hole-1": "KERNEL_UNAVAILABLE", "hole-2": "KERNEL_UNAVAILABLE",
                            "hole-3": "KERNEL_UNAVAILABLE"},
     "points.budget0": {"hole-1": "PLAN_TOO_LARGE", "hole-2": "PLAN_TOO_LARGE", "hole-3": "PLAN_TOO_LARGE"},
@@ -740,6 +757,10 @@ def malformed_cases():
     c = case_points()
     c["records"] = None
     out.append(("records-absent", package_bytes(c), "pkg.malformed", "records_missing"))
+
+    c = case_points()
+    c["kernel_digest"] = NO_KERNEL
+    out.append(("kernel-unattested", package_bytes(c), "pkg.malformed", "kernel_unattested"))
     return out
 
 

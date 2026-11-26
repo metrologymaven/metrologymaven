@@ -98,12 +98,9 @@ pub fn workspace_defs() -> Result<Vec<CommandDef>, BusError> {
 }
 
 /// The kernel manifest digest every entry records until a kernel manifest is in force: the
-/// SHA-256 of the empty string (`sha256:e3b0c442...b855`), a value no kernel manifest can
-/// have. `CORE.JRN` is to reserve it as "no kernel attested" (leaf Open questions).
-pub const NO_KERNEL_MANIFEST: Digest = Digest([
-    0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41,
-    0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55,
-]);
+/// SHA-256 of the empty string (`sha256:e3b0c442...b855`), which `CORE.JRN.ENTRY` reserves as
+/// "no kernel attested". Defined by `fid-journal`, whose readers take it as such.
+pub use fid_journal::NO_KERNEL_MANIFEST;
 
 // ------------------------------------------------------------------ host time and randomness
 

@@ -70,7 +70,11 @@
 //! - **Head cache ([`check_heads`]).** After a successful walk every `heads` row must name an
 //!   entry of the journal (`link/head_past_chain`) on its own branch (`link/head_branch`).
 //! - **Counts** on success: entries walked, distinct referenced blobs checked, checkpoints
-//!   checked, entries whose payload blob is absent.
+//!   checked, entries whose payload blob is absent, and verified entries whose
+//!   `manifests.kernel` is the reserved [`crate::NO_KERNEL_MANIFEST`] (`without_kernel`, in
+//!   [`Checked`] only). Such an entry verifies: the reserved digest is a valid header value
+//!   meaning "no kernel attested" (`CORE.JRN.ENTRY`), and nothing here reads it as an
+//!   attestation of a real kernel.
 //! - **Bounds.** [`VerifyOptions::max_entries`] rows, [`VerifyOptions::max_blobs`] distinct
 //!   referenced blobs, [`MAX_CHECKPOINTS`] checkpoints and [`MAX_ENTRY_REFS`] blob rows per
 //!   entry (`validation/input_limit` beyond); one header and one payload in memory at a
@@ -101,7 +105,8 @@ pub use store::{command_defs, list_store, verify_store, LIST_ENTRIES, VERIFY_CHA
 
 use crate::checkpoint::{Checkpoint, CheckpointError};
 use crate::entry::{
-    commitment, parse_digest, validate_header_value, Salt, FIRST_SEQ, GENESIS_PREV, SCHEMA_V1, SCHEMA_V2,
+    commitment, parse_digest, validate_header_value, KernelAttestation, Salt, FIRST_SEQ, GENESIS_PREV, SCHEMA_V1,
+    SCHEMA_V2,
 };
 use fid_canon::{digest_bytes, parse_with_limits, to_canonical_bytes, CValue, Digest, MAX_DEPTH};
 use std::collections::{BTreeMap, BTreeSet};
@@ -560,6 +565,10 @@ pub struct Checked {
     pub blobs: u64,
     pub checkpoints: u64,
     pub without_payload: u64,
+    /// Entries counted in `entries` whose `manifests.kernel` is the reserved
+    /// [`crate::NO_KERNEL_MANIFEST`]: they verify, but attest no kernel (`CORE.JRN.ENTRY`). Not part
+    /// of the `journal.verify_chain@1` result, whose shape `CORE.JRN.CHAIN.VERIFY` pins.
+    pub without_kernel: u64,
 }
 
 /// The result of `journal.verify_chain@1` (REQ-002, REQ-003, REQ-007).
@@ -669,6 +678,18 @@ fn check_header(bytes: &[u8], len: u64) -> Result<(Obj, Digest), Found> {
         return Err(found(FailureKind::Hash, "schema", "header is not an object"));
     };
     Ok((o, recorded))
+}
+
+/// Whether a schema-checked header records the reserved [`crate::NO_KERNEL_MANIFEST`] kernel.
+fn attests_no_kernel(o: &Obj) -> bool {
+    let kernel = match o.get("manifests") {
+        Some(CValue::Obj(m)) => match m.get("kernel") {
+            Some(CValue::Str(k)) => parse_digest(k),
+            _ => None,
+        },
+        _ => None,
+    };
+    kernel.is_some_and(|k| KernelAttestation::of(&k) == KernelAttestation::Unattested)
 }
 
 fn header_text<'a>(o: &'a Obj, k: &str) -> &'a str {
@@ -1026,6 +1047,9 @@ where
             return Ok(report);
         }
         report.checked.entries += 1;
+        if attests_no_kernel(&o) {
+            report.checked.without_kernel += 1;
+        }
         prev = hash;
         position = p.checked_add(1).ok_or_else(|| ReadError::InputLimit("sequence overflow".into()))?;
     }
