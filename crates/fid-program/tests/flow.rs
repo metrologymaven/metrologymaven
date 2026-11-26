@@ -77,7 +77,7 @@ fn assert_case(name: &str) -> FlowReport {
 #[test]
 fn every_case_matches() {
     let names: Vec<String> = section("cases").keys().cloned().collect();
-    assert_eq!(names.len(), 17);
+    assert_eq!(names.len(), 20);
     for n in names {
         assert_case(&n);
     }
@@ -213,6 +213,31 @@ fn ac6_deterministic() {
         let b = to_canonical_bytes(&analyse_flow(&p, &t).to_value()).unwrap();
         assert_eq!(a, b, "{name}");
     }
+}
+
+/// AC-7: a jump back to an earlier label is one `backward_jump` naming the jump step and the
+/// label, with no jump edge; a jump forward to a later label is clean. A backward jump out of
+/// a loop body is `backward_jump`, not `illegal_jump`.
+#[test]
+fn ac7_backward_jumps() {
+    let r = assert_case("backward-jump");
+    assert_eq!(r.diagnostics.len(), 1);
+    let d = &r.diagnostics[0];
+    let jump = program("backward-jump").main[3].step_id;
+    assert_eq!((d.code, d.step, d.severity()), (FlowCode::BackwardJump, Some(jump), Severity::Error));
+    assert_eq!(d.code.as_str(), "backward_jump");
+    assert_eq!(d.names, ["again"]);
+    assert!(r.cfgs[&SubId::Main].successors(jump).iter().all(|(_, k)| *k != EdgeKind::Jump));
+
+    let r = assert_case("forward-jump");
+    assert!(r.diagnostics.is_empty(), "{:?}", r.diagnostics);
+    let p = program("forward-jump");
+    let (jump, label) = (p.main[1].step_id, p.main[3].step_id);
+    assert!(r.cfgs[&SubId::Main].successors(jump).contains(&(Target::Step(label), EdgeKind::Jump)));
+
+    let r = assert_case("backward-jump-from-loop");
+    let codes: Vec<_> = r.diagnostics.iter().map(|d| (d.code, d.names.clone())).collect();
+    assert_eq!(codes, [(FlowCode::BackwardJump, vec!["top".to_string()])]);
 }
 
 #[test]
