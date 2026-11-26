@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-align-solve]
 satisfies: [REQ-ALN.BFIT.ICP-002, REQ-ALN.BFIT.ICP-005]
 covers: []
 depends_on: [ALN.BFIT.CONSTR, KRN.NUM]
@@ -67,7 +68,9 @@ Turns correspondences into weighted residual rows and their Jacobian with respec
 
 ## Open questions
 
-- None.
+- Build notes (fid-align-solve `icp::metric`): `Correspondences` (the structure of arrays named by `ALN.BFIT.ICP.CORR`'s Design, `valid` as `Vec<bool>`, `reason` with an extra `hit` value for valid points) is defined in `fid_align_solve::icp` because this leaf reads it; CORR fills it. `weights` is the per-point combined weight (normally `cs.combined_weights()`, or those scaled by the loop) and must cover `cs.n_points()` points. Refusals added beyond `nan_input` and `empty_rows`, all fail closed: `length_mismatch`, `invalid_weight` (negative), `inconsistent_correspondence` (`valid` disagrees with `reason`), `non_unit_normal` (point-to-plane, `|n·n - 1| > 1e-12`), `non_finite` (a row overflowed), `input_limit`, `allocation_failed`; `nan_input` also covers infinities.
+- For `ALN.BFIT.ICP.LOOP`: the twist columns are derivatives for a small motion `x -> x + w x x + v` about the origin of the coordinates the points are given in. The reduced columns mean the locked DoFs only when the points, feet and normals are passed in the lock frame, and they are first order: the loop must map each step onto the `ALN.BFIT.CONSTR` parameters, whose `pose_from_params` certifies the locks (`lock_drift`).
+- The 30 ms budget for 1,000,000 point-to-plane rows is not measured [unverified].
 
 ## Children
 
