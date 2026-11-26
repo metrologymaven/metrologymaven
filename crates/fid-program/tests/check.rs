@@ -95,7 +95,7 @@ fn check_diags(r: &CheckResult) -> Vec<&CheckDiag> {
 #[test]
 fn fixture_inputs_agree() {
     assert_eq!(manifest().quantity_catalogue_digest, fid_registry::QuantityCatalogue::digest(&catalogue()));
-    assert_eq!(cases().len(), 11);
+    assert_eq!(cases().len(), 12);
 }
 
 /// AC-1: the clean program passes with no errors, class W2, per-step classes as in
@@ -175,6 +175,18 @@ fn other_fixture_cases() {
     for name in ["deprecated", "unreachable", "literals", "limits", "zero-limit", "unchecked"] {
         assert_case(name);
     }
+}
+
+/// AUTO.PROG.FLOW REQ-010: a program with a backward jump fails the check with the flow
+/// module's `backward_jump` at the jump step.
+#[test]
+fn backward_jump_fails_the_check() {
+    let r = run("backward-jump");
+    assert!(!r.passed);
+    let ids = main_ids("backward-jump");
+    let d: Vec<_> = r.diagnostics.iter().map(|d| (d.module, d.code, d.step_id, d.severity)).collect();
+    assert_eq!(d, [(Module::Flow, "backward_jump", Some(ids[2]), Severity::Error)]);
+    assert_case("backward-jump");
 }
 
 /// REQ-001, D-035: a removed or hidden major, or one whose lifecycle state cannot be read, is

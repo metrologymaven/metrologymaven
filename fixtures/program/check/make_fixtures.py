@@ -491,6 +491,18 @@ def unchecked():
     return p, p.doc([s1, s2, s3, s4, s5], variables=[("k", "string")])
 
 
+def backward_jump():
+    """AUTO.PROG.FLOW REQ-010: a jump to a label before it is backward_jump (an error naming
+    the label), so the check fails; it is in document order with the other diagnostics. The
+    jump has no edge, so nothing becomes unreachable and the class stays R1."""
+    p = P(12)
+    s1 = p.step("label", name="again")
+    s2 = p.invoke("demo.measure", 1, {"feature": lit("bore-1")})
+    s3 = p.step("jump", label="again")
+    p.diag("flow", "backward_jump", ["again"], s3)
+    return p, p.doc([s1, s2, s3])
+
+
 CASES = {
     "clean": clean,
     "unknown-cmd": unknown_cmd,
@@ -502,6 +514,7 @@ CASES = {
     "literals": literals,
     "limits": limits,
     "unchecked": unchecked,
+    "backward-jump": backward_jump,
 }
 
 

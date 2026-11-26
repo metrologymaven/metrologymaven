@@ -3,9 +3,9 @@
 //!
 //! [`analyse_flow`] lowers `main` and every subroutine body into one control-flow graph
 //! ([`Cfg`]) each, builds the call graph, checks the static rules of
-//! REQ-AUTO.PROG.FLOW-001 to -008 and returns everything in a [`FlowReport`]. It never
-//! evaluates anything and never fails: every problem is a [`FlowDiag`], in a fixed order, so
-//! the report is byte-identical across runs and platforms (AC-6). Every walk uses an
+//! REQ-AUTO.PROG.FLOW-001 to -008 and -010 and returns everything in a [`FlowReport`]. It
+//! never evaluates anything and never fails: every problem is a [`FlowDiag`], in a fixed
+//! order, so the report is byte-identical across runs and platforms (AC-6). Every walk uses an
 //! explicit stack; only `BTreeMap`/`BTreeSet` are used.
 //!
 //! Every choice below is pinned here and stated in the PR that built this leaf.
@@ -27,8 +27,8 @@
 //!   first that holds, else the `false` edge.
 //! - `loop`: `true` to the first body step (`loop_back` to the loop itself when the body is
 //!   empty), then `loop_exit` to the loop's successor.
-//! - `jump`: `jump` to the label step when the target is legal (none otherwise); a
-//!   conditional jump then has `false` to its successor.
+//! - `jump`: `jump` to the label step when the target is legal and after the jump (none
+//!   otherwise); a conditional jump then has `false` to its successor.
 //! - `call`: `call` to [`Target::Entry`] of the callee when it is known, then the edge to
 //!   its successor.
 //! - `return`: `return` to `exit`.
@@ -53,6 +53,12 @@
 //! jump is legal when every body that encloses the label also encloses the jump (it may
 //! leave bodies, never enter one). Otherwise `illegal_jump` names the label and a reason:
 //! `into_body`, `other_subroutine` (the label exists only in another unit) or `undefined`.
+//!
+//! **Backward jumps** (REQ-010). A jump whose label passes the rule above but is at or before
+//! the jump in document order (depth first, as the nodes) is `backward_jump`, at the jump,
+//! naming the label; it has no `jump` edge either. A jump is judged by one rule only: an
+//! `illegal_jump` is not also a `backward_jump`. So every cycle within a unit passes a loop's
+//! `loop_back` edge and is bounded by [`MAX_ITERATIONS`].
 //!
 //! **Calls** (REQ-005). A call binds to the first subroutine of that name. The format has no
 //! parameter defaults, so every parameter is required. `bad_call` names the parameter (or
@@ -214,8 +220,8 @@ impl Severity {
     }
 }
 
-/// Diagnostic codes (REQ-AUTO.PROG.FLOW-001 to -008). Declaration order is report order at
-/// one step.
+/// Diagnostic codes (REQ-AUTO.PROG.FLOW-001 to -008, -010). Declaration order is report
+/// order at one step.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FlowCode {
     MissingIterationLimit,
@@ -223,6 +229,7 @@ pub enum FlowCode {
     BadCondition,
     BadLoopBounds,
     IllegalJump,
+    BackwardJump,
     DuplicateLabel,
     BadCall,
     MissingReturn,
@@ -240,6 +247,7 @@ impl FlowCode {
             FlowCode::BadCondition => "bad_condition",
             FlowCode::BadLoopBounds => "bad_loop_bounds",
             FlowCode::IllegalJump => "illegal_jump",
+            FlowCode::BackwardJump => "backward_jump",
             FlowCode::DuplicateLabel => "duplicate_label",
             FlowCode::BadCall => "bad_call",
             FlowCode::MissingReturn => "missing_return",
@@ -665,7 +673,7 @@ impl<'a> Analysis<'a> {
         cfg
     }
 
-    /// The label step a jump binds to, or `illegal_jump`.
+    /// The label step a jump binds to, or `illegal_jump` / `backward_jump` (REQ-003, -010).
     fn resolve(
         &mut self,
         u: &Unit<'_>,
@@ -675,7 +683,16 @@ impl<'a> Analysis<'a> {
         label: &str,
     ) -> Option<Uuid7> {
         let reason = match labels.get(label) {
-            Some(l) if jump.path.starts_with(&l.path) => return Some(l.step.step_id),
+            Some(l) if jump.path.starts_with(&l.path) => {
+                let (to, from) = (l.step.step_id, jump.step.step_id);
+                match (self.pos.get(&to), self.pos.get(&from)) {
+                    (Some(t), Some(f)) if t > f => return Some(to),
+                    _ => {
+                        self.step_diag(FlowCode::BackwardJump, u.id, from, vec![label.to_string()]);
+                        return None;
+                    }
+                }
+            }
             Some(_) => "into_body",
             None if units.iter().any(|o| o.id != u.id && o.label_names.contains(label)) => "other_subroutine",
             None => "undefined",
@@ -881,7 +898,7 @@ fn enter(
 }
 
 /// Lowers every unit of `program` into a CFG, builds the call graph and checks the static
-/// control-flow rules (REQ-AUTO.PROG.FLOW-001 to -009). `types` is the report of
+/// control-flow rules (REQ-AUTO.PROG.FLOW-001 to -010). `types` is the report of
 /// [`check_types`](crate::check_types) for the same program; conditions, loop bounds, call
 /// arguments and return values are judged by the types it gives. See the module docs for
 /// the rules and the diagnostic order. Never fails.

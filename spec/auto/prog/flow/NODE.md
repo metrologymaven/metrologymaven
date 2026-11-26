@@ -87,13 +87,13 @@ Project-authored programs under `fixtures/program/flow/` with expected CFGs and 
 
 - The target's recursion question is answered: recursion is allowed and bounded at run time by the call-depth limit (REQ-AUTO.PROG-007); the analysis only informs.
 - Error-handling edges (`on_error: goto`) are not in FMT yet; if FMT adds them (see `AUTO.PROG.INTERP.CALL`), add an `error` edge kind here.
-- **Unbounded backward-jump loops: resolved by REQ-AUTO.PROG.FLOW-010 (maintainer decision 2026-11-25).** `Analysis::resolve` (crates/fid-program/src/flow.rs:678) accepts a jump to a label at or before the jump, so `label; ...; jump` forms a cycle with no iteration limit (the `duplicate-label` fixture is one). REQ-010 makes such a jump a `backward_jump` error, so every cycle inside a unit goes through a `loop_back` edge, bounded by the iteration limits, and recursion is bounded by the call depth of 64. The code is still to be updated to enforce it, and the `duplicate-label` fixture must change.
-- REQ-010 not yet implemented in fid-program; must land before AUTO.PROG.INTERP.ENGINE is built.
+- **Unbounded backward-jump loops: resolved by REQ-AUTO.PROG.FLOW-010 (maintainer decision 2026-11-25).** A jump to a label at or before the jump formed a cycle with no iteration limit. REQ-010 makes such a jump a `backward_jump` error, so every cycle inside a unit goes through a `loop_back` edge, bounded by the iteration limits, and recursion is bounded by the call depth of 64. Implemented in `fid-program` (`Analysis::resolve`, `FlowCode::BackwardJump`); the `duplicate-label` fixture now jumps forward.
 - **Definite assignment** (follow-up from #418, AUTO.PROG.EXPR.TYPES): whether every use of a variable is preceded by an assignment on every path is a control-flow question for this node, but no REQ or AC here covers it and it is not built. It needs a REQ, here or in `AUTO.PROG.CHECK`.
 - **Obligation on `AUTO.PROG.CHECK`:** when `Program::parse` returns `schema_invalid`, call `iteration_limits` on the raw bytes, and report `bad_iteration_limit` only once per loop. Today a limit above 1 000 000 is reported by both `analyse_flow` (flow.rs:591) and `iteration_limits` (flow.rs:983).
 
 ## Change log
 
+- 2026-11-25: REQ-AUTO.PROG.FLOW-010 implemented in `fid-program`; fixtures `backward-jump`, `forward-jump` (AC-7) and `backward-jump-from-loop` added, `duplicate-label` changed to a forward jump.
 - 2026-11-25 (maintainer decision): added REQ-AUTO.PROG.FLOW-010, `backward_jump` error and AC-7. A jump to a label at or before it in document order is refused, so all cycles within a unit pass a `loop_back` edge. No REQ ID was renumbered.
 
 ## Children

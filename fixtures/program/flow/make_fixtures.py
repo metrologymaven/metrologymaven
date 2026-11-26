@@ -148,6 +148,7 @@ def lower(doc):
     cfgs, calls = [], set()
     for rank, (name, body) in enumerate(units):
         vs = visits(body)
+        at = {v[0]["step_id"]: i for i, v in enumerate(vs)}
         labels = {}
         for s, path, _, _ in vs:
             if s["kind"] == "label" and s["name"] not in labels:
@@ -170,7 +171,8 @@ def lower(doc):
                 out.append((succ, "loop_exit"))
             elif k == "jump":
                 t = labels.get(s["label"])
-                if t is not None and path[: len(t[1])] == t[1]:
+                # REQ-003 (no entering a body) and REQ-010 (the label is after the jump).
+                if t is not None and path[: len(t[1])] == t[1] and at[t[0]] > at[s["step_id"]]:
                     out.append((t[0], "jump"))
                 if "cond" in s:
                     out.append((succ, "false"))
@@ -371,14 +373,49 @@ def dead_code():
 
 
 def duplicate_label():
-    """REQ-004: two labels share a name; the jump binds to the first."""
+    """REQ-004: two labels share a name; the (forward) jump binds to the first."""
     p = P(18)
-    l1 = p.step("label", name="again")
-    l2 = p.step("comment", text="work")
-    l3 = p.step("label", name="again")
-    l4 = p.step("jump", label="again", cond="false")
-    p.diag("duplicate_label", None, l3, ["again"])
+    l1 = p.step("jump", label="again", cond="false")
+    l2 = p.step("label", name="again")
+    l3 = p.step("comment", text="work")
+    l4 = p.step("label", name="again")
+    p.diag("duplicate_label", None, l4, ["again"])
     return p, p.doc([l1, l2, l3, l4])
+
+
+def backward_jump():
+    """AC-7: a label followed later in the same body by a jump to it is backward_jump at the
+    jump, naming the label, and has no jump edge."""
+    p = P(23)
+    b1 = p.step("assign", var="n", expr="0")
+    b2 = p.step("label", name="again")
+    b3 = p.step("assign", var="n", expr="n + 1")
+    b4 = p.step("jump", label="again", cond="n < 3")
+    b5 = p.step("comment", text="after")
+    p.diag("backward_jump", None, b4, ["again"])
+    return p, p.doc([b1, b2, b3, b4, b5], variables=[("n", "int")])
+
+
+def forward_jump():
+    """AC-7: a jump to a label later in the same body is legal: no diagnostic."""
+    p = P(24)
+    f1 = p.step("assign", var="n", expr="0")
+    f2 = p.step("jump", label="skip", cond="n == 0")
+    f3 = p.step("assign", var="n", expr="1")
+    f4 = p.step("label", name="skip")
+    f5 = p.step("comment", text="after")
+    return p, p.doc([f1, f2, f3, f4, f5], variables=[("n", "int")])
+
+
+def backward_jump_from_loop():
+    """REQ-010: a jump out of a loop to a label before the loop leaves a body (legal under
+    REQ-003) but is backward, so it is backward_jump, not illegal_jump."""
+    p = P(25)
+    l1 = p.step("label", name="top")
+    j1 = p.step("jump", label="top", cond="true")
+    l2 = p.step("loop", mode="while", cond="true", max_iterations=2, body=[j1])
+    p.diag("backward_jump", None, j1, ["top"])
+    return p, p.doc([l1, l2])
 
 
 def bad_condition():
@@ -443,6 +480,9 @@ ERRORS = {
     "bad-calls": bad_calls,
     "dead-code": dead_code,
     "duplicate-label": duplicate_label,
+    "backward-jump": backward_jump,
+    "forward-jump": forward_jump,
+    "backward-jump-from-loop": backward_jump_from_loop,
     "bad-condition": bad_condition,
     "bad-return": bad_return,
     "mutual-recursion": mutual_recursion,
