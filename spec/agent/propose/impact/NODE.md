@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-agent]
+built_pr: 645
 satisfies: [REQ-AGENT.PROPOSE-004]
 covers: []
 depends_on: [CORE.JRN.BR, CORE.STO]
