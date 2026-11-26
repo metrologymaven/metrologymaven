@@ -1,0 +1,99 @@
+{
+ "description": "torus face (R 0.05 m, r 0.01 m) bounded by one tube circle that winds once in v",
+ "license": "CC-BY-4.0",
+ "body_id": "70a170a170a170a170a170a170a170a1",
+ "vertices": [
+  {
+   "point": [
+    0.051961524227066326,
+    0.03,
+    0.0
+   ],
+   "label": "v-tube"
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.01,
+    "origin": [
+     0.04330127018922194,
+     0.024999999999999998,
+     0.0
+    ],
+    "axis": [
+     0.49999999999999994,
+     -0.8660254037844387,
+     0.0
+    ],
+    "ref_dir": [
+     0.8660254037844387,
+     0.49999999999999994,
+     0.0
+    ]
+   },
+   "label": "e-tube"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-tube"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0
+   ],
+   "outer": true,
+   "label": "l-tube"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "torus",
+    "major_radius": 0.05,
+    "minor_radius": 0.01,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    0
+   ],
+   "label": "f-torus"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0
+   ],
+   "closed": false
+  }
+ ]
+}

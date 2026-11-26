@@ -426,7 +426,7 @@ fn accept_nurbs(
     }
 }
 
-fn curve_point(c: &CurveDef, t: f64) -> Result<[f64; 3], EvalError> {
+pub(crate) fn curve_point(c: &CurveDef, t: f64) -> Result<[f64; 3], EvalError> {
     if let Some(a) = c.as_analytic() {
         return Ok(a.eval(t, 0)?.p);
     }
