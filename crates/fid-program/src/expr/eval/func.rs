@@ -211,7 +211,10 @@ fn to_unit(ctx: &Ctx<'_>, d: &Dec, u: &str, sym: &str) -> Result<Value, Fail> {
         let p = u128::from(fu.ratio.num()) * u128::from(ft.ratio.den());
         let q = u128::from(fu.ratio.den()) * u128::from(ft.ratio.num());
         let g = gcd(p, q);
-        let k = if g == 0 { None } else { pow10_of(p / g, q / g) };
+        let k = match (p.checked_div(g), q.checked_div(g)) {
+            (Some(a), Some(b)) => pow10_of(a, b),
+            _ => None,
+        };
         if let Some(k) = k {
             let dd = Dec::fit(d.sbig(), i64::from(d.scale()) - i64::from(k)).map_err(|_| Fail::DecOverflow)?;
             return Ok(Value::of_dec(dd, Some(sym.to_string())));

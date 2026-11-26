@@ -456,7 +456,7 @@ impl Dec {
 
     /// `floor`, `ceil` or round half to even to an integer, exactly; `None` if the result
     /// does not fit `i64`.
-    pub(crate) fn to_int(&self, mode: IntMode) -> Option<i64> {
+    pub(crate) fn to_int(self, mode: IntMode) -> Option<i64> {
         let scale = self.scale();
         if scale <= 0 {
             let mut m = Big::from_u128(self.coef.unsigned_abs());
