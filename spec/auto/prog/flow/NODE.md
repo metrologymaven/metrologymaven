@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-25
 ---
 
 # AUTO.PROG.FLOW: Loops, branches, jumps and subroutines
@@ -53,6 +53,7 @@ The static semantics of control flow in Command Programs: counted and conditiona
 - **REQ-AUTO.PROG.FLOW-007** The analysis shall report `unreachable_step` (severity warning) for every step that no path from the program entry reaches, treating loop and branch conditions as unknown.
 - **REQ-AUTO.PROG.FLOW-008** The analysis shall report each recursive cycle in the call graph as `recursion` (severity info); recursion is legal and bounded at run time by the call-depth limit of 64 [unverified].
 - **REQ-AUTO.PROG.FLOW-009** The published CFG shall give, for each step, its successor steps with edge kinds (`next`, `true`, `false`, `loop_back`, `loop_exit`, `jump`, `call`, `return`), so the interpreter and the editor use one definition of control flow.
+- **REQ-AUTO.PROG.FLOW-010** If a `jump` targets a label at or before the jump in document order, then the analysis shall report `backward_jump` naming the jump and target. A program that passes then has every cycle within a unit going through a loop's `loop_back` edge, so it is bounded by the iteration limits, and recursion is bounded at run time by the call depth of 64.
 
 ## Acceptance criteria
 
@@ -62,13 +63,14 @@ The static semantics of control flow in Command Programs: counted and conditiona
 - **AC-4** (error path) Given a subroutine `area(w: length, h: length) -> area` with a path ending without `return`, then `missing_return`; given a call `area(w = 3[mm])`, then `bad_call` naming `h`.
 - **AC-5** Given `fixtures/program/flow/dead-code.json` (steps after an unconditional jump), then `unreachable_step` for exactly those step IDs.
 - **AC-6** (determinism) Given the same program, the diagnostics and CFG are byte-identical across runs and platforms.
+- **AC-7** (error path) Given `fixtures/program/flow/backward-jump.json` (a `label` followed later in the same body by a `jump` to it), then one `backward_jump` naming the jump step and label. Given `fixtures/program/flow/forward-jump.json` (a `jump` to a `label` later in the same body), then no `backward_jump` and no error.
 
 ## Design
 
 - **Registry command(s):** none; library `analyse_flow(&Program, &TypeReport) -> FlowReport`.
 - **Data structures:** `Cfg { subroutine: SubId, nodes: Vec<StepId>, edges: Vec<(StepId, StepId, EdgeKind)> }`; `CallGraph { edges: BTreeSet<(SubId, SubId)> }`; `FlowReport { cfgs: BTreeMap<SubId, Cfg>, call_graph, diagnostics: Vec<Diag> }`.
 - **Algorithm:** structured lowering of nested steps into a CFG per subroutine; label table per subroutine with the enclosing-body path of each label and jump to check legality; reachability by worklist from entry over CFG and call edges; return-path check by backward dataflow; Tarjan SCC on the call graph for recursion.
-- **Errors (diagnostics):** `missing_iteration_limit`, `bad_iteration_limit`, `bad_condition`, `bad_loop_bounds`, `illegal_jump`, `duplicate_label`, `bad_call`, `missing_return`, `bad_return`, `unreachable_step` (warning), `recursion` (info).
+- **Errors (diagnostics):** `missing_iteration_limit`, `bad_iteration_limit`, `bad_condition`, `bad_loop_bounds`, `illegal_jump`, `backward_jump`, `duplicate_label`, `bad_call`, `missing_return`, `bad_return`, `unreachable_step` (warning), `recursion` (info).
 - **Determinism:** D0; `BTreeMap`/`BTreeSet` only, iteration in step order.
 - **Performance budget:** 10 000-step program analysed in < 50 ms [unverified until measured].
 - **Crate:** `fid-program` (module `flow`).
@@ -85,9 +87,14 @@ Project-authored programs under `fixtures/program/flow/` with expected CFGs and 
 
 - The target's recursion question is answered: recursion is allowed and bounded at run time by the call-depth limit (REQ-AUTO.PROG-007); the analysis only informs.
 - Error-handling edges (`on_error: goto`) are not in FMT yet; if FMT adds them (see `AUTO.PROG.INTERP.CALL`), add an `error` edge kind here.
-- **Unbounded backward-jump loops BLOCK `AUTO.PROG.INTERP.ENGINE`.** `Analysis::resolve` (crates/fid-program/src/flow.rs:678) accepts a jump to a label at or before the jump, so `label; ...; jump` forms a cycle with no iteration limit (the `duplicate-label` fixture is one). Maintainer decision on the direction: a future REQ-AUTO.PROG.FLOW-010 makes a jump whose label is at or before the jump in document order a `backward_jump` error. Then every cycle inside a unit goes through a `loop_back` edge, bounded by the iteration limits, and recursion is bounded by the call depth of 64. It lands in a spec PR before ENGINE is built.
+- **Unbounded backward-jump loops: resolved by REQ-AUTO.PROG.FLOW-010 (maintainer decision 2026-11-25).** `Analysis::resolve` (crates/fid-program/src/flow.rs:678) accepts a jump to a label at or before the jump, so `label; ...; jump` forms a cycle with no iteration limit (the `duplicate-label` fixture is one). REQ-010 makes such a jump a `backward_jump` error, so every cycle inside a unit goes through a `loop_back` edge, bounded by the iteration limits, and recursion is bounded by the call depth of 64. The code is still to be updated to enforce it, and the `duplicate-label` fixture must change.
+- REQ-010 not yet implemented in fid-program; must land before AUTO.PROG.INTERP.ENGINE is built.
 - **Definite assignment** (follow-up from #418, AUTO.PROG.EXPR.TYPES): whether every use of a variable is preceded by an assignment on every path is a control-flow question for this node, but no REQ or AC here covers it and it is not built. It needs a REQ, here or in `AUTO.PROG.CHECK`.
 - **Obligation on `AUTO.PROG.CHECK`:** when `Program::parse` returns `schema_invalid`, call `iteration_limits` on the raw bytes, and report `bad_iteration_limit` only once per loop. Today a limit above 1 000 000 is reported by both `analyse_flow` (flow.rs:591) and `iteration_limits` (flow.rs:983).
+
+## Change log
+
+- 2026-11-25 (maintainer decision): added REQ-AUTO.PROG.FLOW-010, `backward_jump` error and AC-7. A jump to a label at or before it in document order is refused, so all cycles within a unit pass a `loop_back` edge. No REQ ID was renumbered.
 
 ## Children
 
