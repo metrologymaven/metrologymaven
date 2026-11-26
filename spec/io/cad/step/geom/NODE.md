@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-25
 ---
 
 # IO.CAD.STEP.GEOM: STEP curve and surface mapping with approximation error
@@ -46,7 +46,7 @@ Turns STEP geometric entities (points, directions, placements, curves, surfaces)
 
 - **REQ-IO.CAD.STEP.GEOM-001** Analytic STEP curves and surfaces shall be mapped to the matching GEO analytic type with parameters converted to metres and no approximation.
 - **REQ-IO.CAD.STEP.GEOM-002** B-spline curves and surfaces (rational or not) shall be mapped to GEO NURBS with knots, multiplicities, weights and control points preserved, and any that fail GEO NURBS validation shall be reported with the entity number and error.
-- **REQ-IO.CAD.STEP.GEOM-003** Where a surface is converted to an approximating NURBS, the mapper shall record per face the maximum distance between the exact and approximating surfaces, in metres, over a parameter sample of at least 33 × 33 points per knot span pair [unverified: sample density adequacy].
+- **REQ-IO.CAD.STEP.GEOM-003** Where a surface is converted to an approximating NURBS, the mapper shall record per surface entity the maximum distance between the exact and approximating surfaces, in metres, over a parameter sample of at least 33 × 33 points per knot span pair [unverified: sample density adequacy]. Per-face association is done by IO.CAD.STEP.BREP.
 - **REQ-IO.CAD.STEP.GEOM-004** If an approximation error exceeds the approximation tolerance (default 1e-7 m), then the mapper shall refine the approximation up to 4 times and, if still above, report the face as `approx_out_of_tolerance` with the achieved error.
 - **REQ-IO.CAD.STEP.GEOM-005** An unsupported geometric entity type shall be reported by entity number and type in the skipped-entities list and shall not stop the mapping of other entities.
 
