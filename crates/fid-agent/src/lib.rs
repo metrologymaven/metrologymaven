@@ -7,14 +7,23 @@
 //!   `cargo run -p fid-agent --bin agent-style-lint`; the standard itself is `agent/STYLE.md`.
 //! - [`propose`]: [`ProposalBrief`] schema (`x-untrusted` free-text fields) and
 //!   `agent.attach_brief@1` (`AGENT.PROPOSE.BRIEF`).
+//! - [`impact`]: [`ProposalImpact`] and `agent.compute_impact@1`, computed from the branch
+//!   diff and the stored ResultRecords (`AGENT.PROPOSE.IMPACT`).
 
 pub mod catalog;
+pub mod impact;
 pub mod propose;
 pub mod style;
 
 pub use catalog::{
     catalog_version, check, parse_catalog, skill_dir_name, CatalogIndex, CatalogRow, Code, Finding, IndexRow, Inputs,
     CATALOG_FORMAT, CORE_PROFILE, MIN_APP_WORKFLOWS,
+};
+pub use impact::{
+    class_table, compute_impact, compute_impact_command_def, invoke_compute_impact_cli, invoke_compute_impact_mcp,
+    Change, CommandClasses, Evidence, ImpactError, ImpactProject, ImpactRow, Label, MemoryObjects, ObjectRead,
+    ObjectSource, Outcome, ProposalImpact, RecordFacts, StoredValue, Uec, CLI_COMPUTE_IMPACT, COMPUTE_IMPACT,
+    IMPACT_SCHEMA, MCP_COMPUTE_IMPACT,
 };
 pub use propose::{
     attach_brief, attach_brief_command_def, brief_schema, command_defs, invoke_attach_brief_cli,
