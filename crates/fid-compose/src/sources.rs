@@ -232,6 +232,7 @@ pub const UNWIRED: &[(&str, &str)] = &[
     ("report.list_balloon@1", "no handler in fid-report"),
     ("report.list_template@1", "no handler in fid-report"),
     ("report.move_balloon@1", "no handler in fid-report"),
+    ("report.move_block_layout@1", "no handler in fid-report"),
     ("report.relink_balloon@1", "no handler in fid-report"),
     ("report.remove_balloon@1", "no handler in fid-report"),
     ("report.remove_block@1", "no handler in fid-report"),

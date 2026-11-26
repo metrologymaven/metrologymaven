@@ -13,6 +13,7 @@ use super::error::LayoutError;
 use super::event::LayoutEvent;
 use super::model::ReportLayout;
 use crate::doc::{MemoryBackend, ReportBackend, ReportError, ReportEvent, ReportId, StoredReport};
+use crate::layout::frame::ReportFrames;
 use fid_canon::CValue;
 use fid_project::Uuid;
 use std::collections::BTreeMap;
@@ -28,16 +29,25 @@ pub trait LayoutBackend: ReportBackend {
 
 /// An in-memory project: the reports of a [`MemoryBackend`], their page setups and one
 /// journal of report and page-setup events, oldest first.
+///
+/// It also stores block frames (`RPT.DESIGN.PLACE.FRAME`, [`crate::layout::frame`]), whose
+/// events share the same journal.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MemoryProject {
-    docs: MemoryBackend,
+    pub(crate) docs: MemoryBackend,
     layouts: BTreeMap<ReportId, ReportLayout>,
-    journal: Vec<CValue>,
+    pub(crate) frames: BTreeMap<ReportId, ReportFrames>,
+    pub(crate) journal: Vec<CValue>,
 }
 
 impl MemoryProject {
     pub fn new(project: Uuid) -> MemoryProject {
-        MemoryProject { docs: MemoryBackend::new(project), layouts: BTreeMap::new(), journal: Vec::new() }
+        MemoryProject {
+            docs: MemoryBackend::new(project),
+            layouts: BTreeMap::new(),
+            frames: BTreeMap::new(),
+            journal: Vec::new(),
+        }
     }
 
     /// The journal as event values, oldest first (the input of [`super::replay_exact`]).
