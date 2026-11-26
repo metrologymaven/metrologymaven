@@ -32,7 +32,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 /// `fid_journal::NO_KERNEL_MANIFEST` in this module's digest type.
-const NO_KERNEL: Digest = Digest::from_bytes(fid_journal::NO_KERNEL_MANIFEST.0);
+pub(crate) const NO_KERNEL: Digest = Digest::from_bytes(fid_journal::NO_KERNEL_MANIFEST.0);
 
 /// Most steps in one span.
 pub const MAX_STEPS: usize = 1 << 20;

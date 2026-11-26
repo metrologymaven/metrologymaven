@@ -16,7 +16,7 @@ use fid_types::Digest;
 use fid_vreplay::compare::ResultInput;
 use fid_vreplay::select::{
     plan, plan_with, ArtifactSource, InputSource, Limits, MemberInfo, PackageError, PackageView, Reason, Selected,
-    Selection,
+    Selection, NO_KERNEL_MANIFEST,
 };
 
 const FIX: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/replay/select");
@@ -201,6 +201,49 @@ fn req001_every_reason_and_detail() {
     assert_eq!(reason_of(&sel, "substituted-non-kernel"), None);
     // Kernel outputs are recomputed even when packaged.
     assert_eq!(entry_indices(&sel, "kernel-output-recomputed"), [2, 16, 17]);
+}
+
+/// Records every digest it is asked about.
+struct Spy(std::cell::RefCell<Vec<Digest>>);
+
+impl ArtifactSource for Spy {
+    fn is_available(&self, d: &Digest) -> bool {
+        self.0.borrow_mut().push(*d);
+        true
+    }
+}
+
+#[test]
+fn no_kernel_manifest_is_the_sha256_of_nothing() {
+    assert_eq!(NO_KERNEL_MANIFEST.as_str(), fid_canon::digest_bytes(b"").to_string());
+}
+
+/// CORE.JRN.ENTRY reserved digest: a package naming it is refused before any artifact lookup.
+#[test]
+fn a_package_attesting_no_kernel_is_refused_before_any_lookup() {
+    let mut pkg = open("malformed/kernel-unattested.zip");
+    assert_eq!(pkg.kernel_manifest_digest(), NO_KERNEL_MANIFEST);
+    let spy = Spy(Default::default());
+    let err = plan(&mut pkg, &spy).unwrap_err();
+    assert_eq!(err.code(), "pkg.malformed");
+    assert_eq!(err.reason(), Some("kernel_unattested"));
+    assert!(spy.0.borrow().is_empty(), "asked {:?}", spy.0.borrow());
+}
+
+/// A kernel call recorded under the reserved digest is `kernel_manifest_mismatch`, and the
+/// reserved digest is never looked up.
+#[test]
+fn an_entry_attesting_no_kernel_is_a_kernel_manifest_mismatch() {
+    let mut pkg = open("no-kernel.zip");
+    let spy = Spy(Default::default());
+    let sel = plan(&mut pkg, &spy).unwrap();
+    check("no-kernel", None, &sel);
+    assert_eq!(reason_of(&sel, "attested"), None);
+    assert_eq!(reason_of(&sel, "unattested"), Some(Reason::KernelUnavailable));
+    let n = sel.not_replayable().find(|n| n.record_id == "unattested").unwrap();
+    assert!(n.detail.starts_with("kernel_manifest_mismatch:"), "{}", n.detail);
+    assert!(!spy.0.borrow().contains(&NO_KERNEL_MANIFEST));
+    assert!(spy.0.borrow().iter().all(|d| *d == pkg.kernel_manifest_digest()));
 }
 
 #[test]

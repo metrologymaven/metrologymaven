@@ -326,6 +326,26 @@ fn req004_req005_remaining_cases() {
     assert_eq!(got.notes, vec!["no_input_difference".to_string()]);
 }
 
+/// CORE.JRN.ENTRY reserved digest: an unattested kernel on both sides still counts as a
+/// differing kernel, so a differing input puts `kernel` in secondary and no case gets the
+/// `no_input_difference` note.
+#[test]
+fn unattested_kernels_are_never_the_same_kernel() {
+    let reserved = Digest::from_bytes(fid_journal::NO_KERNEL_MANIFEST.0);
+    let cases: Vec<_> = attribution_cases().into_iter().filter(|c| c.1 == "NO_KERNEL").collect();
+    assert_eq!(cases.len(), 4);
+    for (name, _, rec, rep, want) in &cases {
+        assert!(rec.kernel_manifest == reserved || rep.kernel_manifest == reserved, "{name}");
+        let got = attribute(rec, rep);
+        assert_eq!(got, *want, "{name}");
+        assert!(got.notes.is_empty(), "{name}");
+    }
+    let (name, _, rec, rep, _) = &cases[0];
+    assert_eq!((rec.kernel_manifest, rep.kernel_manifest), (reserved, reserved), "{name}");
+    let got = attribute(rec, rep);
+    assert_eq!((got.primary, got.secondary), (Cause::Input, vec![Cause::Kernel]), "{name}");
+}
+
 fn run_once() -> Vec<u8> {
     let sp = span();
     let res: BisectResult = bisect(1000, |k| -> Result<bool, ()> {

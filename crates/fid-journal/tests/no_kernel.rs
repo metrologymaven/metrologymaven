@@ -164,30 +164,61 @@ fn verification_accepts_and_counts_unattested_entries() {
     assert_eq!(keys, ["blobs", "checkpoints", "entries", "without_payload"]);
 }
 
+/// A relabelled kernel fails the hash; ordinary tampering of an unattested entry (a re-pointed
+/// `prev`, corrupt payload bytes, another entry's payload) fails with its usual error. The
+/// counts stop before the failing entry.
 #[test]
-fn a_relabelled_kernel_fails_the_hash_and_counts_stop_before_it() {
+fn tampering_fails_with_its_normal_error_and_counts_stop_before_it() {
     let f = fixture();
     let stream = st(&f, "stream").to_string();
     let cases = arr(&f, "tampered");
-    assert_eq!(cases.len(), 2);
+    let names: Vec<&str> = cases.iter().map(|c| st(as_obj(c), "name")).collect();
+    assert_eq!(
+        names,
+        [
+            "attested_to_none",
+            "none_to_attested",
+            "unattested_prev_relinked",
+            "unattested_payload_corrupt",
+            "unattested_payload_swapped"
+        ]
+    );
     for c in cases {
         let c = as_obj(c);
+        let name = st(c, "name");
         let (mut rows, mut blobs) = rows(&f);
         let seq = int(c, "seq");
         let row = rows.iter_mut().find(|r| r.seq as u64 == seq).unwrap();
-        row.header = st(c, "header").as_bytes().to_vec();
-        row.header_len = row.header.len() as u64;
+        for (k, v) in obj(c, "row") {
+            let CValue::Str(v) = v else { panic!("{name}: row.{k} is {v:?}") };
+            match k.as_str() {
+                "header" => {
+                    row.header = v.as_bytes().to_vec();
+                    row.header_len = row.header.len() as u64;
+                }
+                "hash" => row.hash = v.clone(),
+                "prev_hash" => row.prev_hash = Some(v.clone()),
+                "payload_digest" => row.refs = vec![("payload".to_string(), v.clone())],
+                other => panic!("{name}: unknown row field {other}"),
+            }
+        }
+        for (d, v) in obj(c, "store") {
+            let CValue::Str(v) = v else { panic!("{name}: store value is {v:?}") };
+            blobs.0.insert(digest(d).0, v.as_bytes().to_vec());
+        }
         let report = verify(&stream, rows, &mut blobs);
         let expect = obj(c, "expect");
         let want = obj(expect, "failure");
-        let got = report.failure.as_ref().unwrap_or_else(|| panic!("{} verified", st(c, "name")));
-        assert_eq!(got.seq, Some(int(want, "seq")), "{}", st(c, "name"));
-        assert_eq!(got.kind, FailureKind::Hash);
-        assert_eq!(got.kind.as_str(), st(want, "kind"));
-        assert_eq!(got.reason, st(want, "reason"), "{}", st(c, "name"));
+        let got = report.failure.as_ref().unwrap_or_else(|| panic!("{name} verified"));
+        assert_eq!(got.seq, Some(int(want, "seq")), "{name}");
+        assert_eq!(got.kind.as_str(), st(want, "kind"), "{name}");
+        assert_eq!(got.reason, st(want, "reason"), "{name}");
+        if name.contains("_to_") {
+            assert_eq!(got.kind, FailureKind::Hash, "{name}");
+        }
         let counts = obj(expect, "checked");
-        assert_eq!(report.checked.entries, int(counts, "entries"), "{}", st(c, "name"));
-        assert_eq!(report.checked.without_kernel, int(counts, "without_kernel"), "{}", st(c, "name"));
+        assert_eq!(report.checked.entries, int(counts, "entries"), "{name}");
+        assert_eq!(report.checked.without_kernel, int(counts, "without_kernel"), "{name}");
     }
 }
 

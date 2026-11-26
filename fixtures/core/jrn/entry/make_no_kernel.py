@@ -12,7 +12,9 @@ digests one bit away from the reserved one. Verification (CORE.JRN.CHAIN.VERIFY 
 journal holding such entries succeeds; it counts, among the verified entries, those that
 attest no kernel (`without_kernel`). Relabelling an entry's kernel in the stored header
 bytes without re-hashing it is `hash/hash_mismatch` at that sequence, and the counts stop
-before it. Two kernels are "the same attested kernel" only when both attest a kernel and
+before it. Ordinary tampering of an unattested entry fails as for any entry: a re-pointed
+`prev` is `link/broken`, payload bytes that do not hash to their digest `blob/corrupt`, and
+another entry's payload `blob/payload_mismatch`. Two kernels are "the same attested kernel" only when both attest a kernel and
 the digests are equal; the reserved digest is never the same kernel as anything, itself
 included.
 
@@ -166,12 +168,34 @@ def build():
         "without_payload": 0,
     }
     assert full == {"entries": 9, "without_kernel": 4, "without_payload": 0}
+    assert rows[1]["payload"].count("op-02") == 1
     tampered = []
+
+    def tamper(name, seq, kind, reason, row=None, store=None):
+        expect = {"ok": False, "failure": {"seq": seq, "kind": kind, "reason": reason},
+                  "checked": counts_before(rows, seq)}
+        tampered.append({"name": name, "seq": seq, "row": row or {}, "store": store or {}, "expect": expect})
+
     # An attested kernel relabelled as "none attested", and the reverse.
     for name, seq, to in (("attested_to_none", 6, NO_KERNEL), ("none_to_attested", 5, REAL_A)):
-        expect = {"ok": False, "failure": {"seq": seq, "kind": "hash", "reason": "hash_mismatch"}}
-        expect["checked"] = counts_before(rows, seq)
-        tampered.append({"name": name, "seq": seq, "header": relabel(rows, seq, to), "expect": expect})
+        tamper(name, seq, "hash", "hash_mismatch", row={"header": relabel(rows, seq, to)})
+    # Ordinary tampering of an unattested entry (seq 2) fails exactly as for any entry.
+    r2 = rows[1]
+    assert r2["kernel"] == NO_KERNEL
+    # prev re-pointed and the header re-hashed, columns kept consistent: only the link breaks.
+    h = json.loads(r2["header"])
+    del h["hash"]
+    forged = sha(b"forged prev")
+    h["prev"] = forged
+    h["hash"] = sha(canon(h))
+    tamper("unattested_prev_relinked", 2, "link", "broken",
+           row={"header": canon(h).decode("ascii"), "hash": h["hash"], "prev_hash": forged})
+    # The stored payload bytes no longer hash to the payload digest the row names.
+    tamper("unattested_payload_corrupt", 2, "blob", "corrupt",
+           store={r2["payload_digest"]: r2["payload"].replace("op-02", "op-99")})
+    # The row names another entry's (sound) payload: its commitments do not reproduce.
+    tamper("unattested_payload_swapped", 2, "blob", "payload_mismatch",
+           row={"payload_digest": rows[2]["payload_digest"]})
     # Same-attested-kernel pairs: (recorded, replayed, same).
     pairs = []
     for a in (NO_KERNEL, REAL_A, REAL_B, NEAR):

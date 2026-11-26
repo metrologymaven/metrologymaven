@@ -71,6 +71,7 @@ Synthetic spans and attribution cases under `fixtures/core/rpl/bisect/`, generat
 ## Open questions
 
 - The cause precedence is this leaf's choice; the concept docs list the causes without an order.
+- **Unattested kernels (PR #644, `CORE.JRN.ENTRY` reserved no-kernel digest).** `attribute` now treats the kernel as differing whenever either side records `NO_KERNEL_MANIFEST`, both sides included, because an unattested kernel is never the same kernel. This changes REQ-005's output for that case: when both sides are unattested and nothing else differs, the result is primary `kernel` with no `no_input_difference` note (the kernel differs), and a differing input puts `kernel` in secondary. REQ-005 should say "no compared item differs, counting an unattested kernel as differing" when this node is next changed.
 
 ## Children
 
