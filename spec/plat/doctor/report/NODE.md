@@ -9,6 +9,7 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-doctor]
 satisfies: [REQ-PLAT.DOCTOR-003, REQ-PLAT.DOCTOR-008]
 covers: []
 depends_on: [PLAT.DOCTOR.PROBE, PLAT.DOCTOR.LOOKUP]
@@ -78,7 +79,12 @@ Golden JSON and text files under `fixtures/plat/doctor/`, derived from the PROBE
 
 ## Open questions
 
-- None.
+- **Built in `fid-doctor` module `report`** (all six ACs, REQ-001 to REQ-006). Tests: `crates/fid-doctor/tests/report.rs`; independent stdlib oracle `fixtures/plat/doctor/report/make_report.py` (report JSON, text view and redaction re-implemented from this node's rules; every redaction case is also hand-labelled); schema check `fixtures/plat/doctor/report/check_report_schema.py` (`jsonschema`, 2020-12). Inputs are invented (D-038); D-045 does not apply (no GD&T rule).
+- **Schema (deviation).** `platform/doctor-report.schema.json` is written by the oracle script, not by an `xtask doctor-schema` from the Rust types: the crate has no serde derive (it serialises through `fid-canon`), and keeping the schema out of the implementation makes the schema check an independent cross-check. The PROBE snapshot schema is embedded verbatim as a `$defs` resource with its own `$id`, so the script's `--check` fails when that schema changes. The parser is stricter than the schema where JSON Schema cannot say it (profiles in name order, shortfalls and unknowns in field order, outcome recomputed from tier and verdicts); `invalid_cases.json` labels those cases `schema_valid: true`.
+- **Shape.** "Fixed field order" is RFC 8785 key order. The outcome is carried in `assessment.outcome` with `assessment.exit_code` (LOOKUP's shape), not repeated at the top level. `tool_version` is supplied by the caller (the CMD leaf passes its binary's version), so goldens do not change with the workspace version.
+- **Text view.** Rendered by walking the same value tree as the JSON, so every leaf appears; strings are quoted with `"` and backslash escaped, and every control, bidi and other format character is written as `\u{hex}` (C6). The exact layout is in the `report::text` module docs.
+- **Redaction.** `Identity::from_os()` reads the user name, host name and home directory at call time (environment variables; on Linux `/proc/sys/kernel/hostname` or `/etc/hostname`; elsewhere `hostname`) and fails closed with `identity_unavailable` when one is missing. `Redactor::new(identity, install_dir)` refuses a relative or root install directory, one with `..`, and one that holds the home directory. The rules (paths, then home, then user and host names; whole word, ASCII case-insensitive; a path with spaces is taken whole only when it starts with the install or home directory) are in the `report::redact` module docs. Redacted: every probed free-text string and the tool version. Kept: closed-vocabulary values and profile names (they come from the installed profile file, not the machine). A detail that redaction lengthens past 200 characters is cut to 199 and ends with `…`; an `arch` past 64 bytes is refused (`redaction_overflow`). A URL's `//host/...` part is redacted as a path (over-redaction, fail closed).
+- **For PLAT.DOCTOR.CMD.** Use `report.for_sharing(&Redactor::new(&Identity::from_os()?, install_dir)?, include_identifying)`, and `DoctorReport::parse` for `show-report`.
 
 ## Children
 

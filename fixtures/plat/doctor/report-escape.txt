@@ -1,0 +1,83 @@
+Metrology Maven doctor report
+schema_version: 1
+tool_version: "0.1.0"
+phase: "P1a"
+redacted: false
+
+Platform
+  os:
+    status: "known"
+    value:
+      family: "windows"
+      version: "10.0.22631"
+  arch:
+    status: "known"
+    value: "x86_64"
+  tier:
+    status: "known"
+    value:
+      kind: "tier"
+      tier: "tier1"
+  snapshot_schema_version: 1
+
+Hardware
+  cpu:
+    status: "known"
+    value:
+      instruction_set_level: "x86-64-v3"
+      model: "Synthetic \u{1b}[31mRED\u{1b}[0m CPU \u{1b}]0;title\u{7}"
+      physical_cores: 8
+  ram:
+    detail: "meminfo [2Jcleared [0m"
+    reason: "error"
+    status: "unknown"
+  storage:
+    status: "known"
+    value:
+      [0]:
+        free_gib: 200
+        role: "install"
+        total_gib: 512
+      [1]:
+        free_gib: 450
+        role: "data"
+        total_gib: 1024
+  display:
+    status: "known"
+    value: [2560, 1440]
+
+GPU
+  gpu:
+    status: "known"
+    value:
+      adapter: "GPU \u{202e}evil\u{202c} name"
+      backend: "dx12"
+      device_type: "discrete"
+      driver_version: "560.94"
+      fallback: false
+      fallback_cause: "none"
+      reason: ""
+      vram_gib: 12
+
+Verdicts
+  outcome: "indeterminate"
+  exit_code: 4
+  assessment_schema_version: 1
+  profiles:
+    [0]:
+      name: "minimum"
+      reason: null
+      shortfalls: []
+      unknowns: ["ram_gib"]
+      verdict: "indeterminate"
+    [1]:
+      name: "recommended"
+      reason: null
+      shortfalls: []
+      unknowns: ["ram_gib"]
+      verdict: "indeterminate"
+
+Unknowns
+  ram: error "meminfo [2Jcleared [0m"
+  profile "minimum": not compared: "ram_gib"
+  profile "recommended": not compared: "ram_gib"

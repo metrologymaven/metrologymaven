@@ -1,0 +1,85 @@
+Metrology Maven doctor report
+schema_version: 1
+tool_version: "0.1.0"
+phase: "P1a"
+redacted: true
+
+Platform
+  os:
+    status: "known"
+    value:
+      family: "windows"
+      version: "10.0.22631"
+  arch:
+    status: "known"
+    value: "x86_64"
+  tier:
+    status: "known"
+    value:
+      kind: "tier"
+      tier: "tier1"
+  snapshot_schema_version: 1
+
+Hardware
+  cpu:
+    status: "known"
+    value:
+      instruction_set_level: "x86-64-v3"
+      model: "Synthetic Workstation CPU 8C"
+      physical_cores: 8
+  ram:
+    status: "known"
+    value:
+      available_gib: 24
+      total_gib: 32
+  storage:
+    status: "known"
+    value:
+      [0]:
+        free_gib: 200
+        role: "install"
+        total_gib: 512
+      [1]:
+        free_gib: 450
+        role: "data"
+        total_gib: 1024
+  display:
+    detail: "display probe failed for user <redacted:user> on host <redacted:host> reading <redacted:path> via C:\\Program Files\\Metrology Maven\\bin\\edid.dll"
+    reason: "error"
+    status: "unknown"
+
+GPU
+  gpu:
+    status: "known"
+    value:
+      adapter: "Synthetic Discrete GPU 12G (<redacted:host>)"
+      backend: "dx12"
+      device_type: "discrete"
+      driver_version: "560.94"
+      fallback: false
+      fallback_cause: "none"
+      reason: "policy file <redacted:path> chosen by <redacted:user>"
+      vram_gib: 12
+
+Verdicts
+  outcome: "indeterminate"
+  exit_code: 4
+  assessment_schema_version: 1
+  profiles:
+    [0]:
+      name: "minimum"
+      reason: null
+      shortfalls: []
+      unknowns: ["display"]
+      verdict: "indeterminate"
+    [1]:
+      name: "recommended"
+      reason: null
+      shortfalls: []
+      unknowns: ["display"]
+      verdict: "indeterminate"
+
+Unknowns
+  display: error "display probe failed for user <redacted:user> on host <redacted:host> reading <redacted:path> via C:\\Program Files\\Metrology Maven\\bin\\edid.dll"
+  profile "minimum": not compared: "display"
+  profile "recommended": not compared: "display"
