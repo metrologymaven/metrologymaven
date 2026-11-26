@@ -14,7 +14,9 @@
 
 use fid_bus::error::{BusError, Detail, InternalReason, PreconditionReason};
 use fid_bus::handler::{Event, Handler, HandlerCtx, HandlerError, HandlerSet, StateView, ValidParams};
+use fid_canon::CValue;
 use fid_project::Uuid;
+use fid_project_cmd::query::{self, QueryOp};
 use fid_project_cmd::SharedSource;
 use std::collections::BTreeSet;
 use std::fmt;
@@ -79,11 +81,52 @@ fn none(_set: &mut HandlerSet, _parts: &ProjectParts) -> Result<(), BusError> {
     Ok(())
 }
 
-/// `fid-project-cmd`: the two element-tree queries (`CORE.PRJ.TREE.QUERY`, R0) and the four
-/// container commands (`CORE.PRJ.CONT.HIER`, W2). The stage and tree-group commands change the
-/// element tree, which this composition does not fold yet, so they stay in [`UNWIRED`].
+/// The adapter of one `CORE.PRJ.TREE.QUERY` read: `fid_project_cmd::query::run_query` for the
+/// events (none), and the query's result value, which `QueryHandler` computes but does not
+/// return through `Handler::run_with_result`.
+struct QueryAdapter {
+    op: QueryOp,
+    namespace: Uuid,
+}
+
+impl QueryAdapter {
+    fn result(&self, view: &dyn StateView, params: &ValidParams) -> Result<CValue, BusError> {
+        match self.op {
+            QueryOp::ListElements => query::list_result(view, params.value(), self.namespace),
+            QueryOp::DescribeElement => query::describe_result(view, params.value()),
+        }
+    }
+}
+
+impl Handler for QueryAdapter {
+    fn run(&self, view: &dyn StateView, params: &ValidParams, ctx: &HandlerCtx) -> Result<Vec<Event>, HandlerError> {
+        self.run_with_result(view, params, ctx).map(|(events, _)| events)
+    }
+
+    fn run_with_result(
+        &self,
+        view: &dyn StateView,
+        params: &ValidParams,
+        ctx: &HandlerCtx,
+    ) -> Result<(Vec<Event>, Option<CValue>), HandlerError> {
+        if ctx.cancel().is_cancelled() {
+            return Err(HandlerError::Cancelled);
+        }
+        Ok((Vec::new(), Some(self.result(view, params)?)))
+    }
+}
+
+/// `fid-project-cmd`: the two element-tree queries (`CORE.PRJ.TREE.QUERY`, R0, through
+/// [`QueryAdapter`]) and the four container commands (`CORE.PRJ.CONT.HIER`, W2). The stage and
+/// tree-group commands change the element tree, which this composition does not fold yet, so
+/// they stay in [`UNWIRED`].
 fn project_cmd(set: &mut HandlerSet, parts: &ProjectParts) -> Result<(), BusError> {
-    fid_project_cmd::query::register(set, parts.namespace)?;
+    let defs = query::command_defs().map_err(|e| {
+        BusError::Internal(InternalReason::InvariantViolated, Detail::new(&format!("query definitions: {e}")))
+    })?;
+    for (op, def) in QueryOp::ALL.into_iter().zip(defs) {
+        set.register(def, Box::new(QueryAdapter { op, namespace: parts.namespace }))?;
+    }
     fid_project_cmd::register_containers(set, parts.namespace, &parts.ids)
 }
 
@@ -193,6 +236,8 @@ pub const UNWIRED: &[(&str, &str)] = &[
     ("report.remove_page@1", "no handler in fid-report"),
     ("report.renumber_balloon@1", "no handler in fid-report"),
     ("report.save_template@1", "no handler in fid-report"),
+    ("report.set_page_layout@1", "no handler in fid-report"),
+    ("report.show_page_layout@1", "no handler in fid-report"),
     ("report.show_report@1", "no handler in fid-report"),
     ("report.show_template@1", "no handler in fid-report"),
     ("request.file_request@1", "no handler in fid-bus"),
