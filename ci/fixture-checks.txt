@@ -8,6 +8,7 @@ bash crates/fid-catalog/tests/offline.sh
 bash crates/fid-store/tests/offline.sh
 cargo run -q -p fid-design -- color-check --root design --baseline fixtures/ux/tokens/check/palette-baseline.json
 cargo run -q -p fid-design -- comp-check --root design/components --package design
+cargo run -q -p fid-design -- pattern-check --root design/patterns --package design --journeys acceptance/journeys/persona
 cargo run -q -p fid-design -- space-check --root design
 cargo xtask convergence-check --manifest fixtures/aln/bfit/stop-manifest.json
 cargo xtask convergence-doc --manifest fixtures/aln/qa/hist-manifest/fixed.json --check fixtures/aln/qa/hist-manifest/expected-fragment.md
@@ -340,6 +341,7 @@ python fixtures/unc/valid/make_fixtures.py --check
 python fixtures/ux/comp/schema/make_fixtures.py --check
 python fixtures/ux/icons/class/glyph_oracle.py --check
 python fixtures/ux/icons/grid/make_fixtures.py --check
+python fixtures/ux/pattern/schema/make_fixtures.py --check
 python fixtures/ux/report/page/make_fixtures.py --check
 python fixtures/ux/research/plan/make_fixtures.py --check
 python fixtures/ux/screens/inv/make_fixtures.py --check

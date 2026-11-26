@@ -1,0 +1,30 @@
+{
+  "app": "inspect",
+  "format": "journey-map@1",
+  "kind": "job",
+  "map_id": "fx-review",
+  "personas": [
+    "JOB.PER.01"
+  ],
+  "phase": "P1a",
+  "revision": 1,
+  "steps": [
+    {
+      "actor": "human",
+      "command": "palette.run_command@1",
+      "handoff": null,
+      "human_only": false,
+      "n": 1,
+      "owner": "UX.PATTERN.CMDFLOW"
+    },
+    {
+      "actor": "human",
+      "command": "palette.run_command@1",
+      "handoff": null,
+      "human_only": false,
+      "n": 2,
+      "owner": "UX.PATTERN.CMDFLOW"
+    }
+  ],
+  "subject": "JOB.USE.01"
+}

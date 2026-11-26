@@ -405,7 +405,7 @@ pub fn parse_pairs(text: &str) -> Result<Pairs, String> {
 }
 
 /// Splits a spec into its front block and the prose lines after it.
-fn split_front(text: &str) -> Result<(String, Vec<&str>), &'static str> {
+pub(crate) fn split_front(text: &str) -> Result<(String, Vec<&str>), &'static str> {
     let mut lines = text.lines();
     match lines.next() {
         Some(l) if l.trim_end() == "```toml" => {}
@@ -423,7 +423,7 @@ fn split_front(text: &str) -> Result<(String, Vec<&str>), &'static str> {
 }
 
 /// `[a-z][a-z0-9-]*`, at most 64 bytes.
-fn is_ident(s: &str) -> bool {
+pub(crate) fn is_ident(s: &str) -> bool {
     let mut b = s.bytes();
     s.len() <= 64
         && b.next().is_some_and(|c| c.is_ascii_lowercase())
@@ -431,7 +431,7 @@ fn is_ident(s: &str) -> bool {
 }
 
 /// Non-blank text of at most [`MAX_TEXT_CHARS`] characters with no control character.
-fn is_text(s: &str) -> bool {
+pub(crate) fn is_text(s: &str) -> bool {
     !s.trim().is_empty() && s.chars().count() <= MAX_TEXT_CHARS && !s.chars().any(char::is_control)
 }
 

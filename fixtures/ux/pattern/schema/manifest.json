@@ -1,0 +1,30 @@
+{
+  "commands": [
+    {
+      "id": "journal.undo_last",
+      "major": 1
+    },
+    {
+      "id": "palette.open",
+      "major": 1
+    },
+    {
+      "id": "palette.run_command",
+      "major": 1
+    },
+    {
+      "id": "report.export_pdf",
+      "major": 2
+    },
+    {
+      "id": "view.select_all",
+      "major": 1
+    },
+    {
+      "id": "view.select_one",
+      "major": 1
+    }
+  ],
+  "format": 1,
+  "quantity_catalogue_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+}
