@@ -238,7 +238,7 @@ fn code_only(src: &str) -> String {
 #[test]
 fn ac5_eval_module_is_pure() {
     let dir = root().join("crates/fid-program/src/expr/eval");
-    let mut files: Vec<PathBuf> = std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().path()).collect();
+    let mut files: Vec<PathBuf> = std::fs::read_dir(dir).unwrap().map(|e| e.unwrap().path()).collect();
     files.sort();
     assert_eq!(
         files.iter().map(|f| f.file_name().unwrap().to_string_lossy().into_owned()).collect::<Vec<_>>(),
