@@ -1,0 +1,22 @@
+[package]
+name = "fid-io-iges"
+description = "Metrology Maven bounded parser and deterministic writer for fixed-column ASCII IGES sections, with exact unit resolution (spec node IO.CAD.IGES.SECT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# The reader harness: Budget, BoundedSource, IoError, Position, UntrustedText (IO.REG.LIMITS).
+fid-io-reg = { path = "../fid-io-reg" }
+
+[dev-dependencies]
+# Tests check the corpus manifest's SHA-256 digests. Already in the tree through fid-io-reg.
+fid-canon = { path = "../fid-canon" }
+# Tests read the IGES corpus manifest (IO.CORP.MANIF schema) as an untyped TOML table.
+# Already in the lock (fid-io-dmis and others), same features.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+[lints]
+workspace = true
