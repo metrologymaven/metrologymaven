@@ -427,6 +427,24 @@ struct Value {
     literal: Option<String>,
 }
 
+/// The static type of each parameter of a command's `params_schema` and whether it is a value
+/// of record, exactly as [`check_types`] judges an expression argument for it (for
+/// `AUTO.PROG.CHECK`). `None` when the catalogue gives one unit symbol to two kinds, in which
+/// case nothing is typed.
+pub(crate) fn param_types(
+    schema: &CValue,
+    catalogue: &dyn QuantityCatalogue,
+) -> Option<BTreeMap<String, (Option<Type>, bool)>> {
+    let kinds = Kinds::new(catalogue).ok()?;
+    let mut out = BTreeMap::new();
+    if let Some(CValue::Obj(props)) = obj(schema).and_then(|m| m.get("properties")) {
+        for (name, s) in props {
+            out.insert(name.clone(), (schema_type(s, name, &kinds, 0), value_of_record(s, schema, 0)));
+        }
+    }
+    Some(out)
+}
+
 /// Whether a parameter schema holds a value of record anywhere inside it: a schema with
 /// `"value_of_record": true` (CORE.REG.DEF.SCHEMA REQ-011), found through `items`, `prefixItems`,
 /// `allOf`, `anyOf`, `oneOf`, `properties` and local `$ref`s (`#/$defs/<name>` of the

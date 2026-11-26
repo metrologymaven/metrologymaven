@@ -86,6 +86,7 @@
 mod check;
 mod infer;
 
+pub(crate) use check::param_types;
 pub use check::{assignable, check_types, value_of_record, MAX_TYPE_DEPTH};
 pub use infer::{type_of, LIBRARY};
 

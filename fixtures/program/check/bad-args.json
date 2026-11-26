@@ -1,0 +1,1 @@
+{"format":"fid-program","format_version":1,"main":[{"args":{"colour":{"literal":"red"},"offset":{"expr":"5[deg]"}},"command":"demo.set_offset","kind":"invoke","major":2,"step_id":"0190c000-0000-7000-8000-000000000302"}],"meta":{"title":"AUTO.PROG.CHECK fixture"},"params":[],"program_id":"0190c000-0000-7000-8000-000000000301","subroutines":[],"variables":[]}

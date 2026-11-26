@@ -2057,6 +2057,7 @@ name = "fid-program"
 version = "0.0.1"
 dependencies = [
  "cap",
+ "fid-bus",
  "fid-canon",
  "fid-geo-frame",
  "fid-registry",
@@ -2201,6 +2202,7 @@ dependencies = [
  "fid-ors",
  "fid-pkg",
  "fid-profile-cmd",
+ "fid-program",
  "fid-program-rec",
  "fid-project",
  "fid-project-cmd",

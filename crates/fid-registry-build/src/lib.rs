@@ -132,7 +132,7 @@ fn report_defs() -> Result<Vec<CommandDef>, DefError> {
 /// `fid-scan-mesh-cmd` declares `mesh.invert_normals@1` of SCAN.MESHOP.CUT.INVERT.
 /// `fid-hal-runtime` declares `device.show_devices@1` of HAL.ACQ.SESS.REG.
 /// `fid-unc-inst` declares the three instrument-model commands of UNC.INST.SCHEMA.
-pub const SOURCES: [Source; 20] = [
+pub const SOURCES: [Source; 21] = [
     Source { krate: "fid-align", defs: fid_align::command_defs },
     Source { krate: "fid-bus", defs: fid_bus::policy::projection::command_defs },
     Source { krate: "fid-dep", defs: dep_defs },
@@ -144,6 +144,7 @@ pub const SOURCES: [Source; 20] = [
     Source { krate: "fid-mig", defs: fid_mig::command_defs },
     Source { krate: "fid-ors", defs: fid_ors::command_defs },
     Source { krate: "fid-profile-cmd", defs: fid_profile_cmd::command_defs },
+    Source { krate: "fid-program", defs: fid_program::command_defs },
     Source { krate: "fid-program-rec", defs: program_rec_defs },
     Source { krate: "fid-project-cmd", defs: fid_project_cmd::command_defs },
     Source { krate: "fid-qual", defs: fid_qual::command_defs },

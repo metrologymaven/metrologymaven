@@ -7,7 +7,8 @@ Writes, from hand-written tables in this file:
   `area` and `time`;
 - fixtures/manifest/prog-demo.json: a CORE.REG.MAN manifest with result schemas, quantity
   kinds, an enum parameter, a `value_of_record` parameter and an `x-ref: result`
-  parameter (a result reference, not a value of record since CORE.REG.DEF.SCHEMA REQ-011);
+  parameter (a result reference, not a value of record since CORE.REG.DEF.SCHEMA REQ-011),
+  plus the `demo.*` commands of AUTO.PROG.CHECK (DEMO_COMMANDS);
   definition_digest = SHA-256 of the RFC 8785 form of each definition
   without that field, quantity_catalogue_digest = SHA-256 of catalogue.json;
 - fixtures/program/types/valid/*.json and fixtures/program/types/*.json: canonical
@@ -125,6 +126,108 @@ COMMANDS = [
 ]
 
 
+# The `demo.*` commands of AUTO.PROG.CHECK (spec/auto/prog/check/NODE.md, Test fixtures):
+# several side-effect classes, one deprecated major with a replacement, one M1 command and
+# one human-only command. They are full CORE.REG.DEF.FIELD definitions (lifecycle with
+# `since`) so the checker's agent-view test can export them through CORE.REG.MAN. No
+# AUTO.PROG.EXPR.TYPES program uses them.
+STR = {"type": "string"}
+AXIS = {"enum": ["x", "y", "z"], "type": "string"}
+
+
+def demo_params(props, required):
+    return {"additionalProperties": False, "properties": props, "required": required, "type": "object"}
+
+
+CALIBRATE = {
+    "$defs": {"mode": {"enum": ["coarse", "fine"], "type": "string"}},
+    "additionalProperties": False,
+    "oneOf": [{"required": ["probe"]}, {"required": ["stylus"]}],
+    "properties": {"mode": {"$ref": "#/$defs/mode"}, "probe": STR, "stylus": STR},
+    "required": ["mode"],
+    "type": "object",
+}
+
+DEMO_COMMANDS = [
+    ("demo.calibrate", 1, {"params": CALIBRATE, "side_effect": "R1"}),
+    (
+        "demo.approve_plan",
+        1,
+        {
+            "human_only": True,
+            "mcp_projection": "request_only",
+            "params": demo_params({"plan": dict(STR, maxLength=64)}, ["plan"]),
+            "side_effect": "W3",
+        },
+    ),
+    (
+        "demo.measure",
+        1,
+        {
+            "params": demo_params({"feature": dict(STR, maxLength=64), "samples": {"maximum": 100, "minimum": 1, "type": "integer"}}, ["feature"]),
+            "result": obj({"deviation": LEN}),
+            "side_effect": "R1",
+        },
+    ),
+    (
+        "demo.move_axis",
+        1,
+        {
+            "exposure": ["cli", "python"],
+            "mcp_projection": "never",
+            "network": "device",
+            "params": demo_params({"axis": AXIS, "distance": LEN}, ["axis", "distance"]),
+            "side_effect": "M1",
+        },
+    ),
+    ("demo.read_status", 1, {"params": demo_params({}, []), "result": obj({"ready": {"type": "boolean"}}), "side_effect": "R0"}),
+    (
+        "demo.set_offset",
+        1,
+        {
+            "lifecycle": {"remove_after": "2027-06-01", "replaced_by": "demo.set_offset@2", "since": "2026-06-01", "state": "deprecated"},
+            "params": demo_params({"offset": LEN}, ["offset"]),
+            "side_effect": "W2",
+        },
+    ),
+    (
+        "demo.set_offset",
+        2,
+        {
+            "params": demo_params({"axis": AXIS, "note": dict(STR, maxLength=64), "offset": LEN}, ["axis", "offset"]),
+            "side_effect": "W2",
+        },
+    ),
+]
+
+
+def demo_definition(cid, major, f):
+    d = {
+        "algorithms": [],
+        "description": "Fixture definition for AUTO.PROG.CHECK.",
+        "determinism": "D0",
+        "effects": [],
+        "exposure": f.get("exposure", ["cli", "mcp", "python"]),
+        "fs_effect": "none",
+        "human_only": f.get("human_only", False),
+        "id": cid,
+        "idempotency": "natural",
+        "lifecycle": f.get("lifecycle", {"since": "2026-01-15", "state": "active"}),
+        "major": major,
+        "mcp_projection": f.get("mcp_projection", "exposed"),
+        "params_schema": f["params"],
+        "preconditions": [],
+        "result_schema": f.get("result", obj({})),
+        "side_effect": f["side_effect"],
+        "title": "Fixture %s@%d" % (cid, major),
+        "undo": "not_undoable",
+        "web": "available",
+    }
+    if "network" in f:
+        d["network"] = f["network"]
+    return d
+
+
 def manifest(cat_digest):
     cmds = []
     for cid, major, params, result in COMMANDS:
@@ -149,6 +252,10 @@ def manifest(cat_digest):
             "undo": "not_undoable",
             "web": "available",
         }
+        d["definition_digest"] = sha(canon(d))
+        cmds.append(d)
+    for cid, major, fields in DEMO_COMMANDS:
+        d = demo_definition(cid, major, fields)
         d["definition_digest"] = sha(canon(d))
         cmds.append(d)
     cmds.sort(key=lambda d: (d["id"], d["major"]))
