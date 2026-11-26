@@ -1721,6 +1721,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-io-iges"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-io-reg",
+ "toml",
+]
+
+[[package]]
 name = "fid-io-las"
 version = "0.0.1"
 dependencies = [

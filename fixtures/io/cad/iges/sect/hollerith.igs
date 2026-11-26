@@ -1,0 +1,17 @@
+Metrology Maven test fixture for IO.CAD.IGES.SECT.                      S0000001
+Invented data, CC-BY-4.0; not taken from any third-party file.          S0000002
+1H//1H;/7HA,B;C/D/13Hhollerith.igs/9HMM-ORACLE/3H1.0/32/38/6/308/15/    G0000001
+11HMM-RECEIVER/1.0/10/2HCM/1/0.08/15H20261125.120000/0.0001/100.0/      G0000002
+15HInvented Author/21HInvented Organisation/11/0/15H20261125.120000/;   G0000003
+     212       1       0       0       0       0       0       001020304D0000001
+     212       0       0       6       0      R1          NOTE 1       0D0000002
+     116       7       0       0       0       5      -3       000000000D0000003
+     116       0       0       1       0                       P       0D0000004
+212/1/                                                                 1P0000001
+147HA long invented note that spans more than one Parameter Data       1P0000002
+ line, with the delimiters / and ; and , inside it, which the Ho       1P0000003
+llerith count protects./1.0//0H/-7/                                    1P0000004
+70Hxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx       1P0000005
+xxxxxxxxx;                                                             1P0000006
+116/-1.0/+2./.5/-1;                                                    3P0000007
+S0000002G0000003D0000004P0000007                                        T0000001

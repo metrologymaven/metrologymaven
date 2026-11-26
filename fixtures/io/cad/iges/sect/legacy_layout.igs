@@ -1,0 +1,39 @@
+Metrology Maven test fixture for IO.CAD.IGES.SECT.                      S      1
+Invented data, CC-BY-4.0; not taken from any third-party file.          S      2
+1H,,                                                                    G      1
+1H;,                                                                    G      2
+10HMM-FIXTURE,                                                          G      3
+18Hthree_entities.igs,                                                  G      4
+9HMM-ORACLE,                                                            G      5
+3H1.0,                                                                  G      6
+32,                                                                     G      7
+38,                                                                     G      8
+6,                                                                      G      9
+308,                                                                    G     10
+15,                                                                     G     11
+11HMM-RECEIVER,                                                         G     12
+1.0,                                                                    G     13
+2,                                                                      G     14
+2HMM,                                                                   G     15
+1,                                                                      G     16
+0.08,                                                                   G     17
+15H20261125.120000,                                                     G     18
+0.0001,                                                                 G     19
+100.0,                                                                  G     20
+15HInvented Author,                                                     G     21
+21HInvented Organisation,                                               G     22
+11,                                                                     G     23
+0,                                                                      G     24
+15H20261125.120000,                                                     G     25
+;                                                                       G     26
+     116       1               1                                00000000D      1
+     116                       1                        PT1             D      2
+     110       2               1                                00000000D      3
+     110               3       1                        LN1             D      4
+     100       3               1       7                        00000001D      5
+     100                       2                        ARC1           2D      6
+116, 10.0, 20.0, 0.0, 0;                                               1P      1
+110, 0.0, 0.0, 0.0, 50.0, 25.0, 0.0;                                   3P      2
+100, 0.0, 5.0, 5.0, 10.0, 5.0, 5.0,                                    5P      3
+10.0;                                                                  5P      4
+S0000002G0000026D0000006P0000004                                        T      1

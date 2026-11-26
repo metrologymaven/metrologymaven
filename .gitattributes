@@ -231,3 +231,5 @@ fixtures/rpt/balloon/auto/** -text
 fixtures/hal/idl/sens/line/** -text
 # HAL.IDL.SENS.GAUENV fixtures: canonical readings compared byte for byte by --check and the tests.
 fixtures/hal/idl/sens/gauenv/** -text
+# IO.CAD.IGES.SECT fixtures: digested in iges.toml and compared byte for byte (one uses CRLF).
+fixtures/io/cad/iges/sect/** -text

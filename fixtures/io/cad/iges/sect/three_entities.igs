@@ -1,0 +1,15 @@
+Metrology Maven test fixture for IO.CAD.IGES.SECT.                      S0000001
+Invented data, CC-BY-4.0; not taken from any third-party file.          S0000002
+1H,,1H;,10HMM-FIXTURE,18Hthree_entities.igs,9HMM-ORACLE,3H1.0,32,38,6,  G0000001
+308,15,11HMM-RECEIVER,1.0,2,2HMM,1,0.08,15H20261125.120000,0.0001,100.0,G0000002
+15HInvented Author,21HInvented Organisation,11,0,15H20261125.120000,;   G0000003
+     116       1       0       1       0       0       0       000000000D0000001
+     116       0       0       1       0                     PT1       0D0000002
+     110       2       0       1       0       0       0       000000000D0000003
+     110       0       3       1       0                     LN1       0D0000004
+     100       3       0       1       7       0       0       000000001D0000005
+     100       0       0       1       0                    ARC1       2D0000006
+116,10.0,20.0,0.0,0;                                                   1P0000001
+110,0.0,0.0,0.0,50.0,25.0,0.0;                                         3P0000002
+100,0.0,5.0,5.0,10.0,5.0,5.0,10.0;                                     5P0000003
+S0000002G0000003D0000006P0000003                                        T0000001

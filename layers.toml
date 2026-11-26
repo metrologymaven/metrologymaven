@@ -134,6 +134,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-io-las" = "services"
 "fid-io-mesh" = "services"
 "fid-io-step" = "services"
+# Bounded fixed-column IGES section parser and writer (IO.CAD.IGES.SECT): needs fid-io-reg (services).
+"fid-io-iges" = "services"
 # AP242 PMI entity graph extraction and classification (IO.CAD.PMI.READ): needs fid-io-step (services).
 "fid-io-pmi" = "services"
 "fid-cad-proto" = "services"
