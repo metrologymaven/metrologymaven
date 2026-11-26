@@ -1,6 +1,6 @@
 [package]
 name = "fid-geo-ooc"
-description = "Metrology Maven out-of-core point clouds: octree chunk layout, versioned chunk and manifest byte formats in the content-addressed store, conversion to and from in-memory clouds, the bounded-memory streaming chunk writer (spec node GEO.OOC.LAYOUT), the budgeted, digest-verifying chunk cache (GEO.OOC.CACHE) and ordered full-resolution point streaming (GEO.OOC.STREAM)"
+description = "Metrology Maven out-of-core point clouds: octree chunk layout, versioned chunk and manifest byte formats in the content-addressed store, conversion to and from in-memory clouds, the bounded-memory streaming chunk writer (spec node GEO.OOC.LAYOUT), the budgeted, digest-verifying chunk cache (GEO.OOC.CACHE), ordered full-resolution point streaming (GEO.OOC.STREAM) and cross-chunk neighbour queries (GEO.OOC.QUERY)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,9 +11,11 @@ repository.workspace = true
 # CORE.STO blob store and the streaming writer spills to files. Workspace crates only:
 # fid-geo-types (PointCloud, Aabb, FrameRef and the GEO.TYPES.DIGEST layout), fid-kci (its
 # portable FIPS 180-4 SHA-256, the same one the element digest uses), fid-types (the shared
-# `sha256:` Digest of store addresses) and fid-store (the
+# `sha256:` Digest of store addresses), fid-geo-index (the GEO.INDEX k-d tree and
+# index cache that GEO.OOC.QUERY runs per chunk, a kernel crate) and fid-store (the
 # content-addressed BlobStore, behind the default feature `store`).
 [dependencies]
+fid-geo-index = { path = "../fid-geo-index" }
 fid-geo-types = { path = "../fid-geo-types" }
 fid-kci = { path = "../fid-kci" }
 fid-types = { path = "../fid-types" }
