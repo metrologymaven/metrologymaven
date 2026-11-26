@@ -1,6 +1,6 @@
 [package]
 name = "fid-program"
-description = "Metrology Maven Command Programs: document format, canonical serialisation and step IDs (AUTO.PROG.FMT); expression grammar and parser (AUTO.PROG.EXPR.GRAMMAR); expression types, unit algebra and scoping (AUTO.PROG.EXPR.TYPES); part-family parameters and binding validation (AUTO.PROG.FAMILY); operator-interaction descriptors (AUTO.PROG.OPER); control flow: loops, branches, jumps and subroutines (AUTO.PROG.FLOW); the static program checker program.check@1 (AUTO.PROG.CHECK)"
+description = "Metrology Maven Command Programs: document format, canonical serialisation and step IDs (AUTO.PROG.FMT); expression grammar and parser (AUTO.PROG.EXPR.GRAMMAR); expression types, unit algebra and scoping (AUTO.PROG.EXPR.TYPES); the deterministic control evaluator and function library (AUTO.PROG.EXPR.EVAL); part-family parameters and binding validation (AUTO.PROG.FAMILY); operator-interaction descriptors (AUTO.PROG.OPER); control flow: loops, branches, jumps and subroutines (AUTO.PROG.FLOW); the static program checker program.check@1 (AUTO.PROG.CHECK)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -17,10 +17,16 @@ fid-types = { path = "../fid-types" }
 # check refuses what the bus would refuse at run time. Layer engine, below services; already in
 # the lock (no new crate).
 fid-bus = { path = "../fid-bus" }
+# AUTO.PROG.EXPR.EVAL: exact comparison of an f64 against a decimal (`kdec::cmp`,
+# KRN.NUM.KDEC) and the transcendental, sqrt and total-order functions (`fid_num::f`,
+# KRN.NUM.FN). Layer num; already in the lock.
+fid-num = { path = "../fid-num" }
+# AUTO.PROG.EXPR.EVAL: the catalogue's Π (`PI_256`, GEO.FRAME.UNITS) for the exact comparison
+# of a real with a decimal in an angle unit; also the family decimal cross-check in
+# tests/family.rs. Layer kernel; already in the lock (was a dev-dependency).
+fid-geo-frame = { path = "../fid-geo-frame" }
 
 [dev-dependencies]
-# Test-only: cross-check of the family decimal grammar against GEO.FRAME.UNITS (tests/family.rs).
-fid-geo-frame = { path = "../fid-geo-frame" }
 # Test-only: counting global allocator for the peak-memory test (tests/alloc_peak.rs).
 # The workspace forbids `unsafe`, so the test cannot implement GlobalAlloc itself.
 cap = { version = "0.1.2", features = ["stats"] }

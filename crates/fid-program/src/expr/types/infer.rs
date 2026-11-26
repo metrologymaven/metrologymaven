@@ -85,7 +85,7 @@ impl Kinds {
         self.units.get(sym).map(String::as_str)
     }
 
-    fn dim_of(&self, k: &Kind) -> Option<Dim> {
+    pub(crate) fn dim_of(&self, k: &Kind) -> Option<Dim> {
         match k {
             Kind::Named(n) => self.dims.get(n).copied().flatten(),
             Kind::Derived(d) => Some(*d),
@@ -94,7 +94,7 @@ impl Kinds {
 
     /// `decimal` for the empty dimension, the one catalogue kind with this dimension, or a
     /// derived kind.
-    fn type_of_dim(&self, d: Dim) -> Type {
+    pub(crate) fn type_of_dim(&self, d: Dim) -> Type {
         if d.is_none() {
             return Type::Decimal;
         }
