@@ -1113,6 +1113,7 @@ version = "0.0.1"
 dependencies = [
  "fid-bus",
  "fid-canon",
+ "fid-gdt",
  "fid-journal",
  "fid-mcp",
  "fid-registry",
@@ -2185,6 +2186,7 @@ dependencies = [
 name = "fid-registry-build"
 version = "0.0.1"
 dependencies = [
+ "fid-agent",
  "fid-align",
  "fid-bus",
  "fid-canon",

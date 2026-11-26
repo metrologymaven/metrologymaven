@@ -314,7 +314,8 @@ impl Hooks for NoHooks {
 #[test]
 fn command_def_is_w1_d0_and_schemas_validate_with_bus() {
     let defs = command_defs().unwrap();
-    assert_eq!(defs.len(), 1);
+    assert_eq!(defs.len(), 2);
+    assert_eq!(format!("{}@{}", defs[0].id, defs[0].major), ATTACH_BRIEF);
     let def = attach_brief_command_def().unwrap();
     assert_eq!(format!("{}@{}", def.id, def.major), ATTACH_BRIEF);
     assert_eq!(def.side_effect.as_str(), "W1");

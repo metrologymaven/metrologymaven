@@ -135,7 +135,8 @@ const fn src(krate: &'static str, project: ProjectRegister) -> HandlerSource {
 }
 
 /// One entry per `fid_registry_build::SOURCES` entry, same crates, same order (REQ-001).
-pub const HANDLER_SOURCES: [HandlerSource; 21] = [
+pub const HANDLER_SOURCES: [HandlerSource; 22] = [
+    src("fid-agent", none),
     src("fid-align", none),
     src("fid-bus", none),
     src("fid-dep", none),
@@ -162,6 +163,8 @@ pub const HANDLER_SOURCES: [HandlerSource; 21] = [
 /// The manifest majors with no handler yet, as `(name@major, reason)`, sorted by command
 /// (REQ-003). Removing an entry is part of the change that wires its handler.
 pub const UNWIRED: &[(&str, &str)] = &[
+    ("agent.attach_brief@1", "no handler in fid-agent"),
+    ("agent.compute_impact@1", "no handler in fid-agent"),
     ("align.get_alignment@1", "no handler in fid-align"),
     ("align.get_diagnostics@1", "no handler in fid-align"),
     ("align.get_residuals@1", "no handler in fid-align"),

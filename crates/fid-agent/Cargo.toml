@@ -1,6 +1,6 @@
 [package]
 name = "fid-agent"
-description = "Metrology Maven agent experience: workflow catalog check, guide style linter, and proposal brief schema & attach command (spec nodes AGENT.SKILLS.CATALOG, AGENT.SKILLS.STYLE, AGENT.PROPOSE.BRIEF)"
+description = "Metrology Maven agent experience: workflow catalog check, guide style linter, proposal brief schema & attach command, and computed proposal impact (spec nodes AGENT.SKILLS.CATALOG, AGENT.SKILLS.STYLE, AGENT.PROPOSE.BRIEF, AGENT.PROPOSE.IMPACT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -19,7 +19,12 @@ path = "src/bin/agent-style-lint.rs"
 [dependencies]
 # RFC 8785 canonical JSON, bounded parsing and SHA-256 (catalog versions, manifest digest, brief payloads).
 fid-canon = { path = "../fid-canon" }
-# Storage-free branch names, ownership and table model (CORE.JRN.BR). Layer model.
+# AGENT.PROPOSE.IMPACT: the D-045 interpretation label of a stored ResultRecord
+# (`requires_provisional_label_bytes`, the one reader reports and exports use). Same layer
+# (services). Moves to the L0 ResultRecord schema crate once D-035 #4 lands it.
+fid-gdt = { path = "../fid-gdt" }
+# Storage-free branch names, ownership and table model, and the branch diff over stored rows
+# (CORE.JRN.BR.NAME, CORE.JRN.BR.DIFF). Layer model.
 fid-journal = { path = "../fid-journal", default-features = false }
 # Command definitions and x-untrusted schema rules (CORE.REG.DEF). Layer model.
 fid-registry = { path = "../fid-registry" }

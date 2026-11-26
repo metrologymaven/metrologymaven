@@ -9,6 +9,8 @@ phase: P0
 size: M
 owners: []
 claimed_by:
+built_in: [fid-agent]
+built_pr: 645
 satisfies: [REQ-AGENT.PROPOSE-004]
 covers: []
 depends_on: [CORE.JRN.BR, CORE.STO]
@@ -72,9 +74,24 @@ Project-authored synthetic projects under `fixtures/agent/propose/`: `impact-two
 
 > In crate `fid-agent` (layer L3), implement `agent.compute_impact@1` (class R1; CLI `fid agent compute-impact`, MCP `agent_compute_impact`). Input: an agent branch. Call the CORE branch diff against the branch's promotion target, load old and new ResultRecords by digest, and return `ProposalImpact`: changed characteristics sorted by stable ID with old/new decision outcome and UEC class and a `value_changed` flag (stored-bits comparison, never recomputation), a 4x4 decision-move matrix over CONFORMS/NONCONFORMS/INDETERMINATE/NOT_DECIDABLE plus added/removed counts, the entry count since the fork point, the sorted set of side-effect classes, and the source and target head digests. Change no persistent state. Errors: `unknown_branch`, `no_target`, `record_missing`. Acceptance: AC-1 to AC-4 of AGENT.PROPOSE.IMPACT. Constraints: CONSTITUTION §8 (no panic, deny `unwrap` etc.), C1 (compute no value of record; report stored values only), no std HashMap/HashSet in result ordering.
 
+## Build choices
+
+Pinned in `fid_agent::impact` (maintainer decisions for the build):
+
+- **Promotion target.** The branch table records none, so the target is the branch of the journal row named by the branch's `created_from` (the branch it was forked from). `main`, a target in the `agent/` namespace, or a target missing from the table is `no_target` (`precondition/false`); a `created_from` naming no row is `internal/invariant_violated`.
+- **Fork point and entries.** `entry_count` counts `command` entries on the branch above the `created_from` row; session headers and head moves declare no class and are not counted (AC-2 reads "no commands" as count 0). Each counted entry's `id@major` is looked up in the registry definitions (`CommandClasses`, from the manifest via `class_table`): an undefined command, or a verified header whose class differs from the definition, is `internal/invariant_violated`. `classes` is collected from the definitions, as the Design says.
+- **Only the agent's changes.** A diff entity counts only when a command on the branch output it since the ancestor; changes made on the target alone are not listed. Old is the target's record, new the branch's.
+- **What a ResultRecord is.** Stored objects carry no kind, so an object is a ResultRecord when its bytes carry the canonical member `"schema":"fid.gdt-result/` or it parses as an object with that schema prefix. Records must be canonical `fid.gdt-result/1` or `/2` with readable characteristic, value bits and unit, UEC class, evidence facts (`uncertainty.claimed`, `declared_input`, `uncharacterized_input`) and outcome. A record replaced by a non-record, a record naming another characteristic, bytes that do not hash to their digest, or an object the store reports corrupt are `record_invalid` (new error code, `internal/invariant_violated`). The digest check runs before the size rule, so oversize bytes with a wrong digest are refused; correct objects over 16 MiB are not records. Store mapping: `CasError::NotFound` → `record_missing`, `OutOfRange` → too large (not a record), `Integrity` and `ManifestInvalid` → `record_invalid`, `Io` → `internal/storage`.
+- **Listing (REQ-002, maintainer decision).** A characteristic is also listed when only its D-045 interpretation label or only an evidence fact changes, so a record that becomes provisional or claimed never enters unseen. Each side carries its facts as stored, with `value_changed`, `interpretation_changed` and `evidence_changed` flags (all true when a side is absent).
+- **D-045.** Each row carries the old and new record's interpretation label (`fid_gdt::requires_provisional_label_bytes`), and the result carries `interpretation` (`provisional` when any listed record is).
+- **Result wire form** `fid.proposal-impact/1`: the Design's fields plus `branch`, `target`, `characteristic`, the old and new record digests and stored values, and the `outcomes` order of the matrix. `record_missing` maps to `internal/invariant_violated`.
+- **Surfaces.** `invoke_compute_impact_cli` and `invoke_compute_impact_mcp` are the CLI and MCP entry points over an `ImpactProject` (rows, branch table, object source), as for `agent.attach_brief@1`. The canonical JSON result is currently the only output form (`--json` is accepted and changes nothing). Wiring them into the `fid` binary and a store-backed `ObjectSource` waits for the bus dispatch (AUTO.CLI.DISPATCH).
+
 ## Open questions
 
 - Predicted impact on reports and SPC is deferred to a later revision.
+- The ResultRecord reader moves to the L0 ResultRecord schema crate once D-035 #4 creates it.
+- The performance budget (< 200 ms for 5,000 characteristics) is unmeasured; the diff walks the whole journal (CORE.JRN.BR.DIFF limits).
 
 ## Children
 

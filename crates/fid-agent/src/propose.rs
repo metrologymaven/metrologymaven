@@ -1113,7 +1113,8 @@ pub fn attach_brief_command_def() -> Result<CommandDef, DefError> {
     ]))
 }
 
-/// Registry command definitions exported by `fid-agent`.
+/// Registry command definitions exported by `fid-agent`: `agent.attach_brief@1` and
+/// `agent.compute_impact@1`.
 pub fn command_defs() -> Result<Vec<CommandDef>, DefError> {
-    Ok(vec![attach_brief_command_def()?])
+    Ok(vec![attach_brief_command_def()?, crate::impact::compute_impact_command_def()?])
 }
