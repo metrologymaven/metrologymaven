@@ -89,11 +89,13 @@ Defines what one journal entry contains and how it is hashed: the header fields,
 
 - **Resolved with `CORE.RPL.EXEC`'s expectations:** salts are class N and replay substitutes the recorded salts.
 - `TRUST.CHAIN` consumes `entry.schema.json`; it should declare `uses_artifacts: [CORE.JRN.ENTRY]` when next changed.
+- **Reserved "no kernel manifest" digest.** The SHA-256 of the empty string (`sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`) is reserved as the value of `manifests.kernel` meaning "no kernel manifest attested"; it is exported in code as `fid_compose::NO_KERNEL_MANIFEST`. Replay and verify must treat it as "no kernel attested", never as a real kernel attestation. Verify/replay handling of `NO_KERNEL_MANIFEST` not yet implemented.
 - **Follow-up: a `job_lifecycle` entry kind.** The Activity Log writes job lifecycle changes as `command` entries with the reserved command ID `job.lifecycle` (R0, determinism N, principal kind `system`), because the schema has no kind for them (`CORE.JRN.STREAM.ALOG`, PR #307). A dedicated kind `job_lifecycle` with a readable body (job ID, command, from, to, error) would remove the reserved ID and show the transition in the header; it needs a schema change here. Until then `fid-registry-build` tests that no registry command takes the ID `job.lifecycle`.
 
 ## Change log
 
 - 2026-11-21 (maintainer decision): schema version 2 adds `command.event_sources` and `agent_coedited` to the hashed header (REQ-013, REQ-014, REQ-015; AC-8 to AC-11), unblocking release protection (`CORE.JRN.BR.NAME` REQ-006) and the `agent_coedited` flag of `CORE.BUS.ROUTE` REQ-002. Version 1 entries are unchanged and still verify; `entry.schema.json` accepts both versions. Source `bus_approval` records the `RequestApproved` event the bus adds to an approval (`CORE.BUS.PIPE.STAGE` "Deferred"). `CORE.JRN.CHAIN.VERIFY`'s `hash/unknown_version` now means a version other than 1 or 2. No REQ ID was renumbered.
+- 2026-11-25 (maintainer decision, recording what `fid-compose` does): the SHA-256 of the empty string is reserved as the `manifests.kernel` value meaning "no kernel manifest attested" (`fid_compose::NO_KERNEL_MANIFEST`); replay and verify must treat it as "no kernel attested", never as a real attestation. No REQ ID was renumbered.
 
 ## Children
 
