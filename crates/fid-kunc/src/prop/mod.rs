@@ -5,8 +5,10 @@
 //!
 //! Implemented leaves: `UNC.PROP.MCM.BLOCK` ([`mcm::block`]), `UNC.PROP.MCM.INTVL`
 //! ([`mcm::interval`]), `UNC.PROP.MCM.ADAPT` ([`mcm::adapt`]), `UNC.PROP.MCM.SAMP`
-//! ([`mcm::samples`]) and `UNC.PROP.VALID` ([`valid`], [`validate_lpu`]).
+//! ([`mcm::samples`]), `UNC.PROP.VALID` ([`valid`], [`validate_lpu`]) and `UNC.PROP.LPU.TAN`
+//! (the operator tangent contract, [`lpu::tan`]).
 
+pub mod lpu;
 pub mod mcm;
 pub mod valid;
 

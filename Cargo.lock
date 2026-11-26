@@ -1901,6 +1901,7 @@ name = "fid-kunc"
 version = "0.0.1"
 dependencies = [
  "fid-kci",
+ "fid-kunc",
  "fid-num",
  "fid-types",
 ]
