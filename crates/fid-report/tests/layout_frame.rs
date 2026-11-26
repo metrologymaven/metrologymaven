@@ -285,11 +285,11 @@ fn run_scenario(name: &str) -> World {
         let before = w.project.journal().len();
         let doc_before = w.report_digest();
         let p = pitch(int(get(step, "pitch")));
-        assert!(valid(&def.params_schema, &params), "{name} step {i}: params schema");
         let got = w.mv(&params, &p);
         match (got, expect) {
             (Ok(v), CValue::Obj(e)) if e.contains_key("result") => {
                 assert_eq!(v, w.mapped(get(expect, "result")), "{name} step {i}: result");
+                assert!(valid(&def.params_schema, &params), "{name} step {i}: params schema");
                 assert!(valid(&def.result_schema, &v), "{name} step {i}: result schema");
             }
             (Err(e), CValue::Obj(x)) if x.contains_key("error") => {

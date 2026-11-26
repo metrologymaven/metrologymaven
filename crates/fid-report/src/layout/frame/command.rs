@@ -19,7 +19,7 @@ use super::event::{FrameEvent, MOVE_BLOCK_LAYOUT};
 use super::model::{BlockFrame, ReportFrames};
 use super::pitch::PitchSetting;
 use crate::doc::model::{obj, parse_canonical_uuid};
-use crate::doc::{BlockId, KindRegistry, PageId, ReportBackend, ReportId, StoredReport};
+use crate::doc::{BlockId, KindRegistry, PageId, ReportId, StoredReport};
 use crate::layout::page::{parse_length, LayoutError, Length, LengthFault};
 use fid_canon::CValue;
 use fid_project::Uuid;
