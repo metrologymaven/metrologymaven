@@ -26,7 +26,7 @@ updated: 2026-11-25
 
 ## Purpose
 
-Turns STEP geometric entities (points, directions, placements, curves, surfaces) into GEO analytic and NURBS types in metres. Analytic and B-spline geometry maps exactly; surfaces that GEO has no exact type for (offset surfaces, some swept surfaces) are converted to NURBS and the conversion error is measured and recorded per face. Under D-024 (option C) this conversion is first-party Rust code.
+Turns STEP geometric entities (points, directions, placements, curves, surfaces) into GEO analytic and NURBS types in metres. Analytic and B-spline geometry maps exactly; surfaces that GEO has no exact type for (offset surfaces, some swept surfaces) are converted to NURBS and the conversion error is measured and recorded per surface entity; per-face association is done by IO.CAD.STEP.BREP. Under D-024 (option C) this conversion is first-party Rust code.
 
 ## Scope
 
@@ -79,6 +79,10 @@ Hand-written STEP fragments under `fixtures/io/cad/step/geom/` (CC-BY-4.0) with 
 ## Open questions
 
 - Sample density and default approximation tolerance need checking on the CAx-IF corpus [unverified].
+
+## Change log
+
+- 2026-11-25 (maintainer decision, matching REQ-003 as amended in #630): the Purpose paragraph now says approximation error is recorded per surface entity, with per-face association done by `IO.CAD.STEP.BREP`. No REQ ID was renumbered.
 
 ## Children
 
