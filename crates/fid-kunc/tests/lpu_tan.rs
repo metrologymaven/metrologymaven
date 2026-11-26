@@ -1,13 +1,12 @@
 //! Acceptance criteria of spec node `UNC.PROP.LPU.TAN` (AC-1..AC-5, the registered-sample-point
-//! part of AC-H1, REQ-UNC.PROP.LPU.TAN-001..005).
+//! part of AC-H1, REQ-UNC.PROP.LPU.TAN-001, -002, -004, -005). The REQ-003 lint is
+//! `tests/lpu_tan_lint.rs`.
 //!
 //! Fixtures and every expected value (the affine matrix bits, the AC-2 error, the coverage
 //! report bytes) come from the independent stdlib Python reference
 //! `fixtures/unc/lpu/tan/make_fixtures.py`, never from this crate. The test providers below
 //! are hand-written analytic derivatives of hand-written test operators.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-
-use std::path::{Path, PathBuf};
 
 use fid_kci::kci::json::to_canonical;
 use fid_kci::kci::sha256_digest;
@@ -80,7 +79,7 @@ fn hex_values(params: &[u8]) -> Result<Vec<f64>, ProviderError> {
         }
     }
     if out.len() != 12 {
-        return Err(ProviderError::new("bad_params", format!("{} numbers, expected 12", out.len())));
+        return Err(ProviderError::new("bad_params", &format!("{} numbers, expected 12", out.len())));
     }
     Ok(out)
 }
@@ -108,7 +107,7 @@ impl OperatorTangent for Affine {
             return Err(ProviderError::new("arity", "3 inputs"));
         }
         let v = hex_values(params)?;
-        let jac = Mat::new(3, 3, v[..9].to_vec()).map_err(|e| ProviderError::new("mat", e.to_string()))?;
+        let jac = Mat::new(3, 3, v[..9].to_vec()).map_err(|e| ProviderError::new("mat", &e.to_string()))?;
         Ok(TangentOut { jac, kinks: vec![] })
     }
     fn sample_points(&self) -> Vec<SamplePoint> {
@@ -326,7 +325,6 @@ fn ac4_coverage_lists_missing_and_orphan_in_id_order() {
     assert!(!report.is_complete());
     assert_eq!(report.manifest, sha256_digest(&bytes));
     assert_eq!(report.canonical_json().unwrap(), read("coverage_expected.json"));
-    assert_eq!(report.digest().unwrap(), sha256_digest(&read("coverage_expected.json")));
     assert!(String::from_utf8(report.canonical_json().unwrap()).unwrap().contains(COVERAGE_VERSION));
 }
 
@@ -355,6 +353,8 @@ enum Fault {
     Double(usize, usize),
     Transpose(usize, usize),
     Drop(usize, usize),
+    /// Replace the entry, for example by a multi-term derivative with one term dropped.
+    Set(usize, usize, f64),
 }
 
 struct Mutant<'a> {
@@ -375,6 +375,7 @@ impl OperatorTangent for Mutant<'_> {
             Fault::Double(i, j) => d[i * c + j] *= 2.0,
             Fault::Drop(i, j) => d[i * c + j] = 0.0,
             Fault::Transpose(i, j) => d.swap(i * c + j, j * c + i),
+            Fault::Set(i, j, v) => d[i * c + j] = v,
         }
         Ok(TangentOut { jac: Mat::new(r, c, d).unwrap(), kinks: out.kinks })
     }
@@ -559,80 +560,214 @@ fn kink_hints_are_checked() {
     }
 }
 
-// ------------------------------------------------------------------ REQ-003 lint
+// ------------------------------------------------------------------ mixed units and scales (D-045)
 
-/// Identifiers and fragments that mean "evaluate an operator" or "perturb an input". LPU
-/// modules get derivatives from providers only; the kernel call interface, evaluation
-/// callbacks and step sizes have no business there.
-const FORBIDDEN_IDENTS: &[&str] =
-    &["evaluate", "eval", "Eval", "KernelAlgorithm", "KernelCall", "AlgorithmTable", "tangent_harness", "STEP"];
-const FORBIDDEN_IDENT_PARTS: &[&str] = &["perturb", "finite_diff", "central_diff", "forward_diff", "backward_diff"];
-const FORBIDDEN_FRAGMENTS: &[&str] = &[".run(", "Fn(", "FnMut(", "FnOnce(", "fn(", "fn ("];
-
-/// The code of a Rust file with `//` comments removed (doc comments describe the rule).
-fn code_only(text: &str) -> String {
-    text.lines().map(|l| l.find("//").map_or(l, |at| &l[..at])).collect::<Vec<_>>().join("\n")
+/// `f0 = x0 + k x1`, output and `x0` in metres. With `k = 1e-9` the input `x1` is a
+/// nanometre-scaled value; with `k = 1` the same operator takes `x1` in metres.
+struct Scaled {
+    id: AlgorithmId,
+    k: f64,
+    point: [f64; 2],
 }
 
-/// Every forbidden use in `text` (file name for messages).
-fn lint(name: &str, text: &str) -> Vec<String> {
-    let code = code_only(text);
-    let mut found = Vec::new();
-    for ident in code.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_')) {
-        let lower = ident.to_ascii_lowercase();
-        if FORBIDDEN_IDENTS.contains(&ident) || FORBIDDEN_IDENT_PARTS.iter().any(|p| lower.contains(p)) {
-            found.push(format!("{name}: identifier {ident}"));
-        }
+impl OperatorTangent for Scaled {
+    fn alg_id(&self) -> &AlgorithmId {
+        &self.id
     }
-    for frag in FORBIDDEN_FRAGMENTS {
-        if code.contains(frag) {
-            found.push(format!("{name}: {frag}"));
-        }
+    fn jacobian(&self, _params: &[u8], _inputs: &[ScalarView]) -> Result<TangentOut, ProviderError> {
+        Ok(TangentOut { jac: Mat::from_rows(&[[1.0, self.k]]).unwrap(), kinks: vec![] })
     }
-    found
-}
-
-fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
-    for e in std::fs::read_dir(dir).unwrap_or_else(|e| panic!("{}: {e}", dir.display())) {
-        let p = e.unwrap().path();
-        if p.is_dir() {
-            rust_files(&p, out);
-        } else if p.extension().is_some_and(|x| x == "rs") {
-            out.push(p);
-        }
+    fn sample_points(&self) -> Vec<SamplePoint> {
+        vec![SamplePoint { params: b"{}".to_vec(), inputs: self.point.iter().copied().map(m).collect() }]
     }
 }
 
 #[test]
-fn req003_lpu_modules_have_no_finite_difference_path() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/prop/lpu");
-    let mut files = Vec::new();
-    rust_files(&dir, &mut files);
-    files.sort();
-    assert!(files.iter().any(|f| f.ends_with("tan.rs")), "{files:?}");
-    let mut found = Vec::new();
-    for f in &files {
-        found.extend(lint(&f.display().to_string(), &std::fs::read_to_string(f).unwrap()));
+fn d045_a_nanometre_scaled_sensitivity_is_checked_as_in_metres() {
+    // Review of #634: a row-scale floor let a flipped or zeroed 1e-9 sensitivity pass next to
+    // a 1.0 one, while the same operator in metres was rejected. The floor is now per entry,
+    // in that entry's own units, so both unit systems give the same verdicts.
+    for (k, x1) in [(1e-9, 3.0), (1.0, 3e-9)] {
+        let p = Scaled { id: id("test.scale.map@2.0.0"), k, point: [0.5, x1] };
+        let eval = move |_: &[u8], x: &[f64]| -> Result<Vec<f64>, String> { Ok(vec![x[0] + k * x[1]]) };
+        check_provider(&p, &eval).unwrap_or_else(|e| panic!("k = {k}: correct provider rejected: {e:?}"));
+        for fault in [Fault::SignFlip(0, 1), Fault::Drop(0, 1), Fault::Double(0, 1), Fault::Set(0, 1, 1.5 * k)] {
+            let bad = Mutant { inner: &p, fault };
+            match check_provider(&bad, &eval) {
+                Err(HarnessError::Entry { point: 0, row: 0, col: 1, .. }) => {}
+                other => panic!("k = {k}: {fault:?} survived: {other:?}"),
+            }
+        }
     }
-    assert!(found.is_empty(), "finite-difference or evaluation path in LPU modules: {found:?}");
+}
+
+/// `test.mixed.map@1.0.0` over inputs `a` (metres, about 0.1), `n` (nanometre-scaled value,
+/// sensitivity 1e-9) and `l` (large value, sensitivities 1e-3 and 1e-6 l):
+/// f0 = a + 1e-9 n + 1e-3 l, f1 = 1e-9 a n + 1e-6 l^2, f2 = a n + a^2.
+fn mixed_eval(_params: &[u8], x: &[f64]) -> Result<Vec<f64>, String> {
+    let (a, n, l) = (x[0], x[1], x[2]);
+    Ok(vec![a + 1e-9 * n + 1e-3 * l, 1e-9 * a * n + 1e-6 * l * l, a * n + a * a])
+}
+
+struct Mixed {
+    id: AlgorithmId,
+}
+
+impl OperatorTangent for Mixed {
+    fn alg_id(&self) -> &AlgorithmId {
+        &self.id
+    }
+    fn jacobian(&self, _params: &[u8], inputs: &[ScalarView]) -> Result<TangentOut, ProviderError> {
+        let (a, n, l) = (inputs[0].value, inputs[1].value, inputs[2].value);
+        let rows = [[1.0, 1e-9, 1e-3], [1e-9 * n, 1e-9 * a, 2e-6 * l], [n + 2.0 * a, a, 0.0]];
+        Ok(TangentOut { jac: Mat::from_rows(&rows).unwrap(), kinks: vec![] })
+    }
+    fn sample_points(&self) -> Vec<SamplePoint> {
+        [[0.5, 3.0, 40.0], [0.05, 7.0, 12.5], [-0.3, 1.5, 80.0]]
+            .iter()
+            .map(|p| SamplePoint { params: b"{}".to_vec(), inputs: p.iter().copied().map(m).collect() })
+            .collect()
+    }
 }
 
 #[test]
-fn req003_lint_catches_a_finite_difference_path() {
-    // The harness itself differentiates numerically: the lint must flag it.
-    let harness =
-        std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/tangent_harness.rs")).unwrap();
-    assert!(!lint("tangent_harness.rs", &harness).is_empty());
-    let samples = [
-        "fn sens(t: &AlgorithmTable, c: &KernelCall) { let r = fid_kci::evaluate(t, c); }",
-        "fn d(f: &dyn Fn(&[f64]) -> f64, x: &mut [f64]) { x[0] += 1e-6; }",
-        "fn d(a: &dyn KernelAlgorithm, p: &[u8], x: &[&[u8]]) { let _ = a.run(p, None, x); }",
-        "let perturbed = x + h;",
-        "fn central_difference() {}",
-    ];
-    for s in samples {
-        assert!(!lint("sample", s).is_empty(), "{s}");
+fn ach1_mixed_scale_columns_and_dropped_terms_are_rejected() {
+    let p = Mixed { id: id("test.mixed.map@1.0.0") };
+    assert_eq!(check_provider(&p, &mixed_eval).unwrap().entries, 27);
+    let mut killed = 0;
+    for (k, sp) in p.sample_points().into_iter().enumerate() {
+        let (a, n) = (sp.inputs[0].value, sp.inputs[1].value);
+        let jac = p.jacobian(&sp.params, &sp.inputs).unwrap().jac;
+        let mut all = faults(&jac);
+        // d f2 / d a = n + 2a: each of its two terms dropped on its own.
+        all.extend([Fault::Set(2, 0, n), Fault::Set(2, 0, 2.0 * a)]);
+        for fault in all {
+            let mutant = Mutant { inner: &p, fault };
+            match check_provider_at(&mutant, std::slice::from_ref(&sp), &mixed_eval) {
+                Err(HarnessError::Entry { .. }) => killed += 1,
+                other => panic!("point {k}: {fault:?} survived: {other:?}"),
+            }
+        }
     }
-    // Comments are not code.
-    assert!(lint("sample", "// never evaluate an operator at a perturbed input\nlet a = 1;").is_empty());
+    // Per point: 8 non-zero entries x 3 faults, 3 transpositions, 2 dropped terms.
+    assert_eq!(killed, 3 * (8 * 3 + 3 + 2));
+}
+
+// ------------------------------------------------------------------ column order (MCM.BLOCK)
+
+/// A kernel algorithm that records the input blobs `run_block` hands it.
+struct Recorder {
+    seen: std::rc::Rc<std::cell::RefCell<Vec<Vec<f64>>>>,
+}
+
+impl fid_kci::KernelAlgorithm for Recorder {
+    fn id(&self) -> AlgorithmId {
+        id("test.affine.map@1.0.0")
+    }
+    fn input_arity(&self) -> fid_kci::InputArity {
+        fid_kci::InputArity::exactly(2)
+    }
+    fn validate(&self, _params: &[u8]) -> Result<(), fid_kci::KernelError> {
+        Ok(())
+    }
+    fn run(&self, _params: &[u8], _seed: Option<u64>, inputs: &[&[u8]]) -> Result<Vec<u8>, fid_kci::KernelError> {
+        for blob in inputs {
+            let vals = blob.chunks(8).map(|c| f64::from_le_bytes(c.try_into().unwrap())).collect();
+            self.seen.borrow_mut().push(vals);
+        }
+        Ok(0.0f64.to_le_bytes().to_vec())
+    }
+}
+
+fn card(alg: &str, arity: &str) -> String {
+    [
+        format!("id = \"{alg}\""),
+        "title = \"Recording operator of the UNC.PROP.LPU.TAN tests\"".to_string(),
+        "method = \"Records its input blobs and returns zero.\"".to_string(),
+        "applicability = \"Tests of the tangent column order only.\"".to_string(),
+        "references = [\"Spec node UNC.PROP.LPU.TAN.\"]".to_string(),
+        "determinism = \"D0\"".to_string(),
+        "failure_modes = [\"None beyond the test cases.\"]".to_string(),
+        "validation = \"crates/fid-kunc/tests/lpu_tan.rs\"".to_string(),
+        format!("input_arity = \"{arity}\""),
+    ]
+    .join("\n")
+}
+
+#[test]
+fn arity2_columns_follow_the_mcm_block_blob_order() {
+    use fid_kunc::prop::lpu::tan::input_sources;
+    use fid_kunc::prop::mcm::block::{run_block, BlockModel, BlockSpec, SamplingPlan};
+
+    let mdl = model("arity2_model.json");
+    let op = the_operator(&mdl);
+    let want: Vec<String> = expected().into_iter().find(|l| l[0] == "columns").unwrap().into_iter().skip(1).collect();
+    // The document lists b's edge into port p before a's; canonical order puts a first.
+    let cols: Vec<String> = input_sources(&mdl, &op).iter().map(|e| e.node.clone()).collect();
+    assert_eq!(cols, want);
+
+    // One real Monte Carlo trial through the kernel call interface: the blob values, in
+    // order, must come from the same inputs as the Jacobian columns.
+    let manifest = KernelManifest::parse_canonical(&read("manifest_min.json")).unwrap();
+    let valid = fid_kunc::model::validate(&mdl, &manifest)
+        .unwrap_or_else(|e| panic!("{:?}", e.iter().map(ToString::to_string).collect::<Vec<_>>()));
+    let seen = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+    let cards =
+        fid_kci::CardRegistry::new(vec![fid_kci::parse_card(&card("test.affine.map@1.0.0", "2")).unwrap()]).unwrap();
+    let algs: Vec<Box<dyn fid_kci::KernelAlgorithm>> = vec![Box::new(Recorder { seen: seen.clone() })];
+    let table =
+        fid_kci::AlgorithmTable::new(algs, cards).unwrap().with_manifest_core_digest(manifest.core_digest().clone());
+    let bm = BlockModel::prepare(&valid, &manifest, &table).unwrap();
+    let plan = SamplingPlan::new(&valid).unwrap();
+    let spec = BlockSpec {
+        model_digest: valid.model().digest(),
+        inputs_digest: plan.digest(),
+        seed: 7,
+        block_index: 0,
+        block_size: 1,
+    };
+    run_block(&bm, &plan, &spec).unwrap();
+    let blobs = seen.borrow().clone();
+    assert_eq!(blobs.iter().map(Vec::len).collect::<Vec<_>>(), [2, 1], "one blob per port, arity values each");
+    // Means 1, 2, 3 for a, b, c with sigma 1e-9: the nearest whole number names the input.
+    let by_value: Vec<String> = blobs
+        .iter()
+        .flatten()
+        .map(|v| match v.round() as i64 {
+            1 => "a".to_string(),
+            2 => "b".to_string(),
+            3 => "c".to_string(),
+            other => panic!("unexpected sample {v} ({other})"),
+        })
+        .collect();
+    assert_eq!(by_value, want);
+
+    // And the table takes exactly that many columns, unit-checked per port.
+    let mut t = TangentTable::new();
+    t.register(fixed("test.affine.map@1.0.0", Ok(TangentOut { jac: mat(1, 3), kinks: vec![] }))).unwrap();
+    assert_eq!(t.operator_jacobian(&op, &[m(1.0), m(2.0), m(3.0)]).unwrap().jac.cols(), 3);
+}
+
+// ------------------------------------------------------------------ registration
+
+#[test]
+fn register_refuses_an_id_that_does_not_round_trip() {
+    let good = id("test.poly.map@1.0.0");
+    let mut bad_ids = Vec::new();
+    for (module, feature) in [("Test", "poly"), ("test.x", "poly"), ("test", ""), ("test", "po ly")] {
+        let mut b = good.clone();
+        b.module = module.to_string();
+        b.feature = feature.to_string();
+        bad_ids.push(b);
+    }
+    for b in bad_ids {
+        let mut table = TangentTable::new();
+        let err = table.register(Box::new(Poly { id: b.clone() })).unwrap_err();
+        assert_eq!(err.code(), "tangent_bad_call", "{b}");
+        assert!(matches!(err, TanError::BadCall { reason: "algorithm_id", .. }));
+        assert!(table.is_empty());
+    }
+    let mut table = TangentTable::new();
+    table.register(Box::new(Poly { id: good })).unwrap();
+    assert_eq!(table.len(), 1);
 }

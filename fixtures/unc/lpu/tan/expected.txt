@@ -13,3 +13,4 @@ no_derivative test.affine.map@1.1.0
 missing test.scale.map@2.0.0
 missing test.scale.map@10.0.0
 orphan test.affine.map@1.1.0
+columns a b c

@@ -16,7 +16,9 @@
 //! Uncertainty Model ([`TangentTable::operator_jacobian`]) that is: one row per output port
 //! in declared `ports_out` order, and one column per incoming edge, ports in declared
 //! `ports_in` order and, inside a port of arity `k`, its `k` edges in the model's canonical
-//! edge order. Every port component is one scalar (the model's units are scalar units).
+//! edge order (source node, then source port), the order in which `UNC.PROP.MCM.BLOCK`
+//! packs the port's input blob; [`input_sources`] lists them. Every port component is one
+//! scalar (the model's units are scalar units).
 //!
 //! # Checks (pinned order)
 //!
@@ -46,13 +48,12 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use fid_kci::kci::json::{to_canonical, Json, JsonError};
-use fid_kci::kci::sha256_digest;
 use fid_kci::{AlgorithmId, KernelManifest};
 use fid_num::la::{Mat, MAX_DIM};
 use fid_types::Digest;
 
 use crate::dist::UnitCode;
-use crate::model::OperatorNode;
+use crate::model::{Endpoint, OperatorNode, UncertaintyModel};
 
 /// Version tag of the coverage report artifact.
 pub const COVERAGE_VERSION: &str = "tangent-coverage@1";
@@ -103,8 +104,8 @@ pub struct ProviderError {
 
 impl ProviderError {
     /// A provider error with a code and a detail.
-    pub fn new(code: &'static str, detail: impl Into<String>) -> ProviderError {
-        ProviderError { code, detail: detail.into() }
+    pub fn new(code: &'static str, detail: &str) -> ProviderError {
+        ProviderError { code, detail: detail.to_string() }
     }
 }
 
@@ -233,10 +234,16 @@ impl TangentTable {
         TangentTable::default()
     }
 
-    /// Registers a provider under its [`OperatorTangent::alg_id`]. A second provider for the
-    /// same ID is `tangent_duplicate_provider`, and the first one stays.
+    /// Registers a provider under its [`OperatorTangent::alg_id`]. An ID that does not
+    /// round-trip through [`AlgorithmId::parse`] is `tangent_bad_call{algorithm_id}`; a second
+    /// provider for the same ID is `tangent_duplicate_provider`, and the first one stays.
     pub fn register(&mut self, provider: Box<dyn OperatorTangent>) -> Result<(), TanError> {
         let id = provider.alg_id().clone();
+        // `AlgorithmId` has public fields, so a provider can hold an ID that no card or
+        // manifest could spell. Only an ID that round-trips through its own parser is keyed.
+        if AlgorithmId::parse(&id.to_string()).ok().as_ref() != Some(&id) {
+            return Err(TanError::BadCall { operator: sanitize(&id.to_string()), reason: "algorithm_id" });
+        }
         if self.providers.contains_key(&id) {
             return Err(TanError::DuplicateProvider { operator: id.to_string() });
         }
@@ -344,8 +351,10 @@ impl TangentTable {
         let mut index = 0;
         for port in &op.ports_in {
             for _ in 0..port.arity {
-                if inputs[index].unit != port.unit {
-                    return Err(TanError::BadInput { operator, reason: "unit", index });
+                match inputs.get(index) {
+                    Some(s) if s.unit == port.unit => {}
+                    Some(_) => return Err(TanError::BadInput { operator, reason: "unit", index }),
+                    None => return Err(TanError::BadInput { operator, reason: "count", index: inputs.len() }),
                 }
                 index += 1;
             }
@@ -356,6 +365,23 @@ impl TangentTable {
         };
         self.jacobian(&id, &params, inputs, op.ports_out.len())
     }
+}
+
+/// The source endpoint of each Jacobian column of operator node `op` in `model`: input
+/// ports in declared order and, inside a port, its incoming edges in the model's canonical
+/// edge order (source node, then source port). This is the order in which
+/// `UNC.PROP.MCM.BLOCK` packs a port's values into its input blob, so column `j` of
+/// [`TangentTable::operator_jacobian`] is the sensitivity to the value on edge `j` of this
+/// list. Ports with fewer edges than their arity are a `UNC.MODEL.GRAPH.CHECK` error; this
+/// function lists the edges that exist.
+pub fn input_sources<'m>(model: &'m UncertaintyModel, op: &OperatorNode) -> Vec<&'m Endpoint> {
+    let mut out = Vec::new();
+    for port in &op.ports_in {
+        for e in model.edges().iter().filter(|e| e.to.node == op.id && e.to.port == port.name) {
+            out.push(&e.from);
+        }
+    }
+    out
 }
 
 /// The `tangent-coverage@1` report (REQ-004).
@@ -384,11 +410,6 @@ impl CoverageReport {
             ("orphan".to_string(), ids(&self.orphan)),
             ("version".to_string(), Json::Str(COVERAGE_VERSION.to_string())),
         ]))
-    }
-
-    /// SHA-256 over [`CoverageReport::canonical_json`].
-    pub fn digest(&self) -> Result<Digest, JsonError> {
-        Ok(sha256_digest(&self.canonical_json()?))
     }
 }
 

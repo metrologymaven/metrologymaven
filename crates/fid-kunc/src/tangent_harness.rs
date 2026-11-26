@@ -15,11 +15,14 @@
 //!   else `1`. The difference quotient divides by the realised step
 //!   `(x_j + h_j) - (x_j - h_j)`, not by `2 h_j`.
 //! - Oracle entry: `D_ij = (f_i(x + h_j e_j) - f_i(x - h_j e_j)) / ((x_j + h_j) - (x_j - h_j))`.
-//! - Row scale: `r_i = max_k |D_ik|`.
-//! - Entry `(i, j)` passes when `|J_ij - D_ij| <= REL_TOL * max(|J_ij|, |D_ij|, r_i)` with
-//!   [`REL_TOL`] `= 1e-6` [unverified]. The row-scale floor keeps the check relative for
-//!   entries far below the rest of their row, where the central difference has only absolute
-//!   accuracy. A row whose oracle is exactly zero must be exactly zero.
+//! - Entry `(i, j)` passes when
+//!   `|J_ij - D_ij| <= REL_TOL * max(|J_ij|, |D_ij|) + ROUND_C * EPS * max(|f_i(x + h_j e_j)|, |f_i(x - h_j e_j)|) / span_j`
+//!   with [`REL_TOL`] `= 1e-6` [unverified], [`ROUND_C`] `= 64`, `EPS = 2^-52` and `span_j`
+//!   the realised step above. The second term is the rounding floor of this entry's own
+//!   difference quotient, in the units of output `i` per unit of input `j`; it never mixes
+//!   columns, so the verdict on an entry does not depend on the units or the scale of the
+//!   other inputs (D-045: a flipped or dropped sensitivity of a nanometre-scaled input is
+//!   rejected exactly as in metres).
 //! - The first failing entry in (point, row, column) order is reported.
 
 use crate::prop::lpu::tan::{OperatorTangent, ProviderError, SamplePoint};
@@ -28,6 +31,11 @@ use crate::prop::lpu::tan::{OperatorTangent, ProviderError, SamplePoint};
 pub const REL_TOL: f64 = 1e-6;
 /// Base step `2^-17` (about the cube root of the f64 epsilon), exact in binary.
 pub const STEP: f64 = 1.0 / 131_072.0;
+/// Machine epsilon of f64, `2^-52`.
+pub const EPS: f64 = f64::EPSILON;
+/// Multiple of `EPS * |f|` allowed for rounding in one difference quotient: covers a few
+/// ulps of error in each operator evaluation with margin.
+pub const ROUND_C: f64 = 64.0;
 
 /// Evaluates the operator: parameter bytes and input values in, output values out.
 pub type Eval<'a> = &'a dyn Fn(&[u8], &[f64]) -> Result<Vec<f64>, String>;
@@ -117,8 +125,9 @@ fn check_point(
     if actual != (rows, cols) {
         return Err(HarnessError::Shape { point, expected: (rows, cols), actual });
     }
-    // Central differences, stored row-major like the Jacobian.
+    // Central differences and their rounding floors, stored row-major like the Jacobian.
     let mut d = vec![0.0; rows * cols];
+    let mut floor = vec![0.0; rows * cols];
     for (j, &xj) in x.iter().enumerate() {
         let s = if xj.abs() > 1.0 { xj.abs() } else { 1.0 };
         let h = STEP * s;
@@ -136,16 +145,14 @@ fn check_point(
                 return Err(HarnessError::NonFinite { point });
             }
             d[i * cols + j] = q;
+            floor[i * cols + j] = ROUND_C * EPS * larger(a.abs(), b.abs()) / span;
         }
     }
     let jac = out.jac.data();
-    for (i, (oracle_row, provider_row)) in d.chunks(cols).zip(jac.chunks(cols)).enumerate() {
-        let scale = oracle_row.iter().fold(0.0, |m: f64, v| larger(m, v.abs()));
-        for (j, (&o, &p)) in oracle_row.iter().zip(provider_row).enumerate() {
-            let bound = REL_TOL * larger(larger(p.abs(), o.abs()), scale);
-            if (p - o).abs() > bound {
-                return Err(HarnessError::Entry { point, row: i, col: j, provider: p, oracle: o });
-            }
+    for (k, ((&o, &p), &fl)) in d.iter().zip(jac).zip(&floor).enumerate() {
+        let bound = REL_TOL * larger(p.abs(), o.abs()) + fl;
+        if (p - o).abs() > bound {
+            return Err(HarnessError::Entry { point, row: k / cols, col: k % cols, provider: p, oracle: o });
         }
     }
     Ok(rows * cols)

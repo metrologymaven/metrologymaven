@@ -12,10 +12,15 @@ Files written next to this script:
 - affine_model_v110.json   the same model referencing test.affine.map@1.1.0 (AC-2)
 - manifest_min.json        canonical kernel manifest (KRN.MAN.MANI.SCHEMA) listing 5 operators
                            (AC-4)
+- arity2_model.json        a model whose operator (test.affine.map@1.0.0, listed in
+                           manifest_min.json) has an arity-2 port fed by inputs b and a, edges
+                           listed b first, plus an arity-1 port fed by c (column order pin
+                           against the UNC.PROP.MCM.BLOCK blob order)
 - coverage_expected.json   the tangent-coverage@1 report expected for manifest_min.json with
                            providers for 3 of its operators plus 1 orphan provider (AC-4)
 - expected.txt             hand-checkable expectations: the affine Jacobian bit patterns (AC-1),
-                           the AC-2 error and the AC-4 missing/orphan lists
+                           the AC-2 error, the AC-4 missing/orphan lists and the column
+                           sources of arity2_model.json
 
 Run:    python fixtures/unc/lpu/tan/make_fixtures.py
 Check:  python fixtures/unc/lpu/tan/make_fixtures.py --check
@@ -106,6 +111,54 @@ def affine_model(version):
     return (json.dumps(doc, indent=2) + "\n").encode("ascii")
 
 
+# Column-order pin. Input means are distinct whole numbers so that a sampled value (sigma
+# 1e-9) identifies its input. Canonical edge order (UNC.MODEL.GRAPH.SCHEMA): target node,
+# target port, source node, source port; so port p takes a, then b, whatever the document
+# order; port q takes c.
+ARITY2_MEANS = [("a", 1.0), ("b", 2.0), ("c", 3.0)]
+ARITY2_COLUMNS = ["a", "b", "c"]
+
+
+def arity2_model():
+    doc = {
+        "schema": "uncertainty-model/v1",
+        "name": "arity2-order",
+        "semver": "1.0.0",
+        "inputs": [
+            {
+                "id": iid,
+                "quantity_kind": "length",
+                "unit": "si:m",
+                "distribution": {"kind": "normal", "params": {"mu": hex64(mu), "sigma": hex64(1e-9)}},
+                "source": {"kind": "declared", "digest": h("declared " + iid), "author": "metrology-maven fixtures"},
+            }
+            for iid, mu in ARITY2_MEANS
+        ],
+        "operators": [
+            {
+                "id": "op",
+                "algorithm_id": "test.affine.map",
+                "algorithm_version": "1.0.0",
+                "params": {},
+                "ports_in": [
+                    {"name": "p", "quantity_kind": "length", "unit": "si:m", "arity": "2"},
+                    {"name": "q", "quantity_kind": "length", "unit": "si:m", "arity": "1"},
+                ],
+                "ports_out": [{"name": "y", "quantity_kind": "length", "unit": "si:m"}],
+            }
+        ],
+        "outputs": [{"id": "out", "quantity_kind": "length", "unit": "si:m"}],
+        "edges": [
+            {"from": {"node": "b", "port": "value"}, "to": {"node": "op", "port": "p"}},
+            {"from": {"node": "c", "port": "value"}, "to": {"node": "op", "port": "q"}},
+            {"from": {"node": "a", "port": "value"}, "to": {"node": "op", "port": "p"}},
+            {"from": {"node": "op", "port": "y"}, "to": {"node": "out", "port": "value"}},
+        ],
+        "correlations": [],
+    }
+    return (json.dumps(doc, indent=2) + "\n").encode("ascii")
+
+
 # ---------------------------------------------------------------------------------- AC-4
 
 
@@ -178,6 +231,7 @@ def build():
     out["affine_model.json"] = affine_model("1.0.0")
     out["affine_model_v110.json"] = affine_model("1.1.0")
     m = manifest()
+    out["arity2_model.json"] = arity2_model()
     out["manifest_min.json"] = m
     rep = coverage(m)
     out["coverage_expected.json"] = canon(rep)
@@ -191,6 +245,7 @@ def build():
         lines.append("missing " + x)
     for x in rep["orphan"]:
         lines.append("orphan " + x)
+    lines.append("columns " + " ".join(ARITY2_COLUMNS))
     out["expected.txt"] = ("\n".join(lines) + "\n").encode("ascii")
     return out
 
