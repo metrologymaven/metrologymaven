@@ -84,7 +84,7 @@
 //! `from`, `to`, `step`, `var`, `bind`, `command`, `subroutine`).
 
 mod check;
-mod infer;
+pub(crate) mod infer;
 
 pub(crate) use check::param_types;
 pub use check::{assignable, check_types, value_of_record, MAX_TYPE_DEPTH};

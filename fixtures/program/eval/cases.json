@@ -1,0 +1,5942 @@
+{
+ "cases": [
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "-7"
+    }
+   },
+   "id": "int-000",
+   "src": "((-9223372036854775807) % 183)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "int_overflow",
+     "span": {
+      "end": "25",
+      "start": "0"
+     }
+    }
+   },
+   "id": "int-001",
+   "src": "(9223372036854775807 * 2)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "0"
+    }
+   },
+   "id": "int-002",
+   "src": "((-1726266251686337979) % (-1))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "div_zero",
+     "span": {
+      "end": "28",
+      "start": "0"
+     }
+    }
+   },
+   "id": "int-003",
+   "src": "((-9223372036854775807) / 0)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "int-004",
+   "src": "((-911) == (-1))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "4425295636426403951"
+    }
+   },
+   "id": "int-005",
+   "src": "(4425295636426403950 - (-1))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "int_overflow",
+     "span": {
+      "end": "46",
+      "start": "0"
+     }
+    }
+   },
+   "id": "int-006",
+   "src": "((-9223372036854775807) * 9223372036854775807)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "568"
+    }
+   },
+   "id": "int-007",
+   "src": "(9223372036854775807 % (-627))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "2432067355862062287"
+    }
+   },
+   "id": "int-008",
+   "src": "(2432067355862062286 - (-1))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "-9223372036854775807"
+    }
+   },
+   "id": "int-009",
+   "src": "(9223372036854775807 * (-1))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "int-010",
+   "src": "((-3628124695304576832) == 167)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "1375410810928735381"
+    }
+   },
+   "id": "int-011",
+   "src": "(1375410810928735381 - 0)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "-2550068677132771753"
+    }
+   },
+   "id": "int-012",
+   "src": "(2550068677132771753 * (-1))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "int-013",
+   "src": "((-913) >= 0)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "int-014",
+   "src": "(9223372036854775807 < 92)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "9223372036854775807"
+    }
+   },
+   "id": "int-015",
+   "src": "(9223372036854775807 + 0)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "int-016",
+   "src": "((-893854829043585368) == 0)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "int-017",
+   "src": "((-9223372036854775807) >= (-1))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "int-018",
+   "src": "((-712) < 9223372036854775807)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "-9223372036854775045"
+    }
+   },
+   "id": "int-019",
+   "src": "(762 - 9223372036854775807)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "-1"
+    }
+   },
+   "id": "int-020",
+   "src": "((-9223372036854775807) % 2)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "int-021",
+   "src": "(871 == 2)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "0"
+    }
+   },
+   "id": "int-022",
+   "src": "((-9223372036854775807) % (-1))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "int-023",
+   "src": "(167139436537919651 == (-1))"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3e9421f5f40d8376",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "near-024",
+   "src": "(q == 0.3[um])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x4028965453c62407",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "near-025",
+   "src": "(q <= 484.000477[in])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3f507746887a8d65",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "near-026",
+   "src": "(q < 1.005[mm])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3fb164d7f0ed3d86",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "near-027",
+   "src": "(q == 2.675[in])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3fb164d7f0ed3d86",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "near-028",
+   "src": "(q != 2.675[in])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3f4d8030f69ab708",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "near-029",
+   "src": "(q == 900.291355[um])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3ec67084cd59ba86",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "near-030",
+   "src": "(q != 2.675[um])"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3fd3333333333333",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "near-031",
+   "src": "(x < 0.3)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3f33a92a30553261",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "near-032",
+   "src": "(x != 0.0003)"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3e72ca5d05ea7ab3",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "near-033",
+   "src": "(q != 0.07[um])"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3f33a92a30553261",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "near-034",
+   "src": "(x > 0.0003)"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x40091615153afaa8",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "near-035",
+   "src": "(q > 123.456[in])"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x404e03ac0c62e4d2",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "near-036",
+   "src": "(x <= 60.028688)"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3e9421f5f40d8376",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "near-037",
+   "src": "(q != 0.0003[mm])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3edff5e9a6a240b2",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "near-038",
+   "src": "(q == 0.0003[in])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3e72ca5d05ea7ab3",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "near-039",
+   "src": "(q != 0.07[um])"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3fd3333333333333",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "near-040",
+   "src": "(x <= 0.3)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x40864b1ef62f9ca6",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "near-041",
+   "src": "(x <= 713.390118)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "dec-042",
+   "src": "(0.006011 < 9720.43)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "dec-043",
+   "src": "(62988.39793 == 9.34)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "2356465.868865419560"
+    }
+   },
+   "id": "dec-044",
+   "src": "(55276.711010 * 42.630356)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "1.61868"
+    }
+   },
+   "id": "dec-045",
+   "src": "((-3.444) * (-0.47))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "dec-046",
+   "src": "(36627.57411 == 44.56175)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "dec-047",
+   "src": "(0.0738 > 11)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "8398.802"
+    }
+   },
+   "id": "dec-048",
+   "src": "(8391.802 + 7)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "dec-049",
+   "src": "(90407.612756 < (-0.000590))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "37947639923677.018212"
+    }
+   },
+   "id": "dec-050",
+   "src": "(32785286.7 * 1157459.45036)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "-8233853541.5"
+    }
+   },
+   "id": "dec-051",
+   "src": "((-8218131943.5) - 15721598.0)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x3fae0dc689a837eb",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "dec-052",
+   "src": "(52537.9 / 895041.4)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "-90725.74209"
+    }
+   },
+   "id": "dec-053",
+   "src": "((-90680.7) + (-45.04209))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "dec-054",
+   "src": "((-0.8) == (-15))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "878216.8011"
+    }
+   },
+   "id": "dec-055",
+   "src": "(880337.2260 - 2120.4249)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0xc16467d6512bb513",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "dec-056",
+   "src": "(43863.516 / (-0.0041))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "460.185335"
+    }
+   },
+   "id": "dec-057",
+   "src": "(823585756.10 % (-665.031751))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x408d7439f4b061af",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "dec-058",
+   "src": "(61264.339418 / 65.0)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "dec-059",
+   "src": "(1300899.0 > 3808266.0)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "dec-060",
+   "src": "(360946.9904 < 0.000006)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "-246.45"
+    }
+   },
+   "id": "dec-061",
+   "src": "((-767965974.45) % 744.0)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0xc017f615003c03e7",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "dec-062",
+   "src": "(770245.0 / (-128581.730))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "0.156645"
+    }
+   },
+   "id": "dec-063",
+   "src": "(0.017405 * 9)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "4488639023.314"
+    }
+   },
+   "id": "dec-064",
+   "src": "(0.314 - (-4488639023.0))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "66103464.110"
+    }
+   },
+   "id": "dec-065",
+   "src": "(66004369.976 - (-99094.134))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "mm",
+     "v": "552253.5"
+    }
+   },
+   "id": "unit-066",
+   "src": "((-36201.5[mm]) + 588455.0[mm])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x3f0163954b2192a1",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "unit-067",
+   "src": "(21.4266[cm] / 646024.0[cm])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "in",
+     "v": "12.3987"
+    }
+   },
+   "id": "unit-068",
+   "src": "(826959.0[in] % (-18.2199[in]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "unit-069",
+   "src": "((-254501.0[cm]) < 62.8761[cm])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0xbf9a5e4914358dc9",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "unit-070",
+   "src": "(72.3264[cm] / (-2808.76[cm]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "um",
+     "v": "416786.39"
+    }
+   },
+   "id": "unit-071",
+   "src": "((-4639.61[um]) + 421426.0[um])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "in",
+     "v": "415000.51"
+    }
+   },
+   "id": "unit-072",
+   "src": "((-3392.49[in]) + 418393.0[in])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "mm",
+     "v": "129.363"
+    }
+   },
+   "id": "unit-073",
+   "src": "(728.145[mm] % (-199.594[mm]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "um",
+     "v": "11068.21"
+    }
+   },
+   "id": "unit-074",
+   "src": "(1925.37[um] - (-9142.84[um]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0xbe9e8437846a99d6",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "unit-075",
+   "src": "(290.955[um] / (-639.84[m]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0xc0412cc63f141206",
+     "kind": "length",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "unit-076",
+   "src": "((-3434.98[cm]) % (-88.7844[m]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0xbfe8c87980f55de6",
+     "kind": "length",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "unit-077",
+   "src": "(99.6048[cm] - 1770.52[mm])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0xc0532e2ec6fd5500",
+     "kind": "length",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "unit-078",
+   "src": "((-76.7205[m]) - 1105.06[um])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "unit-079",
+   "src": "(71.3476[um] != 35.7140[cm])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "unit-080",
+   "src": "((-233270.0[m]) != 66.6809[m])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "unit-081",
+   "src": "(5489.23[mm] < (-5.3991[in]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "unit-082",
+   "src": "((-76540.7[m]) == 620.520[um])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "unit-083",
+   "src": "(722024.0[m] == 51849.4[cm])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "um",
+     "v": "87796.79"
+    }
+   },
+   "id": "unit-084",
+   "src": "(95448.6[um] - 7651.81[um])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "in",
+     "v": "-3281.160"
+    }
+   },
+   "id": "unit-085",
+   "src": "(376.840[in] - 3658.0[in])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "unit-086",
+   "src": "((-824.152[mm]) == (-1063.7[um]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "unit-087",
+   "src": "(943.515[mm] != (-5994.77[mm]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "um",
+     "v": "57759.517"
+    }
+   },
+   "id": "unit-088",
+   "src": "((-718.983[um]) + 58478.5[um])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "unit-089",
+   "src": "((-45452.1[cm]) < 778.29[cm])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x402add8556c182c1",
+     "kind": "area",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "uprod-090",
+   "src": "((-1878.0[mm]) * (-281.6[in]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0xbf71d515ba8a26a1",
+     "kind": "dim:m^3",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "uprod-091",
+   "src": "(444.2[mm^2] * (-9801.0[mm]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "mm^2",
+     "v": "419.92592"
+    }
+   },
+   "id": "uprod-092",
+   "src": "((-7.496[mm]) * (-56.02[mm]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "m^2",
+     "v": "0.044307120"
+    }
+   },
+   "id": "uprod-093",
+   "src": "(1.144[mm] * 3873.0[cm])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x403199522a6f3f53",
+     "kind": "dim:m*s",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "uprod-094",
+   "src": "(39.10[s] * 450.1[mm])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0xc036fae3a320725a",
+     "kind": "dim:rad^2",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "uprod-095",
+   "src": "((-9642.0[deg]) * 7.824[deg])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x3f7919bff5190b5b",
+     "kind": "area",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "uprod-096",
+   "src": "(2.631[mm] * 91.7[in])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "cm^2",
+     "v": "17556.881"
+    }
+   },
+   "id": "uprod-097",
+   "src": "(84.53[cm] * 207.7[cm])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0xbf95b20a179fc8a2",
+     "kind": "dim:m*s",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "uprod-098",
+   "src": "(5.819[s] * (-3.641[mm]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "m^2",
+     "v": "5177.4740"
+    }
+   },
+   "id": "uprod-099",
+   "src": "(8.105[m] * 638.8[m])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0xbf6b1d3d08bc3fa1",
+     "kind": "dim:m^3",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "uprod-100",
+   "src": "(651.8[mm^2] * (-5078.0[mm]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "mm^2",
+     "v": "3889.5080"
+    }
+   },
+   "id": "uprod-101",
+   "src": "(43.40[mm] * 89.62[mm])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "uprod-102",
+   "src": "((1.868[cm] * 7683.0[cm]) == (-4.3[mm^2]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "m^2",
+     "v": "0.000005951148"
+    }
+   },
+   "id": "uprod-103",
+   "src": "(284.2[um] * 20.94[mm])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x408cd38a2e0662a0",
+     "kind": "dim:rad^2",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "uprod-104",
+   "src": "(980.0[deg] * 3090.0[deg])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "cm^2",
+     "v": "1149415.20"
+    }
+   },
+   "id": "uprod-105",
+   "src": "(315.6[cm] * 3642.0[cm])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "m^2",
+     "v": "-0.0000757368"
+    }
+   },
+   "id": "uprod-106",
+   "src": "((-4.71[mm]) * 1.608[cm])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0xbfea84a58878d48f",
+     "kind": "area",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "uprod-107",
+   "src": "((-303.3[in]) * 4.235[in])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "mm^2",
+     "v": "120.262400"
+    }
+   },
+   "id": "scale-108",
+   "src": "(368.00[mm^2] * 0.3268)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "mm",
+     "v": "516.18925"
+    }
+   },
+   "id": "scale-109",
+   "src": "((-49.25) * (-10.481[mm]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "deg",
+     "v": "-0.491074766"
+    }
+   },
+   "id": "scale-110",
+   "src": "((-0.08099) * 6.0634[deg])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "in",
+     "v": "0.028413440"
+    }
+   },
+   "id": "scale-111",
+   "src": "(0.440 * 0.064576[in])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "mm^2",
+     "v": "31.1784192"
+    }
+   },
+   "id": "scale-112",
+   "src": "(47.16 * 0.66112[mm^2])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "deg",
+     "v": "-83509.7900"
+    }
+   },
+   "id": "scale-113",
+   "src": "((-4.238) * 19705.0[deg])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "s",
+     "v": "250.503273"
+    }
+   },
+   "id": "scale-114",
+   "src": "(0.03177 * 7884.9[s])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "mm",
+     "v": "-112.5445950"
+    }
+   },
+   "id": "scale-115",
+   "src": "(0.012429[mm] * (-9055.0))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "deg",
+     "v": "-613.533065"
+    }
+   },
+   "id": "scale-116",
+   "src": "((-6834.5[deg]) * 0.08977)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x3fc839a5d9f7bf0e",
+     "kind": "angle",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "scale-117",
+   "src": "(0.089461[deg] / 0.00825)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "in",
+     "v": "-0.350714610"
+    }
+   },
+   "id": "scale-118",
+   "src": "(0.048109[in] * (-7.290))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0xbef41715a13455e9",
+     "kind": "time",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "scale-119",
+   "src": "(0.07112[s] / (-3712.0))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "mm^2",
+     "v": "-32947039.40"
+    }
+   },
+   "id": "scale-120",
+   "src": "(506.2 * (-65087.0[mm^2]))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "in",
+     "v": "0.000131503484"
+    }
+   },
+   "id": "scale-121",
+   "src": "(0.002114 * 0.062206[in])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "mm",
+     "v": "19022511.90"
+    }
+   },
+   "id": "scale-122",
+   "src": "(5019.0 * 3790.1[mm])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0xbf57fb8c5c6b2ded",
+     "kind": "angle",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "scale-123",
+   "src": "((-806.48[deg]) / 9616.0)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "deg",
+     "v": "-365385024.00"
+    }
+   },
+   "id": "scale-124",
+   "src": "((-97488.0[deg]) * 3748.0)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "mm",
+     "v": "-0.0252359250"
+    }
+   },
+   "id": "scale-125",
+   "src": "((-0.4125) * 0.061178[mm])"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3fd3333333333334",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "mixed-126",
+   "src": "(y >= 8090.48)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3fd3333333333333",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "mixed-127",
+   "src": "(x < 72.3124)"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3fd3333333333334",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "mixed-128",
+   "src": "(y < 98.2827)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xc00e000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0xbfe7c059210385c8",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "mixed-129",
+   "src": "(x + 3.00777)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xc00e000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "mixed-130",
+   "src": "(x >= (-73.1110))"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3e7ad7f29abcaf48",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0xc152360580000000",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "mixed-131",
+   "src": "((-0.477391) / x)"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x7e37e43c8800759c",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "mixed-132",
+   "src": "(8785.01 >= y)"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3fd3333333333334",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "mixed-133",
+   "src": "(y < 5.1452)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3fb999999999999a",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "mixed-134",
+   "src": "(14.4215 < x)"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x4000000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "mixed-135",
+   "src": "(y == (-453560.0))"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3ff8000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "mixed-136",
+   "src": "(19.1515 >= y)"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x7e37e43c8800759c",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x7e37e43c8800759c",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "mixed-137",
+   "src": "(y + (-468133.0))"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3e7ad7f29abcaf48",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x40e85d60000035b0",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "mixed-138",
+   "src": "(49899.0 + x)"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xbfd0000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "mixed-139",
+   "src": "(678593.0 == y)"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x4000000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "mixed-140",
+   "src": "(y == 38.8081)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xc00e000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0xc00b818efbb0e5e6",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "mixed-141",
+   "src": "(x + 0.311739)"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x4000000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "mixed-142",
+   "src": "(18.0555 < y)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x40fe240c9fbe76c9",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0xc0483009d495182b",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "mixed-143",
+   "src": "((-48.3753) % x)"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3ff8000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "mixed-144",
+   "src": "(5963.90 == y)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xc00e000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0xc022963886594af5",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "mixed-145",
+   "src": "(x * 2.47824)"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x7e37e43c8800759c",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "mixed-146",
+   "src": "(y >= (-85.1097))"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xc00e000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0xc137ad6f80000000",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "mixed-147",
+   "src": "(x * 413794.0)"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x4000000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x4000000000000000",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "mixed-148",
+   "src": "(y % (-9108.39))"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3fb999999999999a",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x3ff0cc23fab10ba6",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "mixed-149",
+   "src": "(0.949839 + x)"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3ff0000000000000",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "real_qty-150",
+   "src": "(q > 0.091615[in])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3ff0000000000000",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "real_qty-151",
+   "src": "(q < 0.3[m])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3f9a027525460aa6",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "real_qty-152",
+   "src": "(q > 0.3[in])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3f50624dd2f1a9fc",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "real_qty-153",
+   "src": "(1[nm] != q)"
+  },
+  {
+   "env": {
+    "p": {
+     "type": "quantity<length>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "mm",
+      "v": "2.54"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "real_qty-154",
+   "src": "(p <= 1[m])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3f50624dd2f1a9fc",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "real_qty-155",
+   "src": "(0.0254[in] < q)"
+  },
+  {
+   "env": {
+    "p": {
+     "type": "quantity<length>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "m",
+      "v": "12.700"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x4029666687f455a7",
+     "kind": "length",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "real_qty-156",
+   "src": "(p + 1000[nm])"
+  },
+  {
+   "env": {
+    "p": {
+     "type": "quantity<length>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "mm",
+      "v": "0.3"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x3f33a92a4c42a944",
+     "kind": "length",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "real_qty-157",
+   "src": "(p + 0.0254[nm])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3f33a92a30553261",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0xbf99b3d07c84b5dc",
+     "kind": "length",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "real_qty-158",
+   "src": "(q - 1[in])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3f50624dd2f1a9fc",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "real_qty-159",
+   "src": "(q < 25.4[in])"
+  },
+  {
+   "env": {
+    "p": {
+     "type": "quantity<length>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "in",
+      "v": "2.54"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "real_qty-160",
+   "src": "(p != 0.0254[mm])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3f9a027525460aa6",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "real_qty-161",
+   "src": "(q == 1000[mm])"
+  },
+  {
+   "env": {
+    "p": {
+     "type": "quantity<length>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "m",
+      "v": "2.54"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "real_qty-162",
+   "src": "(p < 25.4[m])"
+  },
+  {
+   "env": {
+    "p": {
+     "type": "quantity<length>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "m",
+      "v": "2.54"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "real_qty-163",
+   "src": "(p > (-98848.0[nm]))"
+  },
+  {
+   "env": {
+    "p": {
+     "type": "quantity<length>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "in",
+      "v": "12.700"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "real_qty-164",
+   "src": "(0.0254[mm] == p)"
+  },
+  {
+   "env": {
+    "p": {
+     "type": "quantity<length>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "mm",
+      "v": "2.54"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "real_qty-165",
+   "src": "(p > 1[nm])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3ff0000000000000",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "real_qty-166",
+   "src": "(1[nm] == q)"
+  },
+  {
+   "env": {
+    "p": {
+     "type": "quantity<length>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "in",
+      "v": "0.3"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "real_qty-167",
+   "src": "(p == 25.4[in])"
+  },
+  {
+   "env": {
+    "p": {
+     "type": "quantity<length>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "m",
+      "v": "2.54"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "real_qty-168",
+   "src": "(p == 25.4[in])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3f50624dd2f1a9fc",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "real_qty-169",
+   "src": "(q != 0.3[nm])"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3f9a027525460aa6",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "real_qty-170",
+   "src": "(q <= 4491.4[m])"
+  },
+  {
+   "env": {
+    "p": {
+     "type": "quantity<length>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "m",
+      "v": "2.54"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x40041de69ad42c3d",
+     "kind": "length",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "real_qty-171",
+   "src": "(p - 25.4[mm])"
+  },
+  {
+   "env": {
+    "p": {
+     "type": "quantity<length>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "m",
+      "v": "12.700"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x4029666644d87725",
+     "kind": "length",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "real_qty-172",
+   "src": "(p - 1000[nm])"
+  },
+  {
+   "env": {
+    "p": {
+     "type": "quantity<length>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "m",
+      "v": "0.3"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "real_qty-173",
+   "src": "(p == 1000[mm])"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0xbff4000000000000",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0xbff3bfa901b7a364",
+     "kind": "angle",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "angle-174",
+   "src": "(ang + 1[gon])"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0x3fe0000000000000",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "angle-175",
+   "src": "(ang == 30[rad])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x3feffd315bbf4275",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "angle-176",
+   "src": "cos(90[arcmin])"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0xbff4000000000000",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "angle-177",
+   "src": "(ang == 180[deg])"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0x3fe0000000000000",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "angle-178",
+   "src": "(ang >= 1[gon])"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0xbff4000000000000",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "angle-179",
+   "src": "(ang != 1[deg])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x3feffd315bbf4275",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "angle-180",
+   "src": "cos(90[arcmin])"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0xbff4000000000000",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "angle-181",
+   "src": "(ang == 30[rad])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x3f9ad07b730567d3",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "angle-182",
+   "src": "tan(90[arcmin])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x3ff56b466d0eefe6",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "angle-183",
+   "src": "tan(180[rad])"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0xbff4000000000000",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x403cc00000000000",
+     "kind": "angle",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "angle-184",
+   "src": "(ang + 30[rad])"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0x3fe0c152382d7365",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "angle-185",
+   "src": "(ang != 45[rad])"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0x3fe0c152382d7365",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "angle-186",
+   "src": "(ang < 1[gon])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x3fd3c6ef372fe951",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "angle-187",
+   "src": "sin(180[gon])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x3f8015b4bbb44e96",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "angle-188",
+   "src": "sin(0.5[gon])"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0x3fe0c152382d7365",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "angle-189",
+   "src": "(ang == 1[deg])"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0x3fe0000000000000",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "angle-190",
+   "src": "(ang != 1[gon])"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0xbff4000000000000",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x403cc00000000000",
+     "kind": "angle",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "angle-191",
+   "src": "(ang + 30[rad])"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3fd3333333333333",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    },
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x4000000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x4000000000000000",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-192",
+   "src": "max(x, y, (-0.000539))"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0xbff4000000000000",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0xbff4000000000000",
+     "kind": "angle",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-193",
+   "src": "to_unit(ang, \"rad\")"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3e7ad7f29abcaf48",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    },
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x4000000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x4000000000000000",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-194",
+   "src": "max(x, y, 0.0102)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "-1"
+    }
+   },
+   "id": "func-195",
+   "src": "min(0, 0.00778, (-1))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "str",
+     "v": "2.50 mm"
+    }
+   },
+   "id": "func-196",
+   "src": "format(\"{} mm\", 2.50)"
+  },
+  {
+   "env": {
+    "ar": {
+     "type": "quantity<area>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "cm^2",
+      "v": "4"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x3f947ae147ae147b",
+     "kind": "length",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-197",
+   "src": "sqrt(ar)"
+  },
+  {
+   "env": {
+    "names": {
+     "type": "list<string>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "a"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "bb"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": ""
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "3"
+    }
+   },
+   "id": "func-198",
+   "src": "len(names)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "-0.00862"
+    }
+   },
+   "id": "func-199",
+   "src": "min(0.000800, (-0.00862))"
+  },
+  {
+   "env": {
+    "s": {
+     "type": "string",
+     "value": {
+      "not_of_record": true,
+      "t": "str",
+      "v": "probe"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "func-200",
+   "src": "contains(s, \"ob\")"
+  },
+  {
+   "env": {
+    "n": {
+     "type": "int",
+     "value": {
+      "not_of_record": true,
+      "t": "int",
+      "v": "-10"
+     }
+    },
+    "ok": {
+     "type": "bool",
+     "value": {
+      "not_of_record": true,
+      "t": "bool",
+      "v": false
+     }
+    },
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3f9a027525460aa6",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    },
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xc00e000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "str",
+     "v": "n=-10 x=-3.75 q=0.0254 m ok=false"
+    }
+   },
+   "id": "func-201",
+   "src": "format(\"n={} x={} q={} ok={}\", n, x, q, ok)"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3f50624dd2f1a9fc",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x3f50624dd2f1a9fc",
+     "kind": "length",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-202",
+   "src": "abs((-q))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "5"
+    }
+   },
+   "id": "func-203",
+   "src": "max(5, (-0.0625), 0.189, 0.0544)"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0x3fe0c152382d7365",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x3fe0c152382d7365",
+     "kind": "angle",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-204",
+   "src": "to_unit(ang, \"deg\")"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0x3fe0000000000000",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x3ff3c25f13d7a2c6",
+     "kind": "angle",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-205",
+   "src": "atan2(ang, 10[deg])"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "779513304.0"
+    }
+   },
+   "id": "func-206",
+   "src": "abs(779513304.0)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "3"
+    }
+   },
+   "id": "func-207",
+   "src": "min(3, 6)"
+  },
+  {
+   "env": {
+    "xs": {
+     "type": "list<int>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "16"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "1"
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "func-208",
+   "src": "contains(xs, 2)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x40fe240c9fbe76c9",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    },
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x4000000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x40fe240c9fbe76c9",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-209",
+   "src": "max(x, y, 0.000504)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "-3"
+    }
+   },
+   "id": "func-210",
+   "src": "min((-0.930), (-0.00000), (-0.00784), (-3))"
+  },
+  {
+   "env": {
+    "names": {
+     "type": "list<string>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "a"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "bb"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": ""
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "3"
+    }
+   },
+   "id": "func-211",
+   "src": "len(names)"
+  },
+  {
+   "env": {
+    "xs": {
+     "type": "list<int>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "11"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "-6"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "5"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "-2"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "-3"
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "func-212",
+   "src": "contains(xs, (-2))"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xc00e000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    },
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xbfd0000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "90.9"
+    }
+   },
+   "id": "func-213",
+   "src": "max(x, y, 90.9)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xc00e000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x400141083623ffa0",
+     "kind": "angle",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-214",
+   "src": "atan2(5.65, x)"
+  },
+  {
+   "env": {
+    "names": {
+     "type": "list<string>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "a"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "bb"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": ""
+       }
+      ]
+     }
+    },
+    "p": {
+     "type": "quantity<length>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "mm",
+      "v": "2.54"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "str",
+     "v": "p=2.54 mm names=[a, bb, ]"
+    }
+   },
+   "id": "func-215",
+   "src": "format(\"p={} names={}\", p, names)"
+  },
+  {
+   "env": {
+    "names": {
+     "type": "list<string>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "a"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "bb"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": ""
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "func-216",
+   "src": "contains(names, \"bb\")"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "5"
+    }
+   },
+   "id": "func-217",
+   "src": "max(5, (-6))"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x40fe240c9fbe76c9",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x3f33a421abfa28cd",
+     "kind": "angle",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-218",
+   "src": "atan2(37.0, x)"
+  },
+  {
+   "env": {
+    "xs": {
+     "type": "list<int>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "9"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "18"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "-3"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "8"
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "4"
+    }
+   },
+   "id": "func-219",
+   "src": "len(xs)"
+  },
+  {
+   "env": {
+    "n": {
+     "type": "int",
+     "value": {
+      "not_of_record": true,
+      "t": "int",
+      "v": "-34"
+     }
+    },
+    "ok": {
+     "type": "bool",
+     "value": {
+      "not_of_record": true,
+      "t": "bool",
+      "v": true
+     }
+    },
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0xbfe0000000000000",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    },
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x401c000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "str",
+     "v": "n=-34 x=7 q=-0.5 m ok=true"
+    }
+   },
+   "id": "func-220",
+   "src": "format(\"n={} x={} q={} ok={}\", n, x, q, ok)"
+  },
+  {
+   "env": {
+    "names": {
+     "type": "list<string>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "a"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "bb"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": ""
+       }
+      ]
+     }
+    },
+    "p": {
+     "type": "quantity<length>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "in",
+      "v": "1"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "str",
+     "v": "p=1 in names=[a, bb, ]"
+    }
+   },
+   "id": "func-221",
+   "src": "format(\"p={} names={}\", p, names)"
+  },
+  {
+   "env": {
+    "ang": {
+     "type": "quantity<angle>",
+     "value": {
+      "bits": "0x3fe0000000000000",
+      "kind": "angle",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x3fe0000000000000",
+     "kind": "angle",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-222",
+   "src": "to_unit(ang, \"deg\")"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "-3"
+    }
+   },
+   "id": "func-223",
+   "src": "min((-1), 0.00275, (-3), 1)"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3f9a027525460aa6",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x3f9a027525460aa6",
+     "kind": "length",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-224",
+   "src": "to_unit(q, \"mm\")"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "str",
+     "v": "2.50 mm"
+    }
+   },
+   "id": "func-225",
+   "src": "format(\"{} mm\", 2.50)"
+  },
+  {
+   "env": {
+    "ar": {
+     "type": "quantity<area>",
+     "value": {
+      "not_of_record": true,
+      "t": "dec",
+      "unit": "cm^2",
+      "v": "4"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x3f947ae147ae147b",
+     "kind": "length",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-226",
+   "src": "sqrt(ar)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x401c000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x3fbbe716e4ad6f6d",
+     "kind": "angle",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-227",
+   "src": "atan2(0.766, x)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3fb999999999999a",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    },
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x4000000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x3fb999999999999a",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-228",
+   "src": "min(x, y, 8.90)"
+  },
+  {
+   "env": {
+    "n": {
+     "type": "int",
+     "value": {
+      "not_of_record": true,
+      "t": "int",
+      "v": "27"
+     }
+    },
+    "ok": {
+     "type": "bool",
+     "value": {
+      "not_of_record": true,
+      "t": "bool",
+      "v": true
+     }
+    },
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3f50624dd2f1a9fc",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    },
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3e7ad7f29abcaf48",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "str",
+     "v": "n=27 x=0.0000001 q=0.001 m ok=true"
+    }
+   },
+   "id": "func-229",
+   "src": "format(\"n={} x={} q={} ok={}\", n, x, q, ok)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "m",
+     "v": "-0.000050658"
+    }
+   },
+   "id": "func-230",
+   "src": "to_unit((-50.658[um]), \"m\")"
+  },
+  {
+   "env": {
+    "xs": {
+     "type": "list<int>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "18"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "11"
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "func-231",
+   "src": "contains(xs, 14)"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3ff0000000000000",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x3ff0000000000000",
+     "kind": "length",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-232",
+   "src": "abs((-q))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x402baf160f532f8f",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-233",
+   "src": "sqrt(191.6)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3e7ad7f29abcaf48",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    },
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x4000000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "5.28"
+    }
+   },
+   "id": "func-234",
+   "src": "max(x, y, 5.28)"
+  },
+  {
+   "env": {
+    "names": {
+     "type": "list<string>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "a"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "bb"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": ""
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "3"
+    }
+   },
+   "id": "func-235",
+   "src": "len(names)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "2.52"
+    }
+   },
+   "id": "func-236",
+   "src": "max((-539.0), 0.0424, 2.52)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": "deg",
+     "v": "90"
+    }
+   },
+   "id": "func-237",
+   "src": "to_unit(90[deg], \"deg\")"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "bits": "0x3ff921fb54442d18",
+     "kind": "angle",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "func-238",
+   "src": "to_unit(90[deg], \"rad\")"
+  },
+  {
+   "env": {
+    "n": {
+     "type": "int",
+     "value": {
+      "not_of_record": true,
+      "t": "int",
+      "v": "-37"
+     }
+    },
+    "ok": {
+     "type": "bool",
+     "value": {
+      "not_of_record": true,
+      "t": "bool",
+      "v": false
+     }
+    },
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0x3ff0000000000000",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    },
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x40fe240c9fbe76c9",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "str",
+     "v": "n=-37 x=123456.789 q=1 m ok=false"
+    }
+   },
+   "id": "func-239",
+   "src": "format(\"n={} x={} q={} ok={}\", n, x, q, ok)"
+  },
+  {
+   "env": {
+    "part": {
+     "type": "element<part>",
+     "value": {
+      "not_of_record": true,
+      "t": "element",
+      "v": "E-17"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "struct-240",
+   "src": "(part == part)"
+  },
+  {
+   "env": {
+    "xs": {
+     "type": "list<int>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "6"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "13"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "10"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "5"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "-1"
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "13"
+    }
+   },
+   "id": "struct-241",
+   "src": "xs[1]"
+  },
+  {
+   "env": {
+    "s": {
+     "type": "string",
+     "value": {
+      "not_of_record": true,
+      "t": "str",
+      "v": "edge-12"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "struct-242",
+   "src": "(s == \"probe\")"
+  },
+  {
+   "env": {
+    "mode": {
+     "type": "enum<fast|slow>",
+     "value": {
+      "not_of_record": true,
+      "t": "enum",
+      "v": "slow"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "struct-243",
+   "src": "(mode != \"fast\")"
+  },
+  {
+   "env": {
+    "mode": {
+     "type": "enum<fast|slow>",
+     "value": {
+      "not_of_record": true,
+      "t": "enum",
+      "v": "fast"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "struct-244",
+   "src": "(mode == \"slow\")"
+  },
+  {
+   "env": {
+    "r": {
+     "type": "record<probe>",
+     "value": {
+      "not_of_record": true,
+      "t": "record",
+      "v": {
+       "diameter": {
+        "not_of_record": true,
+        "t": "dec",
+        "unit": "mm",
+        "v": "3.000"
+       },
+       "hits": {
+        "not_of_record": true,
+        "t": "int",
+        "v": "4"
+       },
+       "label": {
+        "not_of_record": true,
+        "t": "str",
+        "v": "P1"
+       }
+      }
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "-12"
+    }
+   },
+   "id": "struct-245",
+   "src": "(r.hits * (-3))"
+  },
+  {
+   "env": {
+    "part": {
+     "type": "element<part>",
+     "value": {
+      "not_of_record": true,
+      "t": "element",
+      "v": "E-17"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "struct-246",
+   "src": "(part == part)"
+  },
+  {
+   "env": {
+    "names": {
+     "type": "list<string>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "a"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "bb"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": ""
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "struct-247",
+   "src": "(names == names)"
+  },
+  {
+   "env": {
+    "q": {
+     "type": "quantity<length>",
+     "value": {
+      "bits": "0xbfe0000000000000",
+      "kind": "length",
+      "not_of_record": true,
+      "t": "real"
+     }
+    },
+    "r": {
+     "type": "record<probe>",
+     "value": {
+      "not_of_record": true,
+      "t": "record",
+      "v": {
+       "diameter": {
+        "not_of_record": true,
+        "t": "dec",
+        "unit": "mm",
+        "v": "3.000"
+       },
+       "hits": {
+        "not_of_record": true,
+        "t": "int",
+        "v": "4"
+       },
+       "label": {
+        "not_of_record": true,
+        "t": "str",
+        "v": "P1"
+       }
+      }
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0xbfdfced916872b02",
+     "kind": "length",
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "struct-248",
+   "src": "(r.diameter + q)"
+  },
+  {
+   "env": {
+    "part": {
+     "type": "element<part>",
+     "value": {
+      "not_of_record": true,
+      "t": "element",
+      "v": "E-17"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "struct-249",
+   "src": "(part == part)"
+  },
+  {
+   "env": {
+    "r": {
+     "type": "record<probe>",
+     "value": {
+      "not_of_record": true,
+      "t": "record",
+      "v": {
+       "diameter": {
+        "not_of_record": true,
+        "t": "dec",
+        "unit": "mm",
+        "v": "3.000"
+       },
+       "hits": {
+        "not_of_record": true,
+        "t": "int",
+        "v": "4"
+       },
+       "label": {
+        "not_of_record": true,
+        "t": "str",
+        "v": "P1"
+       }
+      }
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "str",
+     "v": "P1"
+    }
+   },
+   "id": "struct-250",
+   "src": "r.label"
+  },
+  {
+   "env": {
+    "xs": {
+     "type": "list<int>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "7"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "15"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "12"
+       },
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "9"
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "index_range",
+     "span": {
+      "end": "5",
+      "start": "0"
+     }
+    }
+   },
+   "id": "struct-251",
+   "src": "xs[5]"
+  },
+  {
+   "env": {
+    "qs": {
+     "type": "list<quantity<length>>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "dec",
+        "unit": "mm",
+        "v": "0.5"
+       },
+       {
+        "bits": "0x3f50624dd2f1a9fc",
+        "kind": "length",
+        "not_of_record": true,
+        "t": "real"
+       },
+       {
+        "not_of_record": true,
+        "t": "dec",
+        "unit": "in",
+        "v": "2"
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "index_range",
+     "span": {
+      "end": "6",
+      "start": "1"
+     }
+    }
+   },
+   "id": "struct-252",
+   "src": "(qs[3] == 2[mm])"
+  },
+  {
+   "env": {
+    "r": {
+     "type": "record<probe>",
+     "value": {
+      "not_of_record": true,
+      "t": "record",
+      "v": {
+       "diameter": {
+        "not_of_record": true,
+        "t": "dec",
+        "unit": "mm",
+        "v": "3.000"
+       },
+       "hits": {
+        "not_of_record": true,
+        "t": "int",
+        "v": "4"
+       },
+       "label": {
+        "not_of_record": true,
+        "t": "str",
+        "v": "P1"
+       }
+      }
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "str",
+     "v": "P1"
+    }
+   },
+   "id": "struct-253",
+   "src": "r.label"
+  },
+  {
+   "env": {
+    "qs": {
+     "type": "list<quantity<length>>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "dec",
+        "unit": "mm",
+        "v": "0.5"
+       },
+       {
+        "bits": "0x3f50624dd2f1a9fc",
+        "kind": "length",
+        "not_of_record": true,
+        "t": "real"
+       },
+       {
+        "not_of_record": true,
+        "t": "dec",
+        "unit": "in",
+        "v": "2"
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "struct-254",
+   "src": "(qs[1] == 0.5[mm])"
+  },
+  {
+   "env": {
+    "s": {
+     "type": "string",
+     "value": {
+      "not_of_record": true,
+      "t": "str",
+      "v": ""
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "struct-255",
+   "src": "(s == \"\")"
+  },
+  {
+   "env": {
+    "xs": {
+     "type": "list<int>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "int",
+        "v": "19"
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "index_range",
+     "span": {
+      "end": "5",
+      "start": "0"
+     }
+    }
+   },
+   "id": "struct-256",
+   "src": "xs[5]"
+  },
+  {
+   "env": {
+    "qs": {
+     "type": "list<quantity<length>>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "dec",
+        "unit": "mm",
+        "v": "0.5"
+       },
+       {
+        "bits": "0x3f50624dd2f1a9fc",
+        "kind": "length",
+        "not_of_record": true,
+        "t": "real"
+       },
+       {
+        "not_of_record": true,
+        "t": "dec",
+        "unit": "in",
+        "v": "2"
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "index_range",
+     "span": {
+      "end": "6",
+      "start": "1"
+     }
+    }
+   },
+   "id": "struct-257",
+   "src": "(qs[3] == 2[mm])"
+  },
+  {
+   "env": {
+    "ok": {
+     "type": "bool",
+     "value": {
+      "not_of_record": true,
+      "t": "bool",
+      "v": true
+     }
+    },
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xc00e000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "div_zero",
+     "span": {
+      "end": "19",
+      "start": "12"
+     }
+    }
+   },
+   "id": "logic-258",
+   "src": "(if ok then (x / 0) else x)"
+  },
+  {
+   "env": {
+    "n": {
+     "type": "int",
+     "value": {
+      "not_of_record": true,
+      "t": "int",
+      "v": "-49"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "-0.836"
+    }
+   },
+   "id": "logic-259",
+   "src": "(if (n > 0) then 1 else (-0.836))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "logic-260",
+   "src": "(true or ((1 / 0) == 1.0))"
+  },
+  {
+   "env": {
+    "ok": {
+     "type": "bool",
+     "value": {
+      "not_of_record": true,
+      "t": "bool",
+      "v": false
+     }
+    },
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xc00e000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0xc00e000000000000",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "logic-261",
+   "src": "(if ok then (x / 0) else x)"
+  },
+  {
+   "env": {
+    "n": {
+     "type": "int",
+     "value": {
+      "not_of_record": true,
+      "t": "int",
+      "v": "-42"
+     }
+    },
+    "ok": {
+     "type": "bool",
+     "value": {
+      "not_of_record": true,
+      "t": "bool",
+      "v": true
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "logic-262",
+   "src": "(ok or (n < 2))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": false
+    }
+   },
+   "id": "logic-263",
+   "src": "(false and ((1 / 0) == 1.0))"
+  },
+  {
+   "env": {
+    "ok": {
+     "type": "bool",
+     "value": {
+      "not_of_record": true,
+      "t": "bool",
+      "v": true
+     }
+    },
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xc00e000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "div_zero",
+     "span": {
+      "end": "19",
+      "start": "12"
+     }
+    }
+   },
+   "id": "logic-264",
+   "src": "(if ok then (x / 0) else x)"
+  },
+  {
+   "env": {
+    "n": {
+     "type": "int",
+     "value": {
+      "not_of_record": true,
+      "t": "int",
+      "v": "34"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "-1"
+    }
+   },
+   "id": "logic-265",
+   "src": "(if (n > 0) then (-1) else 0.00394)"
+  },
+  {
+   "env": {
+    "ok": {
+     "type": "bool",
+     "value": {
+      "not_of_record": true,
+      "t": "bool",
+      "v": true
+     }
+    },
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xc00e000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "div_zero",
+     "span": {
+      "end": "19",
+      "start": "12"
+     }
+    }
+   },
+   "id": "logic-266",
+   "src": "(if ok then (x / 0) else x)"
+  },
+  {
+   "env": {
+    "n": {
+     "type": "int",
+     "value": {
+      "not_of_record": true,
+      "t": "int",
+      "v": "35"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "-5"
+    }
+   },
+   "id": "logic-267",
+   "src": "(if (n > 0) then (-5) else 0.000662)"
+  },
+  {
+   "env": {
+    "ok": {
+     "type": "bool",
+     "value": {
+      "not_of_record": true,
+      "t": "bool",
+      "v": true
+     }
+    },
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x4004000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "div_zero",
+     "span": {
+      "end": "19",
+      "start": "12"
+     }
+    }
+   },
+   "id": "logic-268",
+   "src": "(if ok then (x / 0) else x)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x40fe240c9fbe76c9",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    },
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3ff8000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "logic-269",
+   "src": "(not (x < y))"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3fd3333333333333",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    },
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xbfd0000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "logic-270",
+   "src": "(not (x == y))"
+  },
+  {
+   "env": {
+    "n": {
+     "type": "int",
+     "value": {
+      "not_of_record": true,
+      "t": "int",
+      "v": "4"
+     }
+    },
+    "ok": {
+     "type": "bool",
+     "value": {
+      "not_of_record": true,
+      "t": "bool",
+      "v": true
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "logic-271",
+   "src": "(ok or (n < (-3)))"
+  },
+  {
+   "env": {
+    "n": {
+     "type": "int",
+     "value": {
+      "not_of_record": true,
+      "t": "int",
+      "v": "3"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "-5"
+    }
+   },
+   "id": "logic-272",
+   "src": "(if (n > 0) then (-5) else (-0.0738))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "logic-273",
+   "src": "(true or ((1 / 0) == 1.0))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "logic-274",
+   "src": "(true or ((1 / 0) == 1.0))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "bool",
+     "v": true
+    }
+   },
+   "id": "logic-275",
+   "src": "(true or ((1 / 0) == 1.0))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "div_zero",
+     "span": {
+      "end": "16",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-276",
+   "src": "(0.000598 / 0.0)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3fd3333333333333",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "div_zero",
+     "span": {
+      "end": "7",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-277",
+   "src": "(x / 0)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "int_overflow",
+     "span": {
+      "end": "28",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-278",
+   "src": "((-9223372036854775807) - 2)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "int_overflow",
+     "span": {
+      "end": "31",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-279",
+   "src": "(-((-9223372036854775807) - 1))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "int_overflow",
+     "span": {
+      "end": "33",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-280",
+   "src": "abs(((-9223372036854775807) - 1))"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x7e37e43c8800759c",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "non_finite",
+     "span": {
+      "end": "7",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-281",
+   "src": "(y * y)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "domain",
+     "span": {
+      "end": "12",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-282",
+   "src": "sqrt((-2.0))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "domain",
+     "span": {
+      "end": "14",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-283",
+   "src": "format(\"{\", 1)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "dec",
+     "unit": null,
+     "v": "99999999999999999999999.999999999999990"
+    }
+   },
+   "id": "err-284",
+   "src": "(9999999999999999999999.999999999999999 * 10.0)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "decimal_overflow",
+     "kind": null,
+     "span": {
+      "end": "42",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-285",
+   "src": "1234567890123456789012345678901234567890.0"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3ff8000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "2"
+    }
+   },
+   "id": "err-286",
+   "src": "round(y)"
+  },
+  {
+   "env": {
+    "names": {
+     "type": "list<string>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "a"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "bb"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": ""
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "index_range",
+     "span": {
+      "end": "9",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-287",
+   "src": "names[10]"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "div_zero",
+     "span": {
+      "end": "13",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-288",
+   "src": "(278.0 / 0.0)"
+  },
+  {
+   "env": {
+    "x": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3fb999999999999a",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "div_zero",
+     "span": {
+      "end": "7",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-289",
+   "src": "(x / 0)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "int_overflow",
+     "span": {
+      "end": "28",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-290",
+   "src": "((-9223372036854775807) - 2)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "int_overflow",
+     "span": {
+      "end": "31",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-291",
+   "src": "(-((-9223372036854775807) - 1))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "int_overflow",
+     "span": {
+      "end": "33",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-292",
+   "src": "abs(((-9223372036854775807) - 1))"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0x3ff8000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "bits": "0x4002000000000000",
+     "kind": null,
+     "not_of_record": true,
+     "t": "real"
+    }
+   },
+   "id": "err-293",
+   "src": "(y * y)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "domain",
+     "span": {
+      "end": "12",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-294",
+   "src": "sqrt((-2.0))"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "domain",
+     "span": {
+      "end": "16",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-295",
+   "src": "format(\"{x}\", 1)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "decimal_overflow",
+     "kind": null,
+     "span": {
+      "end": "46",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-296",
+   "src": "(9999999999999999999999.999999999999999 * 3.3)"
+  },
+  {
+   "env": {},
+   "expect": {
+    "err": {
+     "code": "decimal_overflow",
+     "kind": null,
+     "span": {
+      "end": "42",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-297",
+   "src": "1234567890123456789012345678901234567890.0"
+  },
+  {
+   "env": {
+    "y": {
+     "type": "decimal",
+     "value": {
+      "bits": "0xbfd0000000000000",
+      "kind": null,
+      "not_of_record": true,
+      "t": "real"
+     }
+    }
+   },
+   "expect": {
+    "ok": {
+     "not_of_record": true,
+     "t": "int",
+     "v": "0"
+    }
+   },
+   "id": "err-298",
+   "src": "round(y)"
+  },
+  {
+   "env": {
+    "names": {
+     "type": "list<string>",
+     "value": {
+      "not_of_record": true,
+      "t": "list",
+      "v": [
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "a"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": "bb"
+       },
+       {
+        "not_of_record": true,
+        "t": "str",
+        "v": ""
+       }
+      ]
+     }
+    }
+   },
+   "expect": {
+    "err": {
+     "code": "eval_error",
+     "kind": "index_range",
+     "span": {
+      "end": "9",
+      "start": "0"
+     }
+    }
+   },
+   "id": "err-299",
+   "src": "names[10]"
+  }
+ ],
+ "catalogue": "fixtures/program/types/catalogue.json",
+ "format": "fid-program-eval-cases/1",
+ "records": {
+  "probe": {
+   "diameter": "quantity<length>",
+   "hits": "int",
+   "label": "string"
+  }
+ }
+}

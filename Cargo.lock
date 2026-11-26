@@ -2061,6 +2061,7 @@ dependencies = [
  "fid-bus",
  "fid-canon",
  "fid-geo-frame",
+ "fid-num",
  "fid-registry",
  "fid-types",
 ]

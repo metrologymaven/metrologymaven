@@ -13,6 +13,7 @@ pub use fmt::{
     STEP_KINDS,
 };
 
+pub use expr::eval::{eval_expr, Env, EvalError, EvalKind, Value};
 pub use expr::syntax::{parse_expr, print_expr, Expr, ExprKind, ParseError, Span};
 pub use expr::types::{check_types, type_of, Diag, DiagCode, Dim, Kind, RecordType, Site, Type, TypeReport, Typed};
 
