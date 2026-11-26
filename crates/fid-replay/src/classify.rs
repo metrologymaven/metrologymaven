@@ -94,6 +94,9 @@ pub struct Limit {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StepComparison {
     pub class: Determinism,
+    /// Recording and replay ran under the same attested kernel: compute it with
+    /// `fid_journal::same_attested_kernel`, which is false when either side records the
+    /// reserved "no kernel attested" digest.
     pub same_kernel: bool,
     pub same_platform_class: bool,
     pub outputs: Vec<Output>,

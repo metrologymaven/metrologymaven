@@ -214,4 +214,26 @@ acase("everything differs", "REQ-004",
       ["kernel", "command_major", "defaults_profile", "parameter", "input"], "input",
       ["parameter", "defaults_profile", "command_migration", "kernel"])
 acase("nothing differs", "REQ-005", [], "kernel", [], ["no_input_difference"])
+# CORE.JRN.ENTRY reserved digest: `sha256:` + SHA-256("") means "no kernel attested". An
+# unattested kernel is never the same kernel as anything, itself included, so `kernel`
+# always differs when either side records it (and `no_input_difference` cannot apply).
+NO_KERNEL = sha(b"")
+
+
+def unattested(r):
+    r = json.loads(json.dumps(r))
+    r["kernel_manifest"] = NO_KERNEL
+    return r
+
+
+def ucase(name, recorded, replayed, primary, secondary, notes=()):
+    att_cases.append({"name": name, "ac": "NO_KERNEL", "recorded": recorded, "replayed": replayed,
+                      "expect": {"entry_seq": 637, "primary": primary, "secondary": list(secondary),
+                                 "notes": list(notes)}})
+
+
+ucase("both unattested, input differs", unattested(base), unattested(perturb(["input"])), "input", ["kernel"])
+ucase("both unattested, nothing else differs", unattested(base), unattested(base), "kernel", [])
+ucase("recorded unattested, replayed attested", unattested(base), base, "kernel", [])
+ucase("recorded attested, replayed unattested", base, unattested(base), "kernel", [])
 write("attribution.json", {"license": "CC-BY-4.0", "seed": SEED + 1, "cases": att_cases})

@@ -58,5 +58,10 @@
     "name": "records-absent",
     "code": "pkg.malformed",
     "reason": "records_missing"
+  },
+  {
+    "name": "kernel-unattested",
+    "code": "pkg.malformed",
+    "reason": "kernel_unattested"
   }
 ]

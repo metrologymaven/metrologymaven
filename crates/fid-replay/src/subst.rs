@@ -31,6 +31,9 @@ use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+/// `fid_journal::NO_KERNEL_MANIFEST` in this module's digest type.
+pub(crate) const NO_KERNEL: Digest = Digest::from_bytes(fid_journal::NO_KERNEL_MANIFEST.0);
+
 /// Most steps in one span.
 pub const MAX_STEPS: usize = 1 << 20;
 /// Most recorded observations in one step.
@@ -278,7 +281,8 @@ pub struct RecordedStep {
     pub entry: Digest,
     /// Command `name@major`, or `None` for entries that run no command.
     pub command: Option<CommandId>,
-    /// Kernel manifest digest the step ran under, if it needs a kernel.
+    /// Kernel manifest digest the step ran under, if it needs a kernel;
+    /// `fid_journal::NO_KERNEL_MANIFEST` when its entry attests no kernel.
     pub kernel: Option<Digest>,
     /// Class-N observations in the order the handler read them.
     pub observations: Vec<RecordedObservation>,
@@ -779,7 +783,10 @@ impl CommandCatalog {
 /// Lists everything the span needs and cannot have, before the first step (REQ-005, REQ-006):
 /// blob digests the store lacks, command majors neither retained nor reachable by migrators,
 /// detached or damaged payloads (named by entry hash), and kernel digests `kernels` cannot
-/// supply. Items are ordered by kind (`blob`, `command`, `payload`, `kernel`) then ID; each
+/// supply. A step recorded under the reserved `fid_journal::NO_KERNEL_MANIFEST` attests no
+/// kernel: that digest is always listed as a missing kernel and `kernels` is never asked for
+/// it, so no source can make an unattested step look replayable under a real kernel.
+/// Items are ordered by kind (`blob`, `command`, `payload`, `kernel`) then ID; each
 /// lists the steps that need it in ascending order. Each blob, command and kernel is looked
 /// up once.
 ///
@@ -827,7 +834,9 @@ pub fn preflight(
             }
         }
         if let Some(k) = &step.kernel {
-            if !*kernel_ok.entry(*k).or_insert_with(|| kernels.has(k)) {
+            // The reserved "no kernel attested" digest names no kernel, so no source can
+            // supply it and the source is never asked (CORE.JRN.ENTRY).
+            if !*kernel_ok.entry(*k).or_insert_with(|| *k != NO_KERNEL && kernels.has(k)) {
                 need(MissingKind::Kernel, k.to_string());
             }
         }
