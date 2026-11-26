@@ -11,6 +11,8 @@
 //! * Error paths: query argument errors equal GEO.INDEX's; an unverified manifest is refused
 //!   until verified; a tampered chunk is a `chunk_integrity` error; the index budget refuses
 //!   a tree that does not fit, and a budget that holds one tree still gives identical results.
+//! * A cloud beyond the GEO.INDEX coordinate limit is refused when the index is made; a
+//!   store whose reads fail makes every query kind return that error.
 //! * AC-4 on a small cloud: the per-chunk build counter does not exceed the distinct chunks
 //!   touched, and repeated queries build nothing more.
 //!
@@ -22,8 +24,8 @@ mod common;
 use common::*;
 use fid_geo_index::{BudgetError, PointIndex, PointIndexError};
 use fid_geo_ooc::{
-    to_chunks, ChunkCache, ChunkManifest, ChunkedIndex, LayoutParams, OocError, Provenance, QueryConfig, QueryError,
-    DEFAULT_CACHE_BUDGET,
+    to_chunks, ChunkCache, ChunkManifest, ChunkStore, ChunkedIndex, LayoutParams, OocError, Provenance, QueryConfig,
+    QueryError, DEFAULT_CACHE_BUDGET,
 };
 use fid_geo_types::{Aabb, FrameRef, PointCloud};
 
@@ -329,4 +331,62 @@ fn ac4_build_counter_bound() {
     let again = ix.stats().index_builds;
     ix.batch_knn(&qs, 16, 1).unwrap();
     assert_eq!(ix.stats().index_builds, again);
+}
+
+#[test]
+fn cloud_beyond_the_coordinate_limit_is_refused_up_front() {
+    let big = 2f64.powi(501);
+    let pts = [[0.0, 0.0, 0.0], [1.0, 2.0, 3.0], [0.5, -big, 0.0]];
+    let cloud = PointCloud::from_points(frame(), &pts).unwrap();
+    let mem = PointIndex::build(cloud.buffer(), 1).unwrap_err();
+    assert_eq!(mem, PointIndexError::PointOutOfRange { index: 2, axis: 1 });
+    let (store, m) = chunked(&cloud, 1);
+    let cache = ChunkCache::new(DEFAULT_CACHE_BUDGET);
+    let e = ChunkedIndex::new(&m, &store, &cache, QueryConfig::default(), Provenance::TrustedWriter).unwrap_err();
+    assert_eq!(e, QueryError::Index(PointIndexError::PointOutOfRange { index: u64::MAX, axis: 1 }));
+    assert_eq!(e.code(), "point_out_of_range");
+    // At the limit itself the cloud is accepted, as by GEO.INDEX.
+    let lim = fid_geo_index::COORD_LIMIT;
+    let pts = [[0.0, 0.0, 0.0], [lim, -lim, 1.0]];
+    let cloud = PointCloud::from_points(frame(), &pts).unwrap();
+    let mem = PointIndex::build(cloud.buffer(), 1).unwrap();
+    let (store, m) = chunked(&cloud, 1);
+    let ix = ChunkedIndex::new(&m, &store, &cache, QueryConfig::default(), Provenance::TrustedWriter).unwrap();
+    assert_eq!(bits(&ix.knn([1.0; 3], 2).unwrap()), bits(&mem.knn([1.0; 3], 2).unwrap()));
+}
+
+/// A store whose writes work and whose reads always fail.
+struct FailingReads(SyncStore);
+
+const READ_ERROR: &str = "unavailable";
+
+impl ChunkStore for FailingReads {
+    fn put_blob(&self, bytes: &[u8]) -> Result<[u8; 32], OocError> {
+        self.0.put_blob(bytes)
+    }
+
+    fn get_blob(&self, _: &[u8; 32], _: u64) -> Result<Vec<u8>, OocError> {
+        Err(OocError::Store { code: READ_ERROR, detail: "injected read failure".to_string() })
+    }
+}
+
+#[test]
+fn failing_store_reads_fail_every_query() {
+    let cloud = awkward_cloud();
+    let store = FailingReads(SyncStore::new());
+    let m = to_chunks(&cloud, &store, &LayoutParams { max_chunk_points: 64 }).unwrap();
+    let cache = ChunkCache::new(DEFAULT_CACHE_BUDGET);
+    let ix = ChunkedIndex::new(&m, &store, &cache, QueryConfig::default(), Provenance::TrustedWriter).unwrap();
+    let want = QueryError::Ooc(OocError::Store { code: READ_ERROR, detail: "injected read failure".to_string() });
+    let q = cloud.point(0).unwrap();
+    assert_eq!(ix.knn(q, 4).unwrap_err(), want);
+    assert_eq!(ix.radius(q, 0.01).unwrap_err(), want);
+    let b = Aabb::new([-1.0, -1.0, 6.0], [1.0, 1.0, 8.0]).unwrap();
+    assert_eq!(ix.in_box(&b).unwrap_err(), want);
+    assert_eq!(ix.batch_knn(&[q, q], 4, 2).unwrap_err(), want);
+    assert_eq!(ix.stats().index_builds, 0, "nothing was built");
+    assert_eq!(cache.stats().pinned_chunks, 0);
+    // Verification of an untrusted manifest fails with the same error.
+    let mut un = ChunkedIndex::new(&m, &store, &cache, QueryConfig::default(), Provenance::Untrusted).unwrap();
+    assert_eq!(un.verify().unwrap_err(), want);
 }

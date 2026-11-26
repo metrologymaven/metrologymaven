@@ -76,6 +76,25 @@
 //! returns the error of the first failing query in query order. Which chunks and trees are
 //! resident can depend on scheduling, and so can [`OocError::CacheExhausted`] when the
 //! chunk cache budget is too small for the threads' pins; result values never do.
+//!
+//! # Limits (stated, not hidden)
+//!
+//! * **Identity scope.** REQ-GEO.OOC.QUERY-001 identity is with the in-memory index, so it
+//!   covers only clouds that index accepts: at most [`fid_geo_index::MAX_POINTS`] points, every
+//!   coordinate at most [`COORD_LIMIT`] in magnitude. Larger clouds are queried with the same
+//!   rules, but there is no in-memory result to be identical to.
+//! * **Coordinate limit.** [`ChunkedIndex::new`] refuses a manifest whose bounds exceed
+//!   [`COORD_LIMIT`] on any axis with [`PointIndexError::PointOutOfRange`] (`index` is
+//!   `u64::MAX`: the offending point is not located, only the bounds are read), so every query
+//!   on such a cloud fails, as `PointIndex::build` fails on it, rather than only the queries
+//!   that visit the offending chunk. Bounds given to `to_chunks_in` that are wider than the
+//!   points are refused too (fail closed).
+//! * **Index budget.** The [`IndexCache`] keeps the cached trees within the budget, but a
+//!   query holds the tree it is using; a tree evicted meanwhile stays alive until that query
+//!   ends. So the budget can be exceeded by at most one tree per thread querying at once.
+//! * **Builds under the lock.** A per-chunk tree is built while the index-cache lock is held,
+//!   so concurrent queries wait for each other's builds. This guarantees one build per chunk
+//!   digest and affects performance only, never results.
 
 // Per-axis loops index several 3-arrays at once, mirroring the pinned formulas above.
 #![allow(clippy::needless_range_loop)]
@@ -396,7 +415,9 @@ impl<'a, S: ChunkStore> ChunkedIndex<'a, S> {
     /// [`ChunkStream`].
     ///
     /// Errors: the manifest's validation errors ([`OocError::CorruptManifest`]),
-    /// [`OocError::BoundsTooLarge`], [`OocError::AllocationFailed`].
+    /// [`PointIndexError::PointOutOfRange`] (`index` `u64::MAX`) when the manifest bounds
+    /// exceed [`COORD_LIMIT`] on an axis, [`OocError::BoundsTooLarge`],
+    /// [`OocError::AllocationFailed`].
     pub fn new(
         manifest: &'a ChunkManifest,
         store: &'a S,
@@ -405,6 +426,11 @@ impl<'a, S: ChunkStore> ChunkedIndex<'a, S> {
         provenance: Provenance,
     ) -> Result<ChunkedIndex<'a, S>, QueryError> {
         manifest.validate()?;
+        for (axis, (lo, hi)) in manifest.aabb.min().into_iter().zip(manifest.aabb.max()).enumerate() {
+            if lo.abs() > COORD_LIMIT || hi.abs() > COORD_LIMIT {
+                return Err(QueryError::Index(PointIndexError::PointOutOfRange { index: u64::MAX, axis: axis as u8 }));
+            }
+        }
         let grid = Grid::new(&manifest.aabb)?;
         let bounds = cell_bounds(manifest, &grid)?;
         Ok(ChunkedIndex {

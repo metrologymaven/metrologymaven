@@ -82,6 +82,10 @@ Built in `fid-geo-ooc` module `query` (`ChunkedIndex`). Judgement calls, stated 
 - **Box queries** visit the chunks whose cell bounds meet the box in cell-code order (their lower bound is 0, so this is REQ-002's tie order).
 - **Batches** split the queries into contiguous ranges on scoped threads (1 to 256) and need a `Sync` store; a failing batch reports the first failing query in query order.
 - **Errors**: query argument errors are GEO.INDEX's own values, checked in the same order before any chunk is loaded. A GEO.INDEX build error inside a chunk is reported with the original point index.
+- **Coordinate limit**: `ChunkedIndex::new` refuses a manifest whose bounds exceed GEO.INDEX's `COORD_LIMIT` (2^500) on any axis with `point_out_of_range` (index `u64::MAX`, since only the bounds are read), so every query on such a cloud fails, as the in-memory build does. Bounds wider than the points are refused too (fail closed).
+- **Identity scope**: REQ-001 identity covers only clouds the in-memory index accepts (at most `MAX_POINTS` = 2^32 points, coordinates within `COORD_LIMIT`).
+- **Index budget**: cached trees stay within the budget, but a tree evicted while a query uses it lives until that query ends, so the budget can be exceeded by at most one tree per thread querying at once.
+- **Builds under the lock**: per-chunk trees are built while the index-cache lock is held (one build per chunk digest); concurrent queries wait for each other's builds. Performance only.
 - **AC-1 sizes**: as for GEO.OOC.LAYOUT AC-1, plain `cargo test` runs the 10^4 queries on the 200 000-point prefix of `cloud_5e6` (chunk sizes 65 536 and 4 096); CI's existing `FID_OOC_FULL=1` release step runs them on the full 5 x 10^6 points with 65 536-point chunks. Radius 1 mm is 0.001 (GEO coordinates are metres). Sixty further queries on the prefix are pinned by the independent brute-force reference `fixtures/geo/ooc/make_query_fixtures.py`, which also writes `boundary_ties/cases.json` (AC-2).
 
 ## Open questions
