@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-stats]
+built_pr: 647
 satisfies: [REQ-RPT.STATS.SPC-002, REQ-RPT.STATS.SPC-007]
 covers: []
 depends_on: [KRN.NUM]
