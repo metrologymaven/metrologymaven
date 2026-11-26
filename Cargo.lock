@@ -1569,6 +1569,7 @@ version = "0.0.1"
 dependencies = [
  "cap",
  "fid-canon",
+ "fid-geo-index",
  "fid-geo-types",
  "fid-kci",
  "fid-num",

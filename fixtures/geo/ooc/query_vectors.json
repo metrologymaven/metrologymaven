@@ -1,0 +1,928 @@
+{
+ "aabb_max": [
+  "4000020c3392d51b",
+  "400000afa72fc37f",
+  "3ff002becce4cae1"
+ ],
+ "aabb_min": [
+  "bf31331e285b1752",
+  "bf23063025e5d839",
+  "bfb9c0458d3575f6"
+ ],
+ "comment": "GEO.OOC.QUERY AC-1 pinned subset from make_query_fixtures.py (independent brute-force reference). CC-BY-4.0. Cloud: the first 200 000 points of fixture cloud_5e6 (seed 61). Queries: SplitMix64 seed 62 (see the script). Result digest v1: SHA-256 over per neighbour index u64 | d2 raw f64 bits, per box hit index u64, little-endian.",
+ "n_points": 200000,
+ "queries": [
+  {
+   "count": 1,
+   "digest": "398e03f043df92abe5f8c8871b17c4a137230a896fdab3bb0c916b3544d5e16f",
+   "first": [
+    110762,
+    "3ec27e06726be12f"
+   ],
+   "k": 1,
+   "kind": "knn1",
+   "point": [
+    "3fe09e8cc05fde9a",
+    "3fde8018586d9faa",
+    "3fe48dbd4b57bef5"
+   ]
+  },
+  {
+   "count": 16,
+   "digest": "3ac736b6443ecbc3599d51f78040e63959d39961f6b1eab8cd09e57bcba8f98e",
+   "first": [
+    72384,
+    "3f72db747a2116e8"
+   ],
+   "k": 16,
+   "kind": "knn16",
+   "point": [
+    "3ff40f935ea8ba5e",
+    "3fe3d60525caa683",
+    "3fdccd74e822e702"
+   ]
+  },
+  {
+   "count": 1024,
+   "digest": "7b2258d721e59194d1cd22e70134eeee589c0c7d59b8e30f3aa41f74b55f20dd",
+   "first": [
+    15374,
+    "3ea203c51d34838a"
+   ],
+   "k": 1024,
+   "kind": "knn1024",
+   "point": [
+    "3ff450ef60a419d6",
+    "3f8a1d4ae7fd3ae6",
+    "bfa872b6910c7efb"
+   ]
+  },
+  {
+   "count": 0,
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "kind": "radius",
+   "point": [
+    "3ffac46264b61cb2",
+    "3fdfff96b9dbf971",
+    "3fe9b59c520183d6"
+   ],
+   "r": "3f50624dd2f1a9fc"
+  },
+  {
+   "count": 36,
+   "digest": "22a7760983141e6a766f8caf61d27096c68c80d7bdfa0c5a03ff1319d81c4aef",
+   "hi": [
+    "3fcb4faf154ad14c",
+    "3fda210550fbfba5",
+    "3fd80a45fc184d8f"
+   ],
+   "kind": "box",
+   "lo": [
+    "3fc630f6c35f4c2e",
+    "3fd791a928063915",
+    "3fd57ae9d3228aff"
+   ],
+   "point": [
+    "3fc8c052ec550ebd",
+    "3fd8d9573c811a5d",
+    "3fd6c297e79d6c47"
+   ]
+  },
+  {
+   "count": 1,
+   "digest": "787b8728b0fc99522277f5bdc59b0c8996be57b81407c03b5570f4d332a7e594",
+   "first": [
+    172229,
+    "3f90d91a3902c846"
+   ],
+   "k": 1,
+   "kind": "knn1",
+   "point": [
+    "3ff009d0162228ef",
+    "3ffc1cf34f858306",
+    "3fe50243a2368059"
+   ]
+  },
+  {
+   "count": 16,
+   "digest": "4714d04f8edf6ebe942e97cba99a5b77e6711de4eb4dfc597a79cb17977aae7e",
+   "first": [
+    102338,
+    "3ec1795124fe5939"
+   ],
+   "k": 16,
+   "kind": "knn16",
+   "point": [
+    "3ff726b231bd000c",
+    "3fe81c5fb7944fe8",
+    "3f50b1ab95a1bf72"
+   ]
+  },
+  {
+   "count": 1024,
+   "digest": "a31fb5ce2950b4b446402025d1ffa6cf162a790984fa599f2909913f91bfaf4c",
+   "first": [
+    74595,
+    "3ee6a63de8a38dd2"
+   ],
+   "k": 1024,
+   "kind": "knn1024",
+   "point": [
+    "3ffffea93b7a1b9f",
+    "3fbff87467cdc340",
+    "3fe518449e924377"
+   ]
+  },
+  {
+   "count": 2,
+   "digest": "999ccd69f20e995576f43818d286023e2603abf7ae0a627a92f354cdc9db53da",
+   "kind": "radius",
+   "point": [
+    "3f973fa4a05ca23c",
+    "3ffc2673ac52318c",
+    "3f34db332aa46302"
+   ],
+   "r": "3f847ae147ae147b"
+  },
+  {
+   "count": 0,
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "hi": [
+    "3fe4a4ebe61d8332",
+    "3fe7a721af9ea454",
+    "3fc96ed14b7b06ba"
+   ],
+   "kind": "box",
+   "lo": [
+    "3fe35d3dd1a2a1ea",
+    "3fe65f739b23c30c",
+    "3fc45018f98f819c"
+   ],
+   "point": [
+    "3fe40114dbe0128e",
+    "3fe7034aa56133b0",
+    "3fc6df752285442b"
+   ]
+  },
+  {
+   "count": 1,
+   "digest": "c5b8632cebe659223ef5c9a647e93cf88b5267433ba86cf465939b1945223982",
+   "first": [
+    188749,
+    "3eaab103a428431f"
+   ],
+   "k": 1,
+   "kind": "knn1",
+   "point": [
+    "3fd88a2fc89c98c5",
+    "3ffde6b251a3ba0c",
+    "3fecdca1816c327b"
+   ]
+  },
+  {
+   "count": 16,
+   "digest": "01ac43298a305c062bc44ad57bd8bb6be6242af480f83d40d856d9947b5e11dc",
+   "first": [
+    80482,
+    "3ef00289ccb65da5"
+   ],
+   "k": 16,
+   "kind": "knn16",
+   "point": [
+    "400001f570b0922a",
+    "3fdcb150612974b6",
+    "3feb9dccd05b8d31"
+   ]
+  },
+  {
+   "count": 1024,
+   "digest": "403dc4aaa4d1c9c8349bab40704e52a835641be55377270235913dfe469062df",
+   "first": [
+    58293,
+    "3ec1f0ab63e25da8"
+   ],
+   "k": 1024,
+   "kind": "knn1024",
+   "point": [
+    "3ff9156d2f4c0dd9",
+    "3ff969374ead7d44",
+    "3fe614e2112c688f"
+   ]
+  },
+  {
+   "count": 0,
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "kind": "radius",
+   "point": [
+    "3ff77fae6071895e",
+    "3fec00882ce24108",
+    "3fe5f12d4def48eb"
+   ],
+   "r": "3f50624dd2f1a9fc"
+  },
+  {
+   "count": 24,
+   "digest": "37eb54ddcee903e6ed8fb6cea106a4182ec157cb7e0eec0d08c33c322c11b818",
+   "hi": [
+    "3ff561a9f832b16b",
+    "3ff8ec57e65e0ae8",
+    "3fe59c06c311da2d"
+   ],
+   "kind": "box",
+   "lo": [
+    "3ff4bdd2edf540c7",
+    "3ff84880dc209a44",
+    "3fe45458ae96f8e5"
+   ],
+   "point": [
+    "3ff50fbe7313f919",
+    "3ff89a6c613f5296",
+    "3fe4f82fb8d46989"
+   ]
+  },
+  {
+   "count": 1,
+   "digest": "c5f61e840b5c1dfc2a5e1c4c2dffdfd44adad3a64773b3f3c827d513e681728b",
+   "first": [
+    44500,
+    "3fb232384d9755ef"
+   ],
+   "k": 1,
+   "kind": "knn1",
+   "point": [
+    "3fe4e130fc61f446",
+    "3fe800493ce62a43",
+    "3fe8b1051a2f9c51"
+   ]
+  },
+  {
+   "count": 16,
+   "digest": "607c856b7f1f937546a4241516d8b39e1302c40b4249e9f73119d5a7ab8e2de8",
+   "first": [
+    99274,
+    "3e9bb0fed57d57e4"
+   ],
+   "k": 16,
+   "kind": "knn16",
+   "point": [
+    "3ff37307f562694a",
+    "3ffb8b732c691499",
+    "bfb685c7f88a0b0d"
+   ]
+  },
+  {
+   "count": 1024,
+   "digest": "1498899e03933343c00761091740e664191293fa776b61f5b3426721969ea887",
+   "first": [
+    82717,
+    "3f111d057ed24d56"
+   ],
+   "k": 1024,
+   "kind": "knn1024",
+   "point": [
+    "3ffa03203a74213b",
+    "3ff2113787d30dce",
+    "bf5b1c5be6933213"
+   ]
+  },
+  {
+   "count": 2,
+   "digest": "6480614dfd0fb062ee0816c684a4e81393b1fd3328a14d2eeb958b5994d6c8de",
+   "kind": "radius",
+   "point": [
+    "3fc263a16740e56e",
+    "3fd5ef3e41266a81",
+    "3f3b7d11da4e1ed1"
+   ],
+   "r": "3f847ae147ae147b"
+  },
+  {
+   "count": 0,
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "hi": [
+    "3fd81ebd24faadda",
+    "3fe0208ff893e00c",
+    "3fe9dfbf3093f98e"
+   ],
+   "kind": "box",
+   "lo": [
+    "3fd79baab663208a",
+    "3fdfbe0d829032c9",
+    "3fe99e35f94832e6"
+   ],
+   "point": [
+    "3fd7dd33edaee732",
+    "3fdfff96b9dbf971",
+    "3fe9befa94ee163a"
+   ]
+  },
+  {
+   "count": 1,
+   "digest": "7086474ee02b90813af419decf40b34f0975825ae2b60732dd5614773dc5143a",
+   "first": [
+    75964,
+    "3eb1ea9690efb2d7"
+   ],
+   "k": 1,
+   "kind": "knn1",
+   "point": [
+    "3f9c2926ba441411",
+    "3fe8a14e2f6d1289",
+    "3fdb0802218189e8"
+   ]
+  },
+  {
+   "count": 16,
+   "digest": "3aaf4fbc4d35e1e0ae2bb8ff8e798a6134b9d30bb057117981bf95259b5ecd60",
+   "first": [
+    26648,
+    "3f8fdf0181ae3545"
+   ],
+   "k": 16,
+   "kind": "knn16",
+   "point": [
+    "3fd77f308a0b5399",
+    "3fe1c6de103d2b2d",
+    "3fd865c41eb4de72"
+   ]
+  },
+  {
+   "count": 1024,
+   "digest": "37638b79d9f13d7ef9c46f936d0e1b022ef51f22d6e8fa074d6967a6ff01b607",
+   "first": [
+    196654,
+    "3eb0f1b292204f0b"
+   ],
+   "k": 1024,
+   "kind": "knn1024",
+   "point": [
+    "3ffffaa8e8fc6776",
+    "3fdac8f1affcc6ec",
+    "3fdffafed271b45c"
+   ]
+  },
+  {
+   "count": 0,
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "kind": "radius",
+   "point": [
+    "3ff201d554321541",
+    "3fbbe061de09800a",
+    "3f4411df92cf89d5"
+   ],
+   "r": "3f50624dd2f1a9fc"
+  },
+  {
+   "count": 35,
+   "digest": "42d7aadb2789b33e9822d1b97e239bfa5e2443471cfc6d99a0673b85caea95ed",
+   "hi": [
+    "3fc4a584d762dca4",
+    "3fe82e1556c9344a",
+    "3fde10a906afdfd2"
+   ],
+   "kind": "box",
+   "lo": [
+    "3fbf0d990aeeaf0b",
+    "3fe6e667424e5302",
+    "3fdb814cddba1d42"
+   ],
+   "point": [
+    "3fc21628ae6d1a15",
+    "3fe78a3e4c8bc3a6",
+    "3fdcc8faf234fe8a"
+   ]
+  },
+  {
+   "count": 1,
+   "digest": "fee970ae90e1cd8133a3f6f5b7721e11b293ecd6749d57920181619e74a97177",
+   "first": [
+    172700,
+    "3f8c458868004ada"
+   ],
+   "k": 1,
+   "kind": "knn1",
+   "point": [
+    "3fbff3f87adfd4d1",
+    "3ff0db81ad0ff2ad",
+    "3fe1b811c7d8586c"
+   ]
+  },
+  {
+   "count": 16,
+   "digest": "88c8c955b35dfd7e60d4dc93db3defcb835d9fe03890e007c4656b7629f3a0b0",
+   "first": [
+    126215,
+    "3e9d0c6c4c065b0b"
+   ],
+   "k": 16,
+   "kind": "knn16",
+   "point": [
+    "3fe7b0c566fdbda2",
+    "3fee9acd02f72674",
+    "bf3b7373d8dbc960"
+   ]
+  },
+  {
+   "count": 1024,
+   "digest": "0b004b5da5748d5edc2f46fc50a0f447bd3a1658a86598264b35809bd735a518",
+   "first": [
+    47927,
+    "3f070e0a936f9262"
+   ],
+   "k": 1024,
+   "kind": "knn1024",
+   "point": [
+    "3fe864afc0dc7636",
+    "3fe4000a4cea137e",
+    "bfb21b7f0b42a737"
+   ]
+  },
+  {
+   "count": 6,
+   "digest": "8add451533a2804cec511f0a2c30e1a3b7cc991b50f0b77dd937c1b9f52b0e3e",
+   "kind": "radius",
+   "point": [
+    "3ff508dc526e77c5",
+    "3ff9e838d745d0c8",
+    "bf8deb7416fecf98"
+   ],
+   "r": "3f847ae147ae147b"
+  },
+  {
+   "count": 0,
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "hi": [
+    "3fec23245dc801dc",
+    "3ffe08b2cb27ea96",
+    "3f699b70c19d3352"
+   ],
+   "kind": "box",
+   "lo": [
+    "3febe19b267c3b34",
+    "3ffde7ee2f820742",
+    "bf73f6e34514ba4f"
+   ],
+   "point": [
+    "3fec025fc2221e88",
+    "3ffdf8507d54f8ec",
+    "bf4ca4ab91188297"
+   ]
+  },
+  {
+   "count": 1,
+   "digest": "fcaf20432071ba9bc766697c0ecb5aa1e1328073999eb59dd3473634c0269003",
+   "first": [
+    103566,
+    "3eb9f9004a0d2e69"
+   ],
+   "k": 1,
+   "kind": "knn1",
+   "point": [
+    "3ffd7abfee2d5f89",
+    "3ff5d00d0cbd069a",
+    "3fd878dbc1109901"
+   ]
+  },
+  {
+   "count": 16,
+   "digest": "db35ba717d3778014f64b49aec839e27ad79259cc2cc45675b2d354c03169a0e",
+   "first": [
+    155967,
+    "3ef6538bb631df6e"
+   ],
+   "k": 16,
+   "kind": "knn16",
+   "point": [
+    "3ff601633c48a0a6",
+    "3fd7ff18d9e3cbe6",
+    "3f9d9d69a3b7e86c"
+   ]
+  },
+  {
+   "count": 1024,
+   "digest": "e63173ead206cbd3f0f84eeec3fd45dfa3e8c536bd3ac7074d4ef5fcd4928a9e",
+   "first": [
+    1171,
+    "3eb30fec2d0a787f"
+   ],
+   "k": 1024,
+   "kind": "knn1024",
+   "point": [
+    "3ff48e11718f45e8",
+    "3fe1e9b00e3736ef",
+    "3fe28b414c1832cb"
+   ]
+  },
+  {
+   "count": 0,
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "kind": "radius",
+   "point": [
+    "3fe0006f68bf0c91",
+    "3ff47ed7c18be2be",
+    "3fe68f7d2821ef57"
+   ],
+   "r": "3f50624dd2f1a9fc"
+  },
+  {
+   "count": 1,
+   "digest": "9fd90347e317a3ec3e6096ff6480bea4e7cb1a4169511b6401e42ddacd0f5417",
+   "hi": [
+    "3fff103192d2593a",
+    "3ff5795ba8c9d68a",
+    "3fe04fa02fe7026f"
+   ],
+   "kind": "box",
+   "lo": [
+    "3ffeef6cf72c75e6",
+    "3ff558970d23f336",
+    "3fe00e16f89b3bc7"
+   ],
+   "point": [
+    "3ffeffcf44ff6790",
+    "3ff568f95af6e4e0",
+    "3fe02edb94411f1b"
+   ]
+  },
+  {
+   "count": 1,
+   "digest": "6641454682b4077528afed2a325f71ae04e20dd3229834131609e84d09530bc2",
+   "first": [
+    160512,
+    "3ef671cc4a21463f"
+   ],
+   "k": 1,
+   "kind": "knn1",
+   "point": [
+    "3ff001829aa19243",
+    "3fb1c676514b7d48",
+    "3fee5dc75d5ed57a"
+   ]
+  },
+  {
+   "count": 16,
+   "digest": "7860a897ef6bfe9e1341c047c92f293640c7ed406edf0be96e74c9aa7b7cb6a7",
+   "first": [
+    31412,
+    "3ea051f22eb5dcc8"
+   ],
+   "k": 16,
+   "kind": "knn16",
+   "point": [
+    "3fff6cadef3b4773",
+    "3ff4ea3a33f9d526",
+    "bf22a3d85fa0416a"
+   ]
+  },
+  {
+   "count": 1024,
+   "digest": "2c4a51e46a4130ef56a7c91991f334da497139bfe08e3bcadbb6552dc5880c04",
+   "first": [
+    190809,
+    "3ed6bef13695476b"
+   ],
+   "k": 1024,
+   "kind": "knn1024",
+   "point": [
+    "3ff7f18620a5bce4",
+    "3fdfff96b9dbf971",
+    "3f000ec8e1afee38"
+   ]
+  },
+  {
+   "count": 3,
+   "digest": "1d20f7a108725453df05684157a08dc5e5f4354790ff3f061981d022387cd453",
+   "kind": "radius",
+   "point": [
+    "3fc5760f0de4a6ce",
+    "3fbe02c3298904ec",
+    "3fd7f865666acd88"
+   ],
+   "r": "3f847ae147ae147b"
+  },
+  {
+   "count": 26,
+   "digest": "646961d4f8f14f17a4500bcdd381de00b0f0bff2e5fe53d383db8311da10e13d",
+   "hi": [
+    "3ff4541392e15092",
+    "3ff39fc5cce38df6",
+    "3fdb3ea0f4f8a781"
+   ],
+   "kind": "box",
+   "lo": [
+    "3ff3b03c88a3dfee",
+    "3ff2fbeec2a61d52",
+    "3fd8af44cc02e4f1"
+   ],
+   "point": [
+    "3ff402280dc29840",
+    "3ff34dda47c4d5a4",
+    "3fd9f6f2e07dc639"
+   ]
+  },
+  {
+   "count": 1,
+   "digest": "8b2e2ca55b3221d9ff90e7dc064682f3ea431e94c45aa5fc09027f4964a6ef47",
+   "first": [
+    83740,
+    "3ebbb5807276005f"
+   ],
+   "k": 1,
+   "kind": "knn1",
+   "point": [
+    "3fd5877eb285d95a",
+    "3ffd377bba0f37a8",
+    "3febd79236fd0702"
+   ]
+  },
+  {
+   "count": 16,
+   "digest": "ff405bb178ff0b7368b0351b6b41fe685555247c1cb246a62e9c9673675be460",
+   "first": [
+    125,
+    "3ec0e9fd991efe27"
+   ],
+   "k": 16,
+   "kind": "knn16",
+   "point": [
+    "3fd8af7ca27d7081",
+    "3ff400a27e6b42ad",
+    "3fcb0cdc75902e36"
+   ]
+  },
+  {
+   "count": 1024,
+   "digest": "7e06c97be4e702404b01e24c389c38277d2f49c85d7332072ecf477e1350fa79",
+   "first": [
+    28551,
+    "3eb476c76d0bcc80"
+   ],
+   "k": 1024,
+   "kind": "knn1024",
+   "point": [
+    "3ffffd326c4bb575",
+    "3f6e6cbf97af7df2",
+    "3fd4e34eb54d900e"
+   ]
+  },
+  {
+   "count": 0,
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "kind": "radius",
+   "point": [
+    "3ff001829aa19243",
+    "3fe8ecf7e051a1ae",
+    "3fdaa4e6ee9dc3d2"
+   ],
+   "r": "3f50624dd2f1a9fc"
+  },
+  {
+   "count": 31,
+   "digest": "5ba353823847b42213c86c4de3ade5d7946d32ab5b5196a482cc036ba6c6fe8e",
+   "hi": [
+    "400026d543e88e2f",
+    "3ff710efd56e94d3",
+    "3fcf19869f7dff7d"
+   ],
+   "kind": "box",
+   "lo": [
+    "3fffa9d37d93abbb",
+    "3ff66d18cb31242f",
+    "3fc9face4d927a5f"
+   ],
+   "point": [
+    "3ffffbbf02b2640d",
+    "3ff6bf04504fdc81",
+    "3fcc8a2a76883cee"
+   ]
+  },
+  {
+   "count": 1,
+   "digest": "1f3401204b59b389de27a902c02b9fd9745aee5c4e0f8efa3469ef09e7ab2072",
+   "first": [
+    36182,
+    "3f0499986384f660"
+   ],
+   "k": 1,
+   "kind": "knn1",
+   "point": [
+    "3ffc0372f404a43a",
+    "3fe73244f61edf6a",
+    "3fdd46b6bf69c446"
+   ]
+  },
+  {
+   "count": 16,
+   "digest": "6486bf706d9d0786b4868d16a1604405b3ee9beb37a0812a30949e11bd4fd7b0",
+   "first": [
+    188752,
+    "3ea493d02afc54f5"
+   ],
+   "k": 16,
+   "kind": "knn16",
+   "point": [
+    "3ffe02ac6682af19",
+    "3fd0fef12a2784fe",
+    "3fda24985e1c517b"
+   ]
+  },
+  {
+   "count": 1024,
+   "digest": "4ede400cfccc49eeb6ec1f47dd3eab5485e5f054b92de6749ff8d6786f69e953",
+   "first": [
+    74180,
+    "3efc28086f74fcde"
+   ],
+   "k": 1024,
+   "kind": "knn1024",
+   "point": [
+    "400000da224573ef",
+    "3ff000638e6f2be7",
+    "3fecf4f23305375d"
+   ]
+  },
+  {
+   "count": 3,
+   "digest": "22fcfccbc48a5f6206681f93ad568c8203096bed230df829a4d6270b75eeb2f4",
+   "kind": "radius",
+   "point": [
+    "3ffe38e64831eb2a",
+    "3ffce6b710440ea5",
+    "bf4de38aaf197875"
+   ],
+   "r": "3f847ae147ae147b"
+  },
+  {
+   "count": 0,
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "hi": [
+    "3ffd486a329501b5",
+    "3fb44f331a201898",
+    "3fe523083ddc63ad"
+   ],
+   "kind": "box",
+   "lo": [
+    "3ffd27a596ef1e61",
+    "3fb242e95fc1e358",
+    "3fe4e17f06909d05"
+   ],
+   "point": [
+    "3ffd3807e4c2100b",
+    "3fb3490e3cf0fdf8",
+    "3fe50243a2368059"
+   ]
+  },
+  {
+   "count": 1,
+   "digest": "069a1e9aed52a52d76dbcc8399b8c721685a76f3d457237e3cab0f65e82c5ce7",
+   "first": [
+    52126,
+    "3eb128ebc285338c"
+   ],
+   "k": 1,
+   "kind": "knn1",
+   "point": [
+    "3fe4ebc08b5036c2",
+    "3fe630d1c69f1b84",
+    "3f5115c860139874"
+   ]
+  },
+  {
+   "count": 16,
+   "digest": "2294a40c881c8c409811cbce5982f271a2d58d5ab3daba06a1040165ff360a63",
+   "first": [
+    179919,
+    "3ed2e22986886fee"
+   ],
+   "k": 16,
+   "kind": "knn16",
+   "point": [
+    "3fd7ff93eb3c0d28",
+    "3fd8bea86705834a",
+    "3fe6b84706c39f95"
+   ]
+  },
+  {
+   "count": 1024,
+   "digest": "ef43d459f2ee9d11a59449967705bb76c5a5ea1f601374bb66e1b96f25cdbc62",
+   "first": [
+    43194,
+    "3ea553b006ccb5bb"
+   ],
+   "k": 1024,
+   "kind": "knn1024",
+   "point": [
+    "400002c0b2a353a6",
+    "3fdbcbb3963ca71f",
+    "3fbf1b010709afd0"
+   ]
+  },
+  {
+   "count": 0,
+   "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "kind": "radius",
+   "point": [
+    "3ffa7d3271d3784c",
+    "3fd7ff18d9e3cbe6",
+    "3f57b35dc50fec75"
+   ],
+   "r": "3f50624dd2f1a9fc"
+  },
+  {
+   "count": 27,
+   "digest": "0d239a30ad0078b68d86324c07866f6c1595e41483a7c57f24c29ef0ece97654",
+   "hi": [
+    "3f9ec80f326feccc",
+    "3fff4f300a8962e3",
+    "3fef198e2c363a54"
+   ],
+   "kind": "box",
+   "lo": [
+    "bf845b66b9d87854",
+    "3ffeab59004bf23f",
+    "3fedd1e017bb590c"
+   ],
+   "point": [
+    "3f849a5bd583b0a2",
+    "3ffefd44856aaa91",
+    "3fee75b721f8c9b0"
+   ]
+  },
+  {
+   "count": 1,
+   "digest": "fa6a57fa25f7bc55e276ca13ef1f7876ac0609a3de633398f3a7a3d3b9db78b7",
+   "first": [
+    120545,
+    "3f5ade3166c1dffe"
+   ],
+   "k": 1,
+   "kind": "knn1",
+   "point": [
+    "3ffb88a24648a9bd",
+    "3ff22c5d89a36ca6",
+    "3fa2fa817c759d14"
+   ]
+  },
+  {
+   "count": 16,
+   "digest": "4d74d2ebc8807e276dca862823db02d319934af213c613324b5c46a5521c0b99",
+   "first": [
+    38213,
+    "3eb0fe580598d0b4"
+   ],
+   "k": 16,
+   "kind": "knn16",
+   "point": [
+    "3fd098c5869bd90f",
+    "3ff3bf734a8ef57e",
+    "3fdb3f3c245ee264"
+   ]
+  },
+  {
+   "count": 1024,
+   "digest": "1f1febd2aa4cfbb9382f6a267cef64cb2857df6612a40d25892a5436e19dec34",
+   "first": [
+    44304,
+    "3effc9a01db22890"
+   ],
+   "k": 1024,
+   "kind": "knn1024",
+   "point": [
+    "3fe0006f68bf0c91",
+    "3fd5f87e11728ce1",
+    "3fbfc76b86b4fbee"
+   ]
+  },
+  {
+   "count": 5,
+   "digest": "e9ea0091b595962d8f7e7f6e8be674c47052aaf45fb9f4216aff0e0d752558cc",
+   "kind": "radius",
+   "point": [
+    "3fe9a1c184a875b1",
+    "3fd41c18e765e0cc",
+    "3fe8706298e3d7bd"
+   ],
+   "r": "3f847ae147ae147b"
+  },
+  {
+   "count": 3,
+   "digest": "948436f44aa76286b39998de085a31eabb9e8509c4df72388975367d49a96552",
+   "hi": [
+    "40000aafbd1d6d74",
+    "3fec214cc888245c",
+    "3fe8574cc264c98c"
+   ],
+   "kind": "box",
+   "lo": [
+    "3ffff49ade94f794",
+    "3febdfc3913c5db4",
+    "3fe815c38b1902e4"
+   ],
+   "point": [
+    "4000027e9633f49f",
+    "3fec00882ce24108",
+    "3fe8368826bee638"
+   ]
+  }
+ ]
+}

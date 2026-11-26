@@ -57,6 +57,18 @@ pub trait ChunkStore {
     fn get_blob(&self, address: &[u8; 32], size: u64) -> Result<Vec<u8>, OocError>;
 }
 
+/// A reference to a store is a store, so `&dyn ChunkStore` can be used where a sized store
+/// type is needed (for example [`crate::ChunkedIndex`]).
+impl<T: ChunkStore + ?Sized> ChunkStore for &T {
+    fn put_blob(&self, bytes: &[u8]) -> Result<[u8; 32], OocError> {
+        (**self).put_blob(bytes)
+    }
+
+    fn get_blob(&self, address: &[u8; 32], size: u64) -> Result<Vec<u8>, OocError> {
+        (**self).get_blob(address, size)
+    }
+}
+
 /// An in-memory [`ChunkStore`] (tests, and callers without a project). Reads are checked
 /// against the address like the CORE.STO store's.
 #[derive(Debug, Default)]

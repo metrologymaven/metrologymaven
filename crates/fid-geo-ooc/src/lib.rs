@@ -10,7 +10,8 @@
 //! (spec node `GEO.OOC.CACHE`) loads chunks on demand under a memory budget, verifying
 //! each against its manifest digest. [`ChunkStream`] (spec node `GEO.OOC.STREAM`) streams
 //! the full-resolution points in spatial or original order as a `PointSource`, the only way
-//! kernel code reads a chunked cloud.
+//! kernel code reads a chunked cloud. [`ChunkedIndex`] (spec node `GEO.OOC.QUERY`) runs
+//! k-nearest, radius and box queries across chunks with the in-memory GEO.INDEX results.
 //!
 //! Everything below is pinned for format version 1 and reproduced by the independent
 //! Python reference `fixtures/geo/ooc/make_layout_fixtures.py`.
@@ -90,6 +91,7 @@ mod cell;
 mod error;
 mod format;
 mod layout;
+pub mod query;
 mod store;
 pub mod stream;
 pub mod writer;
@@ -106,6 +108,7 @@ pub use format::{
     MANIFEST_VERSION, MAX_CHUNK_POINTS_LIMIT, MAX_MANIFEST_CHUNKS,
 };
 pub use layout::{memory_needed, to_chunks, to_chunks_in, to_memory, LayoutParams, DEFAULT_MAX_CHUNK_POINTS};
+pub use query::{ChunkedIndex, QueryConfig, QueryError, QueryStats, DEFAULT_INDEX_BUDGET, MAX_QUERY_THREADS};
 pub use store::{blob_address, ChunkStore, MemStore, STORE_CHUNK_SIZE};
 pub use stream::{
     original_digest, to_geo_error, verify_original_digest, ChunkStream, Provenance, StreamBlock, StreamConfig,
