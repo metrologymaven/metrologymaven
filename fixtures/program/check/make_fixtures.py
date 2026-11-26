@@ -39,6 +39,7 @@ ROOT = HERE.parents[2]
 MANIFEST = ROOT / "fixtures" / "manifest" / "prog-demo.json"
 CATALOGUE = ROOT / "fixtures" / "program" / "types" / "catalogue.json"
 
+ALL = "(arguments)"
 CLASS_ORDER = ["R0", "R1", "I1", "W1", "W2", "X1", "D1", "W3", "M1", "S1", "A0"]
 MODULES = ["fmt", "expr", "flow", "oper", "family", "check"]
 DECIMAL = re.compile(r"^[+-]?[0-9]+(\.[0-9]+)?$")
@@ -123,6 +124,38 @@ def valid(schema, v):
     if "maxLength" in schema and isinstance(v, str) and len(v) > schema["maxLength"]:
         return False
     return True
+
+
+def resolve(schema, root):
+    """A local `#/$defs/<name>` reference of a property schema, resolved against the root."""
+    if "$ref" in schema:
+        assert set(schema) == {"$ref"} and schema["$ref"].startswith("#/$defs/"), schema
+        return root["$defs"][schema["$ref"][len("#/$defs/"):]]
+    return schema
+
+
+def static_type(schema):
+    """Whether the type checker gives a parameter schema a static type (AUTO.PROG.EXPR.TYPES:
+    x-quantity, x-ref, a scalar, array or object type, or an enum of strings; a $ref or a
+    union has none)."""
+    if "x-quantity" in schema or "x-ref" in schema:
+        return True
+    if schema.get("type") in ("boolean", "integer", "number", "string", "array", "object"):
+        return True
+    return "type" not in schema and all(isinstance(x, str) for x in schema.get("enum", [None]))
+
+
+ROOT_PLAIN = {"$comment", "$defs", "$id", "$schema", "additionalProperties", "description", "properties", "required", "title", "type"}
+
+
+def root_fails(schema, doc):
+    """Whether the arguments object itself fails the root keywords the demo schemas use
+    (oneOf of required-lists); member failures are the per-parameter checks."""
+    assert set(schema) <= ROOT_PLAIN | {"oneOf"}, schema
+    if "oneOf" in schema:
+        matches = sum(all(r in doc for r in b["required"]) for b in schema["oneOf"])
+        return matches != 1
+    return False
 
 
 # ---------------------------------------------------------------- program builder
@@ -258,10 +291,18 @@ def check_invoke(p, s):
         if name not in props:
             problems[name] = "unknown"
         elif "literal" in arg:
-            if not valid(props[name], arg["literal"]):
+            if not valid(resolve(props[name], schema), arg["literal"]):
                 problems[name] = "invalid"
         elif (s["step_id"], name) in p.wrong_type:
             problems[name] = "wrong_type"
+        elif not static_type(props[name]) and not props[name].get("value_of_record"):
+            problems[name] = "unchecked"
+    if all("literal" in a for a in s["args"].values()):
+        doc = {n: a["literal"] for n, a in s["args"].items()}
+        if root_fails(schema, doc):
+            problems.setdefault(ALL, "invalid")
+    elif set(schema) - ROOT_PLAIN:
+        problems[ALL] = "unchecked"
     if problems:
         names = sorted(problems, key=lambda n: n.encode())
         x = mk("bad_arguments", names)
@@ -435,6 +476,21 @@ def limits():
     return p, p.doc([s1])
 
 
+def unchecked():
+    """REQ-002 fail closed: an expression for a parameter without a static type (a $ref) is
+    unchecked, and so is the arguments object when the root schema has a keyword beyond the
+    plain ones (oneOf) and an argument is an expression. All-literal calls are checked against
+    the root schema: none or both of the oneOf alternatives is (arguments) invalid; exactly one
+    passes; a member failure names the member."""
+    p = P(11)
+    s1 = p.invoke("demo.calibrate", 1, {"mode": ex("k"), "probe": lit("p1")})
+    s2 = p.invoke("demo.calibrate", 1, {"mode": lit("fine")})
+    s3 = p.invoke("demo.calibrate", 1, {"mode": lit("fine"), "probe": lit("p1"), "stylus": lit("s1")})
+    s4 = p.invoke("demo.calibrate", 1, {"mode": lit("coarse"), "stylus": lit("s2")})
+    s5 = p.invoke("demo.calibrate", 1, {"mode": lit("rough"), "probe": lit("p1")})
+    return p, p.doc([s1, s2, s3, s4, s5], variables=[("k", "string")])
+
+
 CASES = {
     "clean": clean,
     "unknown-cmd": unknown_cmd,
@@ -445,6 +501,7 @@ CASES = {
     "unreachable": unreachable,
     "literals": literals,
     "limits": limits,
+    "unchecked": unchecked,
 }
 
 

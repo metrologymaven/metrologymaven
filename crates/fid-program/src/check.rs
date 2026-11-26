@@ -21,13 +21,14 @@
 //! program never goes through [`iteration_limits`], so each loop's limit is reported once
 //! (the obligation `AUTO.PROG.FLOW` records on this node).
 //!
-//! **Command resolution** (REQ-001, REQ-005). An `invoke` resolves when the manifest holds
-//! its exact (command, major) and that major's lifecycle `state` is `active` or
-//! `deprecated`. Anything else is `unknown_command` (error) naming `command@major`: an
-//! absent command or major, a `removed` one, a `hidden` one (only the replay engine's
-//! `system` principal may call a hidden major, and no program runs as it) and one whose
-//! lifecycle state cannot be read (fail closed). The message is the same in every case, so
-//! the result does not say which. A `deprecated` major is also `deprecated_command`
+//! **Command resolution** (REQ-001, REQ-005). Before anything is checked, the manifest is cut
+//! to its callable majors: those whose lifecycle `state` is `active` or `deprecated`. Every
+//! module (the type checker included) sees only that manifest, so a `removed` major, a
+//! `hidden` one (only the replay engine's `system` principal may call a hidden major, and no
+//! program runs as it) and one whose lifecycle state cannot be read (fail closed) are exactly
+//! an absent command or major: `type_unknown` at `command` from the type checker, then
+//! `unknown_command` (error) naming `command@major`, and their arguments are not typed. The
+//! diagnostics are byte-identical in every case, so the result does not say which. A `deprecated` major is also `deprecated_command`
 //! (warning) naming `command@major` and, when the lifecycle has `replaced_by`, the
 //! replacement.
 //!
@@ -38,15 +39,24 @@
 //! quantity-literal normalisation the bus applies) and is `invalid` when it fails; an
 //! expression argument is `wrong_type` when the type checker reported a whole-expression
 //! `type_mismatch` at `args.<name>` (its inferred type, quantity kind included, does not fit
-//! the parameter), the rule `AUTO.PROG.FLOW` uses for call arguments. A property schema is
+//! the parameter), the rule `AUTO.PROG.FLOW` uses for call arguments, and `unchecked` when the
+//! expression has no recorded type or the parameter has no static type (a `$ref`, a type union,
+//! `oneOf`, ...) and is not a value of record (whose expression the type checker refuses). A property schema is
 //! compiled on its own with the root's `$defs` beside it; one that does not compile that way
 //! (a `$ref` outside `$defs`, a keyword the bus refuses) is `unchecked`, an error, so a
 //! literal is never passed without a check (fail closed). Entity references (`x-ref`,
 //! `x-selector`) are removed from the property schema first: whether an entity exists is state,
 //! which only the bus sees at run time, so a reference literal is checked for its JSON shape
-//! only. Keywords of the root `params_schema` other than `properties` and `required` are not
-//! checked statically; the bus checks the whole document at run time. All offending parameters
-//! of one step are one `bad_arguments` (error), names sorted by byte order, each named once.
+//! only. The root schema's own keywords: when every argument is a literal, the whole arguments
+//! object is validated against the root `params_schema` (references removed the same way); a
+//! failure at a member names that parameter (`invalid`), a failure of the object itself names
+//! `(arguments)` ([`ALL_ARGUMENTS`]) unless it is `required` with a `missing` parameter already
+//! reported, and a root schema that does not compile is `(arguments)` `unchecked`. When some
+//! argument is an expression the document is not known statically, so a root keyword other than
+//! `type`, `properties`, `required`, `additionalProperties` and the non-asserting `$defs`,
+//! `$schema`, `$id`, `$comment`, `title`, `description` makes `(arguments)` `unchecked`. All
+//! offending parameters of one step are one `bad_arguments` (error), names sorted by byte order,
+//! each named once.
 //!
 //! **Classes** (REQ-004). Each `invoke` is listed in document order with its command, the
 //! side-effect class and `human_only` flag of its definition (`null` for an unresolved one)
@@ -82,7 +92,7 @@
 //! program bytes as given (for a program that parses, its canonical bytes, so equal to
 //! [`Program::digest`]); `manifest_digest` is the digest the caller passes for the manifest.
 
-use crate::expr::types::{check_types, DiagCode, Site, TypeReport};
+use crate::expr::types::{check_types, param_types, DiagCode, Site, Type, TypeReport};
 use crate::family::{BindingError, Family};
 use crate::flow::{analyse_flow, iteration_limits, FlowCode, FlowDiag, Severity};
 use crate::fmt::{Arg, Program, ProgramError, Step, StepKind, Uuid7};
@@ -90,7 +100,7 @@ use crate::oper::{FieldError, OperatorDescriptor};
 use crate::Span;
 use fid_bus::error::BusError;
 use fid_bus::unit::{normalise_value, Normalised};
-use fid_bus::validate::{Compiled, Hooks, RefLookup};
+use fid_bus::validate::{Compiled, Hooks, RefLookup, Token};
 use fid_canon::{digest_bytes, CValue};
 use fid_registry::query::Audience;
 use fid_registry::{
@@ -349,6 +359,11 @@ pub fn check_program(
     }
     let at = |step: Option<Uuid7>| step.and_then(|s| pos.get(&s).copied()).unwrap_or(0);
 
+    // Only the callable majors exist for every module (REQ-001, D-035): a hidden, removed or
+    // unreadable major is absent for the type checker too, exactly like a real miss.
+    let mut callable = manifest.clone();
+    callable.commands.retain(|_, d| matches!(state_of(d), Some(State::Active | State::Deprecated)));
+    let manifest = &callable;
     let types = check_types(&parsed, manifest, catalogue);
     let flow = analyse_flow(&parsed, &types);
     for d in &types.diagnostics {
@@ -373,7 +388,14 @@ pub fn check_program(
         }
     }
 
-    let mut ck = Checker { manifest, catalogue, types: &types, compiled: BTreeMap::new() };
+    let mut ck = Checker {
+        manifest,
+        catalogue,
+        types: &types,
+        compiled: BTreeMap::new(),
+        roots: BTreeMap::new(),
+        params: BTreeMap::new(),
+    };
     let mut steps = Vec::new();
     let mut found: Vec<(Uuid7, CheckDiag)> = Vec::new();
     each_step(&parsed, &mut |s: &Step| match &s.kind {
@@ -553,7 +575,34 @@ struct Checker<'a> {
     types: &'a TypeReport,
     /// Compiled property schemas by (command, major, parameter); `None` when one does not compile.
     compiled: BTreeMap<(CommandRef, String), Option<Compiled>>,
+    /// Compiled root parameter schemas by (command, major); `None` when one does not compile.
+    roots: BTreeMap<CommandRef, Option<Compiled>>,
+    /// Static parameter types by (command, major), as the type checker sees them.
+    params: BTreeMap<CommandRef, ParamTypes>,
 }
+
+/// Each parameter's static type and whether it is a value of record; `None` when nothing is
+/// typed (the catalogue gives one unit symbol to two kinds).
+type ParamTypes = Option<BTreeMap<String, (Option<Type>, bool)>>;
+
+/// The name `bad_arguments` gives the arguments object as a whole (no parameter name, which is
+/// an identifier, can look like it).
+pub const ALL_ARGUMENTS: &str = "(arguments)";
+
+/// Root `params_schema` keywords that constrain nothing beyond what the per-parameter checks
+/// cover (`properties`, `required`, `additionalProperties`, `type`) or assert nothing.
+const ROOT_PLAIN: [&str; 10] = [
+    "$comment",
+    "$defs",
+    "$id",
+    "$schema",
+    "additionalProperties",
+    "description",
+    "properties",
+    "required",
+    "title",
+    "type",
+];
 
 fn state_of(def: &CommandDef) -> Option<State> {
     match def.lifecycle.get("state") {
@@ -631,6 +680,8 @@ impl Checker<'_> {
         let root = obj(schema);
         let empty = BTreeMap::new();
         let props = root.and_then(|m| m.get("properties")).and_then(obj).unwrap_or(&empty);
+        let catalogue = self.catalogue;
+        let types = self.params.entry(key.clone()).or_insert_with(|| param_types(schema, catalogue)).clone();
         if let Some(CValue::Arr(required)) = root.and_then(|m| m.get("required")) {
             for r in required {
                 if let CValue::Str(name) = r {
@@ -647,11 +698,45 @@ impl Checker<'_> {
             };
             let problem = match arg {
                 Arg::Literal(v) => self.literal(key, name, prop, schema, v),
-                Arg::Expr(_) => self.expression(step, name).then_some(ArgProblem::WrongType),
+                Arg::Expr(_) => self.expression(step, name, types.as_ref()),
             };
             if let Some(p) = problem {
                 out.insert(echo(name), p);
             }
+        }
+        // The root schema's own keywords: on an all-literal call the whole arguments object is
+        // validated against the root schema; with an expression argument the document is not
+        // known statically, so a root keyword beyond `ROOT_PLAIN` is `unchecked`.
+        if args.values().all(|a| matches!(a, Arg::Literal(_))) {
+            let doc: BTreeMap<String, CValue> = args
+                .iter()
+                .filter_map(|(n, a)| match a {
+                    Arg::Literal(v) => Some((n.clone(), v.clone())),
+                    Arg::Expr(_) => None,
+                })
+                .collect();
+            let compiled = self.roots.entry(key.clone()).or_insert_with(|| Compiled::compile(&strip_refs(schema)).ok());
+            let hooks = StaticHooks { catalogue };
+            match compiled {
+                None => {
+                    out.entry(ALL_ARGUMENTS.to_string()).or_insert(ArgProblem::Unchecked);
+                }
+                Some(c) => {
+                    if let Err(f) = c.evaluate(&CValue::Obj(doc), &hooks) {
+                        match f.pointer.tokens().first() {
+                            Some(Token::Key(n)) => {
+                                out.entry(echo(n)).or_insert(ArgProblem::Invalid);
+                            }
+                            _ if f.keyword == "required" && out.values().any(|p| *p == ArgProblem::Missing) => {}
+                            _ => {
+                                out.entry(ALL_ARGUMENTS.to_string()).or_insert(ArgProblem::Invalid);
+                            }
+                        }
+                    }
+                }
+            }
+        } else if !root.is_some_and(|m| m.keys().all(|k| ROOT_PLAIN.contains(&k.as_str()))) {
+            out.insert(ALL_ARGUMENTS.to_string(), ArgProblem::Unchecked);
         }
         out
     }
@@ -674,17 +759,32 @@ impl Checker<'_> {
         c.evaluate(value, &hooks).is_err().then_some(ArgProblem::Invalid)
     }
 
-    /// Whether the type checker reported a whole-expression `type_mismatch` at `args.<name>`.
-    fn expression(&self, step: Uuid7, name: &str) -> bool {
+    /// An expression argument: `wrong_type` when the type checker reported a whole-expression
+    /// `type_mismatch` at `args.<name>`; `unchecked` when the expression has no recorded type or
+    /// the parameter has no static type (a `$ref`, a union, ...) and is not a value of record
+    /// (whose expression the type checker refuses itself); fail closed.
+    fn expression(
+        &self,
+        step: Uuid7,
+        name: &str,
+        types: Option<&BTreeMap<String, (Option<Type>, bool)>>,
+    ) -> Option<ArgProblem> {
         let slot = format!("args.{name}");
         let whole = self.types.types.get(&Site { step, slot: slot.clone() }).map(|t| t.span);
-        self.types.diagnostics.iter().any(|d| {
+        let mismatch = self.types.diagnostics.iter().any(|d| {
             d.code == DiagCode::TypeMismatch
                 && d.step == Some(step)
                 && d.slot == slot
                 && d.span.is_some()
                 && d.span == whole
-        })
+        });
+        if mismatch {
+            return Some(ArgProblem::WrongType);
+        }
+        match (whole, types.and_then(|t| t.get(name))) {
+            (Some(_), Some((Some(_), _) | (None, true))) => None,
+            _ => Some(ArgProblem::Unchecked),
+        }
     }
 }
 

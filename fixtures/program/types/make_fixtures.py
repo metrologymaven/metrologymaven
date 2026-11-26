@@ -139,7 +139,17 @@ def demo_params(props, required):
     return {"additionalProperties": False, "properties": props, "required": required, "type": "object"}
 
 
+CALIBRATE = {
+    "$defs": {"mode": {"enum": ["coarse", "fine"], "type": "string"}},
+    "additionalProperties": False,
+    "oneOf": [{"required": ["probe"]}, {"required": ["stylus"]}],
+    "properties": {"mode": {"$ref": "#/$defs/mode"}, "probe": STR, "stylus": STR},
+    "required": ["mode"],
+    "type": "object",
+}
+
 DEMO_COMMANDS = [
+    ("demo.calibrate", 1, {"params": CALIBRATE, "side_effect": "R1"}),
     (
         "demo.approve_plan",
         1,

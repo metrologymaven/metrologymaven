@@ -95,7 +95,7 @@ fn check_diags(r: &CheckResult) -> Vec<&CheckDiag> {
 #[test]
 fn fixture_inputs_agree() {
     assert_eq!(manifest().quantity_catalogue_digest, fid_registry::QuantityCatalogue::digest(&catalogue()));
-    assert_eq!(cases().len(), 10);
+    assert_eq!(cases().len(), 11);
 }
 
 /// AC-1: the clean program passes with no errors, class W2, per-step classes as in
@@ -172,29 +172,76 @@ fn ac6_output_is_byte_identical() {
 /// iteration limits once per loop, and a document that does not parse.
 #[test]
 fn other_fixture_cases() {
-    for name in ["deprecated", "unreachable", "literals", "limits", "zero-limit"] {
+    for name in ["deprecated", "unreachable", "literals", "limits", "zero-limit", "unchecked"] {
         assert_case(name);
     }
 }
 
-/// REQ-001: a removed or hidden major, or one whose lifecycle state cannot be read, is
-/// `unknown_command` with the same message as a real miss, and no class is claimed.
+/// REQ-001, D-035: a removed or hidden major, or one whose lifecycle state cannot be read, is
+/// exactly an absent command: the FULL result (every module's diagnostics, the step classes, the
+/// program class) is byte-identical to that of a manifest without the major, and its
+/// `unknown_command` has the same message as a real miss.
 #[test]
-fn removed_hidden_and_unreadable_majors_are_unknown() {
+fn removed_hidden_and_unreadable_majors_are_absent() {
     let key = CommandRef { id: "demo.read_status".into(), major: 1 };
     let target = main_ids("clean")[2];
+    let mut absent_manifest = manifest();
+    absent_manifest.commands.remove(&key).unwrap();
+    let absent = run_with("clean", &absent_manifest);
     for state in [CValue::Str("removed".into()), CValue::Str("hidden".into()), CValue::Str("gone".into()), CValue::Null]
     {
         let mut m = manifest();
         m.commands.get_mut(&key).unwrap().lifecycle.insert("state".into(), state.clone());
         let r = run_with("clean", &m);
+        assert_eq!(text(&r.to_value()), text(&absent.to_value()), "{state:?}");
+        let modules: Vec<Module> =
+            r.diagnostics.iter().filter(|d| d.step_id == Some(target)).map(|d| d.module).collect();
+        assert_eq!(modules, [Module::Expr, Module::Check], "{state:?}");
         let d = check_diags(&r);
-        assert_eq!(d.len(), 1, "{state:?}");
         assert_eq!((d[0].code, d[0].step_id), (UNKNOWN_COMMAND, Some(target)));
         assert_eq!(d[0].message, "unknown_command: demo.read_status@1");
         assert_eq!(r.steps[2].class, None);
         assert_eq!(r.program_class, None);
         assert!(!r.passed);
+    }
+}
+
+/// D-035: a hidden major is absent to an agent too (the agent view keeps hidden majors, the
+/// checker does not): the agent's result equals the agent's result without the major.
+#[test]
+fn hidden_major_is_absent_in_the_agent_view() {
+    let hide = |decls: Vec<CommandDecl>| -> Vec<CommandDecl> {
+        decls
+            .into_iter()
+            .map(|d| {
+                let CValue::Obj(mut m) = d.0 else { panic!("decl") };
+                if m.get("id") == Some(&CValue::Str("demo.approve_plan".into())) {
+                    m.insert(
+                        "lifecycle".into(),
+                        obj(&[
+                            ("remove_after", CValue::Str("2027-12-01".into())),
+                            ("since", CValue::Str("2026-02-01".into())),
+                            ("state", CValue::Str("hidden".into())),
+                        ]),
+                    );
+                }
+                CommandDecl::from_value(CValue::Obj(m))
+            })
+            .collect()
+    };
+    let hidden = ManifestInForce::new(&hide(demo_decls()), catalogue()).unwrap();
+    let without: Vec<CommandDecl> = demo_decls()
+        .into_iter()
+        .filter(|d| !matches!(&d.0, CValue::Obj(m) if m.get("id") == Some(&CValue::Str("demo.approve_plan".into()))))
+        .collect();
+    let gone = ManifestInForce::new(&without, catalogue()).unwrap();
+    let bytes = program_bytes("motion");
+    for audience in [Audience::Person, Audience::Agent] {
+        let mut a = check_in_force(&bytes, &hidden, audience).unwrap();
+        let b = check_in_force(&bytes, &gone, audience).unwrap();
+        a.manifest_digest = b.manifest_digest;
+        assert_eq!(text(&a.to_value()), text(&b.to_value()), "{audience:?}");
+        assert_eq!(a.steps[1].class, None);
     }
 }
 
