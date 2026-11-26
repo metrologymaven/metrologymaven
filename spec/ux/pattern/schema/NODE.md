@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-design]
 satisfies: [REQ-UX.PATTERN-001]
 covers: []
 depends_on: [UX.SYSTEM.PKG, UX.COMP.SCHEMA]
@@ -52,6 +53,13 @@ The format every interaction pattern is written in and the check that each one d
 - **Errors:** `PAT-SCHEMA`, `PAT-CANCEL-MISSING`, `PAT-FAILURE-MISSING`, `PAT-KEYBOARD-MISSING`, `PAT-COMPONENT-UNKNOWN`, `PAT-JOURNEY-UNKNOWN`; warning `PAT-COMMAND-UNMATCHED`.
 - **Determinism:** D0.
 - **Crate:** `fid-design`, module `pattern`.
+- **Pinned choices (build):**
+  - **Format:** the front block is split as `component-spec@1`'s; closed key set `format`, `id`, `title` (optional), `trigger`, `states`, `commands`, `cancel`, `failure`, `[[steps]]` `{n, actor, components, input}`, `[[keyboard]]` `{step, keys, note?}`, `[[journeys]]` `{map, steps}`. Steps are numbered 1, 2, 3, .. in order; `actor` is one of the FLOW.PERSONA.MAPS journey actors (`human`, `operator`, `admin`, `agent`, `system`). `cancel` and `failure` are arrays of text lines. `states` and `journeys` need at least one entry; `commands = []` is allowed (a pattern that runs no command).
+  - **Complete keyboard path:** every step whose actor is a person (`human`, `operator`, `admin`) needs a `[[keyboard]]` entry, else `PAT-KEYBOARD-MISSING`.
+  - **Components:** a component is known when `<package>/components/*.md` holds a `component-spec@1` front block with that `comp.<name>` id; whether that spec passes `comp-check` is `comp-check`'s job.
+  - **Command patterns:** `<name glob>@<major>`; the glob uses `[a-z0-9_.]` plus `*` (any run of name characters), starts with a literal letter or digit, at most 8 `*`, never `**`; the major is exact. The manifest is CORE.REG.MAN's (only `id` and `major` read, the person view; D-035's agent view only hides commands from agents); a malformed manifest exits 2.
+  - **Fail closed:** without `--manifest` or `--journeys` the report lists `commands` or `journeys` under `unchecked` and `ok` is false, while the exit code still follows the errors only. A `--journeys` file that is not a well-formed `journey-map@1` is `PAT-SCHEMA` naming the file. `PAT-JOURNEY-UNKNOWN` names `<map>` or `<map>/<step>`.
+  - **Fixture layout:** the AC files live at `fixtures/ux/pattern/schema/ok/ok.md` (so `--root ok` is a directory), `no-cancel.md`, `bad-comp.md`, `stale-cmd.md`, `manifest.json`, with the package fixture `pkg/`; `make_fixtures.py` holds the hand labels and an independent stdlib reference checker.
 
 ## Test fixtures
 

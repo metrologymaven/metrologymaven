@@ -1,0 +1,11 @@
+{
+  "artefact": "patterns/TEMPLATE.md",
+  "author": "Claude Code (Claude Opus 5.5), agent author of UX.PATTERN.SCHEMA",
+  "date": "2026-11-26",
+  "references": [
+    "The UX.PATTERN.SCHEMA and UX.PATTERN spec nodes in this repository",
+    "The component template design/components/TEMPLATE.md in this repository",
+    "The journey map acceptance/journeys/persona/per-01.json in this repository"
+  ],
+  "statement_version": "originality-statement@1"
+}

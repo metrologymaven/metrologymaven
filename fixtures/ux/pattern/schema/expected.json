@@ -1,0 +1,337 @@
+{
+  "cases": [
+    {
+      "errors": [],
+      "journeys": null,
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "ok/ok.md",
+      "unchecked": [
+        "journeys"
+      ],
+      "warnings": []
+    },
+    {
+      "errors": [],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "ok/ok.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "ok",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [],
+      "journeys": null,
+      "manifest": null,
+      "package": "pkg",
+      "root": "ok/ok.md",
+      "unchecked": [
+        "commands",
+        "journeys"
+      ],
+      "warnings": []
+    },
+    {
+      "errors": [
+        [
+          "PAT-CANCEL-MISSING",
+          "no-cancel.md"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "no-cancel.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [
+        [
+          "PAT-COMPONENT-UNKNOWN",
+          "comp.nope"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "bad-comp.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "stale-cmd.md",
+      "unchecked": [],
+      "warnings": [
+        [
+          "PAT-COMMAND-UNMATCHED",
+          "foo.bar_*@1"
+        ]
+      ]
+    },
+    {
+      "errors": [
+        [
+          "PAT-CANCEL-MISSING",
+          "no-cancel-key.md"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/no-cancel-key.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [
+        [
+          "PAT-FAILURE-MISSING",
+          "no-failure.md"
+        ],
+        [
+          "PAT-SCHEMA",
+          "no-failure.md"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/no-failure.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [
+        [
+          "PAT-KEYBOARD-MISSING",
+          "no-keyboard.md"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/no-keyboard.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [
+        [
+          "PAT-KEYBOARD-MISSING",
+          "keyboard-gap.md"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/keyboard-gap.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/agent-step.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [
+        [
+          "PAT-COMPONENT-UNKNOWN",
+          "comp.ghost"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/ghost-comp.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [
+        [
+          "PAT-COMPONENT-UNKNOWN",
+          "steps[0].components[0]"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/comp-field.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [
+        [
+          "PAT-JOURNEY-UNKNOWN",
+          "fx-nope"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/journey-map.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [
+        [
+          "PAT-JOURNEY-UNKNOWN",
+          "fx-run/9"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/journey-step.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [
+        [
+          "PAT-SCHEMA",
+          "no-front-block.md"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/no-front-block.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [
+        [
+          "PAT-SCHEMA",
+          "unknown-key.md"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/unknown-key.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [
+        [
+          "PAT-SCHEMA",
+          "bad-pattern.md"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/bad-pattern.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/wrong-major.md",
+      "unchecked": [],
+      "warnings": [
+        [
+          "PAT-COMMAND-UNMATCHED",
+          "palette.run_command@2"
+        ]
+      ]
+    },
+    {
+      "errors": [
+        [
+          "PAT-SCHEMA",
+          "bad-actor.md"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/bad-actor.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [
+        [
+          "PAT-SCHEMA",
+          "step-order.md"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/step-order.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [
+        [
+          "PAT-SCHEMA",
+          "no-states.md"
+        ]
+      ],
+      "journeys": "journeys",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "extra/no-states.md",
+      "unchecked": [],
+      "warnings": []
+    },
+    {
+      "errors": [
+        [
+          "PAT-JOURNEY-UNKNOWN",
+          "fx-review"
+        ],
+        [
+          "PAT-SCHEMA",
+          "b.json"
+        ],
+        [
+          "PAT-SCHEMA",
+          "c.json"
+        ],
+        [
+          "PAT-SCHEMA",
+          "d.json"
+        ]
+      ],
+      "journeys": "journeys-bad",
+      "manifest": "manifest.json",
+      "package": "pkg",
+      "root": "ok/ok.md",
+      "unchecked": [],
+      "warnings": []
+    }
+  ],
+  "format": "pattern-check-cases@1"
+}
