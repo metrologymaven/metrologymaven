@@ -1,0 +1,15 @@
+# UNC.PROP.LPU.TAN expectations, written by make_fixtures.py (do not edit).
+# jacobian <row> <col> <f64 bits>: the affine matrix A of affine_model.json (AC-1)
+jacobian 0 0 3ff4000000000000
+jacobian 0 1 bfd8000000000000
+jacobian 0 2 4000800000000000
+jacobian 1 0 0000000000000000
+jacobian 1 1 400c000000000000
+jacobian 1 2 bff2000000000000
+jacobian 2 0 bfea000000000000
+jacobian 2 1 3fdc000000000000
+jacobian 2 2 3ffc000000000000
+no_derivative test.affine.map@1.1.0
+missing test.scale.map@2.0.0
+missing test.scale.map@10.0.0
+orphan test.affine.map@1.1.0
