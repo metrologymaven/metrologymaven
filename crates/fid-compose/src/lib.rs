@@ -27,8 +27,8 @@ pub mod presence;
 mod sources;
 
 pub use compose::{
-    host_time, no_kernel_manifest, workspace_defs, ComposedProject, Composition, OpenedProject, ProjectGuard,
-    SystemUpgradeClock, RECORD_STREAM, UNFOLDED_EVENTS, WORKING_BRANCH,
+    host_time, workspace_defs, ComposedProject, Composition, OpenedProject, ProjectGuard, SystemUpgradeClock,
+    NO_KERNEL_MANIFEST, RECORD_STREAM, UNFOLDED_EVENTS, WORKING_BRANCH,
 };
 pub use host::{
     port_kind_for, presence_provider, process_label, process_os_user, roots_from_settings, HostError, HostTransport,

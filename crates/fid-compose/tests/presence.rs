@@ -48,4 +48,15 @@ fn scan_text_rules() {
     assert!(scan_text("#[cfg(test)]\n#[allow(dead_code)]\nmod m { impl HumanPresence for T {} }").is_empty());
     assert_eq!(scan_text("macro_rules! yes { ($t:ty) => { impl HumanPresence for $t {} } }"), ["macro_rules! yes"]);
     assert_eq!(scan_text("fn f(c: char) -> bool { c == '{' }\nimpl HumanPresence for After {}"), ["After"]);
+    // A renamed import or re-export is reported, so `impl Hp for X` cannot pass unseen.
+    assert_eq!(
+        scan_text("use fid_bus::principal::HumanPresence as Hp;\nimpl Hp for Sneaky {}"),
+        ["HumanPresence as Hp"]
+    );
+    assert_eq!(
+        scan_text("use fid_bus::principal::{Channel, HumanPresence as P};\nimpl P for Sneaky {}"),
+        ["HumanPresence as P"]
+    );
+    assert_eq!(scan_text("pub use fid_bus::principal::HumanPresence as Presence;"), ["HumanPresence as Presence"]);
+    assert!(scan_text("#[cfg(test)]\nmod t {\n    use fid_bus::principal::HumanPresence as Hp;\n}").is_empty());
 }

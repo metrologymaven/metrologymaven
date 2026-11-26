@@ -84,8 +84,10 @@ fn ac3_two_majors_defaults_to_newest_and_honours_major_flag() {
     assert_eq!(env_bad.error.unwrap().code, ErrorCode::UsageError);
 }
 
-/// AC-5: Source scan of `crates/fid-cli/src/` proves no string literal equals any registry CLI
-/// command path, domain, or verb-object from `min-classes.json` (REQ-AUTO.CLI.TREE-002).
+/// AC-5: Source scan of `crates/fid-cli/src/` and of the `fid` main, which moved to
+/// `crates/fid-compose/src/bin/fid.rs` (AUTO.SURF.COMPOSE), proves no string literal equals any
+/// registry CLI command path, domain, or verb-object from `min-classes.json`
+/// (REQ-AUTO.CLI.TREE-002).
 #[test]
 fn ac5_no_hardcoded_registry_cli_paths_in_fid_cli_src() {
     let proj = project(&read("fixtures/manifest/min-classes.json")).unwrap();
@@ -99,8 +101,10 @@ fn ac5_no_hardcoded_registry_cli_paths_in_fid_cli_src() {
 
     let src_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
     let mut checked = 0usize;
-    for entry in fs::read_dir(&src_dir).unwrap() {
-        let path = entry.unwrap().path();
+    let main = Path::new(env!("CARGO_MANIFEST_DIR")).join("../fid-compose/src/bin/fid.rs");
+    assert!(main.is_file(), "{}", main.display());
+    let files = fs::read_dir(&src_dir).unwrap().map(|e| e.unwrap().path()).chain([main]);
+    for path in files {
         if path.extension().and_then(|e| e.to_str()) != Some("rs") {
             continue;
         }
@@ -131,7 +135,7 @@ fn ac5_no_hardcoded_registry_cli_paths_in_fid_cli_src() {
             }
         }
     }
-    assert!(checked >= 4, "expected at least 4 Rust source files under crates/fid-cli/src");
+    assert!(checked >= 5, "expected at least 4 Rust source files under crates/fid-cli/src, and the fid main");
 }
 
 /// Embedded tree matches `min-classes.json` emission and `parse_tree` rejects malformed input.

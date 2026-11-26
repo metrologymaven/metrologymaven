@@ -38,12 +38,12 @@
 use crate::compose::{Composition, OpenedProject, ProjectGuard, SystemUpgradeClock};
 use fid_bus::error::{BusError, Detail, InternalReason, PolicyReason, PreconditionReason, UnauthenticatedReason};
 use fid_bus::policy::fs::{resolve_folder, Roots, MAX_RAW_PATH_BYTES};
-use fid_bus::port::{to_api_error, LocalBus, LocalPort, SessionHost};
+use fid_bus::port::{channel_kind, to_api_error, LocalBus, LocalPort, SessionHost};
 use fid_bus::principal::{
     Channel, ChannelKind, HumanPresence, Identity, OsUser, Principal, PrincipalId, SessionId, SessionKey, SessionTable,
     UpgradeGrant,
 };
-use fid_bus_api::{ApiError, ApiStage, BusPort, ChannelInfo, PortKind, PrincipalKind};
+use fid_bus_api::{ApiError, ApiReply, ApiStage, BusCall, BusPort, ChannelInfo, PortKind, PrincipalKind};
 use fid_journal::JournalError;
 use fid_store::settings::{machine_config_dir, user_config_dir, FileStore, Scope, Sources};
 use fid_store::{LockInfo, OpenMode, ProjectLocation, Store, StoreError, TxnError, VerifiedFolder};
@@ -139,6 +139,20 @@ fn raw_path_refused() -> HostError {
     policy(
         PolicyReason::RawPathRefused,
         "a raw path needs a human principal, or a person-confirmed upgrade recorded on the project's journal",
+    )
+}
+
+/// The refusal of a raw path whose pending upgrade could not be recorded on the project's
+/// journal: `raw_path_refused`, with the cause in the detail.
+fn raw_path_refused_by(cause: &ApiError) -> HostError {
+    policy(
+        PolicyReason::RawPathRefused,
+        &format!(
+            "the person-confirmed upgrade could not be recorded on the project's journal ({}/{}: {})",
+            cause.code(),
+            cause.reason(),
+            cause.detail()
+        ),
     )
 }
 
@@ -288,7 +302,11 @@ pub enum ProjectRef {
 
 /// The session host, the one port and, once opened, the project of a process (module docs).
 pub struct InProcessHost {
-    port: LocalPort,
+    /// `None` once the port was closed because it could not leave a released project's bus.
+    port: Option<LocalPort>,
+    kind: PortKind,
+    /// The refusal of every request once the port is closed.
+    closed: ApiError,
     os_user: OsUser,
     no_project: Arc<LocalBus>,
     project: Option<ProjectGuard>,
@@ -334,17 +352,28 @@ impl InProcessHost {
         let port = host.open(kind, label, Arc::clone(&no_project)).map_err(HostError::Bus)?;
         let os_user = OsUser::new(&port.channel().identity)
             .map_err(|e| HostError::bus(&invariant(&format!("port identity: {e:?}"))))?;
-        Ok(InProcessHost { port, os_user, no_project, project: None, composition, roots })
+        let closed = to_api_error(&invariant(PORT_CLOSED), ApiStage::Session)
+            .map_err(|e| HostError::Internal(format!("closed-port error: {e}")))?;
+        Ok(InProcessHost { port: Some(port), kind, closed, os_user, no_project, project: None, composition, roots })
     }
 
-    /// The principal kind the bus derives for the port now.
+    /// The principal kind the bus derives for the port now; for a closed port, the kind before
+    /// any upgrade (never `human`).
     pub fn principal_kind(&self) -> PrincipalKind {
-        self.port.principal_kind()
+        self.port.as_ref().map_or_else(|| channel_kind(self.kind).base_kind(), BusPort::principal_kind)
     }
 
-    /// The port's channel.
+    /// The port's channel (for a closed port: its kind and OS user, no session).
     pub fn channel(&self) -> ChannelInfo {
-        self.port.channel()
+        self.port.as_ref().map_or_else(
+            || ChannelInfo { kind: self.kind, identity: self.os_user.as_str().to_string(), session: String::new() },
+            BusPort::channel,
+        )
+    }
+
+    /// Whether the port is still open.
+    pub fn is_port_open(&self) -> bool {
+        self.port.is_some()
     }
 
     /// Whether a project is open.
@@ -355,7 +384,10 @@ impl InProcessHost {
     /// Asks the session host to confirm a person for the port (CORE.BUS.PORT). With no project
     /// open the confirmation stays pending; opening a project records it (REQ-014).
     pub fn confirm_human(&mut self) -> Result<(), ApiError> {
-        self.port.confirm_human()
+        match self.port.as_mut() {
+            Some(port) => port.confirm_human(),
+            None => Err(self.closed.clone()),
+        }
     }
 
     /// Opens `project` in `mode` and moves the port to its bus (module docs; REQ-010 ..
@@ -367,8 +399,9 @@ impl InProcessHost {
                 Detail::new("a project is already open"),
             )));
         }
+        let Some(port) = self.port.as_ref() else { return Err(HostError::Bus(self.closed.clone())) };
         let raw = matches!(project, ProjectRef::RawPath(_));
-        if raw && self.port.principal_kind() != PrincipalKind::Human && !self.port.has_pending_upgrade() {
+        if raw && port.principal_kind() != PrincipalKind::Human && !port.has_pending_upgrade() {
             return Err(raw_path_refused());
         }
         let opened = match &project {
@@ -385,13 +418,24 @@ impl InProcessHost {
             }
         };
         let (bus, guard) = self.composition.compose_project(opened).map_err(|e| HostError::bus(&e))?.into_parts();
-        // Attach before the transport is handed out: a pending upgrade is recorded first.
-        self.port.attach(bus).map_err(HostError::Bus)?;
-        if raw && self.port.principal_kind() != PrincipalKind::Human {
-            // The confirmation could not be recorded on this project's journal: give nothing.
-            let back = self.port.attach(Arc::clone(&self.no_project));
+        let Some(port) = self.port.as_mut() else { return Err(HostError::Bus(self.closed.clone())) };
+        // Attach before the transport is handed out: a pending upgrade is recorded first. A
+        // failed attach leaves the port on the no-project bus; the project is released.
+        if let Err(e) = port.attach(bus) {
             drop(guard);
-            back.map_err(HostError::Bus)?;
+            return Err(if raw { raw_path_refused_by(&e) } else { HostError::Bus(e) });
+        }
+        if raw && port.principal_kind() != PrincipalKind::Human {
+            // The confirmation could not be recorded on this project's journal: give nothing.
+            let back = port.attach(Arc::clone(&self.no_project));
+            if back.is_err() {
+                // The port cannot leave the project's bus: close it, so that it neither calls
+                // the project nor keeps it (and its lock) open.
+                if let Some(port) = self.port.take() {
+                    port.close();
+                }
+            }
+            drop(guard);
             return Err(raw_path_refused());
         }
         self.project = Some(guard);
@@ -426,9 +470,42 @@ impl InProcessHost {
     /// Hands out the transport (REQ-013, REQ-014): the in-process transport over the port,
     /// then the project guard.
     pub fn into_transport(self) -> HostTransport {
-        let InProcessHost { port, project, .. } = self;
-        let transport = InProcTransport::new(Box::new(port), Box::new(SystemKeySource::new()));
+        let InProcessHost { port, kind, closed, os_user, project, .. } = self;
+        let port: Box<dyn BusPort + Send> = match port {
+            Some(port) => Box::new(port),
+            None => Box::new(ClosedPort { kind, identity: os_user.as_str().to_string(), error: closed }),
+        };
+        let transport = InProcTransport::new(port, Box::new(SystemKeySource::new()));
         HostTransport { transport, project }
+    }
+}
+
+/// The detail of every request on a closed port.
+const PORT_CLOSED: &str = "the port was closed: it could not leave a released project's bus";
+
+/// What a closed port's transport calls: it runs nothing, is never `human`, and refuses every
+/// call and upgrade.
+struct ClosedPort {
+    kind: PortKind,
+    identity: String,
+    error: ApiError,
+}
+
+impl BusPort for ClosedPort {
+    fn channel(&self) -> ChannelInfo {
+        ChannelInfo { kind: self.kind, identity: self.identity.clone(), session: String::new() }
+    }
+
+    fn principal_kind(&self) -> PrincipalKind {
+        channel_kind(self.kind).base_kind()
+    }
+
+    fn confirm_human(&mut self) -> Result<(), ApiError> {
+        Err(self.error.clone())
+    }
+
+    fn call(&mut self, _call: &BusCall) -> ApiReply {
+        ApiReply::Failed(self.error.clone())
     }
 }
 

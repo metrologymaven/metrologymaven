@@ -12,7 +12,10 @@ use fid_bus::principal::SessionId;
 use fid_bus::validate::Compiled;
 use fid_bus_api::{ApiError, ApiReply, ApiStage, BusCall, BusPort, PortKind, PrincipalKind};
 use fid_canon::{parse, CValue, Digest};
-use fid_compose::{not_wired_detail, Composition, InProcessHost, OpenedProject, ProjectRef, HANDLER_SOURCES, UNWIRED};
+use fid_compose::{
+    not_wired_detail, Composition, InProcessHost, OpenedProject, ProjectRef, HANDLER_SOURCES, NO_KERNEL_MANIFEST,
+    UNWIRED,
+};
 use fid_registry::{mcp_projection, CommandDef, Projection};
 use fid_store::{OpenMode, ProjectLocation};
 use fid_surface::inproc::{envelope_for, hidden_as_unknown_major};
@@ -137,6 +140,13 @@ fn ac7_a_confirmed_upgrade_is_journalled_before_the_first_command() {
     assert_eq!(text_at(&headers[1], &["principal", "kind"]).as_deref(), Some("human"));
     assert_eq!(text_at(&headers[1], &["command", "id"]).as_deref(), Some("project.create_part"));
     assert_eq!(text_at(&headers[1], &["command", "class"]).as_deref(), Some("W2"));
+    // Until a kernel manifest is in force, entries record the reserved placeholder.
+    assert_eq!(NO_KERNEL_MANIFEST, fid_canon::digest_bytes(b""));
+    let placeholder = format!("{NO_KERNEL_MANIFEST}");
+    assert!(placeholder.starts_with("sha256:e3b0c442"), "{placeholder}");
+    for h in &headers {
+        assert_eq!(text_at(h, &["manifests", "kernel"]), Some(placeholder.clone()), "{h:?}");
+    }
 }
 
 /// Review of #624: a port whose confirmed upgrade is pending and cannot be journalled gets no
@@ -173,6 +183,43 @@ fn a_pending_upgrade_that_cannot_be_journalled_gets_no_raw_path() {
     drop(h);
     let kinds: Vec<String> = journal_headers(&dir).iter().map(|h| text_at(h, &["kind"]).unwrap()).collect();
     assert_eq!(kinds, ["principal_upgrade"]);
+}
+
+/// Review of #633: a pending upgrade whose journal append fails gets `raw_path_refused` (the
+/// cause in the detail), the project and its lock are released, and the port stays `script` on
+/// the no-project bus. The append fails because the confirmation is older than the project's
+/// last entry (`time_regressed`, CORE.JRN.CHAIN.APPEND).
+#[test]
+fn a_pending_upgrade_whose_append_fails_gets_no_raw_path() {
+    let base = temp_dir("append-fails");
+    let dir = new_project(&base);
+    let mut h = host(confirming_host(), PortKind::Cli, fid_bus::policy::fs::Roots::default());
+    h.confirm_human().unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(20));
+
+    // Another session commits to the project after the confirmation.
+    let comp = Composition::workspace().unwrap();
+    let (bus, guard) = comp.compose_project(OpenedProject::open(&dir, OpenMode::Write).unwrap()).unwrap().into_parts();
+    let mut other = plain_host().open(PortKind::Cli, SessionId::new("test/other").unwrap(), Arc::clone(&bus)).unwrap();
+    let cmd = CommandId::parse("project.create_part@1").unwrap();
+    let reply = other.call(&BusCall { command: cmd, params: label(), dry_run: false });
+    assert!(matches!(reply, ApiReply::Committed { .. }), "{reply:?}");
+    drop(other);
+    drop(bus);
+    drop(guard);
+
+    let e = h.open_project(ProjectRef::RawPath(dir.clone()), OpenMode::Write).unwrap_err();
+    assert_eq!((e.code(), e.reason()), ("policy", "raw_path_refused"), "{e}");
+    assert!(e.to_string().contains("precondition/false"), "the cause is kept: {e}");
+    assert!(!h.has_project());
+    assert!(h.is_port_open());
+    assert_eq!(h.principal_kind(), PrincipalKind::Script);
+    assert_eq!(lock_record(&dir).trim(), "", "the lock is released");
+    let kinds: Vec<String> = journal_headers(&dir).iter().map(|h| text_at(h, &["kind"]).unwrap()).collect();
+    assert_eq!(kinds, ["command"], "no principal_upgrade was recorded");
+    // The port is still usable on the no-project bus, and the failed upgrade is gone.
+    let e = h.open_project(ProjectRef::RawPath(dir), OpenMode::Write).unwrap_err();
+    assert_eq!(e.reason(), "raw_path_refused");
 }
 
 /// A script can never become human: an `mcp` port is refused at the channel even with a
@@ -243,8 +290,21 @@ fn d035_hidden_commands_read_as_unknown_end_to_end() {
     h.open_project(ProjectRef::Handle("root:work/p".into()), OpenMode::Read).unwrap();
     let mut t = tracker(h.into_transport());
     let cmd = CommandId::parse("demo.thing@1").unwrap();
-    let env = send(&mut t, "demo.thing@1", obj(&[]));
-    assert_eq!(encoded(&env), encoded(&hidden_as_unknown_major(&cmd)));
+    let hidden = send(&mut t, "demo.thing@1", obj(&[]));
+    // Hand-written: the envelope of the bus's own refusal of a major its table does not hold.
+    assert_eq!(
+        encoded(&hidden),
+        concat!(
+            r#"{"command_id":"demo.thing@1","envelope_version":1,"error":{"code":"not_found","details":"#,
+            r#"{"bus_code":"not_found","bus_origin":"pipeline","bus_reason":"unknown_major"},"#,
+            r#""message":"\"demo.thing\"@1: unknown major"},"outcome":"failed"}"#
+        )
+    );
+    assert_eq!(encoded(&hidden), encoded(&hidden_as_unknown_major(&cmd)));
+    // A truly absent major of the same name, through the same bus: the same bytes but for the
+    // major number.
+    let absent = send(&mut t, "demo.thing@3", obj(&[]));
+    assert_eq!(encoded(&hidden).replace("@1", "@3"), encoded(&absent));
 
     // An agent never sees a `never`-projected major.
     let comp = Composition::workspace().unwrap();
