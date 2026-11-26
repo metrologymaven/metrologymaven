@@ -17,7 +17,7 @@
 //!   unusable_setting }`, never silently the default. The move command reads the pitch only
 //!   when snapping is on.
 
-use crate::json_num::{as_u32, num_usize};
+use crate::json_num::as_u32;
 use crate::layout::page::{parse_length, LayoutError, Length, MAX_LENGTH};
 use fid_canon::CValue;
 use fid_store::settings::{resolve, Resolved, Scope, SettingWarning, SettingsRegistry, Sources};
@@ -86,7 +86,8 @@ impl GridPitch {
 
     /// The setting value to hand to `settings.set_value@1` (a JSON integer).
     pub fn setting_value(self) -> CValue {
-        num_usize(usize::try_from(self.0).unwrap_or(0))
+        let n = usize::try_from(self.0).unwrap_or(0);
+        crate::json_num::num_usize(n)
     }
 
     /// The pitch of a resolved snapshot of `report.grid_pitch` and the warnings of the same
