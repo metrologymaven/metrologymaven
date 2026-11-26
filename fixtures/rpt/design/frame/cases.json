@@ -633,6 +633,61 @@
     },
     {
      "expect": {
+      "error": "report.bad_params"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "dw": "1700mm",
+      "report": "R",
+      "x": "-2000mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "50000",
+        "w": "30000",
+        "x": "200000",
+        "y": "-2000"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "50000",
+       "page": "P1",
+       "report": "R",
+       "w": "30000",
+       "x": "-200000",
+       "y": "-2000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "report": "R",
+      "x": "-2000mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "50000",
+        "w": "30000",
+        "x": "-200000",
+        "y": "-2000"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
       "result": {
        "block": "B1",
        "h": "50000",
@@ -647,8 +702,7 @@
      "params": {
       "block": "B1",
       "dw": "1700mm",
-      "report": "R",
-      "x": "-2000mm"
+      "report": "R"
      },
      "pitch": "100",
      "state": {

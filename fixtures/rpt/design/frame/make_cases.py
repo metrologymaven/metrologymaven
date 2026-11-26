@@ -19,7 +19,8 @@ body origin):
                  typed as a length text it is parsed as above (field grid_pitch), then
                  below 10 -> below_minimum. Only read when snap is on.
   target frame   absolute: x, y, w, h each optional; delta: dx, dy, dw, dh each optional,
-                 added to the stored frame. A coordinate the command leaves out keeps the
+                 added to the stored frame. Absolute and delta coordinates in one command,
+                 or none at all -> report.bad_params (checked before anything else). A coordinate the command leaves out keeps the
                  stored value. A block with no stored frame needs every coordinate given
                  absolutely; otherwise the first coordinate (x, y, w, h order) that needs the
                  stored frame -> <coordinate> no_frame.
@@ -132,6 +133,10 @@ class World:
         return out
 
     def move(self, params, pitch):
+        has_abs = any(k in params for k in ABSOLUTE)
+        has_delta = any(k in params for k in DELTA)
+        if has_abs == has_delta:
+            raise Refused("report.bad_params")
         given = {}
         for k in ABSOLUTE + DELTA:
             if k in params:
@@ -251,6 +256,8 @@ SCENARIOS = [
         mv(dx="0.01mm"),
         mv(dx="-4000mm"),
         mv(x="-2000mm", dw="1700mm"),
+        mv(x="-2000mm"),
+        mv(dw="1700mm"),
         mv(dw="0.01mm"),
         mv(w="1mm", h="1mm"),
         mv(dh="-0.01mm"),
