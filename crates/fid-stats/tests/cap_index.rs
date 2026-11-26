@@ -144,7 +144,9 @@ fn fixture_cases_and_cross_target_digest() {
                 let reason = want.get("error");
                 assert!(!reason.is_null(), "{id}: unexpected error {e}");
                 assert_eq!(e.code(), "stats.bad_capability_input", "{id}");
-                let StatsError::BadCapabilityInput { reason: r } = e;
+                let StatsError::BadCapabilityInput { reason: r } = e else {
+                    panic!("{id}: expected bad_capability_input, got {e}");
+                };
                 assert_eq!(r.as_str(), reason.str(), "{id}");
                 lines.push_str(&format!("{id} error:{}\n", r.as_str()));
             }

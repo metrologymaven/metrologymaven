@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-stats]
 satisfies: [REQ-RPT.STATS.SPC-002, REQ-RPT.STATS.SPC-007]
 covers: []
 depends_on: [KRN.NUM]
@@ -99,6 +100,7 @@ Holds the Shewhart control-chart constants for subgroup sizes 2 to 25 as a versi
 
 - **Expert choice (open):** which source and edition is authoritative, and whether to store published rounded values or full-precision values computed from d2, d3 and c4. Limits differ slightly between the two. Until decided, all rows are `UNVERIFIED` and results show it.
 - If no maintainer with SPC expertise can choose, raise a decision before release of `RPT.STATS.SPC.LIM` (not before building it).
+- **Build note (fid-stats, 2026-11-26):** version 1.0.0 stores d2 and d3 to 3 decimals and c4 to 4, as in the seed table, and the chart factors to 3 decimals computed from the *stored* base constants (so AC-1 holds exactly; a factor from unrounded constants can differ in the last digit, for example A2 at n = 2 is 1.881, D4 at n = 2 is 3.269). Rows 11 to 25 and all factors come from the project's own normal-distribution integrals (`fixtures/rpt/stats/make_spc_constants.py`), not from a published table. Every row is `UNVERIFIED` and its citation reads "none chosen" until the expert choice above is made; that choice (and any switch to full-precision values) needs a new table version.
 
 ## Children
 

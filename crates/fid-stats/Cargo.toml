@@ -1,6 +1,6 @@
 [package]
 name = "fid-stats"
-description = "Metrology Maven statistics kernel: the capability index function stats.cap.index@1.0.0 (Cp/Cpk, Pp/Ppk and the one-sided indices) with its typed non-results (spec node RPT.STATS.CAP.INDEX)"
+description = "Metrology Maven statistics kernel: the capability index function stats.cap.index@1.0.0 (spec node RPT.STATS.CAP.INDEX) and the control-chart constants table spc.constants.normal@1.0.0 (RPT.STATS.SPC.CONST)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
