@@ -3,21 +3,23 @@
 
 use super::dec::{Dec, DecFail};
 use super::func;
-use super::num::{cmp_real_dec, cmp_real_plain, dec_to_f64, finite, unit_kind, Fail};
+use super::num::{
+    cmp_dec_dec, cmp_real_dec, cmp_real_plain, dec_to_f64, factor_of, finite, pow10_of, reduce, unit_kind, Fail,
+};
 use super::{Env, EvalError, EvalKind, Value, V};
 use crate::expr::syntax::{BinaryOp, Expr, ExprKind, UnaryOp};
-use crate::expr::types::infer::Kinds;
-use crate::expr::types::{type_of, Dim, Kind, Type};
+use crate::expr::types::infer::{node_key, CondTypes, Kinds};
+use crate::expr::types::{Dim, Kind, Type};
 use fid_registry::QuantityCatalogue;
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
 
-/// What one evaluation reads: the catalogue, its kinds, the bindings and their types.
+/// What one evaluation reads: the catalogue, its kinds, the bindings, and the static type
+/// of every `if` node from the typing pass.
 pub(crate) struct Ctx<'a> {
     pub(crate) cat: &'a dyn QuantityCatalogue,
     pub(crate) kinds: &'a Kinds,
     pub(crate) env: &'a Env,
-    pub(crate) types: &'a BTreeMap<String, Type>,
+    pub(crate) conds: &'a CondTypes,
 }
 
 enum Work<'e> {
@@ -109,8 +111,7 @@ pub(crate) fn run(ctx: &Ctx<'_>, root: &Expr) -> Result<Value, EvalError> {
                 // An `int` branch of an `if` typed `decimal` becomes an exact decimal.
                 if let Some(V::Int(i)) = vals.last().map(Value::v) {
                     let i = *i;
-                    let (ty, _) = type_of(e, ctx.types, ctx.cat);
-                    if ty == Some(Type::Decimal) {
+                    if ctx.conds.get(&node_key(e)) == Some(&Type::Decimal) {
                         vals.pop();
                         vals.push(Value::of_dec(Dec::from_i64(i), None));
                     }
@@ -198,6 +199,42 @@ impl Ctx<'_> {
         }
     }
 
+    /// Where the exact product of a decimal in `u` and one in `v` is written: the first
+    /// unit (symbol order) of the product's kind whose factor is exactly `fu * fv`, shift 0;
+    /// else, when `fu * fv = 10^k`, the kind's canonical unit (a plain decimal for an empty
+    /// dimension), shift `k`. `None` (no such catalogue unit, or a derived kind): the
+    /// product is converted to `f64` instead.
+    fn unit_product(&self, u: &str, v: &str) -> Result<Option<(Option<String>, i64)>, Fail> {
+        let ((nu, du, pu), (nv, dv, pv)) = (factor_of(Some(u), self.cat)?, factor_of(Some(v), self.cat)?);
+        let pis = u8::from(pu) + u8::from(pv);
+        let (p, q) = reduce(u128::from(nu) * u128::from(nv), u128::from(du) * u128::from(dv));
+        let kind = self.product_kind(Some(unit_kind(self.kinds, u)?), Some(unit_kind(self.kinds, v)?), 1)?;
+        let info = match &kind {
+            Some(Kind::Named(k)) => Some(self.cat.kind(k).ok_or(Fail::Internal)?),
+            _ => None,
+        };
+        if let Some(info) = info {
+            if pis <= 1 {
+                let same = info.units.iter().find(|w| {
+                    w.factor.times_pi == (pis == 1)
+                        && u128::from(w.factor.ratio.num()) == p
+                        && u128::from(w.factor.ratio.den()) == q
+                });
+                if let Some(w) = same {
+                    return Ok(Some((Some(w.symbol.clone()), 0)));
+                }
+            }
+        }
+        if pis != 0 {
+            return Ok(None);
+        }
+        Ok(match (pow10_of(p, q), &kind, info) {
+            (Some(k), None, _) => Some((None, k)),
+            (Some(k), Some(Kind::Named(_)), Some(info)) => Some((Some(info.canonical.clone()), k)),
+            _ => None,
+        })
+    }
+
     pub(crate) fn real(&self, x: f64, kind: Option<Kind>) -> Result<Value, Fail> {
         Value::real(finite(x)?, kind).map_err(|_| Fail::Kind(EvalKind::NonFinite))
     }
@@ -242,54 +279,59 @@ impl Ctx<'_> {
     }
 
     fn binary(&self, op: BinaryOp, l: &Value, r: &Value) -> Result<Value, Fail> {
-        use BinaryOp as B;
         match op {
-            B::Add | B::Sub | B::Mul | B::Div | B::Rem => {
+            BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => {
                 let (a, b) = (num(l).ok_or(Fail::Internal)?, num(r).ok_or(Fail::Internal)?);
                 self.arith(op, a, b)
             }
-            B::Lt | B::Le | B::Gt | B::Ge => {
+            BinaryOp::Lt | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Ge => {
                 let o = self.cmp(l, r)?;
                 Ok(Value::bool(match op {
-                    B::Lt => o == Ordering::Less,
-                    B::Le => o != Ordering::Greater,
-                    B::Gt => o == Ordering::Greater,
+                    BinaryOp::Lt => o == Ordering::Less,
+                    BinaryOp::Le => o != Ordering::Greater,
+                    BinaryOp::Gt => o == Ordering::Greater,
                     _ => o != Ordering::Less,
                 }))
             }
-            B::Eq => self.equal(l, r).map(Value::bool),
-            B::Ne => self.equal(l, r).map(|b| Value::bool(!b)),
+            BinaryOp::Eq => self.equal(l, r).map(Value::bool),
+            BinaryOp::Ne => self.equal(l, r).map(|b| Value::bool(!b)),
             // Short-circuited by the walker; never applied.
-            B::And | B::Or => Err(Fail::Internal),
+            BinaryOp::And | BinaryOp::Or => Err(Fail::Internal),
         }
     }
 
     fn arith(&self, op: BinaryOp, a: Num<'_>, b: Num<'_>) -> Result<Value, Fail> {
-        use BinaryOp as B;
         if let (Num::Int(x), Num::Int(y)) = (a, b) {
             let ov = || Fail::Kind(EvalKind::IntOverflow);
             return match op {
-                B::Add => x.checked_add(y).map(Value::int).ok_or_else(ov),
-                B::Sub => x.checked_sub(y).map(Value::int).ok_or_else(ov),
-                B::Mul => x.checked_mul(y).map(Value::int).ok_or_else(ov),
-                B::Rem if y == 0 => Err(EvalKind::DivZero.into()),
-                B::Rem => x.checked_rem(y).map(Value::int).ok_or_else(ov),
-                B::Div if y == 0 => Err(EvalKind::DivZero.into()),
+                BinaryOp::Add => x.checked_add(y).map(Value::int).ok_or_else(ov),
+                BinaryOp::Sub => x.checked_sub(y).map(Value::int).ok_or_else(ov),
+                BinaryOp::Mul => x.checked_mul(y).map(Value::int).ok_or_else(ov),
+                BinaryOp::Rem if y == 0 => Err(EvalKind::DivZero.into()),
+                // `i64::MIN % -1` is 0, which `wrapping_rem` returns; y is not 0 here.
+                BinaryOp::Rem => Ok(Value::int(x.wrapping_rem(y))),
+                BinaryOp::Div if y == 0 => Err(EvalKind::DivZero.into()),
                 _ => self.real(x as f64 / y as f64, None),
             };
         }
         if let (Some((x, ux)), Some((y, uy))) = (exact(a), exact(b)) {
             let unit = match (op, ux, uy) {
-                (B::Add | B::Sub | B::Rem, ux, uy) if ux == uy => Some(ux),
-                (B::Mul, Some(u), None) | (B::Mul, None, Some(u)) => Some(Some(u)),
-                (B::Mul, None, None) => Some(None),
+                (BinaryOp::Add | BinaryOp::Sub | BinaryOp::Rem, ux, uy) if ux == uy => Some(ux),
+                (BinaryOp::Mul, Some(u), None) | (BinaryOp::Mul, None, Some(u)) => Some(Some(u)),
+                (BinaryOp::Mul, None, None) => Some(None),
                 _ => None,
             };
+            if let (BinaryOp::Mul, Some(u), Some(v)) = (op, ux, uy) {
+                if let Some((unit, shift)) = self.unit_product(u, v)? {
+                    let d = x.mul_shift(&y, shift).map_err(dec_fail)?;
+                    return Ok(Value::of_dec(d, unit));
+                }
+            }
             if let Some(unit) = unit {
                 let d = match op {
-                    B::Add => x.add(&y),
-                    B::Sub => x.sub(&y),
-                    B::Mul => x.mul(&y),
+                    BinaryOp::Add => x.add(&y),
+                    BinaryOp::Sub => x.sub(&y),
+                    BinaryOp::Mul => x.mul(&y),
                     _ => x.rem(&y),
                 }
                 .map_err(dec_fail)?;
@@ -299,13 +341,13 @@ impl Ctx<'_> {
         let (ka, kb) = (self.kind_of(a)?, self.kind_of(b)?);
         let (x, y) = (self.to_f64(a)?, self.to_f64(b)?);
         match op {
-            B::Add => self.real(x + y, ka.or(kb)),
-            B::Sub => self.real(x - y, ka.or(kb)),
-            B::Rem if y == 0.0 => Err(EvalKind::DivZero.into()),
-            B::Rem => self.real(x % y, ka.or(kb)),
-            B::Mul => self.real(x * y, self.product_kind(ka, kb, 1)?),
-            B::Div if y == 0.0 => Err(EvalKind::DivZero.into()),
-            B::Div => self.real(x / y, self.product_kind(ka, kb, -1)?),
+            BinaryOp::Add => self.real(x + y, ka.or(kb)),
+            BinaryOp::Sub => self.real(x - y, ka.or(kb)),
+            BinaryOp::Rem if y == 0.0 => Err(EvalKind::DivZero.into()),
+            BinaryOp::Rem => self.real(x % y, ka.or(kb)),
+            BinaryOp::Mul => self.real(x * y, self.product_kind(ka, kb, 1)?),
+            BinaryOp::Div if y == 0.0 => Err(EvalKind::DivZero.into()),
+            BinaryOp::Div => self.real(x / y, self.product_kind(ka, kb, -1)?),
             _ => Err(Fail::Internal),
         }
     }
@@ -328,10 +370,7 @@ impl Ctx<'_> {
                 let ((x, ux), (y, uy)) = (exact(a).ok_or(Fail::Internal)?, exact(b).ok_or(Fail::Internal)?);
                 match (ux, uy) {
                     (ux, uy) if ux == uy => Ok(x.cmp(&y)),
-                    (Some(_), Some(_)) => {
-                        let (p, q) = (self.to_f64(a)?, self.to_f64(b)?);
-                        p.partial_cmp(&q).ok_or(Fail::Internal)
-                    }
+                    (Some(_), Some(_)) => cmp_dec_dec(&x, ux, &y, uy, self.cat),
                     _ => Err(Fail::Internal),
                 }
             }

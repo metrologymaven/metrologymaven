@@ -146,6 +146,39 @@ fn children(e: &Expr) -> Vec<&Expr> {
 
 /// Types `expr`, appending its diagnostics to `out` sorted by span (stable).
 pub(crate) fn infer(expr: &Expr, env: Env<'_>, kinds: &Kinds, out: &mut Vec<ExprDiag>) -> Option<Type> {
+    infer_recording(expr, env, kinds, out, None)
+}
+
+/// The static type of every `if` node of an expression, keyed by the node's address
+/// ([`node_key`]). Filled by [`type_of_recording`] in the pass that types the expression.
+pub(crate) type CondTypes = BTreeMap<usize, Type>;
+
+/// The key of a node in [`CondTypes`]: its address (valid while the tree lives).
+pub(crate) fn node_key(e: &Expr) -> usize {
+    e as *const Expr as usize
+}
+
+/// [`type_of`] with prepared [`Kinds`], also recording the type of every `if` node (for
+/// `AUTO.PROG.EXPR.EVAL`, which needs it to evaluate an `if` typed `decimal`).
+pub(crate) fn type_of_recording(
+    expr: &Expr,
+    vars: &BTreeMap<String, Type>,
+    kinds: &Kinds,
+) -> (Option<Type>, Vec<ExprDiag>, CondTypes) {
+    let mut out = Vec::new();
+    let mut conds = CondTypes::new();
+    let env = |n: &str| vars.get(n).map(|t| Some(t.clone()));
+    let t = infer_recording(expr, &env, kinds, &mut out, Some(&mut conds));
+    (t, out, conds)
+}
+
+fn infer_recording(
+    expr: &Expr,
+    env: Env<'_>,
+    kinds: &Kinds,
+    out: &mut Vec<ExprDiag>,
+    mut conds: Option<&mut CondTypes>,
+) -> Option<Type> {
     let mut t = Typer { kinds, env, diags: Vec::new() };
     let mut work = vec![Work::Visit(expr)];
     let mut vals: Vec<Option<Type>> = Vec::new();
@@ -159,6 +192,9 @@ pub(crate) fn infer(expr: &Expr, env: Env<'_>, kinds: &Kinds, out: &mut Vec<Expr
                 let n = children(e).len();
                 let args = vals.split_off(vals.len().saturating_sub(n));
                 let ty = t.node(e, args);
+                if let (Some(c), ExprKind::Cond(..), Some(ty)) = (conds.as_deref_mut(), &e.kind, &ty) {
+                    c.insert(node_key(e), ty.clone());
+                }
                 vals.push(ty);
             }
         }

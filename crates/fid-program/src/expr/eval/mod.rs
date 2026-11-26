@@ -23,15 +23,21 @@
 //!
 //! **Exact decimals (REQ-002).** `int` and plain decimals, and two decimals written in the
 //! same unit, stay exact under `+`, `-`, `%` and comparison; under `*` a decimal in a unit
-//! times a plain number (or `int`) also stays exact and keeps its unit. Sums and remainders
+//! times a plain number (or `int`) also stays exact and keeps its unit. A product of two
+//! decimals in units `u` and `v` stays exact when the catalogue has a unit of the product's
+//! kind whose factor is exactly `fu * fv` (`2[mm] * 3[mm]` is `6[mm^2]`; the first such unit
+//! in symbol order), or when `fu * fv` is a power of ten (then it is written in the kind's
+//! canonical unit, or as a plain decimal for an empty dimension); only when neither exists
+//! (a derived kind, a Π² factor, ...) is it converted to `f64`. Sums and remainders
 //! take the larger scale, products the sum of the scales. A result whose coefficient needs
 //! more than 38 digits is first stripped of trailing zeros (only as far as needed); if it
 //! still does not fit, or its scale cannot be brought within ±400, evaluation fails with
 //! `decimal_overflow`. A decimal literal is held to the same bounds. `%` is the truncated
 //! remainder (the sign of the dividend).
 //!
-//! **Into `f64` (REQ-003).** A decimal that meets a real, a decimal in another unit, or any
-//! `/` (division is never exact) is converted once: a plain decimal by the correctly rounded
+//! **Into `f64` (REQ-003).** A decimal that meets a real, a decimal in another unit under
+//! `+ - %`, a product with no exact unit (above), or any `/` (division is never exact) is
+//! converted once: a plain decimal by the correctly rounded
 //! `fid_num::kdec::Decimal::to_f64`, a decimal in a unit by the single-rounding conversion of
 //! `CORE.BUS.UNIT` (`fid_bus::unit::normalise`, the factors and Π of the catalogue, the same
 //! bits as `GEO.FRAME.UNITS` for its units). A conversion beyond the largest finite `f64`, or
@@ -44,7 +50,8 @@
 //! an `int` uses `fid_num::kdec::cmp`; a real against a decimal in a unit compares the real
 //! with the exact rational `decimal * factor` (Π of the catalogue as the exact rational
 //! `PI_256 / 2^254`), so `0.1[mm]` never equals the nearest `f64` of 0.0001 m. Two decimals
-//! in different units are each converted (REQ-003) and the reals compared. Two reals compare
+//! in different units compare their exact rationals `a * fa` and `b * fb` by cross-multiplied
+//! big integers (`1000[mm] == 1[m]`, `1[in] == 25.4[mm]`). Two reals compare
 //! by IEEE order (`-0 == +0`). `==` on non-numbers compares by value; an enum member equals a
 //! string with the same text; lists and records compare element by element.
 //!
@@ -67,7 +74,7 @@ pub use dec::{Dec, MAX_DEC_DIGITS, MAX_SCALE};
 pub use func::{display, MAX_FORMAT_BYTES};
 
 use crate::expr::syntax::{Expr, Name, Span};
-use crate::expr::types::infer::Kinds;
+use crate::expr::types::infer::{type_of_recording, Kinds};
 use crate::expr::types::{type_of, ExprDiag, Kind, Type};
 use fid_canon::CValue;
 use fid_registry::QuantityCatalogue;
@@ -452,13 +459,16 @@ pub fn eval_expr(expr: &Expr, env: &Env, cat: &dyn QuantityCatalogue) -> Result<
         return Err(EvalError::Env { name: String::new(), reason: "catalogue" });
     }
     let types: BTreeMap<String, Type> = env.vars.iter().map(|(k, (t, _))| (k.clone(), t.clone())).collect();
-    let (ty, diags) = type_of(expr, &types, cat);
+    // A catalogue that gives one symbol to two kinds: `type_of` reports `catalogue_invalid`.
+    let Ok(kinds) = Kinds::new(cat) else {
+        return Err(EvalError::Type { diags: type_of(expr, &types, cat).1 });
+    };
+    let (ty, diags, conds) = type_of_recording(expr, &types, &kinds);
     let ty = match ty {
         Some(t) if diags.is_empty() => t,
         _ => return Err(EvalError::Type { diags }),
     };
-    let kinds = Kinds::new(cat).map_err(|_| EvalError::Type { diags: Vec::new() })?;
-    let ctx = walk::Ctx { cat, kinds: &kinds, env, types: &types };
+    let ctx = walk::Ctx { cat, kinds: &kinds, env, conds: &conds };
     let v = walk::run(&ctx, expr)?;
     if !walk::conforms(&kinds, &ty, &v) {
         return Err(EvalError::Internal { span: expr.span });

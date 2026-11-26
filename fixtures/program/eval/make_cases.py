@@ -233,6 +233,47 @@ def align(a, b):
     return a[0] * 10 ** (s - a[1]), b[0] * 10 ** (s - b[1]), s
 
 
+def pow10(r):
+    """k when the Fraction r is 10^k, else None."""
+    for n, sign in ((r.numerator, 1), (r.denominator, -1)):
+        other = r.denominator if sign == 1 else r.numerator
+        if other != 1:
+            continue
+        k = 0
+        while n > 1 and n % 10 == 0:
+            n //= 10
+            k += 1
+        if n == 1:
+            return sign * k
+    return None
+
+
+def unit_product(u, v):
+    """Where the exact product of decimals in u and v is written: (unit or None, shift k),
+    or None when it is converted to f64."""
+    (ku, _, (nu, du, pu)), (kv, _, (nv, dv, pv)) = UNITS[u], UNITS[v]
+    pis = int(pu) + int(pv)
+    r = Fraction(nu * nv, du * dv)
+    kind = product_kind(("named", ku), ("named", kv), 1)
+    if kind is not None and kind[0] == "named" and pis <= 1:
+        for k in CAT["kinds"]:
+            if k["kind"] != kind[1]:
+                continue
+            for w in k["units"]:  # catalogue order: by symbol
+                if (int(w["num"]), int(w["den"]), w["pi"]) == (r.numerator, r.denominator, pis == 1):
+                    return (w["symbol"], 0)
+    if pis:
+        return None
+    k = pow10(r)
+    if k is None:
+        return None
+    if kind is None:
+        return (None, k)
+    if kind[0] == "named":
+        return (CANON[kind[1]], k)
+    return None
+
+
 def arith(op, a, b):
     if a[0] == "int" and b[0] == "int":
         x, y = a[1], b[1]
@@ -253,6 +294,11 @@ def arith(op, a, b):
             raise err("div_zero")
         return finite(float(x) / float(y), None)
     ea, eb = exact(a), exact(b)
+    if ea is not None and eb is not None and op == "*" and ea[2] is not None and eb[2] is not None:
+        w = unit_product(ea[2], eb[2])
+        if w is not None:
+            c, s = fit(ea[0] * eb[0], ea[1] + eb[1] - w[1])
+            return ("dec", c, s, w[0])
     if ea is not None and eb is not None:
         unit = "no"
         if op in ("+", "-", "%") and ea[2] == eb[2]:
@@ -305,9 +351,9 @@ def cmp_num(a, b):
         o = sgn(Fraction(r[1]) - q)
         return -o if flip else o
     ea, eb = exact(a), exact(b)
-    if ea[2] == eb[2]:
-        return sgn(frac_of_dec(("dec", ea[0], ea[1])) - frac_of_dec(("dec", eb[0], eb[1])))
-    return sgn(Fraction(to_f64(a)) - Fraction(to_f64(b)))
+    qa = frac_of_dec(("dec", ea[0], ea[1])) * (UNITS[ea[2]][1] if ea[2] is not None else 1)
+    qb = frac_of_dec(("dec", eb[0], eb[1])) * (UNITS[eb[2]][1] if eb[2] is not None else 1)
+    return sgn(qa - qb)
 
 
 def equal(a, b):
@@ -404,14 +450,6 @@ def to_int(v, mode):
     return ("int", r)
 
 
-def is_pow10(n):
-    k = 0
-    while n > 1 and n % 10 == 0:
-        n //= 10
-        k += 1
-    return k if n == 1 else None
-
-
 def to_unit(q, sym):
     if q[0] == "real":
         return q
@@ -422,14 +460,16 @@ def to_unit(q, sym):
     nt, dt, pt = UNITS[sym][2]
     if pu == pt:
         r = Fraction(nu * dt, du * nt)
-        k = None
-        if r.denominator == 1:
-            k = is_pow10(r.numerator)
-        elif r.numerator == 1:
-            k = is_pow10(r.denominator)
-            k = None if k is None else -k
-        if k is not None:
-            c, s = fit(q[1], q[2] - k)
+        d, a, b = r.denominator, 0, 0
+        while d % 2 == 0:
+            d //= 2
+            a += 1
+        while d % 5 == 0:
+            d //= 5
+            b += 1
+        if d == 1:
+            m = max(a, b)
+            c, s = fit(q[1] * r.numerator * 2 ** (m - a) * 5 ** (m - b), q[2] + m)
             return ("dec", c, s, sym)
     return ("real", to_f64(q), ("named", UNITS[u][0]))
 
@@ -774,6 +814,17 @@ def fam_int(rng):
     return Bin(op, num(a), num(b))
 
 
+def fam_uprod(rng):
+    """Products of two decimals in units: exact into the catalogue unit of factor fu*fv, or the
+    canonical unit for a power of ten, else f64 (REQ-002)."""
+    u, v = rng.choice([("mm", "mm"), ("cm", "cm"), ("m", "m"), ("mm", "cm"), ("in", "in"), ("mm", "in"), ("um", "mm"), ("deg", "deg"), ("s", "mm"), ("mm^2", "mm")])
+    a, b = dec_lit(rng, 4, rng.randint(0, 3)), dec_lit(rng, 4, rng.randint(0, 3))
+    prod = Bin("*", qty(a, u), qty(b, v))
+    if rng.random() < 0.4 and (u, v) in (("mm", "mm"), ("cm", "cm"), ("mm", "cm")):
+        return Bin("==", prod, qty(dec_lit(rng, 3, 1), rng.choice(["mm^2", "cm^2", "m^2"])))
+    return prod
+
+
 def fam_dec(rng):
     a, b = dec_lit(rng), dec_lit(rng)
     op = rng.choice(["+", "-", "*", "%", "<", "==", ">", "/"])
@@ -942,10 +993,11 @@ FAMILIES = [
     (fam_int, 24),
     (fam_near, 18),
     (fam_dec, 24),
-    (fam_unit, 30),
+    (fam_unit, 24),
+    (fam_uprod, 18),
     (fam_scale, 18),
-    (fam_mixed, 30),
-    (fam_real_qty, 30),
+    (fam_mixed, 24),
+    (fam_real_qty, 24),
     (fam_angle, 18),
     (fam_func, 48),
     (fam_struct, 18),

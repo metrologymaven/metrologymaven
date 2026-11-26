@@ -16,13 +16,14 @@
 //! - `format(template, args...)`: each `{}` takes the [`display`] text of the next argument;
 //!   `{{` and `}}` are literal braces. Any other brace, a count of `{}` other than the number
 //!   of arguments, or a result above [`MAX_FORMAT_BYTES`] is `domain`.
-//! - `to_unit(q, "sym")`: a decimal in unit `u` stays exact when the factor ratio of `u` to
-//!   `sym` is a power of ten (both or neither with Π), and is then written in `sym`;
-//!   otherwise it is converted once into SI (REQ-003) and becomes a real. A real is returned
-//!   unchanged (reals are always SI).
+//! - `to_unit(q, "sym")`: a decimal in unit `u` stays exact, written in `sym`, when the factor
+//!   ratio `fu / ft` (both or neither with Π) in lowest terms has a denominator `2^a 5^b`, so
+//!   the result is a terminating decimal (`to_unit(1[in], "mm")` is `25.4[mm]`); a result
+//!   beyond 38 digits is `decimal_overflow`. Otherwise it is converted once into SI (REQ-003)
+//!   and becomes a real. A real is returned unchanged (reals are always SI).
 
-use super::dec::{Dec, IntMode};
-use super::num::{finite, Fail};
+use super::dec::{Big, Dec, IntMode, SBig};
+use super::num::{factor_of, finite, reduce, two_five, Fail};
 use super::walk::{num, Ctx, Num};
 use super::{EvalKind, Value, V};
 use crate::expr::types::{Dim, Kind};
@@ -171,52 +172,26 @@ fn to_int(x: &Value, mode: IntMode) -> Result<Value, Fail> {
     }
 }
 
-/// `10^k` for a reduced ratio `p / q`: `Some(k)` (k may be negative) or `None`.
-fn pow10_of(p: u128, q: u128) -> Option<i32> {
-    let ten_pow = |mut v: u128| -> Option<i32> {
-        let mut k = 0;
-        while v > 1 {
-            if v % 10 != 0 {
-                return None;
-            }
-            v /= 10;
-            k += 1;
-        }
-        (v == 1).then_some(k)
-    };
-    match (p, q) {
-        (p, 1) => ten_pow(p),
-        (1, q) => ten_pow(q).map(|k| -k),
-        _ => None,
-    }
-}
-
-fn gcd(mut a: u128, mut b: u128) -> u128 {
-    while b != 0 {
-        let r = a % b;
-        a = b;
-        b = r;
-    }
-    a
-}
-
 fn to_unit(ctx: &Ctx<'_>, d: &Dec, u: &str, sym: &str) -> Result<Value, Fail> {
     let kind = ctx.kind_of(Num::Dec(d, Some(u)))?;
     if u == sym {
         return Ok(Value::of_dec(*d, Some(sym.to_string())));
     }
-    let (fu, ft) = (ctx.cat.factor(u).ok_or(Fail::Internal)?, ctx.cat.factor(sym).ok_or(Fail::Internal)?);
-    if fu.times_pi == ft.times_pi {
-        // value in sym = value in u * fu / ft.
-        let p = u128::from(fu.ratio.num()) * u128::from(ft.ratio.den());
-        let q = u128::from(fu.ratio.den()) * u128::from(ft.ratio.num());
-        let g = gcd(p, q);
-        let k = match (p.checked_div(g), q.checked_div(g)) {
-            (Some(a), Some(b)) => pow10_of(a, b),
-            _ => None,
-        };
-        if let Some(k) = k {
-            let dd = Dec::fit(d.sbig(), i64::from(d.scale()) - i64::from(k)).map_err(|_| Fail::DecOverflow)?;
+    let ((nu, du, pu), (nt, dt, pt)) = (factor_of(Some(u), ctx.cat)?, factor_of(Some(sym), ctx.cat)?);
+    if pu == pt {
+        // value in sym = value in u * p / q, with p / q = fu / ft in lowest terms. It is a
+        // terminating decimal exactly when q = 2^a 5^b: then p / q = p 2^(m-a) 5^(m-b) / 10^m
+        // with m = max(a, b).
+        let (p, q) = reduce(u128::from(nu) * u128::from(dt), u128::from(du) * u128::from(nt));
+        if let Some((a, b)) = two_five(q) {
+            let m = a.max(b);
+            let mut mag = Big::from_u128(d.coef().unsigned_abs()).mul(&Big::from_u128(p));
+            mag.shl(m - a);
+            for _ in 0..(m - b) {
+                mag.mul_u32(5);
+            }
+            let exact = SBig { neg: d.is_negative(), mag };
+            let dd = Dec::fit(exact, i64::from(d.scale()) + i64::from(m)).map_err(|_| Fail::DecOverflow)?;
             return Ok(Value::of_dec(dd, Some(sym.to_string())));
         }
     }

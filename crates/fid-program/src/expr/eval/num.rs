@@ -55,7 +55,10 @@ pub(crate) fn dec_to_f64(d: &Dec, unit: Option<&str>, kinds: &Kinds, cat: &dyn Q
         }
         Some(u) => {
             let kind = kinds.unit(u).ok_or(Fail::Internal)?;
-            let lit = AuthoredLiteral::new(&d.text(), u).map_err(|_| domain)?;
+            // `<coef>e<-scale>`: trailing zeros of the written scale are not significant
+            // digits for the bus's digit limit.
+            let text = format!("{}e{}", d.coef(), -d.scale());
+            let lit = AuthoredLiteral::new(&text, u).map_err(|_| domain)?;
             let n = normalise(&lit, kind, cat).map_err(|_| domain)?;
             finite(n.si()).map_err(|_| domain)
         }
@@ -127,6 +130,111 @@ pub(crate) fn cmp_real_dec(x: f64, d: &Dec, unit: &str, cat: &dyn QuantityCatalo
     }
     let mag = left.cmp_mag(&right);
     Ok(if xs < 0 { mag.reverse() } else { mag })
+}
+
+/// The exact factor of a unit as `(num, den, times_pi)`; a plain decimal has `(1, 1, false)`.
+pub(crate) fn factor_of(unit: Option<&str>, cat: &dyn QuantityCatalogue) -> Result<(u64, u64, bool), Fail> {
+    match unit {
+        None => Ok((1, 1, false)),
+        Some(u) => {
+            let f = cat.factor(u).ok_or(Fail::Internal)?;
+            Ok((f.ratio.num(), f.ratio.den(), f.times_pi))
+        }
+    }
+}
+
+/// Exact order of `a` written in `ua` and `b` written in `ub` (REQ-004): the two exact
+/// rationals `a * fa` and `b * fb` (Π as `PI_256 / 2^254`) compared by cross-multiplying
+/// big integers.
+pub(crate) fn cmp_dec_dec(
+    a: &Dec,
+    ua: Option<&str>,
+    b: &Dec,
+    ub: Option<&str>,
+    cat: &dyn QuantityCatalogue,
+) -> Result<Ordering, Fail> {
+    let (sa, sb) = (sign_dec(a), sign_dec(b));
+    if sa != sb || sa == 0 {
+        return Ok(sa.cmp(&sb));
+    }
+    let ((na, da, pa), (nb, db, pb)) = (factor_of(ua, cat)?, factor_of(ub, cat)?);
+    let s = a.scale().max(b.scale());
+    // |a| fa = ca 10^-sa na / da [PI / 2^254]; scale both to 10^-s and clear denominators:
+    // L = ca 10^(s-sa) na db [PI if pa] [2^254 if pb], R = cb 10^(s-sb) nb da [PI if pb] [2^254 if pa].
+    let side = |d: &Dec, n: u64, other_den: u64, pi: bool, other_pi: bool| {
+        let mut m = Big::from_u128(d.coef().unsigned_abs());
+        m.mul_pow10((s - d.scale()).unsigned_abs());
+        m = m.mul(&Big::from_u128(u128::from(n) * u128::from(other_den)));
+        if pi {
+            m = m.mul(&Big::from_limbs(&PI_256));
+        }
+        if other_pi {
+            m.shl(PI_256_SHIFT);
+        }
+        m
+    };
+    let left = side(a, na, db, pa, pb);
+    let right = side(b, nb, da, pb, pa);
+    if left.too_big() || right.too_big() {
+        return Err(Fail::Internal);
+    }
+    let mag = left.cmp_mag(&right);
+    Ok(if sa < 0 { mag.reverse() } else { mag })
+}
+
+pub(crate) fn gcd(mut a: u128, mut b: u128) -> u128 {
+    while b != 0 {
+        let r = a % b;
+        a = b;
+        b = r;
+    }
+    a
+}
+
+/// `p / q` in lowest terms (`q > 0`).
+pub(crate) fn reduce(p: u128, q: u128) -> (u128, u128) {
+    let g = gcd(p, q);
+    match (p.checked_div(g), q.checked_div(g)) {
+        (Some(a), Some(b)) => (a, b),
+        _ => (p, q),
+    }
+}
+
+/// `Some(k)` when the reduced ratio `p / q` is `10^k` (k may be negative).
+pub(crate) fn pow10_of(p: u128, q: u128) -> Option<i64> {
+    let ten_pow = |mut v: u128| -> Option<i64> {
+        let mut k = 0;
+        while v > 1 {
+            if v % 10 != 0 {
+                return None;
+            }
+            v /= 10;
+            k += 1;
+        }
+        (v == 1).then_some(k)
+    };
+    match (p, q) {
+        (p, 1) => ten_pow(p),
+        (1, q) => ten_pow(q).map(|k| -k),
+        _ => None,
+    }
+}
+
+/// `Some((a, b))` when `q = 2^a 5^b` (so a decimal times `p / q` is a terminating decimal).
+pub(crate) fn two_five(q: u128) -> Option<(u32, u32)> {
+    let (mut q, mut a, mut b) = (q, 0u32, 0u32);
+    if q == 0 {
+        return None;
+    }
+    while q % 2 == 0 {
+        q /= 2;
+        a += 1;
+    }
+    while q % 5 == 0 {
+        q /= 5;
+        b += 1;
+    }
+    (q == 1).then_some((a, b))
 }
 
 /// The kind of a decimal written in `unit`.

@@ -70,15 +70,15 @@ impl Big {
     /// `self * 10^k`. Stops growing once past the capacity bound.
     pub(crate) fn mul_pow10(&mut self, k: u32) {
         let mut k = k;
-        while k >= 9 && !self.too_big() {
+        while k >= 9 {
+            if self.too_big() {
+                return;
+            }
             self.mul_u32(1_000_000_000);
             k -= 9;
         }
-        let mut m: u32 = 1;
-        for _ in 0..k {
-            m *= 10;
-        }
-        self.mul_u32(m);
+        // k < 9 here, so 10^k < 2^32.
+        self.mul_u32(10u32.saturating_pow(k));
     }
 
     /// `self * 2^bits`. Stops growing once past the capacity bound.
@@ -381,10 +381,15 @@ impl Dec {
 
     /// Exact product; the result scale is the sum of the scales (then fitted).
     pub(crate) fn mul(&self, o: &Dec) -> Result<Dec, DecFail> {
+        self.mul_shift(o, 0)
+    }
+
+    /// Exact product times `10^shift`: scale `self.scale + o.scale - shift`, fitted once.
+    pub(crate) fn mul_shift(&self, o: &Dec, shift: i64) -> Result<Dec, DecFail> {
         let a = self.sbig();
         let b = o.sbig();
         let p = SBig { neg: (a.neg != b.neg) && !(a.mag.is_zero() || b.mag.is_zero()), mag: a.mag.mul(&b.mag) };
-        Dec::fit(p, i64::from(self.scale) + i64::from(o.scale))
+        Dec::fit(p, i64::from(self.scale) + i64::from(o.scale) - shift)
     }
 
     /// Exact truncated remainder (the sign of the dividend), at the larger scale.

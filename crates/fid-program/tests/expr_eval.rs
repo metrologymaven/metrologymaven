@@ -191,24 +191,69 @@ fn ac4_format_keeps_decimal_text() {
     assert_eq!(v.v(), &V::Str("{2.50 mm} 2.5".into()));
 }
 
-/// Strips comments, string and char literals so only code is scanned.
+fn is_ident(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
+}
+
+/// Strips comments (nested block comments too), string, byte-string, raw-string and char
+/// literals, so only code is scanned. A literal becomes `""`.
 fn code_only(src: &str) -> String {
     let b: Vec<char> = src.chars().collect();
+    let at = |i: usize| b.get(i).copied();
     let mut out = String::new();
     let mut i = 0;
     while i < b.len() {
         let c = b[i];
-        let next = b.get(i + 1).copied();
+        let next = at(i + 1);
+        let prev = if i == 0 { None } else { at(i - 1) };
+        let boundary = |p: Option<char>| !p.is_some_and(is_ident);
+        let raw_start =
+            c == 'r' && (boundary(prev) || (prev == Some('b') && boundary(if i < 2 { None } else { at(i - 2) })));
+        let mut j = i + 1;
+        while at(j) == Some('#') {
+            j += 1;
+        }
+        let raw = raw_start && at(j) == Some('"');
         if c == '/' && next == Some('/') {
             while i < b.len() && b[i] != '\n' {
                 i += 1;
             }
         } else if c == '/' && next == Some('*') {
-            i += 2;
-            while i + 1 < b.len() && !(b[i] == '*' && b[i + 1] == '/') {
+            let mut depth = 0;
+            while i < b.len() {
+                if at(i) == Some('/') && at(i + 1) == Some('*') {
+                    depth += 1;
+                    i += 2;
+                } else if at(i) == Some('*') && at(i + 1) == Some('/') {
+                    depth -= 1;
+                    i += 2;
+                    if depth == 0 {
+                        break;
+                    }
+                } else {
+                    i += 1;
+                }
+            }
+            out.push(' ');
+        } else if raw {
+            let mut hashes = 0;
+            i += 1;
+            while at(i) == Some('#') {
+                hashes += 1;
                 i += 1;
             }
-            i += 2;
+            i += 1;
+            loop {
+                if i >= b.len() {
+                    break;
+                }
+                if b[i] == '"' && (1..=hashes).all(|k| at(i + k) == Some('#')) {
+                    i += 1 + hashes;
+                    break;
+                }
+                i += 1;
+            }
+            out.push_str("\"\"");
         } else if c == '"' {
             i += 1;
             while i < b.len() && b[i] != '"' {
@@ -216,7 +261,7 @@ fn code_only(src: &str) -> String {
             }
             i += 1;
             out.push_str("\"\"");
-        } else if c == '\'' && b.get(i + 2) == Some(&'\'') {
+        } else if c == '\'' && at(i + 2) == Some('\'') {
             i += 3;
         } else if c == '\'' && next == Some('\\') {
             i += 2;
@@ -232,20 +277,79 @@ fn code_only(src: &str) -> String {
     out
 }
 
-/// AC-5 (REQ-007): module `expr::eval` uses only an allowlist of paths: no I/O, time,
-/// environment, process, thread, network, randomness or bus API, and no macro that reads
-/// the build environment or prints.
-#[test]
-fn ac5_eval_module_is_pure() {
-    let dir = root().join("crates/fid-program/src/expr/eval");
-    let mut files: Vec<PathBuf> = std::fs::read_dir(dir).unwrap().map(|e| e.unwrap().path()).collect();
-    files.sort();
-    assert_eq!(
-        files.iter().map(|f| f.file_name().unwrap().to_string_lossy().into_owned()).collect::<Vec<_>>(),
-        ["dec.rs", "func.rs", "mod.rs", "num.rs", "walk.rs"],
-        "a new file in expr::eval must be added to this lint"
-    );
-    // Path roots (an identifier followed by `::` that is not itself after `::`).
+/// Removes whitespace next to `::`, so `std :: fs` reads as `std::fs`.
+fn squash_paths(code: &str) -> String {
+    let b: Vec<char> = code.chars().collect();
+    let mut out = String::new();
+    let mut i = 0;
+    while i < b.len() {
+        if b[i].is_whitespace() {
+            let mut j = i;
+            while j < b.len() && b[j].is_whitespace() {
+                j += 1;
+            }
+            let next_colons = b.get(j) == Some(&':') && b.get(j + 1) == Some(&':');
+            if !(next_colons || out.ends_with("::")) {
+                out.push(' ');
+            }
+            i = j;
+        } else {
+            out.push(b[i]);
+            i += 1;
+        }
+    }
+    out
+}
+
+/// The AC-5 allowlist lint of one source file of `expr::eval` (`name` is its file name).
+/// Returns every problem found; empty means clean.
+fn lint(name: &str, src: &str) -> Vec<String> {
+    let is_mod = name == "mod.rs";
+    let code = squash_paths(&code_only(src));
+    let compact: String = code.chars().filter(|c| !c.is_whitespace()).collect();
+    let mut problems = Vec::new();
+    let banned = [
+        "env!",
+        "option_env!",
+        "include!",
+        "include_str!",
+        "include_bytes!",
+        "print!",
+        "println!",
+        "eprint!",
+        "eprintln!",
+        "dbg!",
+        "#[path",
+        "#![path",
+    ];
+    for m in banned {
+        if compact.contains(m) {
+            problems.push(format!("{name}: {m}"));
+        }
+    }
+    let words: Vec<&str> = code.split(|c: char| !is_ident(c)).filter(|w| !w.is_empty()).collect();
+    for (k, w) in words.iter().enumerate() {
+        let next = words.get(k + 1).copied().unwrap_or("");
+        match *w {
+            "unsafe" | "extern" => problems.push(format!("{name}: {w}")),
+            "static" if next == "mut" => problems.push(format!("{name}: static mut")),
+            "mod" if !(is_mod && ["dec", "func", "num", "walk"].contains(&next)) => {
+                problems.push(format!("{name}: mod {next}"))
+            }
+            _ => {}
+        }
+    }
+    // No renames in `use` (`use std as f;` would make an allowed root name anything).
+    let mut rest = code.as_str();
+    while let Some(p) = rest.find("use ") {
+        let boundary = p == 0 || !rest[..p].chars().last().is_some_and(is_ident);
+        let stmt_end = rest[p..].find(';').map_or(rest.len(), |e| p + e);
+        let stmt = &rest[p..stmt_end];
+        if boundary && stmt.split(|c: char| !is_ident(c)).any(|w| w == "as") {
+            problems.push(format!("{name}: rename in `{stmt}`"));
+        }
+        rest = &rest[(p + 4).min(rest.len())..];
+    }
     let roots: BTreeSet<&str> = [
         "crate",
         "super",
@@ -297,57 +401,103 @@ fn ac5_eval_module_is_pure() {
         "fid_canon::CValue",
         "fid_registry::QuantityCatalogue",
         "fid_types::Digest",
+        "crate::expr::syntax",
+        "crate::expr::types",
     ];
-    let banned_macros = [
-        "env!",
-        "option_env!",
-        "include!",
-        "include_str!",
-        "include_bytes!",
-        "print!",
-        "println!",
-        "eprint!",
-        "eprintln!",
-        "dbg!",
-    ];
-    for f in &files {
-        let code = code_only(&std::fs::read_to_string(f).unwrap());
-        let name = f.file_name().unwrap().to_string_lossy();
-        for m in banned_macros {
-            assert!(!code.contains(m), "{name}: macro {m}");
+    let chars: Vec<char> = code.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        // A `::` with no path segment before it (`::std::fs`) is a root of its own.
+        if chars[i] == ':' && chars.get(i + 1) == Some(&':') {
+            let before = if i == 0 { None } else { chars.get(i - 1).copied() };
+            if !before.is_some_and(|c| is_ident(c) || c == '>') {
+                problems.push(format!("{name}: leading ::"));
+            }
+            i += 2;
+            continue;
         }
-        for word in ["unsafe", "extern"] {
-            assert!(!code.split(|c: char| !c.is_alphanumeric() && c != '_').any(|w| w == word), "{name}: {word}");
-        }
-        assert!(!code.contains("static mut"), "{name}: static mut");
-        let chars: Vec<char> = code.chars().collect();
-        let mut i = 0;
-        while i < chars.len() {
-            let ident = |c: char| c.is_alphanumeric() || c == '_';
-            if ident(chars[i]) && (i == 0 || !ident(chars[i - 1])) {
-                let start = i;
-                while i < chars.len() && ident(chars[i]) {
-                    i += 1;
-                }
-                let word: String = chars[start..i].iter().collect();
-                // Not a root: after `::` (inside a path) or after `.` (a method turbofish).
-                let after_path = (start >= 2 && chars[start - 1] == ':' && chars[start - 2] == ':')
-                    || (start >= 1 && chars[start - 1] == '.');
-                let is_root = chars.get(i) == Some(&':') && chars.get(i + 1) == Some(&':') && !after_path;
-                let lower = word.chars().next().is_some_and(|c| c.is_lowercase());
-                if is_root && lower {
-                    assert!(roots.contains(word.as_str()), "{name}: path root {word}::");
-                    if ["std", "core", "fid_bus", "fid_geo_frame", "fid_num", "fid_canon", "fid_registry", "fid_types"]
-                        .contains(&word.as_str())
-                    {
-                        let rest: String = chars[start..].iter().take(80).collect();
-                        assert!(allowed_paths.iter().any(|p| rest.starts_with(p)), "{name}: path {rest}");
-                    }
-                }
-            } else {
+        if is_ident(chars[i]) && (i == 0 || !is_ident(chars[i - 1])) {
+            let start = i;
+            while i < chars.len() && is_ident(chars[i]) {
                 i += 1;
             }
+            let word: String = chars[start..i].iter().collect();
+            // Not a root: after `::` (inside a path) or after `.` (a method turbofish).
+            let after_path = (start >= 2 && chars[start - 1] == ':' && chars[start - 2] == ':')
+                || (start >= 1 && chars[start - 1] == '.');
+            let is_root = chars.get(i) == Some(&':') && chars.get(i + 1) == Some(&':') && !after_path;
+            let lower = word.chars().next().is_some_and(|c| c.is_lowercase());
+            if !(is_root && lower) {
+                continue;
+            }
+            let path: String = chars[start..].iter().take(80).collect();
+            if !roots.contains(word.as_str()) {
+                problems.push(format!("{name}: path root {word}::"));
+            } else if word == "super" {
+                if is_mod || path.starts_with("super::super") {
+                    problems.push(format!("{name}: path {path}"));
+                }
+            } else if [
+                "std",
+                "core",
+                "crate",
+                "fid_bus",
+                "fid_geo_frame",
+                "fid_num",
+                "fid_canon",
+                "fid_registry",
+                "fid_types",
+            ]
+            .contains(&word.as_str())
+                && !allowed_paths.iter().any(|p| path.starts_with(p))
+            {
+                problems.push(format!("{name}: path {path}"));
+            }
+        } else {
+            i += 1;
         }
+    }
+    problems
+}
+
+/// AC-5 (REQ-007): module `expr::eval` uses only an allowlist of paths: no I/O, time,
+/// environment, process, thread, network, randomness or bus API (only the pure
+/// `fid_bus::unit` conversion), no crate module outside `expr::{syntax, types}`, no macro
+/// that reads the build environment or prints, no `#[path]`, no `use` rename.
+#[test]
+fn ac5_eval_module_is_pure() {
+    let dir = root().join("crates/fid-program/src/expr/eval");
+    let mut files: Vec<PathBuf> = std::fs::read_dir(dir).unwrap().map(|e| e.unwrap().path()).collect();
+    files.sort();
+    assert_eq!(
+        files.iter().map(|f| f.file_name().unwrap().to_string_lossy().into_owned()).collect::<Vec<_>>(),
+        ["dec.rs", "func.rs", "mod.rs", "num.rs", "walk.rs"],
+        "a new file in expr::eval must be added to this lint"
+    );
+    for f in &files {
+        let name = f.file_name().unwrap().to_string_lossy().into_owned();
+        let problems = lint(&name, &std::fs::read_to_string(f).unwrap());
+        assert!(problems.is_empty(), "{problems:?}");
+    }
+}
+
+/// The AC-5 lint itself: each known evasion is caught, and ordinary code passes.
+#[test]
+fn ac5_lint_catches_evasions() {
+    let clean = "use super::dec::Dec;\nuse std::cmp::Ordering;\nfn a(d: &Dec) -> String {\n    let s = r#\"x\"#;\n    let o = Ordering::Less;\n    format!(\"{s}{o:?}{}\", Vec::<u8>::new().len())\n}\n";
+    assert_eq!(lint("walk.rs", clean), Vec::<String>::new());
+    let evasions = [
+        ("whitespace around ::", "walk.rs", "fn a() { let _ = std :: fs :: read(\"x\"); }"),
+        ("leading ::", "walk.rs", "fn a() { let _ = ::std::fs::read(\"x\"); }"),
+        ("#[path]", "walk.rs", "#[path = \"../../check.rs\"]\nmod c;"),
+        ("use rename", "walk.rs", "use std as f;\nfn a() { let _ = f::fs::read(\"x\"); }"),
+        ("crate path outside expr", "walk.rs", "use crate::check::check_program;"),
+        ("super beyond the module", "walk.rs", "use super::super::fmt::Program;"),
+        ("super from mod.rs", "mod.rs", "use super::types::Type;"),
+        ("raw string", "walk.rs", "fn a() { let s = r#\"a\"b\"#; let t = std::fs::read(\"x\"); let u = \"\"; }"),
+    ];
+    for (what, name, src) in evasions {
+        assert!(!lint(name, src).is_empty(), "{what} not caught: {src}");
     }
 }
 
@@ -447,7 +597,22 @@ fn pinned_rules() {
     assert_eq!(text("if false then 1 / 0 else 2.0"), "2.0");
     // to_unit: exact for power-of-ten ratios, one rounding otherwise.
     assert_eq!(text("to_unit(2.50[mm], \"m\")"), "0.00250 m");
-    assert_eq!(text("to_unit(1[in], \"mm\")"), "0.0254 m");
+    assert_eq!(text("to_unit(1[in], \"mm\")"), "25.4 mm");
+    assert_eq!(text("to_unit(1[mm], \"in\")"), "0.001 m");
+    assert_eq!(text("to_unit(1[ft], \"in\")"), "12 in");
+    // Products of unit decimals stay exact in the catalogue unit of factor fu * fv, or in the
+    // canonical unit when fu * fv is a power of ten (REQ-002); f64 only when neither exists.
+    assert_eq!(text("2[mm] * 3[mm] == 6[mm^2]"), "true");
+    assert_eq!(text("2[mm] * 3[mm]"), "6 mm^2");
+    assert_eq!(text("2.0[cm] * 3[mm]"), "0.000060 m^2");
+    assert_eq!(field(&run("2[in] * 3[in]", &env, &cat).unwrap().to_value(), "t"), CValue::Str("real".into()));
+    // Decimals in different units compare exactly (REQ-004).
+    assert_eq!(text("1[in] == 25.4[mm]"), "true");
+    assert_eq!(text("1[ft] == 12[in]"), "true");
+    assert_eq!(text("180[deg] == 200[gon]"), "true");
+    assert_eq!(text("0.1[mm] < 0.0001000000000000000000000000000001[m]"), "true");
+    // `i64::MIN % -1` is 0.
+    assert_eq!(text("(-9223372036854775807 - 1) % -1"), "0");
     assert_eq!(text("1000[mm] == 1[m]"), "true");
     // Strings, enums and lists.
     assert_eq!(text("len(\"aé\")"), "2");
