@@ -1,0 +1,89 @@
+{
+ "decls": [
+  {
+   "command": "probe.read@1",
+   "lifecycle": {
+    "since": "2026-01-15",
+    "state": "active"
+   }
+  }
+ ],
+ "expect": {
+  "no_kernel_manifest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "preflight": [
+   {
+    "id": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "kind": "kernel",
+    "steps": [
+     1,
+     3
+    ]
+   }
+  ]
+ },
+ "kernels": [
+  "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f",
+  "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b854",
+  "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+ ],
+ "migrators": [],
+ "span": {
+  "steps": [
+   {
+    "command": "probe.read@1",
+    "entry": "sha256:acb2cccf3123af7ed47ebba7eb38a2b332a801d3ef123a86ce1395ed901c708c",
+    "kernel": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "observations": [],
+    "payload": {
+     "inline": {},
+     "salts": {}
+    },
+    "seq": 1
+   },
+   {
+    "command": "probe.read@1",
+    "entry": "sha256:b572341e3b84c3770d83ef8b7ca897b1ef4147b5c9903048c9e378204322754f",
+    "kernel": "sha256:64cc0c6f18ab375b7d2c1c32535784f8cf00c9760ee72c4968b3ee516dc9e10f",
+    "observations": [],
+    "payload": {
+     "inline": {},
+     "salts": {}
+    },
+    "seq": 2
+   },
+   {
+    "command": "probe.read@1",
+    "entry": "sha256:1346bc373b5d9cdae10f92cc086093fb5f41a40fb16654123e63d2dbf5667763",
+    "kernel": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "observations": [],
+    "payload": {
+     "inline": {},
+     "salts": {}
+    },
+    "seq": 3
+   },
+   {
+    "command": "probe.read@1",
+    "entry": "sha256:9f8c55e0354f9c7b024d51ffdab605eb0ce11509ec57a4beca54ce1d14b2fd28",
+    "kernel": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b854",
+    "observations": [],
+    "payload": {
+     "inline": {},
+     "salts": {}
+    },
+    "seq": 4
+   },
+   {
+    "command": "probe.read@1",
+    "entry": "sha256:acc96b99cc8d63dc9b7cb4bbc97f052a1bff0f1f50f5ccff88fd510e4e2d3338",
+    "kernel": null,
+    "observations": [],
+    "payload": {
+     "inline": {},
+     "salts": {}
+    },
+    "seq": 5
+   }
+  ]
+ }
+}

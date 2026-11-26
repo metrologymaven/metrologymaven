@@ -202,6 +202,29 @@ emit_json(f"{case}/case.json", {
     "expect": {"preflight": expected},
 })
 
+# ---------------------------------------------------------------------------
+# CORE.JRN.ENTRY reserved digest: no_kernel. Steps 1 and 3 record the reserved
+# "no kernel attested" digest (SHA-256 of the empty string). The kernel source claims to
+# have it, yet it names no kernel and cannot be supplied: it is listed missing for steps
+# 1 and 3. Step 4's digest is one bit away from it and is a real, available kernel; step 2
+# uses kernel 1; step 5 needs no kernel. Hand-labelled from the rule.
+# ---------------------------------------------------------------------------
+case = "no_kernel"
+NO_KERNEL = sha(b"")
+NEAR_NO_KERNEL = NO_KERNEL[:-1] + "%x" % (int(NO_KERNEL[-1], 16) ^ 1)
+steps = [
+    {"seq": s, "entry": entry_hash(case, s), "command": "probe.read@1", "kernel": k,
+     "observations": [], "payload": {"salts": {}, "inline": {}}}
+    for s, k in ((1, NO_KERNEL), (2, KERNEL_1), (3, NO_KERNEL), (4, NEAR_NO_KERNEL), (5, None))
+]
+emit_json(f"{case}/case.json", {
+    "span": {"steps": steps},
+    "decls": [decl("probe.read@1")],
+    "migrators": [],
+    "kernels": sorted([KERNEL_1, NO_KERNEL, NEAR_NO_KERNEL]),
+    "expect": {"no_kernel_manifest": NO_KERNEL, "preflight": [{"kind": "kernel", "id": NO_KERNEL, "steps": [1, 3]}]},
+})
+
 
 def main() -> int:
     check = "--check" in sys.argv[1:]

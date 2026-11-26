@@ -374,6 +374,23 @@ fn req005_preflight_lists_every_kind_in_order() {
     assert!(bytes.starts_with(b"[{\"id\":\"sha256:"), "{}", String::from_utf8_lossy(&bytes));
 }
 
+/// CORE.JRN.ENTRY reserved digest: a step recorded under `NO_KERNEL_MANIFEST` attests no
+/// kernel, so it is always a missing kernel, even from a source that claims to hold it; a
+/// digest one bit away is an ordinary kernel.
+#[test]
+fn no_kernel_manifest_is_never_supplied() {
+    let c = load("no_kernel");
+    let expect = obj(&c.doc["expect"]);
+    let reserved = Digest::from_bytes(fid_journal::NO_KERNEL_MANIFEST.0);
+    assert_eq!(reserved.to_string(), st(&expect["no_kernel_manifest"]));
+    assert!(c.kernels.contains(&reserved), "the fixture's source claims the reserved digest");
+    let got = preflight(&c.span, &c.blobs, &c.catalog, &c.kernels);
+    assert_eq!(got, expected_missing(&expect["preflight"]));
+    // Without the claim the answer is the same.
+    let honest: BTreeSet<Digest> = c.kernels.iter().copied().filter(|k| *k != reserved).collect();
+    assert_eq!(preflight(&c.span, &c.blobs, &c.catalog, &honest), got);
+}
+
 #[test]
 fn req004_salts_rebuild_identical_commitments_and_twice_is_mismatch() {
     let c = load("clock_and_salt");

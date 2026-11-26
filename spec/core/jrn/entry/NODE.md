@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-21
+updated: 2026-11-26
 ---
 
 # CORE.JRN.ENTRY: Entry model, salted commitments and session entries
@@ -75,11 +75,12 @@ Defines what one journal entry contains and how it is hashed: the header fields,
 - **Performance budget:** build and hash a 4 KiB header in < 50 µs [unverified until measured].
 - **Crate:** `fid-journal` (module `entry`).
 - **Schema version 2 (maintainer decision, REQ-013..REQ-015).** Encoding: `agent_coedited` is a top-level boolean; `command.event_sources` is a parallel array of wire strings, one per element of the committed `events` array, in the same order. Both are hashed with the header (RFC 8785, like every other field); the payload and its commitments are unchanged, so detaching the payload leaves the sources verifiable. Because the header holds no event count, the count is checked when the payload is opened: `EntryHeader::event_sources(n)` returns the sources of `n` events or `schema`. Versioning: a header is version 2 only when it records something version 1 cannot (a non-`handler` source or `agent_coedited: true`); otherwise it is written as version 1 byte for byte, so the 1:1 content-to-bytes rule of CONSTITUTION §6 holds and no old entry is rewritten or re-hashed. Readers (`validate_header_value`, `verify_header_value`, `EntryHeader::from_value`, `CORE.JRN.CHAIN.VERIFY`) accept versions 1 and 2. `EventSource` lives in module `entry` and is re-exported as `fid_journal::branch::EventSource`. Fold: `EntryOrigin::of_event(header, i)` / `EntryOrigin::of_entry(header, n)` build each event's origin from a header read with `EntryHeader::from_value` (which checks the hash), so `Branches::apply` and release protection see the recorded source. Drafts: `CommandDraft.event_sources` (empty = every event from the handler, else one per event) and `EntryDraft.agent_coedited`.
+- **Reserved no-kernel digest.** The SHA-256 of the empty string (`sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`) is reserved as the value of `manifests.kernel` meaning "no kernel manifest attested". It is `fid_journal::NO_KERNEL_MANIFEST` (re-exported as `fid_compose::NO_KERNEL_MANIFEST`), a valid header value, so such entries build, hash and verify as usual. Readers take the kernel only through `Manifests::kernel_attestation()` (`KernelAttestation::Unattested` for the reserved digest, `Attested(d)` for any other) or `Manifests::attested_kernel()` (`None` when unattested), never from the raw digest. Verify (`CORE.JRN.CHAIN.VERIFY`) counts the verified entries that attest no kernel (`Checked::without_kernel`). Replay: `same_attested_kernel(recorded, replayed)` is true only when both attest a kernel and the digests are equal, so two unattested entries never count as the same kernel; replay pre-flight (`CORE.RPL.EXEC.SUBST`) lists the reserved digest as a missing kernel and never asks a kernel source for it.
 - **Unchained streams:** the schema's `prev` is required on every entry, but only chained streams link it. Stream `activity` (the P0 Activity Log, `CORE.JRN.STREAM.ALOG`) is unchained: every `activity` entry carries `prev` = `sha256:` followed by 64 zeros and its `seq` only counts lines. Chaining of the Activity Log is P1b (`CORE.JRN.STREAM.COMPACT`).
 
 ## Test fixtures
 
-`fixtures/core/jrn/entry/vectors.json`, produced by an independent reference script committed beside it (`make_vectors.py`, which writes the version 1 vectors unchanged and appends the version 2 cases); `fixtures/core/jrn/chain/append/chain.json` (`v2_entries`, from `make_fixtures.py` there); CC-BY-4.0.
+`fixtures/core/jrn/entry/vectors.json`, produced by an independent reference script committed beside it (`make_vectors.py`, which writes the version 1 vectors unchanged and appends the version 2 cases); `fixtures/core/jrn/entry/no_kernel.json` (reserved no-kernel digest: a verified chain mixing unattested and attested kernels, relabelled kernels, same-kernel pairs), from `make_no_kernel.py` there; `fixtures/core/jrn/chain/append/chain.json` (`v2_entries`, from `make_fixtures.py` there); CC-BY-4.0.
 
 ## Build prompt
 
@@ -89,13 +90,14 @@ Defines what one journal entry contains and how it is hashed: the header fields,
 
 - **Resolved with `CORE.RPL.EXEC`'s expectations:** salts are class N and replay substitutes the recorded salts.
 - `TRUST.CHAIN` consumes `entry.schema.json`; it should declare `uses_artifacts: [CORE.JRN.ENTRY]` when next changed.
-- **Reserved "no kernel manifest" digest.** The SHA-256 of the empty string (`sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`) is reserved as the value of `manifests.kernel` meaning "no kernel manifest attested"; it is exported in code as `fid_compose::NO_KERNEL_MANIFEST`. Replay and verify must treat it as "no kernel attested", never as a real kernel attestation. Verify/replay handling of `NO_KERNEL_MANIFEST` not yet implemented.
+- `journal.verify_chain@1` does not report the `without_kernel` count (it is in the library `Checked` only), because `CORE.JRN.CHAIN.VERIFY` pins the result's `checked` shape; adding it there is that node's call.
 - **Follow-up: a `job_lifecycle` entry kind.** The Activity Log writes job lifecycle changes as `command` entries with the reserved command ID `job.lifecycle` (R0, determinism N, principal kind `system`), because the schema has no kind for them (`CORE.JRN.STREAM.ALOG`, PR #307). A dedicated kind `job_lifecycle` with a readable body (job ID, command, from, to, error) would remove the reserved ID and show the transition in the header; it needs a schema change here. Until then `fid-registry-build` tests that no registry command takes the ID `job.lifecycle`.
 
 ## Change log
 
 - 2026-11-21 (maintainer decision): schema version 2 adds `command.event_sources` and `agent_coedited` to the hashed header (REQ-013, REQ-014, REQ-015; AC-8 to AC-11), unblocking release protection (`CORE.JRN.BR.NAME` REQ-006) and the `agent_coedited` flag of `CORE.BUS.ROUTE` REQ-002. Version 1 entries are unchanged and still verify; `entry.schema.json` accepts both versions. Source `bus_approval` records the `RequestApproved` event the bus adds to an approval (`CORE.BUS.PIPE.STAGE` "Deferred"). `CORE.JRN.CHAIN.VERIFY`'s `hash/unknown_version` now means a version other than 1 or 2. No REQ ID was renumbered.
 - 2026-11-25 (maintainer decision, recording what `fid-compose` does): the SHA-256 of the empty string is reserved as the `manifests.kernel` value meaning "no kernel manifest attested" (`fid_compose::NO_KERNEL_MANIFEST`); replay and verify must treat it as "no kernel attested", never as a real attestation. No REQ ID was renumbered.
+- 2026-11-26: verify/replay handling of the reserved no-kernel digest implemented (`fid-journal` `KernelAttestation`, `same_attested_kernel`, `Checked::without_kernel`; `fid-replay` pre-flight); the reservation moved from Open questions to Design. No REQ ID was renumbered.
 
 ## Children
 

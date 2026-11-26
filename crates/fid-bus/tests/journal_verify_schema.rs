@@ -130,7 +130,7 @@ fn report_with(failure: Option<Failure>, anchor: Anchor, from_seq: u64) -> Verif
         from_seq,
         anchor,
         failure,
-        checked: Checked { entries: 3, blobs: 1, checkpoints: 0, without_payload: 2 },
+        checked: Checked { entries: 3, blobs: 1, checkpoints: 0, without_payload: 2, without_kernel: 1 },
     }
 }
 
