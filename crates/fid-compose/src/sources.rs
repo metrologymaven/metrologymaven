@@ -135,7 +135,7 @@ const fn src(krate: &'static str, project: ProjectRegister) -> HandlerSource {
 }
 
 /// One entry per `fid_registry_build::SOURCES` entry, same crates, same order (REQ-001).
-pub const HANDLER_SOURCES: [HandlerSource; 20] = [
+pub const HANDLER_SOURCES: [HandlerSource; 21] = [
     src("fid-align", none),
     src("fid-bus", none),
     src("fid-dep", none),
@@ -147,6 +147,7 @@ pub const HANDLER_SOURCES: [HandlerSource; 20] = [
     src("fid-mig", none),
     src("fid-ors", none),
     src("fid-profile-cmd", none),
+    src("fid-program", none),
     src("fid-program-rec", none),
     src("fid-project-cmd", project_cmd),
     src("fid-qual", none),
@@ -200,6 +201,7 @@ pub const UNWIRED: &[(&str, &str)] = &[
     ("migrate.generate_coverage@1", "no handler in fid-mig"),
     ("migrate.list_sources@1", "no handler in fid-mig"),
     ("program.adopt_steps@1", "no handler in fid-program-rec"),
+    ("program.check@1", "no handler in fid-program"),
     ("program.deprecate@1", "no handler in fid-program-rec"),
     ("program.open_draft@1", "no handler in fid-program-rec"),
     ("program.register@1", "no handler in fid-program-rec"),

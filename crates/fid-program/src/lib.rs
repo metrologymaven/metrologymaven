@@ -1,5 +1,6 @@
 //! Command Programs for Metrology Maven. Modules land one spec leaf at a time; see `spec/auto/prog/`.
 
+pub mod check;
 pub mod expr;
 pub mod family;
 pub mod flow;
@@ -27,4 +28,9 @@ pub use flow::{
 pub use oper::{
     answer_from_json, operator_schema, validate, AnswerValue, AuthoredText, Decimal, ErrorCode, Field, FieldError,
     OperatorDescriptor, ResponseType, Rules, UntrustedText, ValidAnswer, OPERATOR_FORMAT,
+};
+
+pub use check::{
+    check_in_force, check_program, class_rank, command_defs, ArgProblem, CheckDiag, CheckError, CheckResult, Module,
+    StepClass, CLASS_ORDER,
 };

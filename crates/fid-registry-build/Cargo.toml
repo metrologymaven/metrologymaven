@@ -34,6 +34,9 @@ fid-report = { path = "../fid-report" }
 # `mesh.invert_normals@1` (SCAN.MESHOP.CUT.INVERT), read through
 # `fid_scan_mesh_cmd::command_defs()`. Layer engine.
 fid-scan-mesh-cmd = { path = "../fid-scan-mesh-cmd" }
+# `program.check@1` (AUTO.PROG.CHECK), read through `fid_program::command_defs()`. Layer
+# services, as this crate; already in the lock.
+fid-program = { path = "../fid-program" }
 # The adoption commands of AUTO.REC.ADOPT and the lifecycle commands of AUTO.REC.LIFE, read
 # through `fid_program_rec::{adopt,life}::declarations()`.
 # Layer services, as this crate.
