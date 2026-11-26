@@ -20,6 +20,7 @@
 //! - [`page`]: `page-check` (`UX.REPORT.PAGE`).
 //! - [`glyph`]: `glyph-distinct` (`UX.ICONS.CLASS`).
 //! - [`comp`]: `comp-check` (`UX.COMP.SCHEMA`).
+//! - [`pattern`]: `pattern-check` (`UX.PATTERN.SCHEMA`).
 
 pub mod color;
 pub mod comp;
@@ -31,6 +32,7 @@ pub mod icons_prov;
 pub mod lint;
 pub mod page;
 pub mod palettes;
+pub mod pattern;
 pub mod pkg;
 pub mod princ;
 pub mod research;

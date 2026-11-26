@@ -1,0 +1,670 @@
+{
+  "format": "pattern-glob-cases@1",
+  "malformed": [
+    "view.x",
+    "view.x@0",
+    "view.x@01",
+    "view.x@123456",
+    "*.x@1",
+    "View.x@1",
+    "v**@1",
+    "v.x@a",
+    "@1",
+    "v.x@1@2",
+    "v-x@1",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@1",
+    "a*b*c*d*e*f*g*h*i*j@1"
+  ],
+  "matches": [
+    {
+      "command": "view.select_one@1",
+      "match": true,
+      "pattern": "view.select_*@1"
+    },
+    {
+      "command": "view.select_all@1",
+      "match": true,
+      "pattern": "view.select_*@1"
+    },
+    {
+      "command": "view.select_@1",
+      "match": true,
+      "pattern": "view.select_*@1"
+    },
+    {
+      "command": "view.selectall@1",
+      "match": false,
+      "pattern": "view.select_*@1"
+    },
+    {
+      "command": "view.a.b_all@1",
+      "match": false,
+      "pattern": "view.select_*@1"
+    },
+    {
+      "command": "palette.run_command@1",
+      "match": false,
+      "pattern": "view.select_*@1"
+    },
+    {
+      "command": "palette.run_commands@1",
+      "match": false,
+      "pattern": "view.select_*@1"
+    },
+    {
+      "command": "report.export_pdf@2",
+      "match": false,
+      "pattern": "view.select_*@1"
+    },
+    {
+      "command": "report.export_pdf@1",
+      "match": false,
+      "pattern": "view.select_*@1"
+    },
+    {
+      "command": "aaa@1",
+      "match": false,
+      "pattern": "view.select_*@1"
+    },
+    {
+      "command": "aa@1",
+      "match": false,
+      "pattern": "view.select_*@1"
+    },
+    {
+      "command": "abababa@1",
+      "match": false,
+      "pattern": "view.select_*@1"
+    },
+    {
+      "command": "view.select_one@10",
+      "match": false,
+      "pattern": "view.select_*@1"
+    },
+    {
+      "command": "view.select_one@1",
+      "match": true,
+      "pattern": "view.*@1"
+    },
+    {
+      "command": "view.select_all@1",
+      "match": true,
+      "pattern": "view.*@1"
+    },
+    {
+      "command": "view.select_@1",
+      "match": true,
+      "pattern": "view.*@1"
+    },
+    {
+      "command": "view.selectall@1",
+      "match": true,
+      "pattern": "view.*@1"
+    },
+    {
+      "command": "view.a.b_all@1",
+      "match": true,
+      "pattern": "view.*@1"
+    },
+    {
+      "command": "palette.run_command@1",
+      "match": false,
+      "pattern": "view.*@1"
+    },
+    {
+      "command": "palette.run_commands@1",
+      "match": false,
+      "pattern": "view.*@1"
+    },
+    {
+      "command": "report.export_pdf@2",
+      "match": false,
+      "pattern": "view.*@1"
+    },
+    {
+      "command": "report.export_pdf@1",
+      "match": false,
+      "pattern": "view.*@1"
+    },
+    {
+      "command": "aaa@1",
+      "match": false,
+      "pattern": "view.*@1"
+    },
+    {
+      "command": "aa@1",
+      "match": false,
+      "pattern": "view.*@1"
+    },
+    {
+      "command": "abababa@1",
+      "match": false,
+      "pattern": "view.*@1"
+    },
+    {
+      "command": "view.select_one@10",
+      "match": false,
+      "pattern": "view.*@1"
+    },
+    {
+      "command": "view.select_one@1",
+      "match": false,
+      "pattern": "view.*_all@1"
+    },
+    {
+      "command": "view.select_all@1",
+      "match": true,
+      "pattern": "view.*_all@1"
+    },
+    {
+      "command": "view.select_@1",
+      "match": false,
+      "pattern": "view.*_all@1"
+    },
+    {
+      "command": "view.selectall@1",
+      "match": false,
+      "pattern": "view.*_all@1"
+    },
+    {
+      "command": "view.a.b_all@1",
+      "match": true,
+      "pattern": "view.*_all@1"
+    },
+    {
+      "command": "palette.run_command@1",
+      "match": false,
+      "pattern": "view.*_all@1"
+    },
+    {
+      "command": "palette.run_commands@1",
+      "match": false,
+      "pattern": "view.*_all@1"
+    },
+    {
+      "command": "report.export_pdf@2",
+      "match": false,
+      "pattern": "view.*_all@1"
+    },
+    {
+      "command": "report.export_pdf@1",
+      "match": false,
+      "pattern": "view.*_all@1"
+    },
+    {
+      "command": "aaa@1",
+      "match": false,
+      "pattern": "view.*_all@1"
+    },
+    {
+      "command": "aa@1",
+      "match": false,
+      "pattern": "view.*_all@1"
+    },
+    {
+      "command": "abababa@1",
+      "match": false,
+      "pattern": "view.*_all@1"
+    },
+    {
+      "command": "view.select_one@10",
+      "match": false,
+      "pattern": "view.*_all@1"
+    },
+    {
+      "command": "view.select_one@1",
+      "match": true,
+      "pattern": "v*w.s*t_*@1"
+    },
+    {
+      "command": "view.select_all@1",
+      "match": true,
+      "pattern": "v*w.s*t_*@1"
+    },
+    {
+      "command": "view.select_@1",
+      "match": true,
+      "pattern": "v*w.s*t_*@1"
+    },
+    {
+      "command": "view.selectall@1",
+      "match": false,
+      "pattern": "v*w.s*t_*@1"
+    },
+    {
+      "command": "view.a.b_all@1",
+      "match": false,
+      "pattern": "v*w.s*t_*@1"
+    },
+    {
+      "command": "palette.run_command@1",
+      "match": false,
+      "pattern": "v*w.s*t_*@1"
+    },
+    {
+      "command": "palette.run_commands@1",
+      "match": false,
+      "pattern": "v*w.s*t_*@1"
+    },
+    {
+      "command": "report.export_pdf@2",
+      "match": false,
+      "pattern": "v*w.s*t_*@1"
+    },
+    {
+      "command": "report.export_pdf@1",
+      "match": false,
+      "pattern": "v*w.s*t_*@1"
+    },
+    {
+      "command": "aaa@1",
+      "match": false,
+      "pattern": "v*w.s*t_*@1"
+    },
+    {
+      "command": "aa@1",
+      "match": false,
+      "pattern": "v*w.s*t_*@1"
+    },
+    {
+      "command": "abababa@1",
+      "match": false,
+      "pattern": "v*w.s*t_*@1"
+    },
+    {
+      "command": "view.select_one@10",
+      "match": false,
+      "pattern": "v*w.s*t_*@1"
+    },
+    {
+      "command": "view.select_one@1",
+      "match": false,
+      "pattern": "palette.run_command@1"
+    },
+    {
+      "command": "view.select_all@1",
+      "match": false,
+      "pattern": "palette.run_command@1"
+    },
+    {
+      "command": "view.select_@1",
+      "match": false,
+      "pattern": "palette.run_command@1"
+    },
+    {
+      "command": "view.selectall@1",
+      "match": false,
+      "pattern": "palette.run_command@1"
+    },
+    {
+      "command": "view.a.b_all@1",
+      "match": false,
+      "pattern": "palette.run_command@1"
+    },
+    {
+      "command": "palette.run_command@1",
+      "match": true,
+      "pattern": "palette.run_command@1"
+    },
+    {
+      "command": "palette.run_commands@1",
+      "match": false,
+      "pattern": "palette.run_command@1"
+    },
+    {
+      "command": "report.export_pdf@2",
+      "match": false,
+      "pattern": "palette.run_command@1"
+    },
+    {
+      "command": "report.export_pdf@1",
+      "match": false,
+      "pattern": "palette.run_command@1"
+    },
+    {
+      "command": "aaa@1",
+      "match": false,
+      "pattern": "palette.run_command@1"
+    },
+    {
+      "command": "aa@1",
+      "match": false,
+      "pattern": "palette.run_command@1"
+    },
+    {
+      "command": "abababa@1",
+      "match": false,
+      "pattern": "palette.run_command@1"
+    },
+    {
+      "command": "view.select_one@10",
+      "match": false,
+      "pattern": "palette.run_command@1"
+    },
+    {
+      "command": "view.select_one@1",
+      "match": false,
+      "pattern": "palette.run_command@2"
+    },
+    {
+      "command": "view.select_all@1",
+      "match": false,
+      "pattern": "palette.run_command@2"
+    },
+    {
+      "command": "view.select_@1",
+      "match": false,
+      "pattern": "palette.run_command@2"
+    },
+    {
+      "command": "view.selectall@1",
+      "match": false,
+      "pattern": "palette.run_command@2"
+    },
+    {
+      "command": "view.a.b_all@1",
+      "match": false,
+      "pattern": "palette.run_command@2"
+    },
+    {
+      "command": "palette.run_command@1",
+      "match": false,
+      "pattern": "palette.run_command@2"
+    },
+    {
+      "command": "palette.run_commands@1",
+      "match": false,
+      "pattern": "palette.run_command@2"
+    },
+    {
+      "command": "report.export_pdf@2",
+      "match": false,
+      "pattern": "palette.run_command@2"
+    },
+    {
+      "command": "report.export_pdf@1",
+      "match": false,
+      "pattern": "palette.run_command@2"
+    },
+    {
+      "command": "aaa@1",
+      "match": false,
+      "pattern": "palette.run_command@2"
+    },
+    {
+      "command": "aa@1",
+      "match": false,
+      "pattern": "palette.run_command@2"
+    },
+    {
+      "command": "abababa@1",
+      "match": false,
+      "pattern": "palette.run_command@2"
+    },
+    {
+      "command": "view.select_one@10",
+      "match": false,
+      "pattern": "palette.run_command@2"
+    },
+    {
+      "command": "view.select_one@1",
+      "match": false,
+      "pattern": "report.export_*@2"
+    },
+    {
+      "command": "view.select_all@1",
+      "match": false,
+      "pattern": "report.export_*@2"
+    },
+    {
+      "command": "view.select_@1",
+      "match": false,
+      "pattern": "report.export_*@2"
+    },
+    {
+      "command": "view.selectall@1",
+      "match": false,
+      "pattern": "report.export_*@2"
+    },
+    {
+      "command": "view.a.b_all@1",
+      "match": false,
+      "pattern": "report.export_*@2"
+    },
+    {
+      "command": "palette.run_command@1",
+      "match": false,
+      "pattern": "report.export_*@2"
+    },
+    {
+      "command": "palette.run_commands@1",
+      "match": false,
+      "pattern": "report.export_*@2"
+    },
+    {
+      "command": "report.export_pdf@2",
+      "match": true,
+      "pattern": "report.export_*@2"
+    },
+    {
+      "command": "report.export_pdf@1",
+      "match": false,
+      "pattern": "report.export_*@2"
+    },
+    {
+      "command": "aaa@1",
+      "match": false,
+      "pattern": "report.export_*@2"
+    },
+    {
+      "command": "aa@1",
+      "match": false,
+      "pattern": "report.export_*@2"
+    },
+    {
+      "command": "abababa@1",
+      "match": false,
+      "pattern": "report.export_*@2"
+    },
+    {
+      "command": "view.select_one@10",
+      "match": false,
+      "pattern": "report.export_*@2"
+    },
+    {
+      "command": "view.select_one@1",
+      "match": false,
+      "pattern": "report.*@1"
+    },
+    {
+      "command": "view.select_all@1",
+      "match": false,
+      "pattern": "report.*@1"
+    },
+    {
+      "command": "view.select_@1",
+      "match": false,
+      "pattern": "report.*@1"
+    },
+    {
+      "command": "view.selectall@1",
+      "match": false,
+      "pattern": "report.*@1"
+    },
+    {
+      "command": "view.a.b_all@1",
+      "match": false,
+      "pattern": "report.*@1"
+    },
+    {
+      "command": "palette.run_command@1",
+      "match": false,
+      "pattern": "report.*@1"
+    },
+    {
+      "command": "palette.run_commands@1",
+      "match": false,
+      "pattern": "report.*@1"
+    },
+    {
+      "command": "report.export_pdf@2",
+      "match": false,
+      "pattern": "report.*@1"
+    },
+    {
+      "command": "report.export_pdf@1",
+      "match": true,
+      "pattern": "report.*@1"
+    },
+    {
+      "command": "aaa@1",
+      "match": false,
+      "pattern": "report.*@1"
+    },
+    {
+      "command": "aa@1",
+      "match": false,
+      "pattern": "report.*@1"
+    },
+    {
+      "command": "abababa@1",
+      "match": false,
+      "pattern": "report.*@1"
+    },
+    {
+      "command": "view.select_one@10",
+      "match": false,
+      "pattern": "report.*@1"
+    },
+    {
+      "command": "view.select_one@1",
+      "match": false,
+      "pattern": "a*a*a@1"
+    },
+    {
+      "command": "view.select_all@1",
+      "match": false,
+      "pattern": "a*a*a@1"
+    },
+    {
+      "command": "view.select_@1",
+      "match": false,
+      "pattern": "a*a*a@1"
+    },
+    {
+      "command": "view.selectall@1",
+      "match": false,
+      "pattern": "a*a*a@1"
+    },
+    {
+      "command": "view.a.b_all@1",
+      "match": false,
+      "pattern": "a*a*a@1"
+    },
+    {
+      "command": "palette.run_command@1",
+      "match": false,
+      "pattern": "a*a*a@1"
+    },
+    {
+      "command": "palette.run_commands@1",
+      "match": false,
+      "pattern": "a*a*a@1"
+    },
+    {
+      "command": "report.export_pdf@2",
+      "match": false,
+      "pattern": "a*a*a@1"
+    },
+    {
+      "command": "report.export_pdf@1",
+      "match": false,
+      "pattern": "a*a*a@1"
+    },
+    {
+      "command": "aaa@1",
+      "match": true,
+      "pattern": "a*a*a@1"
+    },
+    {
+      "command": "aa@1",
+      "match": false,
+      "pattern": "a*a*a@1"
+    },
+    {
+      "command": "abababa@1",
+      "match": true,
+      "pattern": "a*a*a@1"
+    },
+    {
+      "command": "view.select_one@10",
+      "match": false,
+      "pattern": "a*a*a@1"
+    },
+    {
+      "command": "view.select_one@1",
+      "match": true,
+      "pattern": "view.select_one*@1"
+    },
+    {
+      "command": "view.select_all@1",
+      "match": false,
+      "pattern": "view.select_one*@1"
+    },
+    {
+      "command": "view.select_@1",
+      "match": false,
+      "pattern": "view.select_one*@1"
+    },
+    {
+      "command": "view.selectall@1",
+      "match": false,
+      "pattern": "view.select_one*@1"
+    },
+    {
+      "command": "view.a.b_all@1",
+      "match": false,
+      "pattern": "view.select_one*@1"
+    },
+    {
+      "command": "palette.run_command@1",
+      "match": false,
+      "pattern": "view.select_one*@1"
+    },
+    {
+      "command": "palette.run_commands@1",
+      "match": false,
+      "pattern": "view.select_one*@1"
+    },
+    {
+      "command": "report.export_pdf@2",
+      "match": false,
+      "pattern": "view.select_one*@1"
+    },
+    {
+      "command": "report.export_pdf@1",
+      "match": false,
+      "pattern": "view.select_one*@1"
+    },
+    {
+      "command": "aaa@1",
+      "match": false,
+      "pattern": "view.select_one*@1"
+    },
+    {
+      "command": "aa@1",
+      "match": false,
+      "pattern": "view.select_one*@1"
+    },
+    {
+      "command": "abababa@1",
+      "match": false,
+      "pattern": "view.select_one*@1"
+    },
+    {
+      "command": "view.select_one@10",
+      "match": false,
+      "pattern": "view.select_one*@1"
+    }
+  ]
+}
