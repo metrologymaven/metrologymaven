@@ -1,0 +1,2702 @@
+{
+ "default_pitch": "100",
+ "pitch_texts": [
+  {
+   "text": "1mm",
+   "units": "100"
+  },
+  {
+   "text": "0.1mm",
+   "units": "10"
+  },
+  {
+   "text": "0.10mm",
+   "units": "10"
+  },
+  {
+   "error": "below_minimum",
+   "field": "grid_pitch",
+   "text": "0.05mm"
+  },
+  {
+   "error": "below_minimum",
+   "field": "grid_pitch",
+   "text": "0.09mm"
+  },
+  {
+   "error": "below_minimum",
+   "field": "grid_pitch",
+   "text": "0mm"
+  },
+  {
+   "text": "0.05in",
+   "units": "127"
+  },
+  {
+   "text": "2000mm",
+   "units": "200000"
+  },
+  {
+   "error": "too_large",
+   "field": "grid_pitch",
+   "text": "2000.01mm"
+  },
+  {
+   "text": "0.15mm",
+   "units": "15"
+  },
+  {
+   "text": "1in",
+   "units": "2540"
+  },
+  {
+   "error": "not_exact",
+   "field": "grid_pitch",
+   "text": "0.001mm"
+  },
+  {
+   "error": "not_a_length",
+   "field": "grid_pitch",
+   "text": "-1mm"
+  },
+  {
+   "error": "not_a_length",
+   "field": "grid_pitch",
+   "text": "1"
+  },
+  {
+   "error": "not_a_length",
+   "field": "grid_pitch",
+   "text": "1 mm"
+  }
+ ],
+ "pitch_units": [
+  {
+   "error": "below_minimum",
+   "units": "0"
+  },
+  {
+   "error": "below_minimum",
+   "units": "5"
+  },
+  {
+   "error": "below_minimum",
+   "units": "9"
+  },
+  {
+   "pitch": "10",
+   "units": "10"
+  },
+  {
+   "pitch": "11",
+   "units": "11"
+  },
+  {
+   "pitch": "100",
+   "units": "100"
+  },
+  {
+   "pitch": "2540",
+   "units": "2540"
+  },
+  {
+   "pitch": "200000",
+   "units": "200000"
+  },
+  {
+   "error": "too_large",
+   "units": "200001"
+  },
+  {
+   "error": "below_minimum",
+   "units": "-100"
+  }
+ ],
+ "scenarios": [
+  {
+   "blocks": [
+    {
+     "handle": "B1",
+     "page": "P1",
+     "text": "Placeholder block one"
+    }
+   ],
+   "fixture": "one_page_report",
+   "name": "ac1_ac2_ac3",
+   "steps": [
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "4000",
+       "page": "P1",
+       "report": "R",
+       "w": "8000",
+       "x": "1000",
+       "y": "2000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "h": "40mm",
+      "report": "R",
+      "snap": true,
+      "w": "80mm",
+      "x": "10.04mm",
+      "y": "20mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "4000",
+        "w": "8000",
+        "x": "1000",
+        "y": "2000"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "4000",
+       "page": "P1",
+       "report": "R",
+       "w": "8000",
+       "x": "1035",
+       "y": "2000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "dx": "0.35mm",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "4000",
+        "w": "8000",
+        "x": "1035",
+        "y": "2000"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "w",
+      "reason": "too_small"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "report": "R",
+      "w": "0.5mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "4000",
+        "w": "8000",
+        "x": "1035",
+        "y": "2000"
+       },
+       "page": "P1"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "blocks": [
+    {
+     "handle": "B1",
+     "page": "P1",
+     "text": "Placeholder block one"
+    }
+   ],
+   "fixture": "one_page_report",
+   "name": "snap_edges",
+   "steps": [
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "750",
+       "page": "P1",
+       "report": "R",
+       "w": "1250",
+       "x": "-250",
+       "y": "-500"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "h": "5mm",
+      "report": "R",
+      "snap": true,
+      "w": "10.1mm",
+      "x": "-1.25mm",
+      "y": "-3.75mm"
+     },
+     "pitch": "250",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "750",
+        "w": "1250",
+        "x": "-250",
+        "y": "-500"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "h",
+      "reason": "too_small"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "h": "2.49mm",
+      "report": "R",
+      "snap": true,
+      "w": "2.51mm",
+      "x": "1.24mm",
+      "y": "1.25mm"
+     },
+     "pitch": "250",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "750",
+        "w": "1250",
+        "x": "-250",
+        "y": "-500"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "750",
+       "page": "P1",
+       "report": "R",
+       "w": "1250",
+       "x": "-250",
+       "y": "-500"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "dx": "-0.01mm",
+      "report": "R",
+      "snap": true
+     },
+     "pitch": "250",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "750",
+        "w": "1250",
+        "x": "-250",
+        "y": "-500"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "w",
+      "reason": "too_small"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "h": "1mm",
+      "report": "R",
+      "snap": true,
+      "w": "0.3mm",
+      "x": "0.6mm",
+      "y": "0mm"
+     },
+     "pitch": "250",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "750",
+        "w": "1250",
+        "x": "-250",
+        "y": "-500"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "100",
+       "page": "P1",
+       "report": "R",
+       "w": "130",
+       "x": "60",
+       "y": "0"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "h": "1mm",
+      "report": "R",
+      "snap": true,
+      "w": "1.3mm",
+      "x": "0.6mm",
+      "y": "0mm"
+     },
+     "pitch": "10",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "100",
+        "w": "130",
+        "x": "60",
+        "y": "0"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "100",
+       "page": "P1",
+       "report": "R",
+       "w": "130",
+       "x": "60",
+       "y": "10"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "dx": "0.04mm",
+      "dy": "0.05mm",
+      "report": "R",
+      "snap": true
+     },
+     "pitch": "10",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "100",
+        "w": "130",
+        "x": "60",
+        "y": "10"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "dw",
+      "reason": "not_exact"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "dw": "0.333mm",
+      "report": "R"
+     },
+     "pitch": "10",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "100",
+        "w": "130",
+        "x": "60",
+        "y": "10"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "100",
+       "page": "P1",
+       "report": "R",
+       "w": "1400",
+       "x": "60",
+       "y": "10"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "dw": "0.5in",
+      "report": "R"
+     },
+     "pitch": "10",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "100",
+        "w": "1400",
+        "x": "60",
+        "y": "10"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "w",
+      "reason": "too_small"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "report": "R",
+      "snap": true,
+      "x": "0.55in"
+     },
+     "pitch": "2540",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "100",
+        "w": "1400",
+        "x": "60",
+        "y": "10"
+       },
+       "page": "P1"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "blocks": [
+    {
+     "handle": "B1",
+     "page": "P1",
+     "text": "Placeholder block one"
+    }
+   ],
+   "fixture": "one_page_report",
+   "name": "outside_and_bounds",
+   "steps": [
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "50000",
+       "page": "P1",
+       "report": "R",
+       "w": "30000",
+       "x": "-5000",
+       "y": "-2000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "h": "500mm",
+      "report": "R",
+      "w": "300mm",
+      "x": "-50mm",
+      "y": "-20mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "50000",
+        "w": "30000",
+        "x": "-5000",
+        "y": "-2000"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "50000",
+       "page": "P1",
+       "report": "R",
+       "w": "30000",
+       "x": "200000",
+       "y": "-2000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "report": "R",
+      "x": "2000mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "50000",
+        "w": "30000",
+        "x": "200000",
+        "y": "-2000"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "x",
+      "reason": "too_large"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "dx": "0.01mm",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "50000",
+        "w": "30000",
+        "x": "200000",
+        "y": "-2000"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "dx",
+      "reason": "too_large"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "dx": "-4000mm",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "50000",
+        "w": "30000",
+        "x": "200000",
+        "y": "-2000"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.bad_params"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "dw": "1700mm",
+      "report": "R",
+      "x": "-2000mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "50000",
+        "w": "30000",
+        "x": "200000",
+        "y": "-2000"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "50000",
+       "page": "P1",
+       "report": "R",
+       "w": "30000",
+       "x": "-200000",
+       "y": "-2000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "report": "R",
+      "x": "-2000mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "50000",
+        "w": "30000",
+        "x": "-200000",
+        "y": "-2000"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "50000",
+       "page": "P1",
+       "report": "R",
+       "w": "200000",
+       "x": "-200000",
+       "y": "-2000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "dw": "1700mm",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "50000",
+        "w": "200000",
+        "x": "-200000",
+        "y": "-2000"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "w",
+      "reason": "too_large"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "dw": "0.01mm",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "50000",
+        "w": "200000",
+        "x": "-200000",
+        "y": "-2000"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "100",
+       "page": "P1",
+       "report": "R",
+       "w": "100",
+       "x": "-200000",
+       "y": "-2000"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "h": "1mm",
+      "report": "R",
+      "w": "1mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "100",
+        "w": "100",
+        "x": "-200000",
+        "y": "-2000"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "h",
+      "reason": "too_small"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "dh": "-0.01mm",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "100",
+        "w": "100",
+        "x": "-200000",
+        "y": "-2000"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "h",
+      "reason": "too_large"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "h": "2000.01mm",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "100",
+        "w": "100",
+        "x": "-200000",
+        "y": "-2000"
+       },
+       "page": "P1"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "blocks": [
+    {
+     "handle": "B1",
+     "page": "P1",
+     "text": "Placeholder block one"
+    }
+   ],
+   "fixture": "one_page_report",
+   "name": "no_frame",
+   "steps": [
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "x",
+      "reason": "no_frame"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "dx": "1mm",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "y",
+      "reason": "no_frame"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "h": "10mm",
+      "report": "R",
+      "w": "10mm",
+      "x": "1mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "h",
+      "reason": "no_frame"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "report": "R",
+      "w": "10mm",
+      "x": "1mm",
+      "y": "1mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "1000",
+       "page": "P1",
+       "report": "R",
+       "w": "1000",
+       "x": "100",
+       "y": "100"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "h": "10mm",
+      "report": "R",
+      "w": "10mm",
+      "x": "1mm",
+      "y": "1mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "1000",
+        "w": "1000",
+        "x": "100",
+        "y": "100"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "1000",
+       "page": "P1",
+       "report": "R",
+       "w": "1000",
+       "x": "100",
+       "y": "200"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "dy": "1mm",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "1000",
+        "w": "1000",
+        "x": "100",
+        "y": "200"
+       },
+       "page": "P1"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "blocks": [
+    {
+     "handle": "B1",
+     "page": "P1",
+     "text": "Placeholder block one"
+    }
+   ],
+   "fixture": "one_page_report",
+   "name": "lengths",
+   "steps": [
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "x",
+      "reason": "not_exact"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "h": "10mm",
+      "report": "R",
+      "w": "10mm",
+      "x": "10.005mm",
+      "y": "1mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "y",
+      "reason": "not_a_length"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "h": "10mm",
+      "report": "R",
+      "w": "10mm",
+      "x": "1mm",
+      "y": "+1mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "w",
+      "reason": "not_a_length"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "h": "10mm",
+      "report": "R",
+      "w": "-10mm",
+      "x": "1mm",
+      "y": "1mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "h",
+      "reason": "not_a_length"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "h": "10 mm",
+      "report": "R",
+      "w": "10mm",
+      "x": "1mm",
+      "y": "1mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "h",
+      "reason": "not_exact"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "h": "0.01in",
+      "report": "R",
+      "w": "10mm",
+      "x": "1mm",
+      "y": "1mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "x",
+      "reason": "not_a_length"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "h": "10mm",
+      "report": "R",
+      "w": "10mm",
+      "x": "--1mm",
+      "y": "1mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "2540",
+       "page": "P1",
+       "report": "R",
+       "w": "2540",
+       "x": "0",
+       "y": "127"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "h": "25.4mm",
+      "report": "R",
+      "w": "1in",
+      "x": "-0mm",
+      "y": "0.05in"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "2540",
+        "w": "2540",
+        "x": "0",
+        "y": "127"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "dx",
+      "reason": "not_a_length"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "dx": "1cm",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "2540",
+        "w": "2540",
+        "x": "0",
+        "y": "127"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "dy",
+      "reason": "too_large"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "dy": "-2000.01mm",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "2540",
+        "w": "2540",
+        "x": "0",
+        "y": "127"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "dw",
+      "reason": "not_exact"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "dw": "0.001mm",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "2540",
+        "w": "2540",
+        "x": "0",
+        "y": "127"
+       },
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "h",
+      "reason": "too_small"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "dh": "-1.5in",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "2540",
+        "w": "2540",
+        "x": "0",
+        "y": "127"
+       },
+       "page": "P1"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "blocks": [
+    {
+     "handle": "B1",
+     "page": "P1",
+     "text": "Placeholder block one"
+    },
+    {
+     "handle": "B2",
+     "page": "P2",
+     "text": "Placeholder block two"
+    },
+    {
+     "handle": "B3",
+     "page": "P1",
+     "text": "Placeholder block three"
+    }
+   ],
+   "fixture": "three_page_report",
+   "name": "not_found",
+   "steps": [
+    {
+     "expect": {
+      "error": "report.not_found"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "h": "10mm",
+      "report": "R?",
+      "w": "10mm",
+      "x": "1mm",
+      "y": "1mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": null,
+       "page": "P1"
+      },
+      "B2": {
+       "frame": null,
+       "page": "P2"
+      },
+      "B3": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.not_found"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B?",
+      "h": "10mm",
+      "report": "R",
+      "w": "10mm",
+      "x": "1mm",
+      "y": "1mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": null,
+       "page": "P1"
+      },
+      "B2": {
+       "frame": null,
+       "page": "P2"
+      },
+      "B3": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.not_found"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "h": "10mm",
+      "page": "X",
+      "report": "R",
+      "w": "10mm",
+      "x": "1mm",
+      "y": "1mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": null,
+       "page": "P1"
+      },
+      "B2": {
+       "frame": null,
+       "page": "P2"
+      },
+      "B3": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.layout_invalid",
+      "field": "x",
+      "reason": "not_exact"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B?",
+      "h": "10mm",
+      "report": "R",
+      "w": "10mm",
+      "x": "1.001mm",
+      "y": "1mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": null,
+       "page": "P1"
+      },
+      "B2": {
+       "frame": null,
+       "page": "P2"
+      },
+      "B3": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.not_found"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B?",
+      "dx": "1mm",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": null,
+       "page": "P1"
+      },
+      "B2": {
+       "frame": null,
+       "page": "P2"
+      },
+      "B3": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "blocks": [
+    {
+     "handle": "B1",
+     "page": "P1",
+     "text": "Placeholder block one"
+    },
+    {
+     "handle": "B2",
+     "page": "P2",
+     "text": "Placeholder block two"
+    },
+    {
+     "handle": "B3",
+     "page": "P1",
+     "text": "Placeholder block three"
+    }
+   ],
+   "fixture": "three_page_report",
+   "name": "move_page",
+   "steps": [
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "2000",
+       "page": "P3",
+       "report": "R",
+       "w": "5000",
+       "x": "500",
+       "y": "500"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "h": "20mm",
+      "page": "P3",
+      "report": "R",
+      "w": "50mm",
+      "x": "5mm",
+      "y": "5mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "2000",
+        "w": "5000",
+        "x": "500",
+        "y": "500"
+       },
+       "page": "P3"
+      },
+      "B2": {
+       "frame": null,
+       "page": "P2"
+      },
+      "B3": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B1",
+       "h": "2000",
+       "page": "P3",
+       "report": "R",
+       "w": "5000",
+       "x": "500",
+       "y": "1500"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B1",
+      "dy": "10mm",
+      "page": "P3",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "2000",
+        "w": "5000",
+        "x": "500",
+        "y": "1500"
+       },
+       "page": "P3"
+      },
+      "B2": {
+       "frame": null,
+       "page": "P2"
+      },
+      "B3": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B2",
+       "h": "1000",
+       "page": "P2",
+       "report": "R",
+       "w": "1000",
+       "x": "0",
+       "y": "0"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B2",
+      "h": "10mm",
+      "page": "P2",
+      "report": "R",
+      "w": "10mm",
+      "x": "0mm",
+      "y": "0mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "2000",
+        "w": "5000",
+        "x": "500",
+        "y": "1500"
+       },
+       "page": "P3"
+      },
+      "B2": {
+       "frame": {
+        "h": "1000",
+        "w": "1000",
+        "x": "0",
+        "y": "0"
+       },
+       "page": "P2"
+      },
+      "B3": {
+       "frame": null,
+       "page": "P1"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B3",
+       "h": "1000",
+       "page": "P2",
+       "report": "R",
+       "w": "1000",
+       "x": "0",
+       "y": "0"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B3",
+      "h": "10mm",
+      "page": "P2",
+      "report": "R",
+      "snap": true,
+      "w": "10mm",
+      "x": "0mm",
+      "y": "0mm"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "2000",
+        "w": "5000",
+        "x": "500",
+        "y": "1500"
+       },
+       "page": "P3"
+      },
+      "B2": {
+       "frame": {
+        "h": "1000",
+        "w": "1000",
+        "x": "0",
+        "y": "0"
+       },
+       "page": "P2"
+      },
+      "B3": {
+       "frame": {
+        "h": "1000",
+        "w": "1000",
+        "x": "0",
+        "y": "0"
+       },
+       "page": "P2"
+      }
+     }
+    },
+    {
+     "expect": {
+      "result": {
+       "block": "B2",
+       "h": "1000",
+       "page": "P1",
+       "report": "R",
+       "w": "1000",
+       "x": "100",
+       "y": "0"
+      }
+     },
+     "journaled": true,
+     "params": {
+      "block": "B2",
+      "dx": "1mm",
+      "page": "P1",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "2000",
+        "w": "5000",
+        "x": "500",
+        "y": "1500"
+       },
+       "page": "P3"
+      },
+      "B2": {
+       "frame": {
+        "h": "1000",
+        "w": "1000",
+        "x": "100",
+        "y": "0"
+       },
+       "page": "P1"
+      },
+      "B3": {
+       "frame": {
+        "h": "1000",
+        "w": "1000",
+        "x": "0",
+        "y": "0"
+       },
+       "page": "P2"
+      }
+     }
+    },
+    {
+     "expect": {
+      "error": "report.not_found"
+     },
+     "journaled": false,
+     "params": {
+      "block": "B1",
+      "dx": "1mm",
+      "page": "X",
+      "report": "R"
+     },
+     "pitch": "100",
+     "state": {
+      "B1": {
+       "frame": {
+        "h": "2000",
+        "w": "5000",
+        "x": "500",
+        "y": "1500"
+       },
+       "page": "P3"
+      },
+      "B2": {
+       "frame": {
+        "h": "1000",
+        "w": "1000",
+        "x": "100",
+        "y": "0"
+       },
+       "page": "P1"
+      },
+      "B3": {
+       "frame": {
+        "h": "1000",
+        "w": "1000",
+        "x": "0",
+        "y": "0"
+       },
+       "page": "P2"
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "snaps": [
+  {
+   "pitch": "10",
+   "snapped": "0",
+   "value": "0"
+  },
+  {
+   "pitch": "10",
+   "snapped": "0",
+   "value": "1"
+  },
+  {
+   "pitch": "10",
+   "snapped": "0",
+   "value": "4"
+  },
+  {
+   "pitch": "10",
+   "snapped": "10",
+   "value": "5"
+  },
+  {
+   "pitch": "10",
+   "snapped": "10",
+   "value": "6"
+  },
+  {
+   "pitch": "10",
+   "snapped": "50",
+   "value": "49"
+  },
+  {
+   "pitch": "10",
+   "snapped": "50",
+   "value": "50"
+  },
+  {
+   "pitch": "10",
+   "snapped": "50",
+   "value": "51"
+  },
+  {
+   "pitch": "10",
+   "snapped": "100",
+   "value": "99"
+  },
+  {
+   "pitch": "10",
+   "snapped": "100",
+   "value": "100"
+  },
+  {
+   "pitch": "10",
+   "snapped": "120",
+   "value": "124"
+  },
+  {
+   "pitch": "10",
+   "snapped": "130",
+   "value": "125"
+  },
+  {
+   "pitch": "10",
+   "snapped": "130",
+   "value": "126"
+  },
+  {
+   "pitch": "10",
+   "snapped": "1270",
+   "value": "1269"
+  },
+  {
+   "pitch": "10",
+   "snapped": "1270",
+   "value": "1270"
+  },
+  {
+   "pitch": "10",
+   "snapped": "1270",
+   "value": "1271"
+  },
+  {
+   "pitch": "10",
+   "snapped": "100000",
+   "value": "99999"
+  },
+  {
+   "pitch": "10",
+   "snapped": "100000",
+   "value": "100000"
+  },
+  {
+   "pitch": "10",
+   "snapped": "100000",
+   "value": "100001"
+  },
+  {
+   "pitch": "10",
+   "snapped": "200000",
+   "value": "200000"
+  },
+  {
+   "pitch": "100",
+   "snapped": "0",
+   "value": "0"
+  },
+  {
+   "pitch": "100",
+   "snapped": "0",
+   "value": "1"
+  },
+  {
+   "pitch": "100",
+   "snapped": "0",
+   "value": "4"
+  },
+  {
+   "pitch": "100",
+   "snapped": "0",
+   "value": "5"
+  },
+  {
+   "pitch": "100",
+   "snapped": "0",
+   "value": "6"
+  },
+  {
+   "pitch": "100",
+   "snapped": "0",
+   "value": "49"
+  },
+  {
+   "pitch": "100",
+   "snapped": "100",
+   "value": "50"
+  },
+  {
+   "pitch": "100",
+   "snapped": "100",
+   "value": "51"
+  },
+  {
+   "pitch": "100",
+   "snapped": "100",
+   "value": "99"
+  },
+  {
+   "pitch": "100",
+   "snapped": "100",
+   "value": "100"
+  },
+  {
+   "pitch": "100",
+   "snapped": "100",
+   "value": "124"
+  },
+  {
+   "pitch": "100",
+   "snapped": "100",
+   "value": "125"
+  },
+  {
+   "pitch": "100",
+   "snapped": "100",
+   "value": "126"
+  },
+  {
+   "pitch": "100",
+   "snapped": "1300",
+   "value": "1269"
+  },
+  {
+   "pitch": "100",
+   "snapped": "1300",
+   "value": "1270"
+  },
+  {
+   "pitch": "100",
+   "snapped": "1300",
+   "value": "1271"
+  },
+  {
+   "pitch": "100",
+   "snapped": "100000",
+   "value": "99999"
+  },
+  {
+   "pitch": "100",
+   "snapped": "100000",
+   "value": "100000"
+  },
+  {
+   "pitch": "100",
+   "snapped": "100000",
+   "value": "100001"
+  },
+  {
+   "pitch": "100",
+   "snapped": "200000",
+   "value": "200000"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "0"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "1"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "4"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "5"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "6"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "49"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "50"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "51"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "99"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "100"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "124"
+  },
+  {
+   "pitch": "250",
+   "snapped": "250",
+   "value": "125"
+  },
+  {
+   "pitch": "250",
+   "snapped": "250",
+   "value": "126"
+  },
+  {
+   "pitch": "250",
+   "snapped": "1250",
+   "value": "1269"
+  },
+  {
+   "pitch": "250",
+   "snapped": "1250",
+   "value": "1270"
+  },
+  {
+   "pitch": "250",
+   "snapped": "1250",
+   "value": "1271"
+  },
+  {
+   "pitch": "250",
+   "snapped": "100000",
+   "value": "99999"
+  },
+  {
+   "pitch": "250",
+   "snapped": "100000",
+   "value": "100000"
+  },
+  {
+   "pitch": "250",
+   "snapped": "100000",
+   "value": "100001"
+  },
+  {
+   "pitch": "250",
+   "snapped": "200000",
+   "value": "200000"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "0"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "1"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "4"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "5"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "6"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "49"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "50"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "51"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "99"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "100"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "124"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "125"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "126"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "1269"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "2540",
+   "value": "1270"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "2540",
+   "value": "1271"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "99060",
+   "value": "99999"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "99060",
+   "value": "100000"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "99060",
+   "value": "100001"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "200660",
+   "value": "200000"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "0"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "1"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "4"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "5"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "6"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "49"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "50"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "51"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "99"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "100"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "124"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "125"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "126"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "1269"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "1270"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "1271"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "99999"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "200000",
+   "value": "100000"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "200000",
+   "value": "100001"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "200000",
+   "value": "200000"
+  },
+  {
+   "pitch": "10",
+   "snapped": "0",
+   "value": "-1"
+  },
+  {
+   "pitch": "10",
+   "snapped": "0",
+   "value": "-4"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-10",
+   "value": "-5"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-10",
+   "value": "-6"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-50",
+   "value": "-49"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-50",
+   "value": "-50"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-50",
+   "value": "-51"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-100",
+   "value": "-99"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-100",
+   "value": "-100"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-120",
+   "value": "-124"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-130",
+   "value": "-125"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-130",
+   "value": "-126"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-1270",
+   "value": "-1269"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-1270",
+   "value": "-1270"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-1270",
+   "value": "-1271"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-100000",
+   "value": "-99999"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-100000",
+   "value": "-100000"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-100000",
+   "value": "-100001"
+  },
+  {
+   "pitch": "10",
+   "snapped": "-200000",
+   "value": "-200000"
+  },
+  {
+   "pitch": "100",
+   "snapped": "0",
+   "value": "-1"
+  },
+  {
+   "pitch": "100",
+   "snapped": "0",
+   "value": "-4"
+  },
+  {
+   "pitch": "100",
+   "snapped": "0",
+   "value": "-5"
+  },
+  {
+   "pitch": "100",
+   "snapped": "0",
+   "value": "-6"
+  },
+  {
+   "pitch": "100",
+   "snapped": "0",
+   "value": "-49"
+  },
+  {
+   "pitch": "100",
+   "snapped": "-100",
+   "value": "-50"
+  },
+  {
+   "pitch": "100",
+   "snapped": "-100",
+   "value": "-51"
+  },
+  {
+   "pitch": "100",
+   "snapped": "-100",
+   "value": "-99"
+  },
+  {
+   "pitch": "100",
+   "snapped": "-100",
+   "value": "-100"
+  },
+  {
+   "pitch": "100",
+   "snapped": "-100",
+   "value": "-124"
+  },
+  {
+   "pitch": "100",
+   "snapped": "-100",
+   "value": "-125"
+  },
+  {
+   "pitch": "100",
+   "snapped": "-100",
+   "value": "-126"
+  },
+  {
+   "pitch": "100",
+   "snapped": "-1300",
+   "value": "-1269"
+  },
+  {
+   "pitch": "100",
+   "snapped": "-1300",
+   "value": "-1270"
+  },
+  {
+   "pitch": "100",
+   "snapped": "-1300",
+   "value": "-1271"
+  },
+  {
+   "pitch": "100",
+   "snapped": "-100000",
+   "value": "-99999"
+  },
+  {
+   "pitch": "100",
+   "snapped": "-100000",
+   "value": "-100000"
+  },
+  {
+   "pitch": "100",
+   "snapped": "-100000",
+   "value": "-100001"
+  },
+  {
+   "pitch": "100",
+   "snapped": "-200000",
+   "value": "-200000"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "-1"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "-4"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "-5"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "-6"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "-49"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "-50"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "-51"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "-99"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "-100"
+  },
+  {
+   "pitch": "250",
+   "snapped": "0",
+   "value": "-124"
+  },
+  {
+   "pitch": "250",
+   "snapped": "-250",
+   "value": "-125"
+  },
+  {
+   "pitch": "250",
+   "snapped": "-250",
+   "value": "-126"
+  },
+  {
+   "pitch": "250",
+   "snapped": "-1250",
+   "value": "-1269"
+  },
+  {
+   "pitch": "250",
+   "snapped": "-1250",
+   "value": "-1270"
+  },
+  {
+   "pitch": "250",
+   "snapped": "-1250",
+   "value": "-1271"
+  },
+  {
+   "pitch": "250",
+   "snapped": "-100000",
+   "value": "-99999"
+  },
+  {
+   "pitch": "250",
+   "snapped": "-100000",
+   "value": "-100000"
+  },
+  {
+   "pitch": "250",
+   "snapped": "-100000",
+   "value": "-100001"
+  },
+  {
+   "pitch": "250",
+   "snapped": "-200000",
+   "value": "-200000"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "-1"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "-4"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "-5"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "-6"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "-49"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "-50"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "-51"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "-99"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "-100"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "-124"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "-125"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "-126"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "0",
+   "value": "-1269"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "-2540",
+   "value": "-1270"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "-2540",
+   "value": "-1271"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "-99060",
+   "value": "-99999"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "-99060",
+   "value": "-100000"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "-99060",
+   "value": "-100001"
+  },
+  {
+   "pitch": "2540",
+   "snapped": "-200660",
+   "value": "-200000"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-1"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-4"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-5"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-6"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-49"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-50"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-51"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-99"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-100"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-124"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-125"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-126"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-1269"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-1270"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-1271"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "0",
+   "value": "-99999"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "-200000",
+   "value": "-100000"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "-200000",
+   "value": "-100001"
+  },
+  {
+   "pitch": "200000",
+   "snapped": "-200000",
+   "value": "-200000"
+  }
+ ]
+}
