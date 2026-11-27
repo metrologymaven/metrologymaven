@@ -280,6 +280,7 @@ FOLD_EXTRA = {
     "\u03f1": "\u03c1",
     "\u03f5": "\u03b5",
     "\u1e9b": "\u1e61",
+    "\u0130": "i",  # Turkish dotted capital I, folded to i (fail closed)
 }
 
 
@@ -454,20 +455,23 @@ def redacted_end(c, end, before):
         while j < len(c) and c[j] != before and not is_line_break(c[j]):
             j += 1
         return j
+    # Look ahead over the whitespace-separated tokens of the same line, up to a token that
+    # starts a path of its own; swallow through the last token holding a separator.
+    best, j = end, end
     while True:
-        j = end
         while j < len(c) and c[j].isspace() and not is_line_break(c[j]):
             j += 1
-        if j == end or j >= len(c) or abs_start(c, j) or tilde_home(c, j):
-            return end
+        if j >= len(c) or is_line_break(c[j]) or (j > end and (abs_start(c, j) or tilde_home(c, j))):
+            return best
         k = j
-        while k < len(c) and not is_term(c[k]):
+        while k < len(c) and not c[k].isspace():
             k += 1
-        if not any(is_sep(x) for x in c[j:k]):
-            return end
-        while k > j + 1 and is_trailing_punct(c[k - 1]):
-            k -= 1
-        end = k
+        if any(is_sep(x) for x in c[j:k]):
+            t = k
+            while t > j + 1 and is_trailing_punct(c[t - 1]):
+                t -= 1
+            best = t
+        j = k
 
 
 def keeps(r, tok):
@@ -642,6 +646,14 @@ REDACT_CASES = [
      "<redacted:path>"),
     ("swallow_stops_at_token_without_separator", ID_WIN, INSTALL_WIN,
      "read C:\\Data\\My Scans\\part 7 failed", "read <redacted:path> 7 failed"),
+    ("swallow_onedrive_folder_with_dash", ID_WIN, INSTALL_WIN, "C:\\Users\\jdoe\\OneDrive - Acme Corp\\Docs\\x",
+     "<redacted:path>"),
+    ("swallow_other_home_with_two_spaces", ID_WIN, INSTALL_WIN, "C:\\Users\\Ann Marie Lee\\Documents\\x",
+     "<redacted:path>"),
+    ("swallow_client_folder_with_spaces", ID_WIN, INSTALL_WIN, "read D:\\Clients\\Acme Bank Audit\\part.stp failed",
+     "read <redacted:path> failed"),
+    ("swallow_over_redacts_later_separator_tokens", ID_WIN, INSTALL_WIN, "C:\\Temp\\a then 8/16 done",
+     "<redacted:path> done"),
     ("swallow_stops_before_kept_install_path", ID_WIN, INSTALL_WIN,
      "copy C:\\Temp\\a C:\\Program Files\\Metrology Maven\\b", "copy <redacted:path> C:\\Program Files\\Metrology Maven\\b"),
     ("swallow_stays_on_its_line", ID_WIN, INSTALL_WIN, "C:\\Temp\\a\nb\\c", "<redacted:path>\nb\\c"),
@@ -670,6 +682,8 @@ REDACT_CASES = [
      "dns <redacted:host> and <redacted:host>"),
     ("non_ascii_user", ID_JOSE, INSTALL_FID, "owner Jos\u00e9 (jos\u00e9)", "owner <redacted:user> (<redacted:user>)"),
     ("non_ascii_user_uppercase", ID_JOSE, INSTALL_FID, "OWNER JOS\u00c9", "OWNER <redacted:user>"),
+    ("turkish_dotted_capital_i", ident("ilker", ["atolye"], "/home/ilker"), INSTALL_FID, "by \u0130LKER today",
+     "by <redacted:user> today"),
     ("greek_user_uppercase", ID_SOFIA, INSTALL_FID, "\u03a3\u039f\u03a6\u038a\u0391 signed", "<redacted:user> signed"),
     ("forward_slash_home_in_free_text", ID_WIN, INSTALL_WIN, "set to C:/Users/jdoe.", "set to <redacted:path>."),
     ("forward_slash_home_after_equals", ID_MAC, INSTALL_MAC, "HOME=/Users/kim", "HOME=<redacted:path>"),

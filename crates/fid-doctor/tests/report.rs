@@ -452,8 +452,24 @@ fn identity_from_lookup_unix_falls_back_to_logname() {
             user: "mtest".into(),
             hosts: vec!["rig-04".into(), "rig-04.lab".into()],
             home: "/home/mtest".into(),
-            domains: Vec::new(),
+            domains: vec!["lab".into()],
         }
+    );
+}
+
+/// Unix: the domain part of a dotted host name joins the domains, so the fully qualified
+/// name and the bare domain are both redacted.
+#[test]
+fn identity_from_lookup_unix_derives_domains() {
+    let env = unix_env();
+    let id =
+        Identity::from_lookup(IdentityPlatform::Unix, lookup(&env), || vec!["rig-04.lab.acme.com".into()]).unwrap();
+    assert_eq!(id.hosts, vec!["rig-04".to_string(), "rig-04.lab.acme.com".to_string()]);
+    assert_eq!(id.domains, vec!["lab.acme.com".to_string()]);
+    let r = Redactor::new(&id, "/opt/metrology-maven").unwrap();
+    assert_eq!(
+        r.redact_text("on rig-04.lab.acme.com (RIG-04) in lab.acme.com"),
+        "on <redacted:host> (<redacted:host>) in <redacted:host>"
     );
 }
 
@@ -511,7 +527,9 @@ fn simple_case_folding() {
     assert_eq!(fold_char('Σ'), 'σ');
     assert_eq!(fold_char('ς'), 'σ');
     assert_eq!(fold_char('ſ'), 's');
-    assert_eq!(fold_char('İ'), 'İ');
+    // Turkish dotted capital I folds to i (fail closed).
+    assert_eq!(fold_char('İ'), 'i');
+    assert_eq!(fold_char('ı'), 'ı');
     assert_eq!(fold_char('A'), 'a');
     assert_eq!(fold_char('7'), '7');
 }

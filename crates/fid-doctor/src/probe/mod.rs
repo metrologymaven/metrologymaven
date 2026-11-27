@@ -318,21 +318,21 @@ impl FakeEnv {
 
     pub fn from_file(path: &Path) -> Result<Self, SnapshotError> {
         let meta = std::fs::symlink_metadata(path)
-            .map_err(|e| SnapshotError::new(format!("cannot stat {}: {e}", path.display())))?;
+            .map_err(|e| SnapshotError::new(format!("cannot stat the snapshot file: {}", e.kind())))?;
         if meta.file_type().is_symlink() {
-            return Err(SnapshotError::new(format!("{}: symbolic links are not allowed", path.display())));
+            return Err(SnapshotError::new("snapshot file: symbolic links are not allowed"));
         }
         if meta.len() > MAX_SNAPSHOT_BYTES as u64 {
-            return Err(SnapshotError::new(format!("{}: exceeds {MAX_SNAPSHOT_BYTES} byte limit", path.display())));
+            return Err(SnapshotError::new(format!("snapshot file: exceeds {MAX_SNAPSHOT_BYTES} byte limit")));
         }
         let file = std::fs::File::open(path)
-            .map_err(|e| SnapshotError::new(format!("cannot open {}: {e}", path.display())))?;
+            .map_err(|e| SnapshotError::new(format!("cannot open the snapshot file: {}", e.kind())))?;
         let mut buf = Vec::new();
         file.take(MAX_SNAPSHOT_BYTES as u64 + 1)
             .read_to_end(&mut buf)
-            .map_err(|e| SnapshotError::new(format!("cannot read {}: {e}", path.display())))?;
+            .map_err(|e| SnapshotError::new(format!("cannot read the snapshot file: {}", e.kind())))?;
         if buf.len() > MAX_SNAPSHOT_BYTES {
-            return Err(SnapshotError::new(format!("{}: exceeds {MAX_SNAPSHOT_BYTES} byte limit", path.display())));
+            return Err(SnapshotError::new(format!("snapshot file: exceeds {MAX_SNAPSHOT_BYTES} byte limit")));
         }
         Self::from_json(&buf)
     }

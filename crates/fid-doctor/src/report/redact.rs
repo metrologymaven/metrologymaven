@@ -17,11 +17,14 @@
 //!    with spaces is taken whole. Trailing `. , ; : ! ? ) ] }` are left outside it. A path
 //!    under the install directory (component-wise prefix; case-insensitive and `/` = `\`
 //!    only for a Windows-style install directory) with no `..` component is kept; every
-//!    other path becomes [`PLACEHOLDER_PATH`]. A redacted path then swallows more text, so
-//!    the rest of a path with spaces cannot leak: when the path opens a quoted string
-//!    (`"`, `'` or `` ` `` just before it), everything up to the closing quote or the end of
-//!    the line; otherwise every following whitespace-separated token on the same line that
-//!    holds a `/` or `\`, until a token without one or a token that starts a path itself.
+//!    other path becomes [`PLACEHOLDER_PATH`]. A redacted path then swallows more text, to
+//!    catch the rest of a path with spaces: when the path opens a quoted string (`"`, `'` or
+//!    `` ` `` just before it), everything up to the closing quote or the end of the line;
+//!    otherwise, looking ahead over the whitespace-separated tokens of the same line up to a
+//!    token that starts a path of its own, everything through the last token that holds a
+//!    `/` or `\` (over-redaction is accepted). Words of an unquoted path after its last
+//!    separator (a final name with spaces, as in `C:\Data\My Scans`) are not recognised as
+//!    part of it and can remain.
 //! 2. **Home.** Every occurrence of the home directory (case-insensitive, `/` = `\`) that is
 //!    not followed by a path character (alphanumeric, `. _ - ~`) becomes
 //!    [`PLACEHOLDER_HOME`]. After pass 1 this only happens inside kept install paths and in
@@ -61,7 +64,8 @@ pub struct Identity {
     pub hosts: Vec<String>,
     /// Absolute home directory.
     pub home: String,
-    /// Logon domains (Windows `USERDOMAIN` and `USERDNSDOMAIN`); may be empty.
+    /// Logon or DNS domains (Windows `USERDOMAIN` and `USERDNSDOMAIN`; elsewhere the domain
+    /// part of the dotted host names); may be empty.
     pub domains: Vec<String>,
 }
 
@@ -94,7 +98,8 @@ impl Identity {
     /// - Windows: user `USERNAME`; home `USERPROFILE`, else `HOMEDRIVE` + `HOMEPATH`; hosts
     ///   `COMPUTERNAME`, then `sys_hosts`, then each dotless host joined with each dotted
     ///   domain; domains `USERDOMAIN`, `USERDNSDOMAIN`.
-    /// - Unix: user `USER`, else `LOGNAME`; home `HOME`; hosts `HOSTNAME`, then `sys_hosts`.
+    /// - Unix: user `USER`, else `LOGNAME`; home `HOME`; hosts `HOSTNAME`, then `sys_hosts`;
+    ///   domains the part after the first dot of each dotted host name.
     pub fn from_lookup(
         platform: IdentityPlatform,
         env: impl Fn(&str) -> Option<OsString>,
@@ -132,6 +137,7 @@ impl Identity {
                     None => get("LOGNAME", "user")?,
                 };
                 let hosts: Vec<String> = get("HOSTNAME", "host")?.into_iter().collect();
+                // Domains are derived below from the dotted host names.
                 (home, user, hosts, Vec::new())
             }
         };
@@ -161,6 +167,16 @@ impl Identity {
         }
         if hosts.is_empty() {
             return Err(unavailable("host"));
+        }
+        let mut domains = domains;
+        if platform == IdentityPlatform::Unix {
+            for h in &hosts {
+                if let Some((_, d)) = h.split_once('.') {
+                    if !d.is_empty() && !domains.iter().any(|x| fold_str_eq(x, d)) {
+                        domains.push(d.to_string());
+                    }
+                }
+            }
         }
         Ok(Identity { user, hosts, home, domains })
     }
@@ -205,6 +221,12 @@ fn os_host_names() -> Vec<String> {
     let mut out: Vec<String> =
         ["/proc/sys/kernel/hostname", "/etc/hostname"].into_iter().filter_map(read_small).collect();
     out.extend(command_host("hostname"));
+    // The kernel's domain name, joined to each dotless host name (`hostname -f` is not used:
+    // it may query DNS, and the doctor makes no network request).
+    if let Some(d) = read_small("/proc/sys/kernel/domainname").filter(|d| d != "(none)" && !d.contains(' ')) {
+        let joined: Vec<String> = out.iter().filter(|h| !h.contains('.')).map(|h| format!("{h}.{d}")).collect();
+        out.extend(joined);
+    }
     out
 }
 
@@ -212,8 +234,8 @@ fn os_host_names() -> Vec<String> {
 
 /// Unicode simple case folding, approximated: the lowercase mapping when it is a single
 /// character, plus the simple foldings that differ from lowercase (`ς` → `σ`, `ſ` → `s`,
-/// U+0345 and U+1FBE → `ι`, `ϐ ϑ ϕ ϖ ϰ ϱ ϵ` → `β θ φ π κ ρ ε`, `ẛ` → `ṡ`). Characters whose
-/// lowercase is longer (e.g. `İ`) fold to themselves.
+/// U+0345 and U+1FBE → `ι`, `ϐ ϑ ϕ ϖ ϰ ϱ ϵ` → `β θ φ π κ ρ ε`, `ẛ` → `ṡ`), and, fail closed,
+/// Turkish `İ` → `i`. Other characters whose lowercase is longer fold to themselves.
 pub fn fold_char(c: char) -> char {
     match c {
         'ς' => 'σ',
@@ -227,6 +249,7 @@ pub fn fold_char(c: char) -> char {
         'ϱ' => 'ρ',
         'ϵ' => 'ε',
         'ẛ' => 'ṡ',
+        'İ' => 'i',
         _ => {
             let mut l = c.to_lowercase();
             match (l.next(), l.next()) {
@@ -534,26 +557,29 @@ fn redacted_end(c: &[char], end: usize, before: Option<char>) -> usize {
         }
         return j;
     }
-    let mut end = end;
+    // Look ahead over the whitespace-separated tokens of the same line, up to a token that
+    // starts a path of its own, and swallow through the last token holding a separator.
+    let mut best = end;
+    let mut j = end;
     loop {
-        let mut j = end;
         while j < c.len() && c[j].is_whitespace() && !is_line_break(c[j]) {
             j += 1;
         }
-        if j == end || j >= c.len() || abs_start(c, j) || tilde_home(c, j) {
-            return end;
+        if j >= c.len() || is_line_break(c[j]) || (j > end && (abs_start(c, j) || tilde_home(c, j))) {
+            return best;
         }
         let mut k = j;
-        while k < c.len() && !is_term(c[k]) {
+        while k < c.len() && !c[k].is_whitespace() {
             k += 1;
         }
-        if !c[j..k].iter().any(|&x| is_sep(x)) {
-            return end;
+        if c[j..k].iter().any(|&x| is_sep(x)) {
+            let mut t = k;
+            while t > j + 1 && is_trailing_punct(c[t - 1]) {
+                t -= 1;
+            }
+            best = t;
         }
-        while k > j + 1 && is_trailing_punct(c[k - 1]) {
-            k -= 1;
-        }
-        end = k;
+        j = k;
     }
 }
 
