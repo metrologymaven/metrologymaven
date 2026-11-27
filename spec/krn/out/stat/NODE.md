@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-filter]
+built_pr: 663
 satisfies: [REQ-KRN.OUT-001]
 covers: [GOM.CON.21, PCD.CON.02, SA.REL.04]
 depends_on: [KRN.OUT.POL, KRN.NUM.RED]
