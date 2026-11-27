@@ -12,12 +12,20 @@
 //! - `SCAN.POLY.SURF.STITCH`, the second half: triangles the fans of their vertices agree on,
 //!   at most two per edge, wound by the vertex normals, as one indexed mesh; and
 //!   [`reconstruct_in_memory`], PREP then FAN then STITCH (see [`stitch`]).
+//! - `SCAN.POLY.MULTI.OVLP`, the first step of multi-scan meshing: for every point of every
+//!   registered scan, the other scans that measured the same surface within an overlap
+//!   distance, with normals facing the same way (see [`multi::overlap`]).
 
 pub mod fan;
+pub mod multi;
 pub mod prep;
 pub mod stitch;
 
 pub use fan::{fans, Fan, FanStatus, EDGE_MARGIN, FLUSH, MAX_GAP, MAX_NEIGHBOURS, MIN_GAP, NORMAL_COS};
+pub use multi::overlap::{
+    detect_overlap, MatchRule, MemoryScan, OverlapMap, OverlapSets, PairCount, PointStatus, ScanOverlap, ScanPoint,
+    ScanSummary, ScanView, MAX_BITSET_SCANS, MAX_D, MIN_D, OVERLAP_NORMAL_COS,
+};
 pub use prep::{
     prepare, PolyError, PrepParams, PrepVertex, VertexSet, VertexStatus, CLAMP_FACTOR, DEFAULT_EDGE_ANGLE_RAD,
     MAX_CELL_INDEX, MAX_H, MAX_THREADS, MIN_NEIGHBOURS, PLANE_RANK_TOL,

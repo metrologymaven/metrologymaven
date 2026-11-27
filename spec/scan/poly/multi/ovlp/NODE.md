@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-scan-poly]
 satisfies: [REQ-SCAN.POLY.MULTI-002, REQ-SCAN.POLY.MULTI-004]
 covers: []
 depends_on: [GEO.INDEX.KDTREE, GEO.OOC.QUERY, GEO.TYPES.POINTS]
@@ -67,7 +68,11 @@ Marks, for every point of every registered scan, which other scans have measured
 
 ## Open questions
 
-- None.
+- **Built (fid-scan-poly `multi::overlap`), choices made at the build:** the API is `detect_overlap(scans: &[&dyn ScanView], d) -> Result<OverlapMap, PolyError>`. `ScanView` is a kernel trait (frame, point count, point position and optional normal, GEO.INDEX-contract radius query) and `MemoryScan` is its in-memory implementation over a GEO.TYPES `PointCloud` and SCAN.CLOUD.NORM validity flags. This kernel crate cannot depend on GEO.OOC (model layer), so the chunked view used for AC-3 is a test adapter over `ChunkedIndex` and the chunk cache in `crates/fid-geo-ooc/tests/scan_overlap.rs`. A production chunked `ScanView` belongs to `SCAN.POLY.MULTI.CMD` (or GEO.OOC). GEO.OOC has no point-attribute lookup by original index, and the test adapter keeps an in-memory index-to-chunk map, so bounded memory for chunked attribute access is open for the GEO.OOC owner.
+- "Angle below 60 degrees" is pinned as the normal dot product strictly above 0.5 (`OVERLAP_NORMAL_COS`), so exactly 60 degrees does not count. SCAN.POLY.SURF.FAN uses `>= 0.5` ("within 60 degrees"). A neighbour without a valid normal does not count for a point that has one (REQ-001 needs the neighbour's normal); a point without one counts any neighbour within d (REQ-002). "Within d" is the GEO.INDEX pinned `dist2 <= d*d`, so a neighbour at exactly d counts.
+- Fail-closed additions: d must be finite in [2^-100, 2^100] m; at least two scans; all scans in one frame (`scans.frame`); every position and present normal is validated before any query; a view hit beyond d or out of range is refused as `scan.poly.inconsistent`; a view's own storage error is passed through as `scan.poly.view` with the view's code (a new additive `PolyError::View` variant). Every point carries a status (`overlapping`, `normals_incompatible`, `nothing_within_d`) and the rule that applied, so an empty set always has a reason, and an empty scan is reported with 0 points.
+- Pair counts are directed (points of scan i that scan j overlaps; overlap is not symmetric) and only non-zero pairs are listed (`pair_count` gives 0 for the rest). The detection runs on the calling thread, so REQ-003's thread-count independence holds trivially; a threaded variant is a possible follow-up.
+- AC-2's d is not stated; `thin_wall_two_scans` uses d = 1.5 mm, larger than the 1 mm wall, so only the normals keep the faces apart (at d = 0.3 mm the faces would be too far apart to test anything).
 
 ## Children
 

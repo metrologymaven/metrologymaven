@@ -1,6 +1,6 @@
 [package]
 name = "fid-scan-poly"
-description = "Metrology Maven cloud polygonization kernel: vertex-set preparation, tangent-plane Delaunay fans and their stitching into a mesh (SCAN.POLY.SURF.PREP, FAN, STITCH)"
+description = "Metrology Maven cloud polygonization kernel: vertex-set preparation, tangent-plane Delaunay fans and their stitching into a mesh, and overlap detection between registered scans (SCAN.POLY.SURF.PREP, FAN, STITCH; SCAN.POLY.MULTI.OVLP)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,6 +14,7 @@ repository.workspace = true
 # distance) and fid-num (the KRN.NUM.LA.EIG symmetric eigensolver, `sqrt`, `cos` and the
 # total-order maximum), and fid-fit for the exact-sign orient2d/incircle predicates of
 # KRN.MZ.VOR (SCAN.POLY.SURF.FAN; the only implementation until KRN.NUM.PRED exists).
+# SCAN.POLY.MULTI.OVLP adds no dependency (fid-geo-index radius queries, GEO.TYPES clouds).
 [dependencies]
 fid-fit = { path = "../fid-fit" }
 fid-geo-index = { path = "../fid-geo-index" }

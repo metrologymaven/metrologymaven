@@ -227,6 +227,12 @@ pub enum PolyError {
     WorkerFailed,
     /// An internal invariant does not hold (unreachable for a validated cloud).
     Inconsistent,
+    /// A scan view's own storage or index failed (SCAN.POLY.MULTI.OVLP); `code` is the stable
+    /// code of the view's error, so the cause is reported, not replaced.
+    View {
+        /// The view's error code.
+        code: &'static str,
+    },
     /// Stitching kept no triangle (SCAN.POLY.SURF.STITCH).
     EmptyMesh {
         /// Distinct candidate triangles over all fans (each was rejected).
@@ -247,6 +253,7 @@ impl PolyError {
             PolyError::Allocation => "scan.poly.allocation",
             PolyError::WorkerFailed => "scan.poly.worker_failed",
             PolyError::Inconsistent => "scan.poly.inconsistent",
+            PolyError::View { .. } => "scan.poly.view",
             PolyError::EmptyMesh { .. } => "scan.poly.empty_mesh",
         }
     }
@@ -259,6 +266,7 @@ impl fmt::Display for PolyError {
             PolyError::OutOfRange { index } => write!(f, "{}: cell of point {index}", self.code()),
             PolyError::Index(e) => write!(f, "{}: {e}", self.code()),
             PolyError::Numeric(e) => write!(f, "{}: {e}", self.code()),
+            PolyError::View { code } => write!(f, "{}: {code}", self.code()),
             PolyError::EmptyMesh { candidates, ok_fans } => {
                 write!(f, "{}: no triangle kept ({candidates} candidates, {ok_fans} ok fans)", self.code())
             }

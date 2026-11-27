@@ -28,6 +28,9 @@ default = ["store"]
 store = ["dep:fid-store"]
 
 [dev-dependencies]
+# Test-only: SCAN.POLY.MULTI.OVLP AC-3 (tests/scan_overlap.rs) runs the kernel overlap detection
+# on chunked clouds; the kernel crate cannot depend on this model crate, so the test is here.
+fid-scan-poly = { path = "../fid-scan-poly" }
 # Test-only: reads the JSON fixtures (fixtures/geo/ooc/*.json).
 fid-canon = { path = "../fid-canon" }
 # Test-only: the seeded Philox generator that regenerates fixture cloud_5e6 (KRN.NUM.RNG).
