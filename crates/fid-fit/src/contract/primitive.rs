@@ -123,15 +123,18 @@ impl Primitive {
 
 impl Method {
     /// Whether the method is defined for the primitive (pinned table): least squares for
-    /// every primitive; minimum zone for every primitive except `point`; maximum inscribed
-    /// and minimum circumscribed for `circle2`, `circle3`, `sphere` and `cylinder`;
+    /// every primitive; minimum zone for every primitive except `point`; maximum inscribed for
+    /// `circle2`, `sphere` and `cylinder` (`mic_tr::MIC_DEFINED`, spec node `KRN.ENV.MIC.TR`;
+    /// a 3D circle is projected to `circle2` by the caller); minimum circumscribed for
+    /// `circle2`, `circle3`, `sphere` and `cylinder`;
     /// tangential for `line2`, `plane` and `cylinder` (the primitives of
     /// `tan_rock::DEFINED_PAIRS`, spec node `KRN.ENV.TAN.ROCK`; a 3D line has no material side).
     pub const fn defined_for(self, p: Primitive) -> bool {
         match self {
             Method::LeastSquares => true,
             Method::MinimumZone => !matches!(p, Primitive::Point),
-            Method::MaximumInscribed | Method::MinimumCircumscribed => {
+            Method::MaximumInscribed => matches!(p, Primitive::Circle2 | Primitive::Sphere | Primitive::Cylinder),
+            Method::MinimumCircumscribed => {
                 matches!(p, Primitive::Circle2 | Primitive::Circle3 | Primitive::Sphere | Primitive::Cylinder)
             }
             Method::Tangential => matches!(p, Primitive::Line2 | Primitive::Plane | Primitive::Cylinder),

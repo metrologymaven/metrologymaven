@@ -74,6 +74,11 @@ pub enum FitError {
     SideViolation { index: usize, violation: f64 },
     /// A parameter is out of range; `field` names it (for example `thresholds.rank_tol`).
     InvalidParams { field: &'static str },
+    /// A maximum inscribed fit's final centre or axis point lies on, within `boundary_tol` of,
+    /// or beyond its trust region's boundary (`mic_tr`, KRN.ENV.MIC.TR): the envelope is not
+    /// bounded by the data, so none is returned. `boundary_distance_m` is the signed distance
+    /// to the nearest facet plane (metres, negative outside). Code `unbounded_envelope`.
+    UnboundedEnvelope { boundary_distance_m: f64 },
     /// A direction vector is zero or too small to normalise (norm below `2^-1022`).
     InvalidDirection,
     /// An ill-posed cone (`ls_cone`, KRN.LSQ.AXIS.CONE): its fitted `half_angle` (radians) is
@@ -129,6 +134,7 @@ impl FitError {
             FitError::NotCertifiable { .. } => "not_certifiable",
             FitError::SideViolation { .. } => "side_violation",
             FitError::InvalidParams { .. } => "invalid_params",
+            FitError::UnboundedEnvelope { .. } => "unbounded_envelope",
             FitError::InvalidDirection => "invalid_direction",
             FitError::ImplausibleFit { .. } => "implausible_fit",
             FitError::FlaggedFit { .. } => "flagged_fit",
@@ -192,6 +198,10 @@ impl fmt::Display for FitError {
                 write!(f, "fit: point {index} lies {violation:e} m on the material-free side, beyond side_tol")
             }
             FitError::InvalidParams { field } => write!(f, "fit: invalid parameter {field}"),
+            FitError::UnboundedEnvelope { boundary_distance_m } => write!(
+                f,
+                "fit: unbounded envelope (centre {boundary_distance_m:e} m from the trust-region boundary)"
+            ),
             FitError::InvalidDirection => write!(f, "fit: zero or too small direction vector"),
             FitError::ImplausibleFit { rms, bound } => {
                 write!(f, "fit: residual RMS {rms:e} m is not below the bounding plane's {bound:e} m (not the global optimum, or none exists)")

@@ -9,6 +9,8 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-fit]
+built_pr: 664
 satisfies: [REQ-KRN.ENV.MIC-002, REQ-KRN.ENV.MIC-003]
 covers: []
 depends_on: [KRN.LSQ.TRAIT, KRN.NUM.FN, KRN.NUM.RED]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-27
 ---
 
 # KRN.ENV.MIC.TR: Trust region, unbounded-envelope error and MIC defined pairs
@@ -66,6 +68,11 @@ The safeguard that makes maximum inscribed fits safe on sparse or partial data. 
 ## Open questions
 
 - The default `fraction` for callers (for example 0.2 [unverified]) must be tuned on the ORS-SIZE partial-arc cases; the kernel never supplies it implicitly.
+- Built in `fid-fit` module `mic_tr`. The method is `Method::MaximumInscribed`, whose slug in the shared fit contract is `mi` (not `mic`), so AC-4's error reads `method_undefined{primitive: slot, method: mi}`. Primitive slugs are the contract's (`circle2`, not `circle2d`).
+- One table (REQ-004): the build made a minimal edit to `KRN.LSQ.TRAIT` code. `Method::defined_for` no longer admits `circle3` for maximum inscribed, so it agrees with `mic_tr::MIC_DEFINED` (a caller projects to `circle2`). Minimum circumscribed keeps `circle3`.
+- `boundary_tol` has a rounding floor, `16 * EPSILON * (max |centre_i| + radius_m)`; a smaller tolerance, 0 included, is refused as `InvalidParams`. Without the floor, a point on the boundary of a far-from-origin region could pass the check by rounding. The factor 16 is a margin over the few-ulp slack error [unverified as a tight bound].
+- The 3D polyhedron is the 26-facet one with the axis, face-diagonal and body-diagonal normals; its inradius is about 0.886 of the region radius (the 2D 32-gon's is about 0.995). A finer polyhedron would change every sphere row, so it would need a new fixture version.
+- The cylinder's rows are the 32-gon in the plane normal to the least-squares axis, a prism along that axis. Whether `KRN.ENV.MIC.CYL` needs rows normal to the current axis at each step (as its Scope says) is for that leaf; it can build a region per step from a feature with that axis.
 
 ## Children
 
