@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-stats]
+built_pr: 661
 satisfies: [REQ-RPT.STATS.TREND-003]
 covers: []
 depends_on: [KRN.NUM]
@@ -84,6 +86,7 @@ The pure kernel function that turns an ordered list of values and a named binnin
 ## Open questions
 
 - The parent asked for a default binning rule; this leaf chooses `sturges@1` because it needs no quantile definition. A Freedman-Diaconis rule (`fd@1`) needs a quantile definition (for example Hyndman and Fan type 7 [unverified as the usual default]) and can be added as a later minor version.
+- Built in `fid-stats` (module `hist`). Choices made at build time, to confirm or reword in REQ-003/006: (1) `fid-num` has no floor function, so `⌊t⌋` is computed exactly by integer truncation for `|t| < 2^52`, and a larger `|t|` (or a non-finite one) is refused as `stats.bad_binning{anchor_too_far}`. (2) When `(min − a)/w` rounds up to an integer so that `a + j0·w > min` (for example a = 0, w = 0.1, min = 1.7), the literal floor would leave `min` outside every bin; the kernel steps `j0` down by one. When the quotient rounds down instead, the first bin can be empty, as REQ-003 is written. (3) Edges that are not strictly increasing because `f64` cannot resolve the width at the data's magnitude (min = 1e16, max = 1e16 + 2, k = 4) are refused as `edges_not_increasing`, and so are a range or edge that overflows (`range_not_finite`, `edge_not_finite`), a NaN or infinite anchor (`anchor_not_finite`) and `fixed_count` with k = 0 (`zero_bins`). (4) `INSUFFICIENT_DATA` (n = 0) is the error `stats.insufficient_data`, the same code `RPT.STATS.SPC.FREEZE` uses. (5) Rule parameters are checked before the data, so a bad rule is refused even for an empty data set. (6) The 50 ms per 1 M values performance budget has not been measured.
 
 ## Children
 

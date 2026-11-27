@@ -50,6 +50,8 @@ use core::fmt;
 
 use fid_num::f::total_min;
 
+use crate::hist::BinningReason;
+
 /// The algorithm ID every [`IndexPair`] carries (REQ-RPT.STATS.CAP.INDEX-006).
 pub const CAP_INDEX_ALGORITHM_ID: &str = "stats.cap.index@1.0.0";
 
@@ -250,14 +252,32 @@ pub enum StatsError {
         /// The subgroup size asked for.
         n: u8,
     },
+    /// `stats.bad_binning{reason}`: the histogram rule cannot bin these values, and no bins
+    /// are returned (REQ-RPT.STATS.TREND.HIST-006).
+    BadBinning {
+        /// Why.
+        reason: BinningReason,
+    },
+    /// `stats.non_finite{index}`: a value is NaN or infinite.
+    NonFinite {
+        /// The position of the first such value in the input.
+        index: usize,
+    },
+    /// `stats.insufficient_data`: there are no values to work on (the `INSUFFICIENT_DATA` of
+    /// REQ-RPT.STATS.TREND.HIST-006).
+    InsufficientData,
 }
 
 impl StatsError {
-    /// The error code: `stats.bad_capability_input` or `stats.subgroup_size_unsupported`.
+    /// The error code: `stats.bad_capability_input`, `stats.subgroup_size_unsupported`,
+    /// `stats.bad_binning`, `stats.non_finite` or `stats.insufficient_data`.
     pub fn code(self) -> &'static str {
         match self {
             StatsError::BadCapabilityInput { .. } => "stats.bad_capability_input",
             StatsError::SubgroupSizeUnsupported { .. } => "stats.subgroup_size_unsupported",
+            StatsError::BadBinning { .. } => "stats.bad_binning",
+            StatsError::NonFinite { .. } => "stats.non_finite",
+            StatsError::InsufficientData => "stats.insufficient_data",
         }
     }
 }
@@ -267,6 +287,9 @@ impl fmt::Display for StatsError {
         match self {
             StatsError::BadCapabilityInput { reason } => write!(f, "{}: {}", self.code(), reason.as_str()),
             StatsError::SubgroupSizeUnsupported { n } => write!(f, "{}: n = {n}", self.code()),
+            StatsError::BadBinning { reason } => write!(f, "{}: {}", self.code(), reason.as_str()),
+            StatsError::NonFinite { index } => write!(f, "{}: index {index}", self.code()),
+            StatsError::InsufficientData => f.write_str(self.code()),
         }
     }
 }
