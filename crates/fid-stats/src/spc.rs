@@ -100,16 +100,21 @@ pub enum ReviewStatus {
     /// No expert has checked the row against a chosen source. Results computed from it carry
     /// this status.
     Unverified,
-    /// An expert has reviewed the row.
+    /// An expert has reviewed the row. Only data shipped with the crate can carry this status.
     ExpertReviewed,
+    /// A loaded run-rule-set file claims a review (`EXPERT_REVIEWED` or `CLAIMED_BY_FILE` in the
+    /// file). The claim is the file's own and is not verified, so it is kept apart from
+    /// [`ReviewStatus::ExpertReviewed`] (D-045).
+    ClaimedByFile,
 }
 
 impl ReviewStatus {
-    /// `"UNVERIFIED"` or `"EXPERT_REVIEWED"`.
+    /// `"UNVERIFIED"`, `"EXPERT_REVIEWED"` or `"CLAIMED_BY_FILE"`.
     pub fn as_str(self) -> &'static str {
         match self {
             ReviewStatus::Unverified => "UNVERIFIED",
             ReviewStatus::ExpertReviewed => "EXPERT_REVIEWED",
+            ReviewStatus::ClaimedByFile => "CLAIMED_BY_FILE",
         }
     }
 }

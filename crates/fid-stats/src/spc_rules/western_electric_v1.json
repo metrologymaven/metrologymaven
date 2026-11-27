@@ -1,0 +1,1 @@
+{"id":"western_electric","review":"UNVERIFIED","rules":[{"id":"1","primitive":"BEYOND","z":3},{"id":"2","k":2,"m":3,"primitive":"K_OF_M_BEYOND","z":2},{"id":"3","k":4,"m":5,"primitive":"K_OF_M_BEYOND","z":1},{"id":"4","len":8,"primitive":"RUN_SAME_SIDE"}],"schema":"fid.stats.ruleset/1","version":1}

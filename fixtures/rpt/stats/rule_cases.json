@@ -1,0 +1,1771 @@
+{
+ "fixture": "RPT.STATS.SPC.RULES run-rule cases",
+ "licence": "CC-BY-4.0",
+ "generator": "fixtures/rpt/stats/make_rule_cases.py",
+ "eval_cases": [
+  {
+   "id": "beyond_hit",
+   "note": "AC-1",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "3ff0000000000000",
+    "400c000000000000",
+    "0000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [
+     [
+      2,
+      "r",
+      2,
+      2
+     ]
+    ],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      1,
+      "4008000000000000",
+      "c008000000000000"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "beyond_miss",
+   "note": "AC-1/AC-2: exactly at UCL and LCL",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000",
+    "4007333333333333"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      0,
+      "4008000000000000",
+      "c008000000000000"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "kofm_hit",
+   "note": "AC-1",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "4004000000000000",
+    "0000000000000000",
+    "4000cccccccccccd",
+    "0000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"k\":2,\"m\":3,\"primitive\":\"K_OF_M_BEYOND\",\"z\":2}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [
+     [
+      3,
+      "r",
+      1,
+      3
+     ]
+    ],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      1,
+      "4000000000000000",
+      "c000000000000000"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "kofm_miss",
+   "note": "AC-1: the two points span 4",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "4004000000000000",
+    "0000000000000000",
+    "0000000000000000",
+    "4000cccccccccccd"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"k\":2,\"m\":3,\"primitive\":\"K_OF_M_BEYOND\",\"z\":2}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      0,
+      "4000000000000000",
+      "c000000000000000"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "kofm_opposite_sides",
+   "note": "same side required",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "4004000000000000",
+    "c004000000000000",
+    "0000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"k\":2,\"m\":3,\"primitive\":\"K_OF_M_BEYOND\",\"z\":2}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      0,
+      "4000000000000000",
+      "c000000000000000"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "kofm_start",
+   "note": "fewer than m points at the start",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "c004000000000000",
+    "c00199999999999a",
+    "0000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"k\":2,\"m\":3,\"primitive\":\"K_OF_M_BEYOND\",\"z\":2}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [
+     [
+      1,
+      "r",
+      0,
+      1
+     ]
+    ],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      1,
+      "4000000000000000",
+      "c000000000000000"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "same_side_hit",
+   "note": "AC-1",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "bff0000000000000",
+    "3ff0000000000000",
+    "3fe0000000000000",
+    "4000000000000000",
+    "3fb999999999999a",
+    "bff0000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":4,\"primitive\":\"RUN_SAME_SIDE\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [
+     [
+      4,
+      "r",
+      1,
+      4
+     ]
+    ],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      1,
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "id": "same_side_miss",
+   "note": "AC-1",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "bff0000000000000",
+    "3ff0000000000000",
+    "3fe0000000000000",
+    "4000000000000000",
+    "bfb999999999999a"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":4,\"primitive\":\"RUN_SAME_SIDE\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      0,
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "id": "trend_hit",
+   "note": "AC-1",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "bff0000000000000",
+    "bfe0000000000000",
+    "0000000000000000",
+    "3fe0000000000000",
+    "3fc999999999999a"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":4,\"primitive\":\"TREND\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [
+     [
+      4,
+      "r",
+      1,
+      4
+     ]
+    ],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      1,
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "id": "trend_miss",
+   "note": "AC-1",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "bff0000000000000",
+    "bfe0000000000000",
+    "0000000000000000",
+    "bfc999999999999a"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":4,\"primitive\":\"TREND\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      0,
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "id": "alternating_hit",
+   "note": "AC-1",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "3ff0000000000000",
+    "0000000000000000",
+    "3ff0000000000000",
+    "0000000000000000",
+    "bff0000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":5,\"primitive\":\"ALTERNATING\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [
+     [
+      4,
+      "r",
+      0,
+      4
+     ]
+    ],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      1,
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "id": "alternating_miss",
+   "note": "AC-1",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "3ff0000000000000",
+    "0000000000000000",
+    "3ff0000000000000",
+    "4000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":5,\"primitive\":\"ALTERNATING\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      0,
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "id": "within_hit",
+   "note": "AC-1/AC-2: +-1 exactly is within",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "4000000000000000",
+    "3fe0000000000000",
+    "bfe0000000000000",
+    "3ff0000000000000",
+    "bff0000000000000",
+    "3ff8000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":4,\"primitive\":\"RUN_WITHIN\",\"z\":1}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [
+     [
+      4,
+      "r",
+      1,
+      4
+     ]
+    ],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      1,
+      "3ff0000000000000",
+      "bff0000000000000"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "within_miss",
+   "note": "AC-1",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "4000000000000000",
+    "3fe0000000000000",
+    "bfe0000000000000",
+    "3ff0000000000000",
+    "3ff028f5c28f5c29"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":4,\"primitive\":\"RUN_WITHIN\",\"z\":1}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      0,
+      "3ff0000000000000",
+      "bff0000000000000"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "outside_hit",
+   "note": "AC-1",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "3ff8000000000000",
+    "c000000000000000",
+    "3ff199999999999a",
+    "0000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":3,\"primitive\":\"RUN_OUTSIDE\",\"z\":1}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [
+     [
+      3,
+      "r",
+      1,
+      3
+     ]
+    ],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      1,
+      "3ff0000000000000",
+      "bff0000000000000"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "outside_miss",
+   "note": "AC-1/AC-2: 1 exactly is not beyond",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "3ff8000000000000",
+    "c000000000000000",
+    "3ff0000000000000",
+    "0000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":3,\"primitive\":\"RUN_OUTSIDE\",\"z\":1}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      0,
+      "3ff0000000000000",
+      "bff0000000000000"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "centre_breaks_run",
+   "note": "AC-2",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "3ff0000000000000",
+    "3ff0000000000000",
+    "0000000000000000",
+    "3ff0000000000000",
+    "3ff0000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":3,\"primitive\":\"RUN_SAME_SIDE\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      0,
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "id": "neg_zero_on_centre",
+   "note": "AC-2: -0.0 sits on a +0.0 centre",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "3ff0000000000000",
+    "3ff0000000000000",
+    "8000000000000000",
+    "3ff0000000000000",
+    "3ff0000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":3,\"primitive\":\"RUN_SAME_SIDE\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      0,
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "id": "at_z_not_beyond",
+   "note": "AC-2",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "4000000000000000",
+    "c000000000000000",
+    "4000000000000001",
+    "c000000000000001"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":2}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [
+     [
+      2,
+      "r",
+      2,
+      2
+     ],
+     [
+      3,
+      "r",
+      3,
+      3
+     ]
+    ],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      2,
+      "4000000000000000",
+      "c000000000000000"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "kofm_at_z",
+   "note": "AC-2",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "4000000000000000",
+    "4000000000000000",
+    "4000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"k\":2,\"m\":3,\"primitive\":\"K_OF_M_BEYOND\",\"z\":2}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      0,
+      "4000000000000000",
+      "c000000000000000"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "equal_breaks_trend",
+   "note": "AC-2",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "3ff0000000000000",
+    "3ff0000000000000",
+    "4000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":3,\"primitive\":\"TREND\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      0,
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "id": "equal_breaks_alternation",
+   "note": "AC-2",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "3ff0000000000000",
+    "3ff0000000000000",
+    "0000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":3,\"primitive\":\"ALTERNATING\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      0,
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "id": "run_continues",
+   "note": "a run of 5 fires at the 4th and 5th point",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "3ff0000000000000",
+    "3ff0000000000000",
+    "3ff0000000000000",
+    "3ff0000000000000",
+    "3ff0000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":4,\"primitive\":\"RUN_SAME_SIDE\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [
+     [
+      3,
+      "r",
+      0,
+      3
+     ],
+     [
+      4,
+      "r",
+      1,
+      4
+     ]
+    ],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      2,
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "id": "r_chart_beyond3",
+   "note": "AC-3: only below 0 or above UCL",
+   "lines": [
+    "4000000000000000",
+    "4020000000000000",
+    "0000000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "4020000000000000",
+    "3fe0000000000000",
+    "4021000000000000",
+    "be112e0be826d695",
+    "4000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [
+     [
+      3,
+      "r",
+      3,
+      3
+     ],
+     [
+      4,
+      "r",
+      4,
+      4
+     ]
+    ],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      2,
+      "4020000000000000",
+      "0000000000000000"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "r_chart_beyond2",
+   "note": "AC-3: lower zone 2 - 2*(2/3)",
+   "lines": [
+    "4000000000000000",
+    "4020000000000000",
+    "0000000000000000"
+   ],
+   "points": [
+    "3fe3333333333333",
+    "3fe6666666666666",
+    "4018000000000000",
+    "4018666666666666"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":2}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [
+     [
+      0,
+      "r",
+      0,
+      0
+     ],
+     [
+      3,
+      "r",
+      3,
+      3
+     ]
+    ],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      2,
+      "4018000000000000",
+      "3fe5555555555556"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "order_by_index_then_rule",
+   "note": "REQ-005/006",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "400c000000000000",
+    "400ccccccccccccd"
+   ],
+   "ruleset": "{\"id\":\"multi\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"b\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"a\",\"k\":2,\"m\":2,\"primitive\":\"K_OF_M_BEYOND\",\"z\":2}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [
+     [
+      0,
+      "b",
+      0,
+      0
+     ],
+     [
+      1,
+      "b",
+      1,
+      1
+     ],
+     [
+      1,
+      "a",
+      0,
+      1
+     ]
+    ],
+    "rules": [
+     [
+      "b",
+      "evaluated",
+      2,
+      "4008000000000000",
+      "c008000000000000"
+     ],
+     [
+      "a",
+      "evaluated",
+      1,
+      "4000000000000000",
+      "c000000000000000"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "too_few_points",
+   "note": "the rule cannot fire on 5 points",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "3ff0000000000000",
+    "3ff0000000000000",
+    "3ff0000000000000",
+    "3ff0000000000000",
+    "3ff0000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"len\":9,\"primitive\":\"RUN_SAME_SIDE\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [],
+    "rules": [
+     [
+      "r",
+      "too_few_points:9",
+      0,
+      null,
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "id": "ucl_equals_centre",
+   "note": "lines",
+   "lines": [
+    "0000000000000000",
+    "0000000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "error": "stats.bad_lines:ucl_not_above_centre"
+   }
+  },
+  {
+   "id": "lcl_equals_centre",
+   "note": "lines",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "0000000000000000"
+   ],
+   "points": [
+    "0000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "error": "stats.bad_lines:lcl_not_below_centre"
+   }
+  },
+  {
+   "id": "nan_centre",
+   "note": "lines",
+   "lines": [
+    "7ff8000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "error": "stats.bad_lines:non_finite_centre"
+   }
+  },
+  {
+   "id": "inf_ucl",
+   "note": "lines",
+   "lines": [
+    "0000000000000000",
+    "7ff0000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "error": "stats.bad_lines:non_finite_ucl"
+   }
+  },
+  {
+   "id": "nan_lcl",
+   "note": "lines",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "7ff8000000000000"
+   ],
+   "points": [
+    "0000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "error": "stats.bad_lines:non_finite_lcl"
+   }
+  },
+  {
+   "id": "span_overflow",
+   "note": "lines",
+   "lines": [
+    "ffe1ccf385ebc8a0",
+    "7fee42d130773b76",
+    "ffeab36d48e1acf0"
+   ],
+   "points": [
+    "0000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "error": "stats.bad_lines:span_not_finite"
+   }
+  },
+  {
+   "id": "sigma_floor",
+   "note": "lines: half-width 1e-9 at 1e6",
+   "lines": [
+    "412e848000000000",
+    "412e848000000009",
+    "412e847e00000000"
+   ],
+   "points": [
+    "412e848000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "error": "stats.bad_lines:sigma_below_resolution"
+   }
+  },
+  {
+   "id": "lines_before_points",
+   "note": "bad lines and no points",
+   "lines": [
+    "0000000000000000",
+    "0000000000000000",
+    "c008000000000000"
+   ],
+   "points": [],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "error": "stats.bad_lines:ucl_not_above_centre"
+   }
+  },
+  {
+   "id": "no_points",
+   "note": "points",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "error": "stats.insufficient_data"
+   }
+  },
+  {
+   "id": "nan_point",
+   "note": "points",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "3ff0000000000000",
+    "7ff8000000000000",
+    "7ff0000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "error": "stats.non_finite:2"
+   }
+  },
+  {
+   "id": "inf_point",
+   "note": "points",
+   "lines": [
+    "0000000000000000",
+    "4008000000000000",
+    "c008000000000000"
+   ],
+   "points": [
+    "0000000000000000",
+    "fff0000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "error": "stats.non_finite:1"
+   }
+  },
+  {
+   "id": "zone_underflow",
+   "note": "z sigma rounds onto the centre",
+   "lines": [
+    "0000000000000000",
+    "01a56e1fc2f8f359",
+    "81a56e1fc2f8f359"
+   ],
+   "points": [
+    "0000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":0.000000000000000000000000000001}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "error": "stats.bad_lines:zone_below_resolution"
+   }
+  },
+  {
+   "id": "zone_floor",
+   "note": "z * sigma of 2e-10 at 1e6 is 2 ulp wide, below the 16 eps floor",
+   "lines": [
+    "412e848000000000",
+    "412e848600000000",
+    "412e847a00000000"
+   ],
+   "points": [
+    "412e848000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":0.0000000002}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "error": "stats.bad_lines:zone_below_resolution"
+   }
+  },
+  {
+   "id": "zone_floor_ok",
+   "note": "z * sigma of 1e-8 at 1e6 is above the floor",
+   "lines": [
+    "412e848000000000",
+    "412e848600000000",
+    "412e847a00000000"
+   ],
+   "points": [
+    "412e848000000000",
+    "412e8480000000ac"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":0.00000001}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [
+     [
+      1,
+      "r",
+      1,
+      1
+     ]
+    ],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      1,
+      "412e848000000056",
+      "412e847fffffffaa"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "threshold_overflow",
+   "note": "1000 sigma overflows",
+   "lines": [
+    "0000000000000000",
+    "7fe1ccf385ebc8a0",
+    "ffe1ccf385ebc8a0"
+   ],
+   "points": [
+    "0000000000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":1000}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "error": "stats.bad_lines:threshold_not_finite"
+   }
+  }
+ ],
+ "eval_digest": "9ad63eddad446b76d5ca9dd8006958eda3183c668730e8b3b4f1919a47de14c8",
+ "load_cases": [
+  {
+   "id": "magic",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"MAGIC\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "unknown_primitive"
+  },
+  {
+   "id": "valid",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "ok",
+   "canonical": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}"
+  },
+  {
+   "id": "pretty",
+   "text": "{\n  \"schema\": \"fid.stats.ruleset/1\",\n  \"id\": \"pretty\",\n  \"version\": 2,\n  \"review\": \"UNVERIFIED\",\n  \"rules\": [\n    {\"primitive\": \"K_OF_M_BEYOND\", \"id\": \"k\", \"k\": 2, \"m\": 3, \"z\": 2.0},\n    {\"id\": \"w\", \"primitive\": \"RUN_WITHIN\", \"len\": 15, \"z\": 1e0},\n    {\"id\": \"h\", \"primitive\": \"BEYOND\", \"z\": 2.5}\n  ]\n}\n",
+   "expect": "ok",
+   "canonical": "{\"id\":\"pretty\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"k\",\"k\":2,\"m\":3,\"primitive\":\"K_OF_M_BEYOND\",\"z\":2},{\"id\":\"w\",\"len\":15,\"primitive\":\"RUN_WITHIN\",\"z\":1},{\"id\":\"h\",\"primitive\":\"BEYOND\",\"z\":2.5}],\"schema\":\"fid.stats.ruleset/1\",\"version\":2}"
+  },
+  {
+   "id": "z_max",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":1000}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "ok",
+   "canonical": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":1000}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}"
+  },
+  {
+   "id": "reviewed_claim",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"version\":1,\"review\":\"EXPERT_REVIEWED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "ok",
+   "canonical": "{\"id\":\"x\",\"review\":\"CLAIMED_BY_FILE\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}"
+  },
+  {
+   "id": "claimed_by_file",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"version\":1,\"review\":\"CLAIMED_BY_FILE\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "ok",
+   "canonical": "{\"id\":\"x\",\"review\":\"CLAIMED_BY_FILE\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}"
+  },
+  {
+   "id": "max_rules",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"version\":1,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r0\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r1\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r2\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r3\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r4\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r5\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r6\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r7\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r8\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r9\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r10\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r11\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r12\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r13\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r14\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r15\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r16\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r17\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r18\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r19\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r20\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r21\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r22\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r23\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r24\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r25\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r26\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r27\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r28\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r29\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r30\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r31\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r32\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r33\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r34\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r35\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r36\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r37\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r38\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r39\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r40\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r41\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r42\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r43\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r44\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r45\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r46\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r47\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r48\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r49\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r50\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r51\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r52\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r53\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r54\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r55\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r56\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r57\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r58\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r59\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r60\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r61\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r62\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r63\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "ok",
+   "canonical": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r0\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r1\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r2\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r3\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r4\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r5\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r6\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r7\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r8\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r9\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r10\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r11\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r12\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r13\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r14\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r15\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r16\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r17\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r18\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r19\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r20\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r21\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r22\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r23\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r24\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r25\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r26\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r27\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r28\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r29\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r30\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r31\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r32\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r33\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r34\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r35\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r36\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r37\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r38\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r39\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r40\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r41\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r42\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r43\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r44\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r45\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r46\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r47\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r48\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r49\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r50\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r51\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r52\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r53\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r54\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r55\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r56\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r57\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r58\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r59\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r60\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r61\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r62\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r63\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}"
+  },
+  {
+   "id": "max_size",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "ok",
+   "pad_to": 65536,
+   "canonical": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}"
+  },
+  {
+   "id": "too_large",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "too_large",
+   "pad_to": 65537
+  },
+  {
+   "id": "empty",
+   "text": "",
+   "expect": "malformed"
+  },
+  {
+   "id": "open_brace",
+   "text": "{",
+   "expect": "malformed"
+  },
+  {
+   "id": "trailing",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}x",
+   "expect": "malformed"
+  },
+  {
+   "id": "two_values",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "malformed"
+  },
+  {
+   "id": "nan_literal",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":NaN}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "malformed"
+  },
+  {
+   "id": "infinity_literal",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":Infinity}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "malformed"
+  },
+  {
+   "id": "escape",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"a\\u0062\",\"version\":1,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "malformed"
+  },
+  {
+   "id": "control_char",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"a\tb\",\"version\":1,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "malformed"
+  },
+  {
+   "id": "leading_zero",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":03}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "malformed"
+  },
+  {
+   "id": "bare_dot",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3.}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "malformed"
+  },
+  {
+   "id": "plus_sign",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":+3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "malformed"
+  },
+  {
+   "id": "single_quotes",
+   "text": "{'id':'x'}",
+   "expect": "malformed"
+  },
+  {
+   "id": "trailing_comma",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3},],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "malformed"
+  },
+  {
+   "id": "too_deep",
+   "text": "{\"id\":[[[[[[[[[]]]]]]]]]}",
+   "expect": "too_deep"
+  },
+  {
+   "id": "depth_ok_then_dup",
+   "text": "{\"a\":[[[[[[[]]]]]]],\"a\":1}",
+   "expect": "duplicate_key"
+  },
+  {
+   "id": "dup_root_key",
+   "text": "{\"id\":\"x\",\"id\":\"y\"}",
+   "expect": "duplicate_key"
+  },
+  {
+   "id": "dup_rule_key",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3,\"z\":2}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "duplicate_key"
+  },
+  {
+   "id": "dup_before_syntax_error",
+   "text": "{\"r\":{\"a\":1,\"a\":2},",
+   "expect": "duplicate_key"
+  },
+  {
+   "id": "root_array",
+   "text": "[]",
+   "expect": "wrong_type"
+  },
+  {
+   "id": "root_string",
+   "text": "\"x\"",
+   "expect": "wrong_type"
+  },
+  {
+   "id": "unknown_root_key",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"version\":1,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}],\"extra\":1}",
+   "expect": "unknown_key"
+  },
+  {
+   "id": "unknown_before_missing",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}],\"extra\":1}",
+   "expect": "unknown_key"
+  },
+  {
+   "id": "missing_version",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "missing_key"
+  },
+  {
+   "id": "missing_schema",
+   "text": "{\"id\":\"x\",\"version\":1,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "missing_key"
+  },
+  {
+   "id": "bad_schema",
+   "text": "{\"schema\":\"fid.stats.ruleset/2\",\"id\":\"x\",\"version\":1,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "bad_schema"
+  },
+  {
+   "id": "schema_not_string",
+   "text": "{\"schema\":1,\"id\":\"x\",\"version\":1,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "bad_schema"
+  },
+  {
+   "id": "schema_before_id",
+   "text": "{\"schema\":\"x\",\"id\":\"X\",\"version\":1,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "bad_schema"
+  },
+  {
+   "id": "upper_id",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"Nelson\",\"version\":1,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "bad_id"
+  },
+  {
+   "id": "digit_first_id",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"1x\",\"version\":1,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "bad_id"
+  },
+  {
+   "id": "long_id",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"version\":1,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "bad_id"
+  },
+  {
+   "id": "version_zero",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"version\":0,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "bad_version"
+  },
+  {
+   "id": "version_fraction",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"version\":1.0,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "bad_version"
+  },
+  {
+   "id": "version_string",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"version\":\"1\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "bad_version"
+  },
+  {
+   "id": "version_large",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"version\":1000000,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "bad_version"
+  },
+  {
+   "id": "version_negative",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"version\":-1,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "bad_version"
+  },
+  {
+   "id": "bad_review",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"version\":1,\"review\":\"REVIEWED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "bad_review"
+  },
+  {
+   "id": "rules_object",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"version\":1,\"review\":\"UNVERIFIED\",\"rules\":{}}",
+   "expect": "bad_rules"
+  },
+  {
+   "id": "rules_empty",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"version\":1,\"review\":\"UNVERIFIED\",\"rules\":[]}",
+   "expect": "no_rules"
+  },
+  {
+   "id": "rules_65",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"version\":1,\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r0\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r1\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r2\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r3\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r4\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r5\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r6\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r7\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r8\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r9\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r10\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r11\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r12\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r13\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r14\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r15\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r16\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r17\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r18\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r19\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r20\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r21\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r22\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r23\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r24\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r25\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r26\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r27\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r28\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r29\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r30\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r31\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r32\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r33\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r34\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r35\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r36\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r37\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r38\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r39\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r40\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r41\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r42\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r43\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r44\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r45\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r46\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r47\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r48\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r49\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r50\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r51\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r52\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r53\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r54\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r55\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r56\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r57\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r58\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r59\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r60\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r61\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r62\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r63\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"r64\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "too_many_rules"
+  },
+  {
+   "id": "rule_number",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[3],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_rule"
+  },
+  {
+   "id": "rule_no_primitive",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "missing_key"
+  },
+  {
+   "id": "primitive_number",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":7,\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_rule"
+  },
+  {
+   "id": "primitive_lower",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"beyond\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "unknown_primitive"
+  },
+  {
+   "id": "magic_before_keys",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"primitive\":\"MAGIC\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "unknown_primitive"
+  },
+  {
+   "id": "rule_unknown_key",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3,\"zz\":1}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "unknown_key"
+  },
+  {
+   "id": "param_of_other",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"len\":3,\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "unknown_key"
+  },
+  {
+   "id": "missing_z",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "missing_key"
+  },
+  {
+   "id": "missing_rule_id",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "missing_key"
+  },
+  {
+   "id": "empty_rule_id",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_rule_id"
+  },
+  {
+   "id": "upper_rule_id",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"A\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_rule_id"
+  },
+  {
+   "id": "rule_id_number",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":1,\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_rule_id"
+  },
+  {
+   "id": "dup_rule_id",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3},{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":2}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "duplicate_rule_id"
+  },
+  {
+   "id": "k_zero",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"k\":0,\"m\":3,\"primitive\":\"K_OF_M_BEYOND\",\"z\":2}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "m_below_k",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"k\":3,\"m\":2,\"primitive\":\"K_OF_M_BEYOND\",\"z\":2}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "m_too_big",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"k\":3,\"m\":1001,\"primitive\":\"K_OF_M_BEYOND\",\"z\":2}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "z_zero",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":0}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "z_neg_zero",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":-0}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "z_negative",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":-1}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "z_overflow",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":1e999}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "z_above_max",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":1000.0000001}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "z_string",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":\"3\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "z_null",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":null}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "trend_len_2",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"len\":2,\"primitive\":\"TREND\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "alternating_len_2",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"len\":2,\"primitive\":\"ALTERNATING\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "run_len_1",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"len\":1,\"primitive\":\"RUN_SAME_SIDE\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "len_fraction",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"len\":3.0,\"primitive\":\"RUN_SAME_SIDE\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "len_exponent",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"len\":3e0,\"primitive\":\"RUN_SAME_SIDE\"}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "len_too_big",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"len\":1001,\"primitive\":\"RUN_OUTSIDE\",\"z\":1}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "len_huge",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"len\":99999999999,\"primitive\":\"RUN_OUTSIDE\",\"z\":1}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  },
+  {
+   "id": "within_z_bad",
+   "text": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"len\":3,\"primitive\":\"RUN_WITHIN\",\"z\":true}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": "bad_parameter"
+  }
+ ],
+ "random_10k": {
+  "seed": 11,
+  "stream": 0,
+  "n": 10000,
+  "draws_per_point": 12,
+  "transform": "x_j = (sum of uniform_f64 at indices 12j..12j+11, left to right from 0.0) - 6.0",
+  "lines": [
+   "0000000000000000",
+   "4008000000000000",
+   "c008000000000000"
+  ],
+  "first_points": [
+   "3fedb9a4f9e721f8",
+   "bfe1181f546d2d88",
+   "3ffc88a40b1414a4",
+   "3fe8c63ce0e779c0"
+  ],
+  "sets": [
+   {
+    "set": "beyond_limits",
+    "version": 1,
+    "violations": 17,
+    "per_rule": [
+     [
+      "1",
+      17
+     ]
+    ],
+    "first": [
+     [
+      467,
+      "1",
+      467,
+      467
+     ],
+     [
+      1007,
+      "1",
+      1007,
+      1007
+     ],
+     [
+      1241,
+      "1",
+      1241,
+      1241
+     ],
+     [
+      1817,
+      "1",
+      1817,
+      1817
+     ],
+     [
+      2061,
+      "1",
+      2061,
+      2061
+     ]
+    ],
+    "digest": "ccd428c61bdaa07029fab83ce84fe0654c9f44457446fcd6f1ce0a312a198039"
+   },
+   {
+    "set": "nelson",
+    "version": 1,
+    "violations": 201,
+    "per_rule": [
+     [
+      "1",
+      17
+     ],
+     [
+      "2",
+      36
+     ],
+     [
+      "3",
+      25
+     ],
+     [
+      "4",
+      35
+     ],
+     [
+      "5",
+      18
+     ],
+     [
+      "6",
+      48
+     ],
+     [
+      "7",
+      21
+     ],
+     [
+      "8",
+      1
+     ]
+    ],
+    "first": [
+     [
+      20,
+      "6",
+      16,
+      20
+     ],
+     [
+      280,
+      "6",
+      277,
+      280
+     ],
+     [
+      435,
+      "2",
+      427,
+      435
+     ],
+     [
+      436,
+      "2",
+      428,
+      436
+     ],
+     [
+      467,
+      "1",
+      467,
+      467
+     ]
+    ],
+    "digest": "efa1659bf28d5c33e9e526a6d5b24300b4fd9d6322193f1cf71e51256857103a"
+   },
+   {
+    "set": "western_electric",
+    "version": 1,
+    "violations": 154,
+    "per_rule": [
+     [
+      "1",
+      17
+     ],
+     [
+      "2",
+      18
+     ],
+     [
+      "3",
+      48
+     ],
+     [
+      "4",
+      71
+     ]
+    ],
+    "first": [
+     [
+      20,
+      "3",
+      16,
+      20
+     ],
+     [
+      23,
+      "4",
+      16,
+      23
+     ],
+     [
+      84,
+      "4",
+      77,
+      84
+     ],
+     [
+      280,
+      "3",
+      277,
+      280
+     ],
+     [
+      434,
+      "4",
+      427,
+      434
+     ]
+    ],
+    "digest": "8ed419302ccfdc181f1bedf7047c5345ba8da3214f2786fc85bdaeb516839624"
+   }
+  ]
+ }
+}
