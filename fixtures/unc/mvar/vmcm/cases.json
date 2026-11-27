@@ -249,5 +249,125 @@
    "seed": "7",
    "trials": "25"
   }
+ ],
+ "json_members": {
+  "basis": "simulated",
+  "interpretation": "provisional"
+ },
+ "refusals": [
+  {
+   "expected": {
+    "code": "invalid_covariance",
+    "constant_output": "0",
+    "exact_variance": "0",
+    "rounded_mean": "3fb999999999999b",
+    "rounded_mean_differs": "true"
+   },
+   "generator": {
+    "c": {
+     "constant": "3fb999999999999a"
+    },
+    "v": {
+     "mod": "7",
+     "offset": "-3"
+    }
+   },
+   "group": [
+    "c"
+   ],
+   "name": "constant_3_k1",
+   "outputs": [
+    "c",
+    "v"
+   ],
+   "p": "3fe0000000000000",
+   "trials": "3"
+  },
+  {
+   "expected": {
+    "code": "invalid_covariance",
+    "constant_output": "1",
+    "exact_variance": "0",
+    "rounded_mean": "3fb999999999999b",
+    "rounded_mean_differs": "true"
+   },
+   "generator": {
+    "c": {
+     "constant": "3fb999999999999a"
+    },
+    "v": {
+     "mod": "7",
+     "offset": "-3"
+    }
+   },
+   "group": [
+    "v",
+    "c"
+   ],
+   "name": "constant_3_k2",
+   "outputs": [
+    "c",
+    "v"
+   ],
+   "p": "3fe0000000000000",
+   "trials": "3"
+  },
+  {
+   "expected": {
+    "code": "invalid_covariance",
+    "constant_output": "0",
+    "exact_variance": "0",
+    "rounded_mean": "3fb999999999999b",
+    "rounded_mean_differs": "true"
+   },
+   "generator": {
+    "c": {
+     "constant": "3fb999999999999a"
+    },
+    "v": {
+     "mod": "7",
+     "offset": "-3"
+    }
+   },
+   "group": [
+    "c"
+   ],
+   "name": "constant_99999_k1",
+   "outputs": [
+    "c",
+    "v"
+   ],
+   "p": "3fee666666666666",
+   "trials": "99999"
+  },
+  {
+   "expected": {
+    "code": "invalid_covariance",
+    "constant_output": "1",
+    "exact_variance": "0",
+    "rounded_mean": "3fb999999999999b",
+    "rounded_mean_differs": "true"
+   },
+   "generator": {
+    "c": {
+     "constant": "3fb999999999999a"
+    },
+    "v": {
+     "mod": "7",
+     "offset": "-3"
+    }
+   },
+   "group": [
+    "v",
+    "c"
+   ],
+   "name": "constant_99999_k2",
+   "outputs": [
+    "c",
+    "v"
+   ],
+   "p": "3fee666666666666",
+   "trials": "99999"
+  }
  ]
 }

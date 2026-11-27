@@ -419,7 +419,8 @@ fn canonical_json_members() {
     }
     let want = format!(
         concat!(
-            r#"{{"algorithm":"{}","basis":"simulated","cov":[{}],"excluded":["5"],"mean":["{}","{}"],"#,
+            r#"{{"algorithm":"{}","basis":"simulated","cov":[{}],"excluded":["5"],"#,
+            r#""interpretation":"provisional","mean":["{}","{}"],"#,
             r#""outputs":["a","b"],"region":{{"at_radius":"{}","contained":"{}","m":"11","p":"{}","r2_p":"{}","#,
             r#""r_p":"{}","rank":"{}"}},"samples_ref":"{}","trials":"12"}}"#
         ),
@@ -436,6 +437,10 @@ fn canonical_json_members() {
         r.samples_ref().as_str(),
     );
     assert_eq!(json, want);
+    // The fixed members the oracle lists (D-045).
+    for (key, value) in parse_json(&read("cases.json")).get("json_members").o() {
+        assert!(json.contains(&format!("\"{key}\":\"{}\"", value.s())), "{key}");
+    }
 }
 
 // ------------------------------------------------------------------ hand-labelled rules
@@ -528,18 +533,53 @@ fn rank_deficient_covariance_is_refused() {
     let e = propagate_vector_mcm(&bytes, DEFAULT_CAP, &["a", "b"], 0.5).unwrap_err();
     assert_eq!(e.code(), "invalid_covariance");
     match e {
-        VmcmError::InvalidCovariance(CovarianceRefusal::RankDeficient(c)) => assert!(c.rank_deficient),
+        VmcmError::InvalidCovariance(CovarianceRefusal::RankDeficient { check: Some(c), constant_output: None }) => {
+            assert!(c.rank_deficient)
+        }
         other => panic!("{other:?}"),
     }
     // Each output on its own is fine.
     assert!(propagate_vector_mcm(&bytes, DEFAULT_CAP, &["b"], 0.5).is_ok());
-    // A constant output.
+    // A constant output is named by its group index (rule 5a).
     let rows: Vec<Vec<f64>> = (0..8).map(|t| vec![f64::from(t), 3.0]).collect();
     let bytes = simple(&["a", "b"], &rows);
-    for g in [&["a", "b"][..], &["b"][..]] {
-        match propagate_vector_mcm(&bytes, DEFAULT_CAP, g, 0.5).unwrap_err() {
-            VmcmError::InvalidCovariance(CovarianceRefusal::RankDeficient(c)) => assert!(c.rank_deficient),
-            other => panic!("{other:?}"),
-        }
+    for (g, at) in [(&["a", "b"][..], 1), (&["b"][..], 0), (&["b", "a"][..], 0)] {
+        let e = propagate_vector_mcm(&bytes, DEFAULT_CAP, g, 0.5).unwrap_err();
+        let want = CovarianceRefusal::RankDeficient { check: None, constant_output: Some(at) };
+        assert_eq!(e, VmcmError::InvalidCovariance(want), "{g:?}");
+    }
+}
+
+/// Review of #676: a constant column whose rounded mean differs from the constant leaves
+/// deviations of about 1e-17 that the correlation scaling would hide; it is refused before
+/// any mean is computed (oracle `refusals`, k = 1 and k = 2, 3 and 99999 trials).
+#[test]
+fn constant_outputs_are_refused() {
+    let fix = parse_json(&read("cases.json"));
+    let refusals = fix.get("refusals").a();
+    assert_eq!(refusals.len(), 4);
+    for c in refusals {
+        let name = c.get("name").s();
+        let trials = c.get("trials").u();
+        let outputs: Vec<&str> = c.get("outputs").a().iter().map(J::s).collect();
+        assert_eq!(outputs, ["c", "v"]);
+        let g = c.get("generator");
+        let constant = g.get("c").get("constant").f();
+        let (modulus, offset): (i64, i64) =
+            (g.get("v").get("mod").s().parse().unwrap(), g.get("v").get("offset").s().parse().unwrap());
+        let rows: Vec<Vec<f64>> = (0..trials as i64).map(|t| vec![constant, (t % modulus + offset) as f64]).collect();
+        let bytes = simple(&outputs, &rows);
+        let group: Vec<&str> = c.get("group").a().iter().map(J::s).collect();
+        let e = c.get("expected");
+        assert_eq!(e.get("rounded_mean_differs").s(), "true", "{name}");
+        let err = propagate_vector_mcm(&bytes, DEFAULT_CAP, &group, c.get("p").f()).unwrap_err();
+        assert_eq!(err.code(), e.get("code").s(), "{name}");
+        let want = CovarianceRefusal::RankDeficient {
+            check: None,
+            constant_output: Some(e.get("constant_output").u() as usize),
+        };
+        assert_eq!(err, VmcmError::InvalidCovariance(want), "{name}");
+        // The varying output alone is accepted.
+        assert!(propagate_vector_mcm(&bytes, DEFAULT_CAP, &["v"], c.get("p").f()).is_ok(), "{name}");
     }
 }

@@ -9,7 +9,10 @@
 //! `UNC.PROP.MCM.SAMP`) and returns a [`VectorMcmResult`].
 //!
 //! The result is a model-based (simulated) Monte Carlo summary, never a measured value; its
-//! canonical JSON says so in the required member `"basis":"simulated"` (D-045). Nothing here
+//! canonical JSON says so in the required member `"basis":"simulated"` (D-045). Because the
+//! region rule `ceil(p M)` is [unverified], the JSON also carries the required member
+//! `"interpretation":"provisional"`, so no consumer can take the region for a verified one
+//! (D-045). Nothing here
 //! makes an uncertainty statement or assigns an evidence class.
 //!
 //! # Failed trials (REQ-UNC.PROP.MVAR.VMCM-001)
@@ -38,6 +41,13 @@
 //!    `n_min` is the smallest `M` with `ceil(p M) < M` (so at least one trial lies outside the
 //!    region), computed exactly in integers from the binary64 value of `p`; else
 //!    [`VmcmError::TooFewTrials`] with that minimum.
+//! 5a. Constant outputs: a group column whose values are all bitwise equal to its first value
+//!    (the lowest group index first) is `invalid_covariance` with
+//!    [`CovarianceRefusal::RankDeficient`] naming it (`constant_output`, no check), before any
+//!    mean is computed. Its exact variance is zero, but the rounded mean `fl(sum) / M` can
+//!    differ from the constant (three values `0.1` give a mean one ulp above `0.1`), which
+//!    leaves deviations of about `1e-17`; the correlation scaling of rule 8 would then turn that tiny, purely rounding
+//!    variance into a well-conditioned matrix and a confident region.
 //! 6. Mean of output `i`: `red::mean` of its column (fixed-order sum, one division).
 //!    Deviations `x_ir - mean_i`, one rounded subtraction each, in trial order.
 //! 7. Covariance: `s_ij = red::dot(dev_i, dev_j) / (M - 1)` for `i <= j`, mirrored, so the
@@ -45,11 +55,13 @@
 //!    output nodes; it is the `k = 1` (standard-uncertainty) covariance.
 //! 8. The covariance check of `UNC.PROP.MVAR.PARAM` ([`check_covariance`], correlation-scaled):
 //!    a refusal is `invalid_covariance` with [`CovarianceRefusal::Defect`]. An accepted matrix
-//!    flagged [`CovarianceCheck::rank_deficient`] (a constant output, outputs that are exact
-//!    linear combinations of each other, or a smallest scaled eigenvalue at most the PSD
-//!    tolerance times the largest) is refused as `invalid_covariance` with
-//!    [`CovarianceRefusal::RankDeficient`] and the check: a singular sample covariance has no
-//!    Mahalanobis metric, and a flagged covariance is never returned as a confident one.
+//!    flagged [`CovarianceCheck::rank_deficient`] (outputs whose deviations are exact linear
+//!    combinations of each other, a column with an exactly zero deviation vector, or a smallest
+//!    scaled eigenvalue at most the PSD tolerance times the largest) is refused as
+//!    `invalid_covariance` with [`CovarianceRefusal::RankDeficient`] and the check: a singular
+//!    sample covariance has no Mahalanobis metric, and a flagged covariance is never returned
+//!    as a confident one. Constant outputs never reach this rule (rule 5a): the check alone
+//!    does not catch them when the rounded mean leaves non-zero deviations.
 //! 9. Scaling: `d_i = f::sqrt(s_ii)`, `r_ij = (s_ij / d_i) / d_j`. Pivoted Cholesky of `R`
 //!    ([`chol_pivoted`]) with the relative stop tolerance `tol = total_max(PSD_REL_TOL,
 //!    16 k 2^-53)` (the check's, never below rounding resolution). A rank below `k` is
@@ -75,7 +87,8 @@
 //! # Canonical encoding ([`VectorMcmResult::canonical_json`])
 //!
 //! RFC 8785 bytes of `{"algorithm","basis":"simulated","cov":[[<f64>...]...],
-//! "excluded":[<u64>...],"mean":[<f64>...],"outputs":[<id>...],"region":{"at_radius",
+//! "excluded":[<u64>...],"interpretation":"provisional","mean":[<f64>...],"outputs":[<id>...],
+//! "region":{"at_radius",
 //! "contained","m","p","r2_p","r_p","rank"},"samples_ref","trials"}`, every member required,
 //! integers as decimal strings and every double as its 16 lowercase hex digits of IEEE-754
 //! bits (the kernel convention). Determinism: D2 (a function of the seeded sample set; D0
@@ -107,8 +120,10 @@ const U: f64 = 1.0 / 9_007_199_254_740_992.0;
 pub enum CovarianceRefusal {
     /// The covariance check of `UNC.PROP.MVAR.PARAM` refused the matrix.
     Defect(CovarianceDefect),
-    /// The check accepted the matrix but flagged it rank deficient (rule 8).
-    RankDeficient(CovarianceCheck),
+    /// The sample covariance is rank deficient: `constant_output` is the group index of a
+    /// constant output (rule 5a, `check` is `None`), or `check` is the flagged check of rule 8
+    /// (`constant_output` is `None`).
+    RankDeficient { check: Option<CovarianceCheck>, constant_output: Option<usize> },
     /// The pivoted Cholesky of the scaled matrix stopped at `rank < dim` (rule 9).
     CholeskyRank { rank: usize, dim: usize },
 }
@@ -168,8 +183,14 @@ impl fmt::Display for VmcmError {
             VmcmError::InvalidCovariance(CovarianceRefusal::Defect(d)) => {
                 write!(out, "invalid_covariance: {}", ParamError::InvalidCovariance(*d))
             }
-            VmcmError::InvalidCovariance(CovarianceRefusal::RankDeficient(c)) => {
+            VmcmError::InvalidCovariance(CovarianceRefusal::RankDeficient { constant_output: Some(i), .. }) => {
+                write!(out, "invalid_covariance: rank deficient, group output {i} is constant")
+            }
+            VmcmError::InvalidCovariance(CovarianceRefusal::RankDeficient { check: Some(c), .. }) => {
                 write!(out, "invalid_covariance: rank deficient (condition {:e})", c.cond)
+            }
+            VmcmError::InvalidCovariance(CovarianceRefusal::RankDeficient { .. }) => {
+                write!(out, "invalid_covariance: rank deficient")
             }
             VmcmError::InvalidCovariance(CovarianceRefusal::CholeskyRank { rank, dim }) => {
                 write!(out, "invalid_covariance: Cholesky rank {rank} of {dim}")
@@ -338,6 +359,7 @@ impl VectorMcmResult {
             ("basis".to_owned(), Json::Str("simulated".to_owned())),
             ("cov".to_owned(), Json::Arr(cov)),
             ("excluded".to_owned(), Json::Arr(excluded)),
+            ("interpretation".to_owned(), Json::Str("provisional".to_owned())),
             ("mean".to_owned(), Json::Arr(self.mean.iter().map(|&x| hex(x)).collect())),
             ("outputs".to_owned(), Json::Arr(self.outputs.iter().map(|s| Json::Str(s.clone())).collect())),
             ("region".to_owned(), region),
@@ -427,6 +449,14 @@ pub fn propagate_vector_mcm(samples: &[u8], cap: u64, group: &[&str], p: f64) ->
     if cols.iter().any(|c| c.len() != mu) {
         return Err(internal("column_length"));
     }
+    // Rule 5a.
+    for (i, c) in cols.iter().enumerate() {
+        let first = c.first().ok_or(internal("column_length"))?.to_bits();
+        if c.iter().all(|x| x.to_bits() == first) {
+            let refusal = CovarianceRefusal::RankDeficient { check: None, constant_output: Some(i) };
+            return Err(VmcmError::InvalidCovariance(refusal));
+        }
+    }
 
     // Rule 6.
     let mut mean = Vec::new();
@@ -464,7 +494,8 @@ pub fn propagate_vector_mcm(samples: &[u8], cap: u64, group: &[&str], p: f64) ->
         _ => internal("covariance_check"),
     })?;
     if check.rank_deficient {
-        return Err(VmcmError::InvalidCovariance(CovarianceRefusal::RankDeficient(check)));
+        let refusal = CovarianceRefusal::RankDeficient { check: Some(check), constant_output: None };
+        return Err(VmcmError::InvalidCovariance(refusal));
     }
 
     // Rule 9.

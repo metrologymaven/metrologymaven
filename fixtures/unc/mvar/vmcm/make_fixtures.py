@@ -18,6 +18,12 @@ Rules this reference implements on its own, in exact rational arithmetic:
 - Region (REQ-002): rank n_p = ceil(p M) computed exactly from the binary64 value of p; the
   radius of record r2_p is the n_p-th smallest squared distance; `contained` counts the
   trials with distance <= r2_p and `at_radius` those equal to it.
+- Constant outputs (review of #676): a group column whose values are all bitwise equal is
+  refused as invalid_covariance (rank deficient) naming its group index, before any mean is
+  computed; its exact variance is zero. `rounded_mean` records the correctly rounded mean
+  fl(fl(sum) / M), which differs from the constant for 0.1, the hazard the rule guards.
+- The canonical JSON of a result carries the required members "basis":"simulated" and
+  "interpretation":"provisional" (D-045: the region rule is [unverified]).
 - The `mcm-samples@1` bytes (UNC.PROP.MCM.SAMP): u64 LE header length, the canonical JSON
   header (sorted keys, no whitespace, integers as decimal strings), every output's column as
   LE doubles in header order, then the failed indices as LE u64; `samples` is the SHA-256
@@ -36,7 +42,9 @@ Files written next to this script:
                   and the chi-square(2) quantile -2 ln(1 - p) of the Mahalanobis region
 - cases.json      AC-2 and the rule checks: hand-built sample sets (columns, failed
                   indices), a group, p, and the expected M, mean, covariance, rank, radius,
-                  counts and samples digest
+                  counts and samples digest; `refusals`, the constant-output cases (three
+                  values 0.1 and 99999 trials of 0.1, each alone and next to a varying
+                  output); `json_members`, the fixed members of the canonical JSON
 
 Every f64 is written as its IEEE-754 bit pattern in 16 lowercase hex digits.
 
@@ -258,6 +266,42 @@ def build_cases():
     return cases
 
 
+def constant_case(name, trials, group, p):
+    """A constant output c = 0.1 and a varying output v = (t mod 7) - 3, t = 0 .. trials - 1."""
+    c = Fraction(0.1)
+    v = [Fraction(t % 7 - 3) for t in range(trials)]
+    mean = c  # exact: every value is the same double
+    var = sum(((c - mean) ** 2 for _ in range(trials)), Fraction(0)) / (trials - 1)
+    assert var == 0
+    rounded_mean = float(Fraction(float(c * trials)) / trials)
+    assert sum(1 for x in v if x != v[0]) > 0
+    assert trials >= min_trials(p, len(group))
+    return {
+        "name": name,
+        "outputs": ["c", "v"],
+        "trials": str(trials),
+        "generator": {"c": {"constant": hex64(0.1)}, "v": {"mod": "7", "offset": "-3"}},
+        "group": group,
+        "p": hex64(p),
+        "expected": {
+            "code": "invalid_covariance",
+            "constant_output": str(group.index("c")),
+            "exact_variance": "0",
+            "rounded_mean": hex64(rounded_mean),
+            "rounded_mean_differs": "true" if rounded_mean != 0.1 else "false",
+        },
+    }
+
+
+def build_refusals():
+    return [
+        constant_case("constant_3_k1", 3, ["c"], 0.5),
+        constant_case("constant_3_k2", 3, ["v", "c"], 0.5),
+        constant_case("constant_99999_k1", 99999, ["c"], 0.95),
+        constant_case("constant_99999_k2", 99999, ["v", "c"], 0.95),
+    ]
+
+
 def build_bivariate():
     m = 10**6
     p = 0.95
@@ -303,7 +347,13 @@ def dump(obj):
 def build():
     return {
         "bivariate.json": dump(build_bivariate()),
-        "cases.json": dump({"cases": build_cases()}),
+        "cases.json": dump(
+            {
+                "cases": build_cases(),
+                "refusals": build_refusals(),
+                "json_members": {"basis": "simulated", "interpretation": "provisional"},
+            }
+        ),
     }
 
 
