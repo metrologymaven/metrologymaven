@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-scan-poly]
+built_pr: 662
 satisfies: [REQ-SCAN.POLY.SURF-003, REQ-SCAN.POLY.SURF-006]
 covers: []
 depends_on: [SCAN.POLY.SURF.FAN, GEO.TYPES.MESH]
