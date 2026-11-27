@@ -1,0 +1,448 @@
+{
+ "description": "cylinder r 20 mm, height 10 mm, with an 8 mm radius through hole; seam edges on both cylinder faces, closed shell",
+ "license": "CC-BY-4.0",
+ "body_id": "a5e4a5e4a5e4a5e4a5e4a5e4a5e4a5e4",
+ "vertices": [
+  {
+   "point": [
+    0.02,
+    0.0,
+    0.0
+   ],
+   "label": "v-ob"
+  },
+  {
+   "point": [
+    0.02,
+    0.0,
+    0.01
+   ],
+   "label": "v-ot"
+  },
+  {
+   "point": [
+    0.008,
+    0.0,
+    0.0
+   ],
+   "label": "v-ib"
+  },
+  {
+   "point": [
+    0.008,
+    0.0,
+    0.01
+   ],
+   "label": "v-it"
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.02,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-outer-bottom"
+  },
+  {
+   "start": 1,
+   "end": 1,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.02,
+    "origin": [
+     0.0,
+     0.0,
+     0.01
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-outer-top"
+  },
+  {
+   "start": 2,
+   "end": 2,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.008,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-inner-bottom"
+  },
+  {
+   "start": 3,
+   "end": 3,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.008,
+    "origin": [
+     0.0,
+     0.0,
+     0.01
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-inner-top"
+  },
+  {
+   "start": 0,
+   "end": 1,
+   "range": [
+    0.0,
+    0.01
+   ],
+   "curve": {
+    "type": "line",
+    "origin": [
+     0.02,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "label": "e-outer-seam"
+  },
+  {
+   "start": 2,
+   "end": 3,
+   "range": [
+    0.0,
+    0.01
+   ],
+   "curve": {
+    "type": "line",
+    "origin": [
+     0.008,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "label": "e-inner-seam"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-oc-bottom"
+  },
+  {
+   "edge": 4,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-oc-seam-up"
+  },
+  {
+   "edge": 1,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-oc-top"
+  },
+  {
+   "edge": 4,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-oc-seam-down"
+  },
+  {
+   "edge": 2,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-ic-bottom"
+  },
+  {
+   "edge": 5,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-ic-seam-up"
+  },
+  {
+   "edge": 3,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-ic-top"
+  },
+  {
+   "edge": 5,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-ic-seam-down"
+  },
+  {
+   "edge": 0,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-bot-outer"
+  },
+  {
+   "edge": 2,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-bot-inner"
+  },
+  {
+   "edge": 1,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-top-outer"
+  },
+  {
+   "edge": 3,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-top-inner"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "outer": true,
+   "label": "l-outer-cyl"
+  },
+  {
+   "coedges": [
+    4,
+    5,
+    6,
+    7
+   ],
+   "outer": true,
+   "label": "l-inner-cyl"
+  },
+  {
+   "coedges": [
+    8
+   ],
+   "outer": true,
+   "label": "l-bot-outer"
+  },
+  {
+   "coedges": [
+    9
+   ],
+   "outer": false,
+   "label": "l-bot-inner"
+  },
+  {
+   "coedges": [
+    10
+   ],
+   "outer": true,
+   "label": "l-top-outer"
+  },
+  {
+   "coedges": [
+    11
+   ],
+   "outer": false,
+   "label": "l-top-inner"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "cylinder",
+    "radius": 0.02,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    0
+   ],
+   "label": "f-outer-cyl"
+  },
+  {
+   "surface": {
+    "type": "cylinder",
+    "radius": 0.008,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "reversed",
+   "loops": [
+    1
+   ],
+   "label": "f-inner-cyl"
+  },
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    2,
+    3
+   ],
+   "label": "f-bottom"
+  },
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     0.01
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    4,
+    5
+   ],
+   "label": "f-top"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "closed": true
+  }
+ ]
+}

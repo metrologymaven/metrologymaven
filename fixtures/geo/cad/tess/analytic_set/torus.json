@@ -1,0 +1,148 @@
+{
+ "description": "whole torus R 30 mm, r 8 mm: one loop of a u seam circle and a v seam circle, each used twice, closed shell",
+ "license": "CC-BY-4.0",
+ "body_id": "70b570b570b570b570b570b570b570b5",
+ "vertices": [
+  {
+   "point": [
+    0.038,
+    0.0,
+    0.0
+   ],
+   "label": "v0"
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.038,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-u-seam"
+  },
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.008,
+    "origin": [
+     0.03,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     -1.0,
+     0.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-v-seam"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-u"
+  },
+  {
+   "edge": 1,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-v"
+  },
+  {
+   "edge": 0,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-u-back"
+  },
+  {
+   "edge": 1,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-v-back"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "outer": true,
+   "label": "l-torus"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "torus",
+    "major_radius": 0.03,
+    "minor_radius": 0.008,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    0
+   ],
+   "label": "f-torus"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0
+   ],
+   "closed": true
+  }
+ ]
+}

@@ -1,0 +1,448 @@
+{
+ "description": "the washer with every builder list reversed (AC-4)",
+ "license": "CC-BY-4.0",
+ "body_id": "a5e4a5e4a5e4a5e4a5e4a5e4a5e4a5e4",
+ "vertices": [
+  {
+   "point": [
+    0.008,
+    0.0,
+    0.01
+   ],
+   "label": "v-it"
+  },
+  {
+   "point": [
+    0.008,
+    0.0,
+    0.0
+   ],
+   "label": "v-ib"
+  },
+  {
+   "point": [
+    0.02,
+    0.0,
+    0.01
+   ],
+   "label": "v-ot"
+  },
+  {
+   "point": [
+    0.02,
+    0.0,
+    0.0
+   ],
+   "label": "v-ob"
+  }
+ ],
+ "edges": [
+  {
+   "start": 1,
+   "end": 0,
+   "range": [
+    0.0,
+    0.01
+   ],
+   "curve": {
+    "type": "line",
+    "origin": [
+     0.008,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "label": "e-inner-seam"
+  },
+  {
+   "start": 3,
+   "end": 2,
+   "range": [
+    0.0,
+    0.01
+   ],
+   "curve": {
+    "type": "line",
+    "origin": [
+     0.02,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "label": "e-outer-seam"
+  },
+  {
+   "start": 0,
+   "end": 0,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.008,
+    "origin": [
+     0.0,
+     0.0,
+     0.01
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-inner-top"
+  },
+  {
+   "start": 1,
+   "end": 1,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.008,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-inner-bottom"
+  },
+  {
+   "start": 2,
+   "end": 2,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.02,
+    "origin": [
+     0.0,
+     0.0,
+     0.01
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-outer-top"
+  },
+  {
+   "start": 3,
+   "end": 3,
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.02,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-outer-bottom"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 2,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-top-inner"
+  },
+  {
+   "edge": 4,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-top-outer"
+  },
+  {
+   "edge": 3,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-bot-inner"
+  },
+  {
+   "edge": 5,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-bot-outer"
+  },
+  {
+   "edge": 0,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-ic-seam-down"
+  },
+  {
+   "edge": 2,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-ic-top"
+  },
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-ic-seam-up"
+  },
+  {
+   "edge": 3,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-ic-bottom"
+  },
+  {
+   "edge": 1,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-oc-seam-down"
+  },
+  {
+   "edge": 4,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-oc-top"
+  },
+  {
+   "edge": 1,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-oc-seam-up"
+  },
+  {
+   "edge": 5,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-oc-bottom"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0
+   ],
+   "outer": false,
+   "label": "l-top-inner"
+  },
+  {
+   "coedges": [
+    1
+   ],
+   "outer": true,
+   "label": "l-top-outer"
+  },
+  {
+   "coedges": [
+    2
+   ],
+   "outer": false,
+   "label": "l-bot-inner"
+  },
+  {
+   "coedges": [
+    3
+   ],
+   "outer": true,
+   "label": "l-bot-outer"
+  },
+  {
+   "coedges": [
+    7,
+    6,
+    5,
+    4
+   ],
+   "outer": true,
+   "label": "l-inner-cyl"
+  },
+  {
+   "coedges": [
+    11,
+    10,
+    9,
+    8
+   ],
+   "outer": true,
+   "label": "l-outer-cyl"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     0.01
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    1,
+    0
+   ],
+   "label": "f-top"
+  },
+  {
+   "surface": {
+    "type": "plane",
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    3,
+    2
+   ],
+   "label": "f-bottom"
+  },
+  {
+   "surface": {
+    "type": "cylinder",
+    "radius": 0.008,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "reversed",
+   "loops": [
+    4
+   ],
+   "label": "f-inner-cyl"
+  },
+  {
+   "surface": {
+    "type": "cylinder",
+    "radius": 0.02,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    5
+   ],
+   "label": "f-outer-cyl"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "closed": true
+  }
+ ]
+}

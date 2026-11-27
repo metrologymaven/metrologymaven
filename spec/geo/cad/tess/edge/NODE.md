@@ -9,6 +9,7 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-cad]
 satisfies: [REQ-GEO.CAD.TESS-001, REQ-GEO.CAD.TESS-002, REQ-GEO.CAD.TESS-003]
 covers: []
 depends_on: [GEO.CAD.TOPO.MODEL, GEO.CAD.TOPO.ADJ, GEO.CAD.TOPO.PCURVE, GEO.NURBS.EVAL]

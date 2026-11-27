@@ -1,0 +1,113 @@
+{
+ "description": "whole sphere r 15 mm: one meridian seam edge from pole to pole used twice, closed shell",
+ "license": "CC-BY-4.0",
+ "body_id": "5b4e5b4e5b4e5b4e5b4e5b4e5b4e5b4e",
+ "vertices": [
+  {
+   "point": [
+    0.0,
+    0.0,
+    -0.015
+   ],
+   "label": "v-south"
+  },
+  {
+   "point": [
+    0.0,
+    0.0,
+    0.015
+   ],
+   "label": "v-north"
+  }
+ ],
+ "edges": [
+  {
+   "start": 0,
+   "end": 1,
+   "range": [
+    -1.5707963267948966,
+    1.5707963267948966
+   ],
+   "curve": {
+    "type": "circle",
+    "radius": 0.015,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     -1.0,
+     0.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "label": "e-seam"
+  }
+ ],
+ "coedges": [
+  {
+   "edge": 0,
+   "sense": "same",
+   "pcurve": null,
+   "label": "c-seam-up"
+  },
+  {
+   "edge": 0,
+   "sense": "reversed",
+   "pcurve": null,
+   "label": "c-seam-down"
+  }
+ ],
+ "loops": [
+  {
+   "coedges": [
+    0,
+    1
+   ],
+   "outer": true,
+   "label": "l-seam"
+  }
+ ],
+ "faces": [
+  {
+   "surface": {
+    "type": "sphere",
+    "radius": 0.015,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ]
+   },
+   "sense": "same",
+   "loops": [
+    0
+   ],
+   "label": "f-sphere"
+  }
+ ],
+ "shells": [
+  {
+   "faces": [
+    0
+   ],
+   "closed": true
+  }
+ ]
+}

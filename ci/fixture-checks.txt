@@ -133,6 +133,7 @@ python fixtures/gdt/spec/make_fixtures.py --check
 python fixtures/gdt/status/make_cases.py --check
 python fixtures/gdt/zone/make_shapes_fixtures.py --check
 python fixtures/geo/cad/assy/make_assy_fixtures.py --check
+python fixtures/geo/cad/tess/make_tess_fixtures.py --check
 python fixtures/geo/cad/topo/make_adj_fixtures.py --check
 python fixtures/geo/cad/topo/make_pcurve_fixtures.py --check
 python fixtures/geo/cad/topo/make_topo_fixtures.py --check
