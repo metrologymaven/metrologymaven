@@ -404,6 +404,9 @@ fn jacobians_and_propagated_covariance() {
         let ck = fc.check();
         assert!((ck.max_eig - hi).abs() <= 1e-12 * hi, "{name}: max eig {} vs {hi:e}", ck.max_eig);
         assert!((ck.min_eig - lo).abs() <= 1e-12 * hi, "{name}: min eig {} vs {lo:e}", ck.min_eig);
+        // Only the cone (7 parameters, 6 degrees of freedom) is rank deficient by construction.
+        assert_eq!(fc.check().rank_deficient, tp.ftype == FeatureType::Cone, "{name}: rank flag {:?}", fc.check());
+        assert_eq!(fc.check().cond.is_infinite() || fc.check().cond >= 1.0 / PSD_REL_TOL, fc.check().rank_deficient);
         assert_eq!(fc.units(), tp.ftype.units());
         assert_eq!(fc.version(), VERSION);
     }
@@ -557,6 +560,26 @@ fn ac2_negative_variance_zero_matrix_and_dimension_bound() {
     // A well-conditioned diagonal matrix is not flagged.
     let (_, ck) = check_covariance(&square(2, vec![1e-12, 0.0, 0.0, 1e-8]), 2).unwrap();
     assert!(!ck.rank_deficient && (ck.cond - 1.0).abs() <= 4.0 * U, "{ck:?}");
+    // A scaled entry that overflows (|c_01| far beyond sqrt(c_00 c_11)) is indefinite, not a
+    // numeric failure; a scaled difference that overflows is asymmetric.
+    match check_covariance(&square(2, vec![1e-300, 1e300, 1e300, 1.0]), 2) {
+        Err(ParamError::InvalidCovariance(CovarianceDefect::NotPositiveSemidefinite {
+            min_eig,
+            corr_min_eig,
+            corr_max_eig,
+            ..
+        })) => {
+            assert!(min_eig < 0.0);
+            assert_eq!((corr_min_eig, corr_max_eig), (f64::NEG_INFINITY, f64::INFINITY));
+        }
+        other => panic!("{other:?}"),
+    }
+    match check_covariance(&square(2, vec![1e-300, 1e300, -1e300, 1.0]), 2) {
+        Err(ParamError::InvalidCovariance(CovarianceDefect::Asymmetric { asym, i, j })) => {
+            assert_eq!((asym, i, j), (f64::INFINITY, 0, 1));
+        }
+        other => panic!("{other:?}"),
+    }
     // 1 <= n <= MAX_DIM (7, the largest fcov-param@1 dimension).
     assert_eq!(MAX_DIM, 7);
     assert_eq!(FeatureType::ALL.iter().map(|t| t.dim().max(t.kernel_dim())).max(), Some(MAX_DIM));

@@ -89,13 +89,18 @@
 //!    (the first in row-major order of `j`, row before column) is `invalid_covariance` with
 //!    [`CovarianceDefect::CorrelatedZeroVariance`] (no correlation can have a zero variance;
 //!    scaling cannot show it). Scaling: `d_i = f::sqrt(c_ii)` for `c_ii > 0` and `d_i = 1`
-//!    for a zero variance (whose row is then all zero). A scaled entry is `(x / d_i) / d_j`,
-//!    computed for `i <= j` and mirrored.
-//! 4. Symmetry: `mr` is the total-order maximum of `|(c_ij / d_i) / d_j|`; the asymmetry is
-//!    the largest `(|c_ij - c_ji| / d_i) / d_j` over `i < j` (row-major; the first maximum
-//!    wins a tie, and its pair is reported) divided by `mr` (`0` for the zero matrix). Above
-//!    [`ASYM_REL_TOL`]: `invalid_covariance` with [`CovarianceDefect::Asymmetric`].
-//! 5. The stored matrix is the symmetrised `(c_ij + c_ji) * 0.5` (exactly symmetric).
+//!    for a zero variance (whose row is then all zero). Every scaled quantity divides by
+//!    `d_i`, then by `d_j`.
+//! 4. Symmetry: `mr` is the total-order maximum of `|(c_ij / d_i) / d_j|` over all `(i, j)`;
+//!    the asymmetry is the largest `(|c_ij - c_ji| / d_i) / d_j` over `i < j` (row-major; the
+//!    first maximum wins a tie, and its pair is reported) divided by `mr` (`0` for the zero
+//!    matrix). Above [`ASYM_REL_TOL`]: `invalid_covariance` with
+//!    [`CovarianceDefect::Asymmetric`]. If a scaled difference overflows to infinity, the
+//!    asymmetry is `+inf` (refused as asymmetric); otherwise, if a scaled entry overflows (so
+//!    `|c_ij|` exceeds `sqrt(c_ii c_jj)` by far more than any rounding),
+//!    [`CovarianceDefect::NotPositiveSemidefinite`] with scaled extremes `-inf` and `+inf`.
+//! 5. The stored matrix is the symmetrised `(c_ij + c_ji) * 0.5`, computed for `i <= j` and
+//!    mirrored (exactly symmetric); its scaled form `(x / d_i) / d_j` likewise.
 //! 6. Positive semi-definiteness: eigenvalues of the scaled symmetrised matrix by `fid-num`
 //!    cyclic Jacobi (`sym_eig`); with `lo` the smallest and `hi` the largest,
 //!    `lo >= -(tol * hi)` where `tol` is the total-order maximum of [`PSD_REL_TOL`] and the
@@ -107,9 +112,10 @@
 //!    `hi / lo` of the scaled matrix (`+inf` when `lo <= 0`). A flagged covariance has at
 //!    least one parameter combination with no stated uncertainty (a zero or numerically zero
 //!    variance); downstream code must not treat it as a confident uncertainty for that
-//!    combination. Some parameterisations are rank deficient by construction: the line,
-//!    plane and cylinder points and the cone reference point carry a component along a
-//!    direction the feature does not determine.
+//!    combination. Only the cone's parameterisation is rank deficient by construction: seven
+//!    parameters for a feature with six degrees of freedom (its reference point slides along
+//!    the axis), so a cone covariance propagated with [`FeatureCovariance::from_kernel`] is
+//!    always flagged. The other types are full rank for a well-determined fit.
 //!
 //! The tolerances are the spec's placeholders and are `[unverified]`. They are far above the
 //! rounding resolution of the check (`n 2^-53` relative for the eigenvalues of an `n x n`
@@ -806,25 +812,8 @@ pub fn check_covariance(cov: &Mat, n: usize) -> Result<(Mat, CovarianceCheck), P
         }
     }
     let d = |i: usize| scale.get(i).copied().ok_or_else(|| bad("cov", Some(i)));
-    // Step 4: symmetry of the scaled matrix.
-    let mut mr = 0.0_f64;
-    let mut worst = (0.0_f64, 0_usize, 1_usize);
-    for i in 0..n {
-        for j in 0..n {
-            mr = f::total_max(mr, ((get(i, j)? / d(i)?) / d(j)?).abs())?;
-            if j > i {
-                let diff = ((get(i, j)? - get(j, i)?).abs() / d(i)?) / d(j)?;
-                if diff > worst.0 {
-                    worst = (diff, i, j);
-                }
-            }
-        }
-    }
-    let asym = if mr == 0.0 { 0.0 } else { worst.0 / mr };
-    if asym.is_nan() || asym > ASYM_REL_TOL {
-        return Err(ParamError::InvalidCovariance(CovarianceDefect::Asymmetric { asym, i: worst.1, j: worst.2 }));
-    }
-    // Step 5: the stored symmetrised covariance, and its scaled form (i <= j, mirrored).
+    // Step 5 (built first, the overflow refusal of step 4 reports its eigenvalues): the
+    // stored symmetrised covariance and its scaled form, for i <= j and mirrored.
     let mut sym = vec![0.0; n * n];
     let mut scaled = vec![0.0; n * n];
     for i in 0..n {
@@ -840,6 +829,45 @@ pub fn check_covariance(cov: &Mat, n: usize) -> Result<(Mat, CovarianceCheck), P
         }
     }
     let sym = Mat::new(n, n, sym)?;
+    // Step 4: symmetry of the scaled matrix.
+    let mut mr = 0.0_f64;
+    let mut overflow = false;
+    let mut worst = (0.0_f64, 0_usize, 1_usize);
+    for i in 0..n {
+        for j in 0..n {
+            let r = ((get(i, j)? / d(i)?) / d(j)?).abs();
+            if r.is_finite() {
+                mr = f::total_max(mr, r)?;
+            } else {
+                overflow = true;
+            }
+            if j > i {
+                let diff = ((get(i, j)? - get(j, i)?).abs() / d(i)?) / d(j)?;
+                if diff > worst.0 {
+                    worst = (diff, i, j);
+                }
+            }
+        }
+    }
+    let asym = if worst.0.is_infinite() {
+        f64::INFINITY
+    } else if mr == 0.0 {
+        0.0
+    } else {
+        worst.0 / mr
+    };
+    if asym.is_nan() || asym > ASYM_REL_TOL {
+        return Err(ParamError::InvalidCovariance(CovarianceDefect::Asymmetric { asym, i: worst.1, j: worst.2 }));
+    }
+    if overflow {
+        let (min_eig, max_eig) = extremes(&sym)?;
+        return Err(ParamError::InvalidCovariance(CovarianceDefect::NotPositiveSemidefinite {
+            min_eig,
+            max_eig,
+            corr_min_eig: f64::NEG_INFINITY,
+            corr_max_eig: f64::INFINITY,
+        }));
+    }
     let scaled = Mat::new(n, n, scaled)?;
     // Step 6: PSD on the scaled matrix; the unscaled extremes are reported alongside.
     let (corr_min_eig, corr_max_eig) = extremes(&scaled)?;
