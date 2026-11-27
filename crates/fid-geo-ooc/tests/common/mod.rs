@@ -337,3 +337,79 @@ pub fn stream_all(
     assert!(s.next_stream_block().is_none(), "the stream stays ended");
     (idx, hex(&h.finish()), lens)
 }
+
+// ------------------------------------------------------------------ query helpers (GEO.OOC.QUERY)
+
+/// An in-memory store that threads can share (`MemStore` is single-threaded), for the
+/// batch queries of GEO.OOC.QUERY.
+#[derive(Default)]
+pub struct SyncStore(std::sync::Mutex<fid_geo_ooc::MemStore>);
+
+impl SyncStore {
+    pub fn new() -> SyncStore {
+        SyncStore::default()
+    }
+
+    /// Replaces what is stored under `address` (fault injection).
+    pub fn replace(&self, address: [u8; 32], bytes: Vec<u8>) {
+        self.0.lock().unwrap().replace(address, bytes);
+    }
+
+    /// The stored bytes of chunk `pos` of `m`.
+    pub fn get_blob_for_test(&self, m: &fid_geo_ooc::ChunkManifest, pos: usize) -> Vec<u8> {
+        let e = &m.chunks[pos];
+        self.get_blob(&e.blob, e.bytes).unwrap()
+    }
+}
+
+impl ChunkStore for SyncStore {
+    fn put_blob(&self, bytes: &[u8]) -> Result<[u8; 32], OocError> {
+        self.0.lock().unwrap().put_blob(bytes)
+    }
+
+    fn get_blob(&self, address: &[u8; 32], size: u64) -> Result<Vec<u8>, OocError> {
+        self.0.lock().unwrap().get_blob(address, size)
+    }
+}
+
+/// A neighbour list as `(index, dist2 bits)`, for bit-exact comparison.
+pub fn bits(v: &[fid_geo_index::Neighbour]) -> Vec<(u64, u64)> {
+    v.iter().map(|n| (n.index, n.dist2.to_bits())).collect()
+}
+
+/// Result digest v1 of `fixtures/geo/ooc/make_query_fixtures.py` for a neighbour list.
+pub fn neighbour_digest(v: &[fid_geo_index::Neighbour]) -> String {
+    let mut h = fid_kci::kci::Sha256::new();
+    for n in v {
+        h.update(&n.index.to_le_bytes());
+        h.update(&n.dist2.to_bits().to_le_bytes());
+    }
+    hex(&h.finish())
+}
+
+/// Result digest v1 for a box hit list.
+pub fn hits_digest(v: &[u64]) -> String {
+    let mut h = fid_kci::kci::Sha256::new();
+    for i in v {
+        h.update(&i.to_le_bytes());
+    }
+    hex(&h.finish())
+}
+
+/// SplitMix64, the tests' own query generator.
+pub struct SplitMix(pub u64);
+
+impl SplitMix {
+    pub fn next(&mut self) -> u64 {
+        self.0 = self.0.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = self.0;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
+    }
+
+    /// Uniform in [0, 1).
+    pub fn unit(&mut self) -> f64 {
+        (self.next() >> 11) as f64 * (1.0 / 9_007_199_254_740_992.0)
+    }
+}
