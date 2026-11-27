@@ -1,0 +1,274 @@
+{
+ "cases": [
+  {
+   "cov": [
+    "3e42431356a4f9be",
+    "3e466a414d973a39",
+    "be40d09abbf7534d",
+    "3e333005186afbcd",
+    "3e3ef25b11e98ad9",
+    "be2499296da8b505",
+    "3e466a414d973a39",
+    "3e53b4fb43253cc5",
+    "be44b91a6a767d7b",
+    "3df4867d68c3597d",
+    "3e494574abc7b838",
+    "be2689d74905d32b",
+    "be40d09abbf7534d",
+    "be44b91a6a767d7b",
+    "3e401eeb35f59bf9",
+    "be32d4cd195bfb79",
+    "be3b612b051f096f",
+    "3e18d389d21d76c2",
+    "3e333005186afbcd",
+    "3df4867d68c3597d",
+    "be32d4cd195bfb79",
+    "3e403d8941451b93",
+    "3e0cd7ed62146d90",
+    "be081621d941031f",
+    "3e3ef25b11e98ad9",
+    "3e494574abc7b838",
+    "be3b612b051f096f",
+    "3e0cd7ed62146d90",
+    "3e41258f7fe492c8",
+    "be26441c83b9098b",
+    "be2499296da8b505",
+    "be2689d74905d32b",
+    "3e18d389d21d76c2",
+    "be081621d941031f",
+    "be26441c83b9098b",
+    "3e26f539098cec6f"
+   ],
+   "expected": {
+    "asym": "0000000000000000",
+    "asym_pair": [
+     0,
+     1
+    ],
+    "max_eig": "3e65798ee2308c3a",
+    "min_eig": "bdb5fd7fe1796342",
+    "verdict": "not_psd"
+   },
+   "name": "indefinite",
+   "note": "eigenvalues 4e-8, 1e-8, 2.5e-9, 1e-10, 4e-12, -2e-11 (AC-2)",
+   "params": [
+    "3f9eb851eb851eb8",
+    "bfa47ae147ae147b",
+    "0000000000000000",
+    "0000000000000000",
+    "0000000000000000",
+    "3f847ae147ae147b"
+   ],
+   "ref_dir": [
+    "0000000000000000",
+    "0000000000000000",
+    "3ff0000000000000"
+   ],
+   "type": "cylinder"
+  },
+  {
+   "cov": [
+    "3e4245f552553d67",
+    "3e4666f5698f606c",
+    "be40d18b3b4bc991",
+    "3e332b91781ff5e7",
+    "3e3ef6b96dcdd58c",
+    "be2493a1bf4653c3",
+    "3e4666f5698f606c",
+    "3e53b6ddc2c563a4",
+    "be44b80767a306c0",
+    "3df4d7f02ea55e43",
+    "3e4942f53e7565f9",
+    "be26902a214f768a",
+    "be40d18b3b4bc991",
+    "be44b80767a306c0",
+    "3e401f3995ce9f33",
+    "be32d359b65f6d0e",
+    "be3b629779dc693f",
+    "3e18cfef1f8bd644",
+    "3e332b91781ff5e7",
+    "3df4d7f02ea55e43",
+    "be32d359b65f6d0e",
+    "3e403f41385f157b",
+    "3e0cbcf14e651098",
+    "be08273629cf52c8",
+    "3e3ef6b96dcdd58c",
+    "3e4942f53e7565f9",
+    "be3b629779dc693f",
+    "3e0cbcf14e651098",
+    "3e4127373279e837",
+    "be263febd59c7705",
+    "be2493a1bf4653c3",
+    "be26902a214f768a",
+    "3e18cfef1f8bd644",
+    "be08273629cf52c8",
+    "be263febd59c7705",
+    "3e26f7dff76c3c70"
+   ],
+   "expected": {
+    "asym": "0000000000000000",
+    "asym_pair": [
+     0,
+     1
+    ],
+    "max_eig": "3e65798ee2308c3a",
+    "min_eig": "bba2e322c1657b86",
+    "verdict": "ok"
+   },
+   "name": "barely_psd",
+   "note": "smallest eigenvalue -2e-21, inside -1e-12 times the largest",
+   "params": [
+    "3f9eb851eb851eb8",
+    "bfa47ae147ae147b",
+    "0000000000000000",
+    "0000000000000000",
+    "0000000000000000",
+    "3f847ae147ae147b"
+   ],
+   "ref_dir": [
+    "0000000000000000",
+    "0000000000000000",
+    "3ff0000000000000"
+   ],
+   "type": "cylinder"
+  },
+  {
+   "cov": [
+    "3e42461a38847549",
+    "3e4666cb37c22da6",
+    "be40d19741a99cb4",
+    "3e332b587ce90066",
+    "3e3ef6f158cc74da",
+    "be24935af68e32cf",
+    "3e4666cb37c22da6",
+    "3e53b6f5e2c099a3",
+    "be44b7f9a77ed9ee",
+    "3df4dc02b88a69a2",
+    "3e4942d546375f93",
+    "be26907b12865b28",
+    "be40d19741a99cb4",
+    "be44b7f9a77ed9ee",
+    "3e401f3d80ffdf7f",
+    "be32d347249f987b",
+    "be3b62a9b2e5e1e1",
+    "3e18cfc0fd048c9e",
+    "3e332b587ce90066",
+    "3df4dc02b88a69a2",
+    "be32d347249f987b",
+    "3e403f5737ed2f8d",
+    "3e0cbb97e702a62d",
+    "be082810c77011aa",
+    "3e3ef6f158cc74da",
+    "3e4942d545cae0bc",
+    "be3b62a9b2e5e1e1",
+    "3e0cbb97e702a62d",
+    "3e41274c61ce2d3c",
+    "be263fb6334e3a9a",
+    "be24935af68e32cf",
+    "be26907b12865b28",
+    "3e18cfc0fd048c9e",
+    "be082810c77011aa",
+    "be263fb6334e3a9a",
+    "3e26f801e9b76809"
+   ],
+   "expected": {
+    "asym": "3e06035bfe72fd2d",
+    "asym_pair": [
+     1,
+     4
+    ],
+    "max_eig": "3e65798ee2381f4e",
+    "min_eig": "3d7197966c7a3cfb",
+    "verdict": "asymmetric"
+   },
+   "name": "asymmetric",
+   "note": "entry (1, 4) scaled by 1 + 1e-9, entry (4, 1) unchanged",
+   "params": [
+    "3f9eb851eb851eb8",
+    "bfa47ae147ae147b",
+    "0000000000000000",
+    "0000000000000000",
+    "0000000000000000",
+    "3f847ae147ae147b"
+   ],
+   "ref_dir": [
+    "0000000000000000",
+    "0000000000000000",
+    "3ff0000000000000"
+   ],
+   "type": "cylinder"
+  },
+  {
+   "cov": [
+    "3e42461a38847549",
+    "3e4666cb37c22da6",
+    "be40d19741a99a58",
+    "3e332b587ce90066",
+    "3e3ef6f158cc74da",
+    "be24935af68e32cf",
+    "3e4666cb37c22da6",
+    "3e53b6f5e2c099a3",
+    "be44b7f9a77ed9ee",
+    "3df4dc02b88a69a2",
+    "3e4942d545cae0bc",
+    "be26907b12865b28",
+    "be40d19741a99cb4",
+    "be44b7f9a77ed9ee",
+    "3e401f3d80ffdf7f",
+    "be32d347249f987b",
+    "be3b62a9b2e5e1e1",
+    "3e18cfc0fd048c9e",
+    "3e332b587ce90066",
+    "3df4dc02b88a69a2",
+    "be32d347249f987b",
+    "3e403f5737ed2f8d",
+    "3e0cbb97e702a62d",
+    "be082810c77011aa",
+    "3e3ef6f158cc74da",
+    "3e4942d545cae0bc",
+    "be3b62a9b2e5e1e1",
+    "3e0cbb97e702a62d",
+    "3e41274c61ce2d3c",
+    "be263fb6334e3a9a",
+    "be24935af68e32cf",
+    "be26907b12865b28",
+    "3e18cfc0fd048c9e",
+    "be082810c77011aa",
+    "be263fb6334e3a9a",
+    "3e26f801e9b76809"
+   ],
+   "expected": {
+    "asym": "3d2ea315f4e33621",
+    "asym_pair": [
+     0,
+     2
+    ],
+    "max_eig": "3e65798ee2308c1f",
+    "min_eig": "3d71979981277516",
+    "verdict": "ok"
+   },
+   "name": "near_symmetric",
+   "note": "entry (0, 2) raised by 1e-21, below 1e-12 of the largest entry",
+   "params": [
+    "3f9eb851eb851eb8",
+    "bfa47ae147ae147b",
+    "0000000000000000",
+    "0000000000000000",
+    "0000000000000000",
+    "3f847ae147ae147b"
+   ],
+   "ref_dir": [
+    "0000000000000000",
+    "0000000000000000",
+    "3ff0000000000000"
+   ],
+   "type": "cylinder"
+  }
+ ],
+ "generator": "fixtures/unc/mvar/param/make_fixtures.py",
+ "tolerances": {
+  "asym_rel": "1e-12",
+  "psd_rel": "1e-12"
+ },
+ "version": "fcov-param@1"
+}
