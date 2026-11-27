@@ -94,6 +94,8 @@ const ALLOWED: &[(&str, &str)] = &[
     ("fid-fit/src/ls_rnd.rs::sphere_coverage", "sphere coverage of a Centred set, returns a fraction"),
     ("fid-fit/src/mcc_cyl/mod.rs::fit_mcc_cylinder", "MCC cylinder fit"),
     ("fid-fit/src/mcc_cyl/mod.rs::fit_mcc_cylinder_from", "MCC cylinder fit from a given axis"),
+    ("fid-fit/src/mic_cirsph/mod.rs::fit_mic_circle2d", "MIC circle fit: every point is a row or checked"),
+    ("fid-fit/src/mic_cirsph/mod.rs::fit_mic_sphere", "MIC sphere fit: every point is a row or checked"),
     ("fid-fit/src/tan_plane/mod.rs::fit_tan_plane", "tangent plane fit"),
     ("fid-fit/src/tan_rock.rs::MaterialSide::validate", "checks the material side against the view, returns unit"),
     ("fid-fit/src/vor/mod.rs::mz_circle2d", "MZ circle fit"),
