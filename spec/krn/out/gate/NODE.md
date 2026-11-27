@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-filter]
 satisfies: [REQ-KRN.OUT-001]
 covers: [GOM.CON.21, GOM.CON.23]
 depends_on: [KRN.OUT.POL]
@@ -64,7 +65,8 @@ Geometric policies that decide by position relative to the nominal rather than b
 
 ## Open questions
 
-- None.
+- The tolerance band runs under `fid_filter::policy::apply` as `filter.outlier.tolerance_band@1.0.0`, not the `filter.select.tolerance_band@1.0.0` named in Scope and Build prompt: `apply` (KRN.OUT.POL) accepts only `filter.outlier.*` IDs for a `PolicyMethod`. A `filter.select.*` form of band selection belongs to the point-selection command (`KRN.OUT.SEL`), which can reuse `ToleranceBand::mask`.
+- The Design's `MissingNominal` error is KRN.OUT.POL's existing `PolicyError::NominalDistances { required: true }`; no second variant was added.
 
 ## Children
 

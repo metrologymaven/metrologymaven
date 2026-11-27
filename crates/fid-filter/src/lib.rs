@@ -6,8 +6,11 @@
 //! their validation, the [`policy::PolicyMethod`] trait every method implements, the
 //! [`policy::ExclusionMask`] with its digest, the two guards every method obeys, and
 //! [`policy::apply`], the one entry point in the kernel through which a fit's input set is
-//! reduced (REQ-KRN.OUT.POL-006). The methods (`KRN.OUT.STAT`, `KRN.OUT.RANSAC`,
-//! `KRN.OUT.GATE`), the full record with its impact disclosure (`KRN.OUT.DISC`), the
-//! reject-and-refit loop (`KRN.OUT.RUN`) and point selection (`KRN.OUT.SEL`) are separate leaves.
+//! reduced (REQ-KRN.OUT.POL-006). Methods: [`gate`] (spec node `KRN.OUT.GATE`), the
+//! distance-to-nominal gate and the tolerance band over caller-supplied signed nominal
+//! distances. The other methods (`KRN.OUT.STAT`, `KRN.OUT.RANSAC`), the full record with its
+//! impact disclosure (`KRN.OUT.DISC`), the reject-and-refit loop (`KRN.OUT.RUN`) and point
+//! selection (`KRN.OUT.SEL`) are separate leaves.
 
+pub mod gate;
 pub mod policy;

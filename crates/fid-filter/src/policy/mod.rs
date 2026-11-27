@@ -221,7 +221,7 @@ impl OutlierPolicy {
     }
 
     /// Checks the policy's own fields (steps 1 and 2 of the pinned validation order).
-    fn validate_fields(&self) -> Result<(), PolicyError> {
+    pub(crate) fn validate_fields(&self) -> Result<(), PolicyError> {
         match *self {
             OutlierPolicy::NSigma { k, .. } | OutlierPolicy::RobustScale { k, .. } => positive("k", k),
             OutlierPolicy::Ransac { threshold_m, iterations, min_inliers, .. } => {
