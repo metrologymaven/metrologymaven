@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-fit]
+built_pr: 664
 satisfies: [REQ-KRN.ENV.MIC-002, REQ-KRN.ENV.MIC-003]
 covers: []
 depends_on: [KRN.LSQ.TRAIT, KRN.NUM.FN, KRN.NUM.RED]
