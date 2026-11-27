@@ -134,14 +134,8 @@ fn run_case(case: &str, threads: usize) -> (Cloud, Case, VertexSet) {
         let src = point(&cloud, v.source);
         assert!(cloud.valid[v.source as usize], "{case}: invalid source {}", v.source);
         if v.status.moved() {
-            for a in 0..3 {
-                assert!(
-                    (v.position[a] - row.position[a]).abs() <= POS_TOL,
-                    "{case}: source {} axis {a}: {} vs {}",
-                    v.source,
-                    v.position[a],
-                    row.position[a]
-                );
+            for (a, (got, want)) in v.position.iter().zip(&row.position).enumerate() {
+                assert!((got - want).abs() <= POS_TOL, "{case}: source {} axis {a}: {got} vs {want}", v.source);
             }
             assert!(v.displacement_m <= half, "{case}: displacement above h/2");
             assert!((v.displacement_m - dist(v.position, src)).abs() <= 1e-15);

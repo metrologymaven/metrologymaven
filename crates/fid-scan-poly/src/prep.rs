@@ -373,7 +373,7 @@ fn select(buf: &PointBuffer, valid: &[bool], o: [f64; 3], h: f64) -> Result<Vec<
         return Err(PolyError::Inconsistent);
     }
     // Keys are unique (the index), so the unstable sort is a pure function of the input.
-    keyed.sort_unstable_by(|a, b| (a.0, a.1).cmp(&(b.0, b.1)));
+    keyed.sort_unstable_by_key(|e| (e.0, e.1));
 
     let mut reps = Vec::new();
     for group in keyed.chunk_by(|a, b| a.0 == b.0) {
