@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-xtask]
+built_pr: 674
 satisfies: [REQ-ECO.CI-004, REQ-ECO.CI-006]
 covers: []
 depends_on: [ECO.REPO, ECO.RULES, ECO.COMM]
