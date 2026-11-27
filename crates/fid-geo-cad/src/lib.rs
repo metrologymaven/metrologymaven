@@ -29,14 +29,24 @@
 //! inconsistent orientation, edge curves off their surfaces, pcurve disagreement, PCURVE
 //! failures and doubly periodic windings) by kind and entity ID, without changing the body.
 //!
+//! Implemented leaf: `GEO.CAD.TESS.EDGE` (see [`tess::edge`]): [`tessellate_edges`], every edge
+//! sampled once under chordal and angular tolerances by fixed left-to-right bisection, one
+//! shared mesh vertex per body vertex and interior sample, the samples in every coedge's face
+//! chart, and the per-edge surface gap.
+//!
 //! The commands (`GEO.CAD.TOPO.CMD`) are another leaf.
 
 pub mod assy;
+pub mod tess;
 pub mod topo;
 
 pub use assy::{
     AssyModelError, BodyId, Instance, InstanceEntityId, InstanceId, InstanceIndex, InstanceIx, InstancePath,
     InstanceView, ASSY_NAMESPACE, MAX_INSTANCE_ENTITIES, MAX_PATH_DEPTH,
+};
+pub use tess::{
+    sample_curve, tessellate_edges, CoedgeUv, CurveSamples, EdgeReport, EdgeSamples, EdgeTess, EdgeTessError,
+    EdgeTessParams, SampleError, UvError,
 };
 pub use topo::{
     body_digest, classify_uv, decode, derive_coedge, derive_pcurves, encode, pcurve_disagreement, AdjError, Adjacency,
