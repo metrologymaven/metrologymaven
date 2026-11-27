@@ -140,6 +140,8 @@ def clean_path(line):
         raise ValueError("long")
     if line != line.strip() or any(ord(c) < 0x20 or 0x7F <= ord(c) <= 0x9F for c in line):
         raise ValueError("whitespace or control")
+    if "\ufeff" in line:
+        raise ValueError("byte-order mark")
     if line.startswith('"'):
         raise ValueError("quoted")
     p = line.replace("\\", "/")
@@ -238,6 +240,7 @@ CASES = [
     ("bad_input_space", CFG, "bad-space.txt"),
     ("bad_input_quoted", CFG, "bad-quoted.txt"),
     ("bad_input_empty", CFG, "bad-empty.txt"),
+    ("bad_input_bom", CFG, "bad-bom.txt"),
 ] + [
     (f"bad_config_{p.stem.replace('-', '_')}", f"bad-config/{p.name}", "kernel-change.txt")
     for p in sorted((HERE / "bad-config").glob("*.toml"))
@@ -299,6 +302,8 @@ def build():
     assert by["ac3_mixed"]["exit"] == "1" and by["ac3_mixed"]["json"] == "CI-MIXED src/lib.rs\n"
     assert by["ac4_config_change"]["json"] == '{"gates":["apps","layers","rules","spec"]}\n'
     assert by["ac5_ci_only"]["exit"] == "0"
+    assert by["ac5_ci_only"]["json"] == '{"gates":["apps","layers","rules","spec"]}\n'
+    assert by["bad_input_bom"]["error"] == "GATES-INPUT"
     assert by["ac6_multi"] == {**by["ac6_multi_shuffled"], "name": "ac6_multi", "changed": "multi.txt"}
     return {"cases": cases, "glob_cases": globs, "bad_globs": bad}
 

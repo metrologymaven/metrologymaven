@@ -4,7 +4,11 @@
 //!
 //! Reads the gate configuration (`[[gate]]` with `id`, `run`, `globs` and optional `always`;
 //! optional `[isolation] ci_globs` and `[shared] tool_globs`) and a list of changed
-//! repo-relative paths (one per line), and prints the governed checks the change must run:
+//! repo-relative paths (one per line), and prints the governed checks the change must run.
+//! The list must come from `git diff --name-only --no-renames <base> <head>`: with rename
+//! detection on, git lists a renamed file only under its new path, so a gate that governs the
+//! old path would silently not be selected.
+//!
 //!
 //! - REQ-ECO.CI.GATES-001: every gate whose globs match at least one changed path, plus every
 //!   gate with `always = true`, sorted by gate ID.
@@ -433,6 +437,9 @@ pub fn normalise_path(line: &str) -> Result<String, String> {
     }
     if line.chars().any(char::is_control) {
         return Err("control character".into());
+    }
+    if line.contains('\u{feff}') {
+        return Err("byte-order mark (U+FEFF)".into());
     }
     if line.starts_with('"') {
         return Err("quoted path (run git with -c core.quotePath=false)".into());

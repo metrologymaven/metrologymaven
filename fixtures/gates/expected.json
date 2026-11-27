@@ -58,27 +58,27 @@
    "config": "ci-gates.toml",
    "error": null,
    "exit": "0",
-   "json": "{\"gates\":[]}\n",
+   "json": "{\"gates\":[\"apps\",\"layers\",\"rules\",\"spec\"]}\n",
    "name": "ac5_ci_only",
-   "text": "ci-plan: 0 gates: no changed path matches a gate glob and no gate is always\n"
+   "text": "ci-plan: 4 gate(s)\napps: every gate selected: .github/actions/setup/action.yml is a ci-gates.toml or a shared tool\nlayers: every gate selected: .github/actions/setup/action.yml is a ci-gates.toml or a shared tool\nrules: every gate selected: .github/actions/setup/action.yml is a ci-gates.toml or a shared tool\nspec: every gate selected: .github/actions/setup/action.yml is a ci-gates.toml or a shared tool\n"
   },
   {
    "changed": "multi.txt",
    "config": "ci-gates.toml",
    "error": null,
    "exit": "0",
-   "json": "{\"gates\":[\"layers\",\"rules\",\"spec\"]}\n",
+   "json": "{\"gates\":[\"apps\",\"layers\",\"rules\",\"spec\"]}\n",
    "name": "ac6_multi",
-   "text": "ci-plan: 3 gate(s)\nlayers: Cargo.lock matches Cargo.lock\nrules: AGENTS.md matches AGENTS.md\nspec: spec/eco/ci/gates/NODE.md matches spec/**\n"
+   "text": "ci-plan: 4 gate(s)\napps: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\nlayers: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\nrules: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\nspec: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\n"
   },
   {
    "changed": "multi-shuffled.txt",
    "config": "ci-gates.toml",
    "error": null,
    "exit": "0",
-   "json": "{\"gates\":[\"layers\",\"rules\",\"spec\"]}\n",
+   "json": "{\"gates\":[\"apps\",\"layers\",\"rules\",\"spec\"]}\n",
    "name": "ac6_multi_shuffled",
-   "text": "ci-plan: 3 gate(s)\nlayers: Cargo.lock matches Cargo.lock\nrules: AGENTS.md matches AGENTS.md\nspec: spec/eco/ci/gates/NODE.md matches spec/**\n"
+   "text": "ci-plan: 4 gate(s)\napps: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\nlayers: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\nrules: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\nspec: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\n"
   },
   {
    "changed": "config-copy-change.txt",
@@ -240,6 +240,15 @@
    "exit": "2",
    "json": "",
    "name": "bad_input_empty",
+   "text": ""
+  },
+  {
+   "changed": "bad-bom.txt",
+   "config": "ci-gates.toml",
+   "error": "GATES-INPUT",
+   "exit": "2",
+   "json": "",
+   "name": "bad_input_bom",
    "text": ""
   },
   {

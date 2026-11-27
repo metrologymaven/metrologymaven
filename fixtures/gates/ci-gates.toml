@@ -1,6 +1,11 @@
 # ECO.CI.GATES test configuration (hand-written; MIT OR Apache-2.0).
-# No [isolation] and no [shared] table, so the planner's defaults apply:
-# ci_globs = .github/workflows/**, .github/actions/**, ci/**; tool_globs = xtask/**.
+# No [isolation] table, so the planner's default ci_globs apply (.github/workflows/**,
+# .github/actions/**, ci/**). [shared] mirrors the repository's ci-gates.toml, so a CI-only or
+# Cargo.lock change selects every gate. The default tool_globs (xtask/**) are tested through
+# the library; ci-gates-always.toml sets its own.
+
+[shared]
+tool_globs = ["xtask/**", ".github/workflows/**", ".github/actions/**", "ci/**", "Cargo.lock"]
 
 [[gate]]
 id = "spec"

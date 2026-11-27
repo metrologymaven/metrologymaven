@@ -123,7 +123,8 @@ fn ac4_config_change_selects_every_gate() {
 #[test]
 fn ac5_ci_only_change_passes() {
     let (code, out, _) = plan_cli("ci-gates.toml", "ci-only.txt", true);
-    assert_eq!((code, out.as_str()), (0, "{\"gates\":[]}\n"));
+    // The fixture config lists the CI paths as shared tools, so every gate runs.
+    assert_eq!((code, out.as_str()), (0, "{\"gates\":[\"apps\",\"layers\",\"rules\",\"spec\"]}\n"));
 }
 
 /// AC-6: the same inputs in shuffled orders (with duplicates and blank lines) give
@@ -210,7 +211,22 @@ fn reasons_name_the_path_and_glob() {
 fn changed_paths_are_normalised_or_refused() {
     assert_eq!(normalise_path("./spec/a.md").unwrap(), "spec/a.md");
     assert_eq!(normalise_path("crates\\a\\Cargo.toml").unwrap(), "crates/a/Cargo.toml");
-    for bad in ["/etc/x", "C:/x", "c:\\x", "a//b", "a/", "../a", "a/./b", " a", "a ", "\"a\\303\"", "a\tb", "./"] {
+    for bad in [
+        "/etc/x",
+        "C:/x",
+        "c:\\x",
+        "a//b",
+        "a/",
+        "../a",
+        "a/./b",
+        " a",
+        "a ",
+        "\"a\\303\"",
+        "a\tb",
+        "./",
+        "\u{feff}a",
+        "a/\u{feff}b",
+    ] {
         assert!(normalise_path(bad).is_err(), "accepted {bad:?}");
     }
     assert_eq!(parse_changed(b"b\r\na\r\n\r\nb\n").unwrap().into_iter().collect::<Vec<_>>(), ["a", "b"]);
@@ -299,7 +315,6 @@ fn repository_config_implements_the_default_gate_set() {
         ("kernel-allowlist.toml", "layers"),
         ("Cargo.toml", "layers"),
         ("crates/fid-num/Cargo.toml", "layers"),
-        ("Cargo.lock", "layers"),
         ("AGENTS.md", "rules"),
         ("CLAUDE.md", "rules"),
         ("house-rules/core.md", "rules"),
@@ -311,11 +326,20 @@ fn repository_config_implements_the_default_gate_set() {
         assert_eq!(one(path), [gate], "{path}");
     }
     assert!(one("crates/fid-num/src/lib.rs").is_empty());
-    for all in ["ci-gates.toml", "crates/fid-xtask/src/ci_plan.rs"] {
+    for all in [
+        "ci-gates.toml",
+        "crates/fid-xtask/src/ci_plan.rs",
+        "Cargo.lock",
+        ".github/workflows/rust.yml",
+        ".github/actions/setup/action.yml",
+        "ci/fixture-checks.txt",
+    ] {
         assert_eq!(one(all).len(), cfg.gates.len(), "{all}");
     }
-    // Workflow files are CI paths here; the ci/ lists are not (they travel with leaf PRs).
+    // Workflow files are CI paths here; the ci/ lists are not (they travel with leaf PRs), but
+    // they select every gate as shared tools (checked above).
     let mixed = parse_changed(b".github/workflows/rust.yml\nspec/a.md\n").unwrap();
     assert_eq!(plan(&cfg, &mixed), Outcome::CiMixed { non_ci: vec!["spec/a.md".into()] });
-    assert_eq!(one("ci/fixture-checks.txt"), Vec::<String>::new());
+    let with_code = parse_changed(b"ci/fixture-checks.txt\ncrates/fid-num/src/lib.rs\n").unwrap();
+    assert!(matches!(plan(&cfg, &with_code), Outcome::Plan(p) if p.len() == cfg.gates.len()));
 }
