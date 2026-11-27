@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-chart-series]
+built_pr: 671
 satisfies: [REQ-RPT.STATS.TREND-004, REQ-RPT.STATS.TREND-005]
 covers: []
 depends_on: [CORE.JRN.CANON, GEO.FRAME.UNITS]
