@@ -187,9 +187,12 @@ fn results() -> &'static [Result<MicFit, FitError>] {
 /// Cases up to this many points also run through the `Fit` trait.
 const TRAIT_MAX_POINTS: usize = 2000;
 
+/// A case being read: id, dimension, arc flag, points and expectation.
+type Partial = (String, usize, bool, Vec<[f64; 3]>, Option<Expect>);
+
 fn load() -> Vec<Case> {
     let mut out = Vec::new();
-    let mut cur: Option<(String, usize, bool, Vec<[f64; 3]>, Option<Expect>)> = None;
+    let mut cur: Option<Partial> = None;
     for line in CASES_TXT.lines() {
         if line.starts_with('#') || line.trim().is_empty() {
             continue;
