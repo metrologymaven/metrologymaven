@@ -1,0 +1,1512 @@
+{
+ "body_id": "6e6f6d696e616c2d626c6f636b2d3031",
+ "coedges": [
+  {
+   "edge": 11,
+   "label": "c0",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 12,
+   "label": "c1",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 13,
+   "label": "c2",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 14,
+   "label": "c3",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 0,
+   "label": "c4",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 15,
+   "label": "c5",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 16,
+   "label": "c6",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 17,
+   "label": "c7",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 18,
+   "label": "c8",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 2,
+   "label": "c9",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 5,
+   "label": "c10",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 10,
+   "label": "c11",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 19,
+   "label": "c12",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 18,
+   "label": "c13",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 20,
+   "label": "c14",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 11,
+   "label": "c15",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 13,
+   "label": "c16",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 21,
+   "label": "c17",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 16,
+   "label": "c18",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 22,
+   "label": "c19",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 14,
+   "label": "c20",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 22,
+   "label": "c21",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 15,
+   "label": "c22",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 19,
+   "label": "c23",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 20,
+   "label": "c24",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 17,
+   "label": "c25",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 21,
+   "label": "c26",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 12,
+   "label": "c27",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 0,
+   "label": "c28",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 3,
+   "label": "c29",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 1,
+   "label": "c30",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 3,
+   "label": "c31",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 1,
+   "label": "c32",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 4,
+   "label": "c33",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 2,
+   "label": "c34",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 4,
+   "label": "c35",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 5,
+   "label": "c36",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 9,
+   "label": "c37",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 6,
+   "label": "c38",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 9,
+   "label": "c39",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 6,
+   "label": "c40",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 8,
+   "label": "c41",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 7,
+   "label": "c42",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 8,
+   "label": "c43",
+   "pcurve": null,
+   "sense": "reversed"
+  },
+  {
+   "edge": 7,
+   "label": "c44",
+   "pcurve": null,
+   "sense": "same"
+  },
+  {
+   "edge": 10,
+   "label": "c45",
+   "pcurve": null,
+   "sense": "same"
+  }
+ ],
+ "description": "analytic block: box, through hole with countersink, boss with torus fillet, spherical dimple; every surface and curve analytic, closed shell",
+ "edges": [
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "origin": [
+     0.03125,
+     0.03125,
+     0.0
+    ],
+    "radius": 0.0078125,
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "circle"
+   },
+   "end": 8,
+   "label": "e.hole.bottom",
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "start": 8
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "origin": [
+     0.03125,
+     0.03125,
+     0.02734375
+    ],
+    "radius": 0.0078125,
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "circle"
+   },
+   "end": 9,
+   "label": "e.hole.top",
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "start": 9
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "origin": [
+     0.03125,
+     0.03125,
+     0.03125
+    ],
+    "radius": 0.01171875,
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "circle"
+   },
+   "end": 10,
+   "label": "e.csink.rim",
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "start": 10
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "origin": [
+     0.0390625,
+     0.03125,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "type": "line"
+   },
+   "end": 9,
+   "label": "e.hole.seam",
+   "range": [
+    0.0,
+    0.02734375
+   ],
+   "start": 8
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "origin": [
+     0.0390625,
+     0.03125,
+     0.02734375
+    ],
+    "ref_dir": [
+     0.7071067811865476,
+     0.0,
+     0.7071067811865476
+    ],
+    "type": "line"
+   },
+   "end": 10,
+   "label": "e.csink.seam",
+   "range": [
+    0.0,
+    0.005524271728019903
+   ],
+   "start": 9
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "origin": [
+     0.09375,
+     0.03125,
+     0.03125
+    ],
+    "radius": 0.009765625,
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "circle"
+   },
+   "end": 11,
+   "label": "e.fillet.outer",
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "start": 11
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "origin": [
+     0.09375,
+     0.03125,
+     0.033203125
+    ],
+    "radius": 0.0078125,
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "circle"
+   },
+   "end": 12,
+   "label": "e.boss.bottom",
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "start": 12
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "origin": [
+     0.09375,
+     0.03125,
+     0.046875
+    ],
+    "radius": 0.0078125,
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "circle"
+   },
+   "end": 13,
+   "label": "e.boss.top",
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "start": 13
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "origin": [
+     0.1015625,
+     0.03125,
+     0.033203125
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "type": "line"
+   },
+   "end": 13,
+   "label": "e.boss.seam",
+   "range": [
+    0.0,
+    0.013671875
+   ],
+   "start": 12
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     -1.0,
+     0.0
+    ],
+    "origin": [
+     0.103515625,
+     0.03125,
+     0.033203125
+    ],
+    "radius": 0.001953125,
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "circle"
+   },
+   "end": 11,
+   "label": "e.fillet.seam",
+   "range": [
+    3.141592653589793,
+    4.71238898038469
+   ],
+   "start": 12
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "origin": [
+     0.0625,
+     0.03125,
+     0.03125
+    ],
+    "radius": 0.0078125,
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "circle"
+   },
+   "end": 14,
+   "label": "e.dimple.rim",
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "start": 14
+  },
+  {
+   "curve": {
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "type": "line"
+   },
+   "end": 2,
+   "label": "e.box.000-010",
+   "range": [
+    0.0,
+    0.0625
+   ],
+   "start": 0
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "origin": [
+     0.0,
+     0.0625,
+     0.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "line"
+   },
+   "end": 6,
+   "label": "e.box.010-110",
+   "range": [
+    0.0,
+    0.125
+   ],
+   "start": 2
+  },
+  {
+   "curve": {
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "origin": [
+     0.125,
+     0.0625,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     -1.0,
+     0.0
+    ],
+    "type": "line"
+   },
+   "end": 4,
+   "label": "e.box.110-100",
+   "range": [
+    0.0,
+    0.0625
+   ],
+   "start": 6
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "origin": [
+     0.125,
+     0.0,
+     0.0
+    ],
+    "ref_dir": [
+     -1.0,
+     0.0,
+     0.0
+    ],
+    "type": "line"
+   },
+   "end": 0,
+   "label": "e.box.100-000",
+   "range": [
+    0.0,
+    0.125
+   ],
+   "start": 4
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "origin": [
+     0.0,
+     0.0,
+     0.03125
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "line"
+   },
+   "end": 5,
+   "label": "e.box.001-101",
+   "range": [
+    0.0,
+    0.125
+   ],
+   "start": 1
+  },
+  {
+   "curve": {
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "origin": [
+     0.125,
+     0.0,
+     0.03125
+    ],
+    "ref_dir": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "type": "line"
+   },
+   "end": 7,
+   "label": "e.box.101-111",
+   "range": [
+    0.0,
+    0.0625
+   ],
+   "start": 5
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "origin": [
+     0.125,
+     0.0625,
+     0.03125
+    ],
+    "ref_dir": [
+     -1.0,
+     0.0,
+     0.0
+    ],
+    "type": "line"
+   },
+   "end": 3,
+   "label": "e.box.111-011",
+   "range": [
+    0.0,
+    0.125
+   ],
+   "start": 7
+  },
+  {
+   "curve": {
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "origin": [
+     0.0,
+     0.0625,
+     0.03125
+    ],
+    "ref_dir": [
+     0.0,
+     -1.0,
+     0.0
+    ],
+    "type": "line"
+   },
+   "end": 1,
+   "label": "e.box.011-001",
+   "range": [
+    0.0,
+    0.0625
+   ],
+   "start": 3
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "type": "line"
+   },
+   "end": 1,
+   "label": "e.box.000-001",
+   "range": [
+    0.0,
+    0.03125
+   ],
+   "start": 0
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "origin": [
+     0.0,
+     0.0625,
+     0.03125
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "type": "line"
+   },
+   "end": 2,
+   "label": "e.box.011-010",
+   "range": [
+    0.0,
+    0.03125
+   ],
+   "start": 3
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "origin": [
+     0.125,
+     0.0625,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "type": "line"
+   },
+   "end": 7,
+   "label": "e.box.110-111",
+   "range": [
+    0.0,
+    0.03125
+   ],
+   "start": 6
+  },
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "origin": [
+     0.125,
+     0.0,
+     0.03125
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "type": "line"
+   },
+   "end": 4,
+   "label": "e.box.101-100",
+   "range": [
+    0.0,
+    0.03125
+   ],
+   "start": 5
+  }
+ ],
+ "faces": [
+  {
+   "label": "f.box.bottom",
+   "loops": [
+    0,
+    1
+   ],
+   "sense": "same",
+   "surface": {
+    "axis": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "plane"
+   }
+  },
+  {
+   "label": "f.box.top",
+   "loops": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "sense": "same",
+   "surface": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "origin": [
+     0.0,
+     0.0,
+     0.03125
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "plane"
+   }
+  },
+  {
+   "label": "f.box.x0",
+   "loops": [
+    6
+   ],
+   "sense": "reversed",
+   "surface": {
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "type": "plane"
+   }
+  },
+  {
+   "label": "f.box.x1",
+   "loops": [
+    7
+   ],
+   "sense": "same",
+   "surface": {
+    "axis": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "origin": [
+     0.125,
+     0.0,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "type": "plane"
+   }
+  },
+  {
+   "label": "f.box.y0",
+   "loops": [
+    8
+   ],
+   "sense": "same",
+   "surface": {
+    "axis": [
+     0.0,
+     -1.0,
+     0.0
+    ],
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "plane"
+   }
+  },
+  {
+   "label": "f.box.y1",
+   "loops": [
+    9
+   ],
+   "sense": "same",
+   "surface": {
+    "axis": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "origin": [
+     0.0,
+     0.0625,
+     0.0
+    ],
+    "ref_dir": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "type": "plane"
+   }
+  },
+  {
+   "label": "f.hole",
+   "loops": [
+    10
+   ],
+   "sense": "reversed",
+   "surface": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "origin": [
+     0.03125,
+     0.03125,
+     0.0
+    ],
+    "radius": 0.0078125,
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "cylinder"
+   }
+  },
+  {
+   "label": "f.csink",
+   "loops": [
+    11
+   ],
+   "sense": "reversed",
+   "surface": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "half_angle": 0.7853981633974483,
+    "origin": [
+     0.03125,
+     0.03125,
+     0.02734375
+    ],
+    "radius": 0.0078125,
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "cone"
+   }
+  },
+  {
+   "label": "f.fillet",
+   "loops": [
+    12
+   ],
+   "sense": "reversed",
+   "surface": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "major_radius": 0.009765625,
+    "minor_radius": 0.001953125,
+    "origin": [
+     0.09375,
+     0.03125,
+     0.033203125
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "torus"
+   }
+  },
+  {
+   "label": "f.boss",
+   "loops": [
+    13
+   ],
+   "sense": "same",
+   "surface": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "origin": [
+     0.09375,
+     0.03125,
+     0.033203125
+    ],
+    "radius": 0.0078125,
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "cylinder"
+   }
+  },
+  {
+   "label": "f.boss.top",
+   "loops": [
+    14
+   ],
+   "sense": "same",
+   "surface": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "origin": [
+     0.09375,
+     0.03125,
+     0.046875
+    ],
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "plane"
+   }
+  },
+  {
+   "label": "f.dimple",
+   "loops": [
+    15
+   ],
+   "sense": "reversed",
+   "surface": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "origin": [
+     0.0625,
+     0.03125,
+     0.037109375
+    ],
+    "radius": 0.009765625,
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "sphere"
+   }
+  }
+ ],
+ "license": "CC-BY-4.0",
+ "loops": [
+  {
+   "coedges": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "label": "l.box.bottom",
+   "outer": true
+  },
+  {
+   "coedges": [
+    4
+   ],
+   "label": "l.box.bottom.hole",
+   "outer": false
+  },
+  {
+   "coedges": [
+    5,
+    6,
+    7,
+    8
+   ],
+   "label": "l.box.top",
+   "outer": true
+  },
+  {
+   "coedges": [
+    9
+   ],
+   "label": "l.box.top.csink",
+   "outer": false
+  },
+  {
+   "coedges": [
+    10
+   ],
+   "label": "l.box.top.fillet",
+   "outer": false
+  },
+  {
+   "coedges": [
+    11
+   ],
+   "label": "l.box.top.dimple",
+   "outer": false
+  },
+  {
+   "coedges": [
+    12,
+    13,
+    14,
+    15
+   ],
+   "label": "l.box.x0",
+   "outer": true
+  },
+  {
+   "coedges": [
+    16,
+    17,
+    18,
+    19
+   ],
+   "label": "l.box.x1",
+   "outer": true
+  },
+  {
+   "coedges": [
+    20,
+    21,
+    22,
+    23
+   ],
+   "label": "l.box.y0",
+   "outer": true
+  },
+  {
+   "coedges": [
+    24,
+    25,
+    26,
+    27
+   ],
+   "label": "l.box.y1",
+   "outer": true
+  },
+  {
+   "coedges": [
+    28,
+    29,
+    30,
+    31
+   ],
+   "label": "l.hole",
+   "outer": true
+  },
+  {
+   "coedges": [
+    32,
+    33,
+    34,
+    35
+   ],
+   "label": "l.csink",
+   "outer": true
+  },
+  {
+   "coedges": [
+    36,
+    37,
+    38,
+    39
+   ],
+   "label": "l.fillet",
+   "outer": true
+  },
+  {
+   "coedges": [
+    40,
+    41,
+    42,
+    43
+   ],
+   "label": "l.boss",
+   "outer": true
+  },
+  {
+   "coedges": [
+    44
+   ],
+   "label": "l.boss.top",
+   "outer": true
+  },
+  {
+   "coedges": [
+    45
+   ],
+   "label": "l.dimple",
+   "outer": true
+  }
+ ],
+ "shells": [
+  {
+   "closed": true,
+   "faces": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11
+   ]
+  }
+ ],
+ "vertices": [
+  {
+   "label": "v.corner.000",
+   "point": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "label": "v.corner.001",
+   "point": [
+    0.0,
+    0.0,
+    0.03125
+   ]
+  },
+  {
+   "label": "v.corner.010",
+   "point": [
+    0.0,
+    0.0625,
+    0.0
+   ]
+  },
+  {
+   "label": "v.corner.011",
+   "point": [
+    0.0,
+    0.0625,
+    0.03125
+   ]
+  },
+  {
+   "label": "v.corner.100",
+   "point": [
+    0.125,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "label": "v.corner.101",
+   "point": [
+    0.125,
+    0.0,
+    0.03125
+   ]
+  },
+  {
+   "label": "v.corner.110",
+   "point": [
+    0.125,
+    0.0625,
+    0.0
+   ]
+  },
+  {
+   "label": "v.corner.111",
+   "point": [
+    0.125,
+    0.0625,
+    0.03125
+   ]
+  },
+  {
+   "label": "v.hole.bottom",
+   "point": [
+    0.0390625,
+    0.03125,
+    0.0
+   ]
+  },
+  {
+   "label": "v.hole.top",
+   "point": [
+    0.0390625,
+    0.03125,
+    0.02734375
+   ]
+  },
+  {
+   "label": "v.csink.rim",
+   "point": [
+    0.04296875,
+    0.03125,
+    0.03125
+   ]
+  },
+  {
+   "label": "v.fillet.outer",
+   "point": [
+    0.103515625,
+    0.03125,
+    0.03125
+   ]
+  },
+  {
+   "label": "v.boss.bottom",
+   "point": [
+    0.1015625,
+    0.03125,
+    0.033203125
+   ]
+  },
+  {
+   "label": "v.boss.top",
+   "point": [
+    0.1015625,
+    0.03125,
+    0.046875
+   ]
+  },
+  {
+   "label": "v.dimple.rim",
+   "point": [
+    0.0703125,
+    0.03125,
+    0.03125
+   ]
+  }
+ ]
+}

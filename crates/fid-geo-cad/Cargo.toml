@@ -1,6 +1,6 @@
 [package]
 name = "fid-geo-cad"
-description = "Metrology Maven CAD boundary representation: B-rep arena, typed stable IDs, builder with topology checks, the canonical binary encoding with its SHA-256 digest, adjacency, coedge pcurves, trimmed-face classification, defect validation without repair, assembly instances with per-instance entity IDs, and shared edge discretisation for tessellation (spec nodes GEO.CAD.TOPO.MODEL, ADJ, PCURVE, TRIM, VALID, GEO.CAD.ASSY.MODEL, GEO.CAD.TESS.EDGE)"
+description = "Metrology Maven CAD boundary representation: B-rep arena, typed stable IDs, builder with topology checks, the canonical binary encoding with its SHA-256 digest, adjacency, coedge pcurves, trimmed-face classification, defect validation without repair, assembly instances with per-instance entity IDs, and shared edge discretisation for tessellation, and nominal elements mapped directly from analytic faces, edges and vertices (spec nodes GEO.CAD.TOPO.MODEL, ADJ, PCURVE, TRIM, VALID, GEO.CAD.ASSY.MODEL, GEO.CAD.TESS.EDGE, GEO.CAD.NOMINAL.DIRECT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

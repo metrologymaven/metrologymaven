@@ -1,0 +1,489 @@
+{
+ "description": "GEO.CAD.NOMINAL.DIRECT expected nominal elements of analytic_block.json (make_nominal_fixtures.py; material from design intent checked against Su x Sv, extents exact)",
+ "edges": {
+  "e.boss.bottom": {
+   "extent": {
+    "angular": [
+     0.0,
+     6.283185307179586
+    ]
+   },
+   "kind": "circle"
+  },
+  "e.boss.seam": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.013671875
+    ]
+   },
+   "kind": "line"
+  },
+  "e.boss.top": {
+   "extent": {
+    "angular": [
+     0.0,
+     6.283185307179586
+    ]
+   },
+   "kind": "circle"
+  },
+  "e.box.000-001": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.03125
+    ]
+   },
+   "kind": "line"
+  },
+  "e.box.000-010": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.0625
+    ]
+   },
+   "kind": "line"
+  },
+  "e.box.001-101": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.125
+    ]
+   },
+   "kind": "line"
+  },
+  "e.box.010-110": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.125
+    ]
+   },
+   "kind": "line"
+  },
+  "e.box.011-001": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.0625
+    ]
+   },
+   "kind": "line"
+  },
+  "e.box.011-010": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.03125
+    ]
+   },
+   "kind": "line"
+  },
+  "e.box.100-000": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.125
+    ]
+   },
+   "kind": "line"
+  },
+  "e.box.101-100": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.03125
+    ]
+   },
+   "kind": "line"
+  },
+  "e.box.101-111": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.0625
+    ]
+   },
+   "kind": "line"
+  },
+  "e.box.110-100": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.0625
+    ]
+   },
+   "kind": "line"
+  },
+  "e.box.110-111": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.03125
+    ]
+   },
+   "kind": "line"
+  },
+  "e.box.111-011": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.125
+    ]
+   },
+   "kind": "line"
+  },
+  "e.csink.rim": {
+   "extent": {
+    "angular": [
+     0.0,
+     6.283185307179586
+    ]
+   },
+   "kind": "circle"
+  },
+  "e.csink.seam": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.005524271728019903
+    ]
+   },
+   "kind": "line"
+  },
+  "e.dimple.rim": {
+   "extent": {
+    "angular": [
+     0.0,
+     6.283185307179586
+    ]
+   },
+   "kind": "circle"
+  },
+  "e.fillet.outer": {
+   "extent": {
+    "angular": [
+     0.0,
+     6.283185307179586
+    ]
+   },
+   "kind": "circle"
+  },
+  "e.fillet.seam": {
+   "extent": {
+    "angular": [
+     3.141592653589793,
+     4.71238898038469
+    ]
+   },
+   "kind": "circle"
+  },
+  "e.hole.bottom": {
+   "extent": {
+    "angular": [
+     0.0,
+     6.283185307179586
+    ]
+   },
+   "kind": "circle"
+  },
+  "e.hole.seam": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.02734375
+    ]
+   },
+   "kind": "line"
+  },
+  "e.hole.top": {
+   "extent": {
+    "angular": [
+     0.0,
+     6.283185307179586
+    ]
+   },
+   "kind": "circle"
+  }
+ },
+ "faces": {
+  "f.boss": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.013671875
+    ]
+   },
+   "kind": "cylinder",
+   "material": "Outside"
+  },
+  "f.boss.top": {
+   "extent": {
+    "planar": {
+     "u": [
+      -0.0078125,
+      0.0078125
+     ],
+     "v": [
+      -0.0078125,
+      0.0078125
+     ]
+    }
+   },
+   "kind": "plane",
+   "material": "Outside"
+  },
+  "f.box.bottom": {
+   "extent": {
+    "planar": {
+     "u": [
+      0.0,
+      0.125
+     ],
+     "v": [
+      -0.0625,
+      0.0
+     ]
+    }
+   },
+   "kind": "plane",
+   "material": "Outside"
+  },
+  "f.box.top": {
+   "extent": {
+    "planar": {
+     "u": [
+      0.0,
+      0.125
+     ],
+     "v": [
+      0.0,
+      0.0625
+     ]
+    }
+   },
+   "kind": "plane",
+   "material": "Outside"
+  },
+  "f.box.x0": {
+   "extent": {
+    "planar": {
+     "u": [
+      0.0,
+      0.0625
+     ],
+     "v": [
+      0.0,
+      0.03125
+     ]
+    }
+   },
+   "kind": "plane",
+   "material": "Inside"
+  },
+  "f.box.x1": {
+   "extent": {
+    "planar": {
+     "u": [
+      0.0,
+      0.0625
+     ],
+     "v": [
+      0.0,
+      0.03125
+     ]
+    }
+   },
+   "kind": "plane",
+   "material": "Outside"
+  },
+  "f.box.y0": {
+   "extent": {
+    "planar": {
+     "u": [
+      0.0,
+      0.125
+     ],
+     "v": [
+      0.0,
+      0.03125
+     ]
+    }
+   },
+   "kind": "plane",
+   "material": "Outside"
+  },
+  "f.box.y1": {
+   "extent": {
+    "planar": {
+     "u": [
+      0.0,
+      0.03125
+     ],
+     "v": [
+      0.0,
+      0.125
+     ]
+    }
+   },
+   "kind": "plane",
+   "material": "Outside"
+  },
+  "f.csink": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.00390625
+    ]
+   },
+   "kind": "cone",
+   "material": "Inside"
+  },
+  "f.dimple": {
+   "extent": "not_defined",
+   "kind": "sphere",
+   "material": "Inside"
+  },
+  "f.fillet": {
+   "extent": "not_defined",
+   "kind": "torus",
+   "material": "Inside"
+  },
+  "f.hole": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.02734375
+    ]
+   },
+   "kind": "cylinder",
+   "material": "Inside"
+  }
+ },
+ "license": "CC-BY-4.0",
+ "vertices": {
+  "v.boss.bottom": {
+   "kind": "point",
+   "point": [
+    0.1015625,
+    0.03125,
+    0.033203125
+   ]
+  },
+  "v.boss.top": {
+   "kind": "point",
+   "point": [
+    0.1015625,
+    0.03125,
+    0.046875
+   ]
+  },
+  "v.corner.000": {
+   "kind": "point",
+   "point": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "v.corner.001": {
+   "kind": "point",
+   "point": [
+    0.0,
+    0.0,
+    0.03125
+   ]
+  },
+  "v.corner.010": {
+   "kind": "point",
+   "point": [
+    0.0,
+    0.0625,
+    0.0
+   ]
+  },
+  "v.corner.011": {
+   "kind": "point",
+   "point": [
+    0.0,
+    0.0625,
+    0.03125
+   ]
+  },
+  "v.corner.100": {
+   "kind": "point",
+   "point": [
+    0.125,
+    0.0,
+    0.0
+   ]
+  },
+  "v.corner.101": {
+   "kind": "point",
+   "point": [
+    0.125,
+    0.0,
+    0.03125
+   ]
+  },
+  "v.corner.110": {
+   "kind": "point",
+   "point": [
+    0.125,
+    0.0625,
+    0.0
+   ]
+  },
+  "v.corner.111": {
+   "kind": "point",
+   "point": [
+    0.125,
+    0.0625,
+    0.03125
+   ]
+  },
+  "v.csink.rim": {
+   "kind": "point",
+   "point": [
+    0.04296875,
+    0.03125,
+    0.03125
+   ]
+  },
+  "v.dimple.rim": {
+   "kind": "point",
+   "point": [
+    0.0703125,
+    0.03125,
+    0.03125
+   ]
+  },
+  "v.fillet.outer": {
+   "kind": "point",
+   "point": [
+    0.103515625,
+    0.03125,
+    0.03125
+   ]
+  },
+  "v.hole.bottom": {
+   "kind": "point",
+   "point": [
+    0.0390625,
+    0.03125,
+    0.0
+   ]
+  },
+  "v.hole.top": {
+   "kind": "point",
+   "point": [
+    0.0390625,
+    0.03125,
+    0.02734375
+   ]
+  }
+ }
+}

@@ -9,6 +9,7 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-cad]
 satisfies: [REQ-GEO.CAD.NOMINAL-001, REQ-GEO.CAD.NOMINAL-006]
 covers: []
 depends_on: [GEO.CAD.TOPO.MODEL, GEO.CAD.TOPO.ADJ, GEO.NURBS.ANALYTIC]
@@ -76,6 +77,8 @@ Defines the typed nominal element (plane, cylinder, cone, sphere, torus, line, c
 
 ## Open questions
 
+- Build choices (fid-geo-cad `nominal`), recorded for review: placement and sizes are one `NominalParams` enum per kind (so `kind` is derived, not stored twice); `map_*` return `Result<DirectResult, DirectError>` because an extent can be refused (`EdgeWithoutCurve`, `NurbsBoundary` for a NURBS boundary edge whose extremes have no closed form, `NonFinite`, `UnknownEntity`); `Extent` gains `NotDefined` for sphere and torus faces (their height can peak inside the face, so a boundary-only range would be wrong) and points, and `Unbounded` is a plane, cylinder or cone face without loops. A line edge's extent is its parameter range as `Axial`, a circle edge's as `Angular`. Material is `Outside` exactly when the face sense is `Same`: `Su x Sv` points to the outer side of every analytic kind, on both cone nappes; for a plane `Outside` means `+Z` of the placement points out of the material (the placement itself is never flipped, REQ-001).
+- Extents of faces bounded by NURBS edges (common in STEP intersection curves) need a bounded extreme search; until a leaf owns it they are refused, not estimated.
 - The nominal element type is defined here in GEO (L0). KRN.CONS.AUTO and ALN.DATUM.ELEM also handle nominal elements; whether they reuse this type or a KRN-owned feature type should be agreed with KRN (inherited from the parent's open question). Both are L0, so either direction is layer-legal.
 
 ## Children
