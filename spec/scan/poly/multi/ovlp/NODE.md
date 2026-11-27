@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-scan-poly]
+built_pr: 665
 satisfies: [REQ-SCAN.POLY.MULTI-002, REQ-SCAN.POLY.MULTI-004]
 covers: []
 depends_on: [GEO.INDEX.KDTREE, GEO.OOC.QUERY, GEO.TYPES.POINTS]
