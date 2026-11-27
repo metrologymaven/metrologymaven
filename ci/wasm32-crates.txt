@@ -37,6 +37,7 @@ fid-rdl-gen
 fid-rep
 fid-replay
 fid-report-pdf
+fid-scan-cloud
 fid-scan-cmp --lib
 fid-scan-mesh
 fid-scan-poly

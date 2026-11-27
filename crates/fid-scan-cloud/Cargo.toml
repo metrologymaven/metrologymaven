@@ -1,0 +1,27 @@
+[package]
+name = "fid-scan-cloud"
+description = "Metrology Maven point-cloud operations: the oriented-cloud projection target (point-to-plane against the nearest point with a valid normal), the overlap fraction and deterministic stride sampling for scan registration (spec node SCAN.CLOUD.REG.CTGT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Kernel crate (KNP-1): no third-party dependencies. Only kernel- and num-layer workspace crates:
+# fid-geo-types (PointCloud, PointBuffer, FrameRef), fid-geo-index (the GEO.INDEX.KDTREE nearest
+# neighbour with its pinned (dist2, index) order), fid-geo-dist (the GEO.DIST.BATCH
+# ProjectionTarget trait this crate implements), fid-geo-frame (the Rigid pose and the
+# frame-mismatch guard) and fid-num (the correctly rounded square root).
+[dependencies]
+fid-geo-dist = { path = "../fid-geo-dist" }
+fid-geo-frame = { path = "../fid-geo-frame" }
+fid-geo-index = { path = "../fid-geo-index" }
+fid-geo-types = { path = "../fid-geo-types" }
+fid-num = { path = "../fid-num" }
+
+[dev-dependencies]
+# Test-support only (never in the kernel graph): the workspace root for fixture paths.
+fid-testkit = { path = "../fid-testkit" }
+
+[lints]
+workspace = true

@@ -2343,6 +2343,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-scan-cloud"
+version = "0.0.1"
+dependencies = [
+ "fid-geo-dist",
+ "fid-geo-frame",
+ "fid-geo-index",
+ "fid-geo-types",
+ "fid-num",
+ "fid-testkit",
+]
+
+[[package]]
 name = "fid-scan-cmp"
 version = "0.0.1"
 dependencies = [
