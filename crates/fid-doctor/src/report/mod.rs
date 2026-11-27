@@ -23,12 +23,16 @@ mod parse;
 mod redact;
 mod text;
 
-pub use redact::{Identity, Redactor, PLACEHOLDER_HOME, PLACEHOLDER_HOST, PLACEHOLDER_PATH, PLACEHOLDER_USER};
+pub use redact::{
+    fold_char, Identity, IdentityPlatform, Redactor, PLACEHOLDER_HOME, PLACEHOLDER_HOST, PLACEHOLDER_PATH,
+    PLACEHOLDER_USER,
+};
 pub use text::{escape_text, is_escaped_char, quote_text};
 
 use crate::lookup::Assessment;
 use crate::probe::{EnvSnapshot, MAX_DETAIL_CHARS};
 use fid_canon::CValue;
+use fid_platform_core::hw_profile::{MINIMUM, RECOMMENDED};
 use fid_platform_core::matrix::Phase;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -80,11 +84,13 @@ pub enum ReportError {
     /// The install directory given to the redactor is not an absolute, non-root directory
     /// outside the home directory.
     InvalidInstallDir { detail: String },
-    /// An identifying string (user, host or home) could not be determined, so redaction could
-    /// not be guaranteed (fail closed).
+    /// An identifying string (`user`, `host`, `home` or `domain`) could not be determined or is
+    /// not valid UTF-8, so redaction could not be guaranteed (fail closed).
     IdentityUnavailable { item: &'static str },
     /// A redacted string no longer fits its field's bound (e.g. `arch` over 64 bytes).
     RedactionOverflow { pointer: String },
+    /// Redaction made two profile names equal, so the profiles can no longer be told apart.
+    RedactionCollision { pointer: String },
     /// A hand-built report holds a non-finite number, which JSON cannot carry.
     NonFiniteNumber,
 }
@@ -101,6 +107,7 @@ impl ReportError {
             ReportError::InvalidInstallDir { .. } => "invalid_install_dir",
             ReportError::IdentityUnavailable { .. } => "identity_unavailable",
             ReportError::RedactionOverflow { .. } => "redaction_overflow",
+            ReportError::RedactionCollision { .. } => "redaction_collision",
             ReportError::NonFiniteNumber => "non_finite_number",
         }
     }
@@ -119,6 +126,7 @@ impl fmt::Display for ReportError {
             ReportError::InvalidInstallDir { detail } => write!(f, "invalid_install_dir: {detail}"),
             ReportError::IdentityUnavailable { item } => write!(f, "identity_unavailable: {item}"),
             ReportError::RedactionOverflow { pointer } => write!(f, "redaction_overflow at {pointer:?}"),
+            ReportError::RedactionCollision { pointer } => write!(f, "redaction_collision at {pointer:?}"),
             ReportError::NonFiniteNumber => f.write_str("non_finite_number"),
         }
     }
@@ -131,6 +139,12 @@ impl std::error::Error for ReportError {}
 pub(crate) fn valid_tool_version(s: &str) -> bool {
     let n = s.chars().count();
     (1..=MAX_TOOL_VERSION_CHARS).contains(&n) && !s.trim().is_empty() && !s.chars().any(is_escaped_char)
+}
+
+/// Whether `s` is an acceptable profile name: 1 to [`MAX_PROFILE_NAME_CHARS`] characters with
+/// no control or format character.
+pub(crate) fn valid_profile_name(s: &str) -> bool {
+    (1..=MAX_PROFILE_NAME_CHARS).contains(&s.chars().count()) && !s.chars().any(is_escaped_char)
 }
 
 impl DoctorReport {
@@ -185,11 +199,13 @@ impl DoctorReport {
         parse::parse(bytes)
     }
 
-    /// The redacted copy of this report (`redacted: true`): every probed free-text string and
-    /// the tool version pass through `redactor`. Closed-vocabulary values (statuses, reasons,
-    /// verdicts, outcome, fields, tiers, phase) and the profile names of the installed profile
-    /// file are configuration, not machine data, and are kept. An unknown item's `detail` that
-    /// redaction made longer than 200 characters is cut to 199 and ends with `…`.
+    /// The redacted copy of this report (`redacted: true`): every probed free-text string, the
+    /// tool version and every profile name other than `minimum` and `recommended` pass
+    /// through `redactor`, and the profiles are sorted by name again. Closed-vocabulary values
+    /// (statuses, reasons, verdicts, outcome, fields, tiers, phase) are kept. An unknown item's
+    /// `detail` that redaction made longer than 200 characters is cut to 199 and ends with
+    /// `…`; a profile name pushed past 64 characters is refused (`redaction_overflow`), and two
+    /// profile names made equal are refused (`redaction_collision`).
     pub fn redact(&self, redactor: &Redactor) -> Result<Self, ReportError> {
         let mut out = self.clone();
         out.tool_version = redactor.redact_text(&self.tool_version);
@@ -198,6 +214,18 @@ impl DoctorReport {
         }
         redact::redact_snapshot(&mut out.snapshot, redactor)?;
         redact::redact_probed_detail(&mut out.assessment.tier, redactor);
+        for (i, p) in out.assessment.profiles.iter_mut().enumerate() {
+            if p.name != MINIMUM && p.name != RECOMMENDED {
+                p.name = redactor.redact_text(&p.name);
+                if !valid_profile_name(&p.name) {
+                    return Err(ReportError::RedactionOverflow { pointer: format!("/assessment/profiles/{i}/name") });
+                }
+            }
+        }
+        out.assessment.profiles.sort_by(|a, b| a.name.cmp(&b.name));
+        if out.assessment.profiles.windows(2).any(|w| w[0].name == w[1].name) {
+            return Err(ReportError::RedactionCollision { pointer: "/assessment/profiles".to_string() });
+        }
         out.redacted = true;
         Ok(out)
     }

@@ -266,6 +266,29 @@ def render(report):
 
 USER, HOST, HOME, PATH = "<redacted:user>", "<redacted:host>", "<redacted:home>", "<redacted:path>"
 
+# Simple case foldings that differ from the single-character lowercase mapping.
+FOLD_EXTRA = {
+    "\u03c2": "\u03c3",  # final sigma
+    "\u017f": "s",  # long s
+    "\u0345": "\u03b9",
+    "\u1fbe": "\u03b9",
+    "\u03d0": "\u03b2",
+    "\u03d1": "\u03b8",
+    "\u03d5": "\u03c6",
+    "\u03d6": "\u03c0",
+    "\u03f0": "\u03ba",
+    "\u03f1": "\u03c1",
+    "\u03f5": "\u03b5",
+    "\u1e9b": "\u1e61",
+}
+
+
+def fold(c):
+    if c in FOLD_EXTRA:
+        return FOLD_EXTRA[c]
+    low = c.lower()
+    return low if len(low) == 1 else c
+
 
 def is_sep(c):
     return c in "/\\"
@@ -273,6 +296,10 @@ def is_sep(c):
 
 def is_term(c):
     return c.isspace() or is_escaped(c) or c in "\"'`<>|"
+
+
+def is_line_break(c):
+    return c in "\n\r\x0b\x0c\x85\u2028\u2029"
 
 
 def is_alnum(c):
@@ -283,8 +310,12 @@ def is_path_char(c):
     return is_alnum(c) or c in "._-~"
 
 
+def is_trailing_punct(c):
+    return c in ".,;:!?)]}"
+
+
 def fold_eq(a, b):
-    return a == b or (a.isascii() and b.isascii() and a.lower() == b.lower())
+    return a == b or fold(a) == fold(b)
 
 
 def path_eq(a, b, windows):
@@ -304,6 +335,14 @@ def abs_start(c, i):
     if a is not None and a.isascii() and a.isalpha() and b == ":" and d is not None and is_sep(d):
         return True
     return a is not None and is_sep(a) and b is not None and not is_term(b)
+
+
+def tilde_home(c, i):
+    return i + 1 < len(c) and c[i] == "~" and is_sep(c[i + 1])
+
+
+def verbatim_len(c, i):
+    return 4 if c[i : i + 4] == "\\\\?\\" else 0
 
 
 def is_absolute(c):
@@ -337,16 +376,19 @@ class RedactError(Exception):
 
 
 def make_redactor(identity, install_dir):
-    user, host = identity["user"].strip(), identity["host"].strip()
+    user = identity["user"].strip()
     if not user:
         raise RedactError("identity_unavailable", "user")
-    if not host:
+    hosts = [h.strip() for h in identity["hosts"] if h.strip()]
+    if not hosts:
         raise RedactError("identity_unavailable", "host")
     home = identity["home"].strip()
     if not is_absolute(home):
         raise RedactError("identity_unavailable", "home")
     home = strip_seps(home)
-    if not comps_after_root(home):
+    home_comps = comps_after_root(home)
+    home_last = home_comps[-1] if home_comps else None
+    if not home_comps:
         home = ""
     inst = install_dir.strip()
     if not is_absolute(inst):
@@ -363,10 +405,25 @@ def make_redactor(identity, install_dir):
     ):
         raise RedactError("invalid_install_dir", "contains the home directory")
     names = []
-    for s, mark in [(host, HOST), (host.split(".", 1)[0] if "." in host else "", HOST), (user, USER)]:
+
+    def push(s, mark):
+        s = s.strip()
         if s and not any(len(n) == len(s) and all(fold_eq(a, b) for a, b in zip(n, s)) for n, _ in names):
             names.append((s, mark))
-    names.sort(key=lambda nm: -len(nm[0]))  # stable: ties keep host, host label, user
+
+    def with_label(s):
+        return [s, s.split(".", 1)[0]] if "." in s else [s]
+
+    for h in hosts:
+        for n in with_label(h):
+            push(n, HOST)
+    for d in identity.get("domains", []):
+        for n in with_label(d.strip()):
+            push(n, HOST)
+    push(user, USER)
+    if home_last is not None:
+        push(home_last, USER)
+    names.sort(key=lambda nm: -len(nm[0]))  # stable: ties keep the push order
     return {"install": inst, "win": win, "home": home, "names": names}
 
 
@@ -377,19 +434,44 @@ def path_end(r, c, i):
         return j
 
     end, min_end = scan(i), i + 1
+    base = i + verbatim_len(c, i)
     for p, win in [(r["install"], r["win"]), (r["home"], True)]:
-        after = i + len(p)
-        if p and starts_at(c, i, p, lambda a, b: path_eq(a, b, win)) and (
+        after = base + len(p)
+        if p and starts_at(c, base, p, lambda a, b: path_eq(a, b, win)) and (
             after == len(c) or is_sep(c[after]) or is_term(c[after])
         ):
             end = max(end, scan(after))
             min_end = max(min_end, after)
-    while end > min_end and c[end - 1] in ".,;:!?)]}":
+    while end > min_end and is_trailing_punct(c[end - 1]):
         end -= 1
     return end
 
 
+def redacted_end(c, end, before):
+    """How far a redacted path ending at `end` swallows the text after it."""
+    if before is not None and before in "\"'`":
+        j = end
+        while j < len(c) and c[j] != before and not is_line_break(c[j]):
+            j += 1
+        return j
+    while True:
+        j = end
+        while j < len(c) and c[j].isspace() and not is_line_break(c[j]):
+            j += 1
+        if j == end or j >= len(c) or abs_start(c, j) or tilde_home(c, j):
+            return end
+        k = j
+        while k < len(c) and not is_term(c[k]):
+            k += 1
+        if not any(is_sep(x) for x in c[j:k]):
+            return end
+        while k > j + 1 and is_trailing_punct(c[k - 1]):
+            k -= 1
+        end = k
+
+
 def keeps(r, tok):
+    tok = tok[verbatim_len(tok, 0) :]
     inst = r["install"]
     n = len(inst)
     return (
@@ -403,18 +485,28 @@ def redact(r, s):
     # segments: ("t", text) or ("m", placeholder)
     segs, buf, i = [], "", 0
     while i < len(s):
-        boundary = i == 0 or not (is_path_char(s[i - 1]) or is_sep(s[i - 1]))
+        before = s[i - 1] if i > 0 else None
+        boundary = before is None or not (is_path_char(before) or is_sep(before))
+        if boundary and tilde_home(s, i):
+            if buf:
+                segs.append(("t", buf))
+                buf = ""
+            segs.append(("m", HOME))
+            segs.append(("m", PATH))
+            i = redacted_end(s, path_end(r, s, i + 1), before)
+            continue
         if boundary and abs_start(s, i):
             end = path_end(r, s, i)
             tok = s[i:end]
             if keeps(r, tok):
                 buf += tok
+                i = end
             else:
                 if buf:
                     segs.append(("t", buf))
                     buf = ""
                 segs.append(("m", PATH))
-            i = end
+                i = redacted_end(s, end, before)
             continue
         buf += s[i]
         i += 1
@@ -493,25 +585,42 @@ def redact_report(report, identity, install_dir):
         for k in ["backend", "adapter", "driver_version", "device_type", "fallback_cause", "reason"]:
             if v[k] is not None:
                 v[k] = redact(r, v[k])
-    t = out["assessment"]["tier"]
+    ass = out["assessment"]
+    t = ass["tier"]
     if t["status"] == "unknown":
         t["detail"] = fit_detail(redact(r, t["detail"]))
+    for p in ass["profiles"]:
+        if p["name"] not in ("minimum", "recommended"):
+            p["name"] = redact(r, p["name"])
+            assert 1 <= len(p["name"]) <= 64
+    ass["profiles"].sort(key=lambda p: p["name"])
+    names = [p["name"] for p in ass["profiles"]]
+    assert len(set(names)) == len(names), "redaction collision"
     out["redacted"] = True
     return out
 
 
 # ------------------------------------------------------------------ redaction cases (hand-labelled)
 
-ID_WIN = {"user": "jdoe", "host": "WS-QA-17.lab.example", "home": "C:\\Users\\jdoe"}
+
+def ident(user, hosts, home, domains=()):
+    return {"domains": list(domains), "home": home, "hosts": list(hosts), "user": user}
+
+
+ID_WIN = ident("jdoe", ["WS-QA-17.lab.example"], "C:\\Users\\jdoe")
+ID_CORP = ident("jdoe", ["WS-QA-17", "ws-qa-17-long-name"], "C:\\Users\\jdoe", ["CORP", "CORP.EXAMPLE.COM"])
 INSTALL_WIN = "C:\\Program Files\\Metrology Maven"
-ID_SPACE = {"user": "Ann Lee", "host": "studio", "home": "C:\\Users\\Ann Lee"}
-ID_LINUX = {"user": "mtest", "host": "rig-04", "home": "/home/mtest"}
+ID_SPACE = ident("Ann Lee", ["studio"], "C:\\Users\\Ann Lee")
+ID_LINUX = ident("mtest", ["rig-04"], "/home/mtest")
 INSTALL_LINUX = "/opt/metrology-maven"
-ID_MAC = {"user": "kim", "host": "bench", "home": "/Users/kim"}
+ID_MAC = ident("kim", ["bench"], "/Users/kim")
 INSTALL_MAC = "/Users/kim/Applications/Metrology Maven.app"
-ID_NESTED = {"user": "lab", "host": "lab-pc", "home": "/home/lab"}
-ID_WORDS = {"user": "user", "host": "host", "home": "/home/user"}
+ID_NESTED = ident("lab", ["lab-pc"], "/home/lab")
+ID_WORDS = ident("user", ["host"], "/home/user")
 INSTALL_FID = "/opt/fid"
+ID_JOSE = ident("Jos\u00e9", ["taller"], "/home/jose")
+ID_SOFIA = ident("\u03a3\u03bf\u03c6\u03af\u03b1", ["lab"], "/home/sofia")
+ID_RENAMED = ident("jdoe", ["WS-QA-17"], "C:\\Users\\john.doe.CORP")
 
 # (name, identity, install_dir, input, expected) -- expected written by hand from the rules.
 REDACT_CASES = [
@@ -529,8 +638,13 @@ REDACT_CASES = [
      "C:\\Program Files\\Metrology Maven"),
     ("install_escape_by_dotdot", ID_WIN, INSTALL_WIN,
      "C:\\Program Files\\Metrology Maven\\..\\..\\Users\\jdoe\\x", "<redacted:path>"),
-    ("install_sibling_not_kept", ID_WIN, INSTALL_WIN, "C:\\Program Files\\Metrology Maven2\\x",
-     "<redacted:path> Files\\Metrology Maven2\\x"),
+    ("install_sibling_redacted_whole", ID_WIN, INSTALL_WIN, "C:\\Program Files\\Metrology Maven2\\x",
+     "<redacted:path>"),
+    ("swallow_stops_at_token_without_separator", ID_WIN, INSTALL_WIN,
+     "read C:\\Data\\My Scans\\part 7 failed", "read <redacted:path> 7 failed"),
+    ("swallow_stops_before_kept_install_path", ID_WIN, INSTALL_WIN,
+     "copy C:\\Temp\\a C:\\Program Files\\Metrology Maven\\b", "copy <redacted:path> C:\\Program Files\\Metrology Maven\\b"),
+    ("swallow_stays_on_its_line", ID_WIN, INSTALL_WIN, "C:\\Temp\\a\nb\\c", "<redacted:path>\nb\\c"),
     ("home_with_space_taken_whole", ID_SPACE, INSTALL_WIN, "cache at C:\\Users\\Ann Lee\\AppData\\cache.",
      "cache at <redacted:path>."),
     ("user_with_space", ID_SPACE, INSTALL_WIN, "owner Ann Lee, not Ann Leeds",
@@ -541,8 +655,34 @@ REDACT_CASES = [
      "share <redacted:path> ready"),
     ("rooted_path", ID_WIN, INSTALL_WIN, "\\Windows\\Temp\\jdoe.log", "<redacted:path>"),
     ("path_in_parentheses", ID_WIN, INSTALL_WIN, "(C:\\Users\\jdoe\\x.txt)", "(<redacted:path>)"),
-    ("path_in_quotes_ends_at_space", ID_WIN, INSTALL_WIN, "'C:\\Temp\\a b'", "'<redacted:path> b'"),
+    ("path_in_quotes_runs_to_quote", ID_WIN, INSTALL_WIN, "'C:\\Temp\\a b' and more", "'<redacted:path>' and more"),
+    ("path_in_double_quotes_unclosed", ID_WIN, INSTALL_WIN, "open \"C:\\Temp\\my file", "open \"<redacted:path>"),
     ("drive_relative_is_not_absolute", ID_WIN, INSTALL_WIN, "C:data and D:", "C:data and D:"),
+    ("tilde_home_posix", ID_LINUX, INSTALL_LINUX, "config at ~/.config/fid/gpu.toml now",
+     "config at <redacted:home><redacted:path> now"),
+    ("tilde_home_windows_with_space", ID_WIN, INSTALL_WIN, "saved to ~\\My Documents\\run.log",
+     "saved to <redacted:home><redacted:path>"),
+    ("tilde_inside_word_is_not_home", ID_LINUX, INSTALL_LINUX, "a~/b and v1.2~/x", "a~/b and v1.2~/x"),
+    ("email_user_and_dns_domain", ID_CORP, INSTALL_WIN, "mail jdoe@corp.example.com today",
+     "mail <redacted:user>@<redacted:host> today"),
+    ("domain_backslash_user", ID_CORP, INSTALL_WIN, "logon CORP\\jdoe ok", "logon <redacted:host>\\<redacted:user> ok"),
+    ("dns_host_name_beside_netbios", ID_CORP, INSTALL_WIN, "dns WS-QA-17-LONG-NAME and WS-QA-17",
+     "dns <redacted:host> and <redacted:host>"),
+    ("non_ascii_user", ID_JOSE, INSTALL_FID, "owner Jos\u00e9 (jos\u00e9)", "owner <redacted:user> (<redacted:user>)"),
+    ("non_ascii_user_uppercase", ID_JOSE, INSTALL_FID, "OWNER JOS\u00c9", "OWNER <redacted:user>"),
+    ("greek_user_uppercase", ID_SOFIA, INSTALL_FID, "\u03a3\u039f\u03a6\u038a\u0391 signed", "<redacted:user> signed"),
+    ("forward_slash_home_in_free_text", ID_WIN, INSTALL_WIN, "set to C:/Users/jdoe.", "set to <redacted:path>."),
+    ("forward_slash_home_after_equals", ID_MAC, INSTALL_MAC, "HOME=/Users/kim", "HOME=<redacted:path>"),
+    ("file_url", ID_WIN, INSTALL_WIN, "open file:///C:/Users/jdoe/x.txt now", "open file:<redacted:path> now"),
+    ("verbatim_prefix_redacted", ID_WIN, INSTALL_WIN, "at \\\\?\\C:\\Users\\jdoe\\x", "at <redacted:path>"),
+    ("verbatim_prefix_install_kept", ID_WIN, INSTALL_WIN, "\\\\?\\C:\\Program Files\\Metrology Maven\\bin\\fid.exe",
+     "\\\\?\\C:\\Program Files\\Metrology Maven\\bin\\fid.exe"),
+    ("short_name_path", ID_WIN, INSTALL_WIN, "temp C:\\Users\\JDOE~1\\AppData\\Local\\Temp\\fid.log",
+     "temp <redacted:path>"),
+    ("short_name_in_text", ID_WIN, INSTALL_WIN, "profile JDOE~1", "profile <redacted:user>~1"),
+    ("renamed_profile_name", ID_RENAMED, INSTALL_WIN, "profile john.doe.CORP loaded for jdoe",
+     "profile <redacted:user> loaded for <redacted:user>"),
+    ("renamed_profile_path", ID_RENAMED, INSTALL_WIN, "C:\\Users\\john.doe.CORP\\x", "<redacted:path>"),
     ("linux_install_kept_home_redacted", ID_LINUX, INSTALL_LINUX,
      "lib /opt/metrology-maven/lib/libfid.so; config /home/mtest/.config/fid (owner mtest)",
      "lib /opt/metrology-maven/lib/libfid.so; config <redacted:path> (owner <redacted:user>)"),
@@ -552,7 +692,6 @@ REDACT_CASES = [
     ("per_user_install_home_redacted", ID_MAC, INSTALL_MAC,
      "running /Users/kim/Applications/Metrology Maven.app/Contents/MacOS/fid",
      "running <redacted:home>/Applications/Metrology Maven.app/Contents/MacOS/fid"),
-    ("home_text_outside_path", ID_MAC, INSTALL_MAC, "HOME=/Users/kim", "HOME=<redacted:path>"),
     ("url_is_over_redacted", ID_WIN, INSTALL_WIN, "see https://example.org/x", "see https:<redacted:path>"),
     ("ratio_is_not_a_path", ID_WIN, INSTALL_WIN, "ratio 8/16 and a/b", "ratio 8/16 and a/b"),
     ("host_holding_user_longest_first", ID_NESTED, INSTALL_FID, "lab-pc by lab", "<redacted:host> by <redacted:user>"),
@@ -571,7 +710,8 @@ REDACTOR_ERRORS = [
     ("install_holds_home", ID_WIN, "C:\\Users", "invalid_install_dir", "contains the home directory"),
     ("install_is_home", ID_WIN, "c:/users/JDOE/", "invalid_install_dir", "contains the home directory"),
     ("user_blank", dict(ID_WIN, user="  "), INSTALL_WIN, "identity_unavailable", "user"),
-    ("host_empty", dict(ID_WIN, host=""), INSTALL_WIN, "identity_unavailable", "host"),
+    ("hosts_empty", dict(ID_WIN, hosts=[]), INSTALL_WIN, "identity_unavailable", "host"),
+    ("hosts_blank", dict(ID_WIN, hosts=["", " "]), INSTALL_WIN, "identity_unavailable", "host"),
     ("home_relative", dict(ID_WIN, home="jdoe"), INSTALL_WIN, "identity_unavailable", "home"),
 ]
 
@@ -642,6 +782,8 @@ def identifying_report():
         "profiles": [
             verdict("minimum", "indeterminate", unknowns=["display"]),
             verdict("recommended", "indeterminate", unknowns=["display"]),
+            # A site profile named after the machine: redacted, and the profiles re-sorted.
+            verdict("ws-qa-17 bench", "indeterminate", unknowns=["display"]),
         ],
         "schema_version": 1,
         "tier": TIER1,
@@ -650,6 +792,7 @@ def identifying_report():
 
 
 IDENTIFYING_REDACTED_EXPECTED = {
+    "profile_names": ["<redacted:host> bench", "minimum", "recommended"],
     "display_detail": "display probe failed for user <redacted:user> on host <redacted:host> reading "
     "<redacted:path> via C:\\Program Files\\Metrology Maven\\bin\\edid.dll",
     "gpu_adapter": "Synthetic Discrete GPU 12G (<redacted:host>)",
@@ -709,7 +852,7 @@ A = "assessment"
 # accepts it; the parser is stricter where the schema cannot say it (marked schema_valid True).
 INVALID = [
     ("missing_tool_version", mutate(["tool_version"], delete=True), False, "schema_invalid", "/tool_version"),
-    ("unknown_top_key", mutate(["outcome"], "meets_recommended"), False, "schema_invalid", "/outcome"),
+    ("unknown_top_key", mutate(["outcome"], "meets_recommended"), False, "schema_invalid", ""),
     ("schema_version_string", mutate(["schema_version"], "1"), False, "schema_invalid", "/schema_version"),
     ("schema_version_fraction", mutate(["schema_version"], 1.5), False, "schema_invalid", "/schema_version"),
     ("schema_version_missing", mutate(["schema_version"], delete=True), False, "schema_invalid", "/schema_version"),
@@ -723,7 +866,7 @@ INVALID = [
     ("snapshot_bad_reason", mutate(["snapshot", "ram"], {"status": "unknown", "reason": "nope", "detail": ""}),
      False, "schema_invalid", "/snapshot"),
     ("snapshot_extra_key", mutate(["snapshot", "host"], "x"), False, "schema_invalid", "/snapshot"),
-    ("assessment_extra_key", mutate([A, "notes"], ""), False, "schema_invalid", "/assessment/notes"),
+    ("assessment_extra_key", mutate([A, "notes"], ""), False, "schema_invalid", "/assessment"),
     ("assessment_schema_2", mutate([A, "schema_version"], 2), False, "schema_invalid", "/assessment/schema_version"),
     ("outcome_unknown", mutate([A, "outcome"], "great"), False, "schema_invalid", "/assessment/outcome"),
     ("exit_code_mismatch", mutate([A, "exit_code"], 1), False, "schema_invalid", "/assessment/exit_code"),
@@ -899,6 +1042,7 @@ def self_check():
         "display_detail": ident["snapshot"]["display"]["detail"],
         "gpu_adapter": ident["snapshot"]["gpu"]["value"]["adapter"],
         "gpu_reason": ident["snapshot"]["gpu"]["value"]["reason"],
+        "profile_names": [p["name"] for p in ident["assessment"]["profiles"]],
     }
     if got != exp:
         raise SystemExit(f"identifying report: {got!r} != hand label {exp!r}")

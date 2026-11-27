@@ -67,12 +67,18 @@ Verdicts
   assessment_schema_version: 1
   profiles:
     [0]:
-      name: "minimum"
+      name: "<redacted:host> bench"
       reason: null
       shortfalls: []
       unknowns: ["display"]
       verdict: "indeterminate"
     [1]:
+      name: "minimum"
+      reason: null
+      shortfalls: []
+      unknowns: ["display"]
+      verdict: "indeterminate"
+    [2]:
       name: "recommended"
       reason: null
       shortfalls: []
@@ -81,5 +87,6 @@ Verdicts
 
 Unknowns
   display: error "display probe failed for user <redacted:user> on host <redacted:host> reading <redacted:path> via C:\\Program Files\\Metrology Maven\\bin\\edid.dll"
+  profile "<redacted:host> bench": not compared: "display"
   profile "minimum": not compared: "display"
   profile "recommended": not compared: "display"

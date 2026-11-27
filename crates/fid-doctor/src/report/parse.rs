@@ -7,7 +7,7 @@
 //! reasons, outcome and exit code do not fit together, profiles out of name order, and
 //! shortfalls or unknowns out of field order.
 
-use super::{valid_tool_version, DoctorReport, ReportError, MAX_PROFILES, MAX_PROFILE_NAME_CHARS, MAX_REPORT_BYTES};
+use super::{valid_profile_name, valid_tool_version, DoctorReport, ReportError, MAX_PROFILES, MAX_REPORT_BYTES};
 use crate::lookup::{self, Assessment, Field, Outcome, ProfileVerdict, Shortfall, Value, Verdict, VerdictReason};
 use crate::probe::{EnvSnapshot, Probed, UnknownReason, MAX_DETAIL_CHARS};
 use fid_canon::CValue;
@@ -40,15 +40,11 @@ fn exact_keys(m: &Obj, expected: &[&str], ptr: &str) -> Result<(), ReportError> 
             return Err(invalid(&format!("{ptr}/{k}"), "missing"));
         }
     }
-    if let Some(extra) = m.keys().find(|k| !expected.contains(&k.as_str())) {
-        return Err(invalid(&format!("{ptr}/{}", escape_pointer(extra)), "unknown key"));
+    // The unknown key is input: point at its object and do not echo it.
+    if m.keys().any(|k| !expected.contains(&k.as_str())) {
+        return Err(invalid(ptr, "unknown key"));
     }
     Ok(())
-}
-
-/// RFC 6901 escaping of one reference token.
-fn escape_pointer(s: &str) -> String {
-    s.replace('~', "~0").replace('/', "~1")
 }
 
 fn field<'a>(m: &'a Obj, key: &str, ptr: &str) -> Result<&'a CValue, ReportError> {
@@ -217,8 +213,7 @@ fn parse_profile(v: &CValue, ptr: &str) -> Result<ProfileVerdict, ReportError> {
     exact_keys(m, &["name", "reason", "shortfalls", "unknowns", "verdict"], ptr)?;
     let np = format!("{ptr}/name");
     let name = string(field(m, "name", ptr)?, &np)?;
-    let n = name.chars().count();
-    if n == 0 || n > MAX_PROFILE_NAME_CHARS || name.chars().any(super::is_escaped_char) {
+    if !valid_profile_name(name) {
         return Err(invalid(&np, "must be 1 to 64 characters with no control or format character"));
     }
     let vp = format!("{ptr}/verdict");

@@ -7,11 +7,12 @@ use fid_canon::CValue;
 use fid_doctor::lookup::assess;
 use fid_doctor::probe::{Arch, EnvSnapshot, Probed, UnknownReason};
 use fid_doctor::report::{
-    quote_text, DoctorReport, Identity, Redactor, ReportError, MAX_REPORT_BYTES, PLACEHOLDER_HOST, PLACEHOLDER_PATH,
-    PLACEHOLDER_USER, SCHEMA_PATH,
+    fold_char, quote_text, DoctorReport, Identity, IdentityPlatform, Redactor, ReportError, MAX_REPORT_BYTES,
+    PLACEHOLDER_HOST, PLACEHOLDER_PATH, PLACEHOLDER_USER, SCHEMA_PATH,
 };
 use fid_platform_core::hw_profile;
 use fid_platform_core::matrix::{self, Phase};
+use std::ffi::OsString;
 use std::path::PathBuf;
 
 const INSTALL_WIN: &str = "C:\\Program Files\\Metrology Maven";
@@ -46,12 +47,34 @@ fn s<'a>(v: &'a CValue, key: &str) -> &'a str {
     }
 }
 
+fn strings(v: &CValue, key: &str) -> Vec<String> {
+    match obj(v).get(key) {
+        Some(CValue::Arr(a)) => a
+            .iter()
+            .map(|x| match x {
+                CValue::Str(t) => t.clone(),
+                other => panic!("{key}: expected strings, got {other:?}"),
+            })
+            .collect(),
+        other => panic!("{key}: expected an array, got {other:?}"),
+    }
+}
+
 fn identity_of(v: &CValue) -> Identity {
-    Identity { user: s(v, "user").to_string(), host: s(v, "host").to_string(), home: s(v, "home").to_string() }
+    Identity {
+        user: s(v, "user").to_string(),
+        hosts: strings(v, "hosts"),
+        home: s(v, "home").to_string(),
+        domains: strings(v, "domains"),
+    }
+}
+
+fn simple_identity(user: &str, host: &str, home: &str) -> Identity {
+    Identity { user: user.into(), hosts: vec![host.into()], home: home.into(), domains: Vec::new() }
 }
 
 fn id_win() -> Identity {
-    Identity { user: "jdoe".into(), host: "WS-QA-17.lab.example".into(), home: "C:\\Users\\jdoe".into() }
+    simple_identity("jdoe", "WS-QA-17.lab.example", "C:\\Users\\jdoe")
 }
 
 /// LOOKUP AC-1's inputs, assessed, in a new report.
@@ -289,7 +312,7 @@ fn long_redacted_detail_is_cut_visibly() {
     let detail = ["x"; 100].join(" ");
     assert_eq!(detail.chars().count(), 199);
     r.snapshot.ram = Probed::Unknown { reason: UnknownReason::Error, detail };
-    let ident = Identity { user: "x".into(), host: "h".into(), home: "/home/x".into() };
+    let ident = simple_identity("x", "h", "/home/x");
     let red = r.redact(&Redactor::new(&ident, "/opt/fid").unwrap()).unwrap();
     let full = [PLACEHOLDER_USER; 100].join(" ");
     let mut expected: String = full.chars().take(199).collect();
@@ -304,7 +327,7 @@ fn long_redacted_detail_is_cut_visibly() {
 fn arch_redaction_overflow_fails_closed() {
     let mut r = win11_report();
     r.snapshot.arch = Probed::Known(Arch::parse(&["x"; 21].join("-")).unwrap());
-    let ident = Identity { user: "x".into(), host: "h".into(), home: "/home/x".into() };
+    let ident = simple_identity("x", "h", "/home/x");
     let err = r.redact(&Redactor::new(&ident, "/opt/fid").unwrap()).unwrap_err();
     assert_eq!(err, ReportError::RedactionOverflow { pointer: "/snapshot/arch/value".into() });
 }
@@ -313,11 +336,13 @@ fn arch_redaction_overflow_fails_closed() {
 #[test]
 fn identity_from_os_is_redacted() {
     let id = Identity::from_os().unwrap();
-    assert!(!id.user.is_empty() && !id.host.is_empty() && !id.home.is_empty());
+    assert!(!id.user.is_empty() && !id.hosts.is_empty() && !id.home.is_empty());
     let install = if cfg!(windows) { "C:\\Program Files\\Metrology Maven" } else { "/opt/metrology-maven" };
     let r = Redactor::new(&id, install).unwrap();
     assert_eq!(r.redact_text(&format!("user {} here", id.user)), format!("user {PLACEHOLDER_USER} here"));
-    assert_eq!(r.redact_text(&format!("on {} now", id.host)), format!("on {PLACEHOLDER_HOST} now"));
+    for host in &id.hosts {
+        assert_eq!(r.redact_text(&format!("on {host} now")), format!("on {PLACEHOLDER_HOST} now"));
+    }
     assert_eq!(r.redact_text(&format!("at {} now", id.home)), format!("at {PLACEHOLDER_PATH} now"));
 }
 
@@ -328,4 +353,192 @@ fn rendering_is_deterministic() {
     let b = win11_report();
     assert_eq!(a.to_json().unwrap(), b.to_json().unwrap());
     assert_eq!(a.to_text().unwrap(), b.to_text().unwrap());
+}
+
+// ------------------------------------------------------------------ identity gathering
+
+fn os(v: &str) -> OsString {
+    OsString::from(v)
+}
+
+#[cfg(unix)]
+fn non_utf8() -> OsString {
+    use std::os::unix::ffi::OsStringExt;
+    OsString::from_vec(vec![0x6a, 0xff])
+}
+
+#[cfg(windows)]
+fn non_utf8() -> OsString {
+    use std::os::windows::ffi::OsStringExt;
+    OsString::from_wide(&[0x6a, 0xD800])
+}
+
+type Env = Vec<(&'static str, OsString)>;
+
+fn lookup(env: &Env) -> impl Fn(&str) -> Option<OsString> + '_ {
+    move |name| env.iter().find(|(k, _)| *k == name).map(|(_, v)| v.clone())
+}
+
+fn win_env() -> Env {
+    vec![
+        ("USERNAME", os("jdoe")),
+        ("USERPROFILE", os("C:\\Users\\jdoe")),
+        ("COMPUTERNAME", os("WS-QA-17")),
+        ("USERDOMAIN", os("CORP")),
+        ("USERDNSDOMAIN", os("CORP.EXAMPLE.COM")),
+    ]
+}
+
+fn unix_env() -> Env {
+    vec![("USER", os("mtest")), ("HOME", os("/home/mtest")), ("HOSTNAME", os("rig-04"))]
+}
+
+fn with(mut env: Env, key: &'static str, value: Option<OsString>) -> Env {
+    env.retain(|(k, _)| *k != key);
+    if let Some(v) = value {
+        env.push((key, v));
+    }
+    env
+}
+
+#[test]
+fn identity_from_lookup_windows_gathers_dns_names_and_domains() {
+    let env = win_env();
+    let id =
+        Identity::from_lookup(IdentityPlatform::Windows, lookup(&env), || vec!["ws-qa-17-long-name".into()]).unwrap();
+    assert_eq!(
+        id,
+        Identity {
+            user: "jdoe".into(),
+            hosts: vec![
+                "WS-QA-17".into(),
+                "ws-qa-17-long-name".into(),
+                "WS-QA-17.CORP.EXAMPLE.COM".into(),
+                "ws-qa-17-long-name.CORP.EXAMPLE.COM".into(),
+            ],
+            home: "C:\\Users\\jdoe".into(),
+            domains: vec!["CORP".into(), "CORP.EXAMPLE.COM".into()],
+        }
+    );
+    // A sys host equal to COMPUTERNAME in another case is not listed twice.
+    let id = Identity::from_lookup(IdentityPlatform::Windows, lookup(&env), || vec!["ws-qa-17".into()]).unwrap();
+    assert_eq!(id.hosts, vec!["WS-QA-17".to_string(), "WS-QA-17.CORP.EXAMPLE.COM".to_string()]);
+    // HOMEDRIVE + HOMEPATH stand in for a missing USERPROFILE.
+    let env = with(
+        with(with(win_env(), "USERPROFILE", None), "HOMEDRIVE", Some(os("D:"))),
+        "HOMEPATH",
+        Some(os("\\Users\\jdoe")),
+    );
+    let id = Identity::from_lookup(IdentityPlatform::Windows, lookup(&env), Vec::new).unwrap();
+    assert_eq!(id.home, "D:\\Users\\jdoe");
+    // Every gathered name is redacted.
+    let env = win_env();
+    let id =
+        Identity::from_lookup(IdentityPlatform::Windows, lookup(&env), || vec!["ws-qa-17-long-name".into()]).unwrap();
+    let r = Redactor::new(&id, INSTALL_WIN).unwrap();
+    assert_eq!(
+        r.redact_text("CORP\\jdoe on ws-qa-17-long-name.corp.example.com mail jdoe@corp.example.com"),
+        "<redacted:host>\\<redacted:user> on <redacted:host> mail <redacted:user>@<redacted:host>"
+    );
+}
+
+#[test]
+fn identity_from_lookup_unix_falls_back_to_logname() {
+    let env = with(with(unix_env(), "USER", None), "LOGNAME", Some(os("mtest")));
+    let id = Identity::from_lookup(IdentityPlatform::Unix, lookup(&env), || vec!["rig-04.lab".into()]).unwrap();
+    assert_eq!(
+        id,
+        Identity {
+            user: "mtest".into(),
+            hosts: vec!["rig-04".into(), "rig-04.lab".into()],
+            home: "/home/mtest".into(),
+            domains: Vec::new(),
+        }
+    );
+}
+
+/// identity_unavailable for each missing, blank or non-UTF-8 item (hand-labelled).
+#[test]
+fn identity_unavailable_for_each_missing_blank_or_non_utf8_item() {
+    use IdentityPlatform::{Unix, Windows};
+    let blank = || Some(os("  "));
+    let bad = || Some(non_utf8());
+    // (label, platform, env, sys hosts, item)
+    let cases: Vec<(&str, IdentityPlatform, Env, Vec<String>, &'static str)> = vec![
+        ("win user missing", Windows, with(win_env(), "USERNAME", None), vec![], "user"),
+        ("win user blank", Windows, with(win_env(), "USERNAME", blank()), vec![], "user"),
+        ("win user non-utf8", Windows, with(win_env(), "USERNAME", bad()), vec![], "user"),
+        ("win home missing", Windows, with(win_env(), "USERPROFILE", None), vec![], "home"),
+        ("win home blank", Windows, with(win_env(), "USERPROFILE", blank()), vec![], "home"),
+        ("win home non-utf8", Windows, with(win_env(), "USERPROFILE", bad()), vec![], "home"),
+        ("win home relative", Windows, with(win_env(), "USERPROFILE", Some(os("jdoe"))), vec![], "home"),
+        (
+            "win homepath non-utf8",
+            Windows,
+            with(with(win_env(), "USERPROFILE", None), "HOMEPATH", bad()),
+            vec![],
+            "home",
+        ),
+        ("win host missing", Windows, with(win_env(), "COMPUTERNAME", None), vec![], "host"),
+        ("win host blank", Windows, with(win_env(), "COMPUTERNAME", blank()), vec![], "host"),
+        ("win host non-utf8", Windows, with(win_env(), "COMPUTERNAME", bad()), vec!["ws-qa-17".into()], "host"),
+        ("win host control only", Windows, with(win_env(), "COMPUTERNAME", None), vec!["\u{7}".into()], "host"),
+        ("win domain non-utf8", Windows, with(win_env(), "USERDOMAIN", bad()), vec![], "domain"),
+        ("win dns domain non-utf8", Windows, with(win_env(), "USERDNSDOMAIN", bad()), vec![], "domain"),
+        ("unix user missing", Unix, with(unix_env(), "USER", None), vec![], "user"),
+        ("unix user blank", Unix, with(unix_env(), "USER", blank()), vec![], "user"),
+        ("unix user non-utf8", Unix, with(unix_env(), "USER", bad()), vec![], "user"),
+        ("unix logname non-utf8", Unix, with(with(unix_env(), "USER", None), "LOGNAME", bad()), vec![], "user"),
+        ("unix home missing", Unix, with(unix_env(), "HOME", None), vec![], "home"),
+        ("unix home blank", Unix, with(unix_env(), "HOME", blank()), vec![], "home"),
+        ("unix home non-utf8", Unix, with(unix_env(), "HOME", bad()), vec![], "home"),
+        ("unix host missing", Unix, with(unix_env(), "HOSTNAME", None), vec![], "host"),
+        ("unix host blank", Unix, with(unix_env(), "HOSTNAME", blank()), vec![], "host"),
+        ("unix host non-utf8", Unix, with(unix_env(), "HOSTNAME", bad()), vec!["rig-04".into()], "host"),
+    ];
+    for (label, platform, env, sys, item) in cases {
+        let err = Identity::from_lookup(platform, lookup(&env), move || sys).unwrap_err();
+        assert_eq!(err, ReportError::IdentityUnavailable { item }, "{label}");
+    }
+    // A missing host is fine when the OS reports one.
+    let env = with(unix_env(), "HOSTNAME", None);
+    assert!(Identity::from_lookup(Unix, lookup(&env), || vec!["rig-04".into()]).is_ok());
+}
+
+#[test]
+fn simple_case_folding() {
+    assert_eq!(fold_char('É'), 'é');
+    assert_eq!(fold_char('Σ'), 'σ');
+    assert_eq!(fold_char('ς'), 'σ');
+    assert_eq!(fold_char('ſ'), 's');
+    assert_eq!(fold_char('İ'), 'İ');
+    assert_eq!(fold_char('A'), 'a');
+    assert_eq!(fold_char('7'), '7');
+}
+
+/// Profile names other than `minimum` and `recommended` are redacted and re-sorted; two
+/// made equal, or one made too long, are refused.
+#[test]
+fn profile_names_redacted_resorted_and_checked() {
+    let base = DoctorReport::parse(&read("fixtures/plat/doctor/report/identifying.json")).unwrap();
+    let redactor = Redactor::new(&id_win(), INSTALL_WIN).unwrap();
+    let red = base.redact(&redactor).unwrap();
+    let names: Vec<&str> = red.assessment.profiles.iter().map(|p| p.name.as_str()).collect();
+    assert_eq!(names, ["<redacted:host> bench", "minimum", "recommended"]);
+
+    let mut twin = base.clone();
+    let mut extra = twin.assessment.profiles[2].clone();
+    extra.name = "WS-QA-17 bench".into();
+    twin.assessment.profiles.insert(0, extra);
+    assert_eq!(
+        twin.redact(&redactor).unwrap_err(),
+        ReportError::RedactionCollision { pointer: "/assessment/profiles".into() }
+    );
+
+    let mut long = base;
+    long.assessment.profiles[2].name = ["jdoe"; 12].join(" ");
+    assert_eq!(
+        long.redact(&redactor).unwrap_err(),
+        ReportError::RedactionOverflow { pointer: "/assessment/profiles/2/name".into() }
+    );
 }

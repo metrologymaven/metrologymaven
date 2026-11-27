@@ -3,33 +3,46 @@
 //! [`Redactor::redact_text`] applies three passes to a string, in this order; text already
 //! replaced by a placeholder is never scanned again:
 //!
-//! 1. **Paths.** An absolute path starts where the previous character is absent or is not
-//!    alphanumeric and not one of `. _ - ~ / \`, and is a drive path (`C:\`, `C:/`), or a `/`
-//!    or `\` followed by a character that does not end a path (so `\\server\share` and rooted
-//!    `\dir` count too). It runs until whitespace, a control or format character, or one of
-//!    ``" ' ` < > |``; when the install directory or the home directory starts there, the path
-//!    runs at least to its end (so a directory name with spaces is taken whole). Trailing
-//!    `. , ; : ! ? ) ] }` are left outside the path. A path under the install directory
-//!    (component-wise prefix; ASCII case-insensitive and `/` = `\` only for a Windows-style
-//!    install directory) with no `..` component is kept; every other path becomes
-//!    [`PLACEHOLDER_PATH`].
-//! 2. **Home.** Every occurrence of the home directory (ASCII case-insensitive, `/` = `\`)
-//!    that is not followed by a path character (alphanumeric, `. _ - ~`) becomes
+//! 1. **Paths.** A path starts where the previous character is absent or is not
+//!    alphanumeric and not one of `. _ - ~ / \`, and is
+//!    - a drive path (`C:\`, `C:/`), or a `/` or `\` followed by a character that does not
+//!      end a path (so `\\server\share`, `\\?\C:\...`, rooted `\dir` and `file:///...`'s
+//!      `///...` count too); or
+//!    - `~` followed by `/` or `\`: the `~` becomes [`PLACEHOLDER_HOME`] and the rest is
+//!      redacted as a path.
+//!
+//!    A path runs until whitespace, a control or format character, or one of
+//!    ``" ' ` < > |``; when the install directory or the home directory starts there (after
+//!    a `\\?\` prefix, if any), it runs at least to that directory's end, so a directory name
+//!    with spaces is taken whole. Trailing `. , ; : ! ? ) ] }` are left outside it. A path
+//!    under the install directory (component-wise prefix; case-insensitive and `/` = `\`
+//!    only for a Windows-style install directory) with no `..` component is kept; every
+//!    other path becomes [`PLACEHOLDER_PATH`]. A redacted path then swallows more text, so
+//!    the rest of a path with spaces cannot leak: when the path opens a quoted string
+//!    (`"`, `'` or `` ` `` just before it), everything up to the closing quote or the end of
+//!    the line; otherwise every following whitespace-separated token on the same line that
+//!    holds a `/` or `\`, until a token without one or a token that starts a path itself.
+//! 2. **Home.** Every occurrence of the home directory (case-insensitive, `/` = `\`) that is
+//!    not followed by a path character (alphanumeric, `. _ - ~`) becomes
 //!    [`PLACEHOLDER_HOME`]. After pass 1 this only happens inside kept install paths and in
 //!    text that is not a path.
-//! 3. **Names.** Every occurrence of the user name and the host name (and the host's first
-//!    DNS label, when the name has a dot), longest first, that is ASCII case-insensitively
-//!    equal and has no alphanumeric character on either side becomes [`PLACEHOLDER_USER`] or
-//!    [`PLACEHOLDER_HOST`].
+//! 3. **Names.** Every occurrence, longest first, of each host name and its first DNS label,
+//!    each logon domain and its first label ([`PLACEHOLDER_HOST`]), the user name and the
+//!    home directory's last component ([`PLACEHOLDER_USER`]) that matches case-insensitively
+//!    and has no alphanumeric character on either side. So `CORP\jdoe` and
+//!    `jdoe@corp.example.com` lose both parts, and a renamed profile folder name is caught.
 //!
-//! Every comparison is per Unicode scalar value; only ASCII letters fold case.
+//! "Case-insensitive" is Unicode simple case folding as approximated by [`fold_char`]; every
+//! comparison is per Unicode scalar value (no normalisation, so a decomposed `é` does not
+//! match a precomposed one).
 
 use super::{fit_detail, ReportError};
 use crate::probe::{Arch, EnvSnapshot, Probed};
+use std::ffi::OsString;
 
 /// Replaces the current user name.
 pub const PLACEHOLDER_USER: &str = "<redacted:user>";
-/// Replaces the host name.
+/// Replaces a host name or a logon domain.
 pub const PLACEHOLDER_HOST: &str = "<redacted:host>";
 /// Replaces the home directory.
 pub const PLACEHOLDER_HOME: &str = "<redacted:home>";
@@ -43,71 +56,113 @@ const MAX_HOST_BYTES: usize = 255;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Identity {
     pub user: String,
-    pub host: String,
+    /// Every host name known for the machine (at least one): on Windows `COMPUTERNAME`, the
+    /// DNS host name and the fully qualified name; elsewhere `HOSTNAME` and the kernel's.
+    pub hosts: Vec<String>,
     /// Absolute home directory.
     pub home: String,
+    /// Logon domains (Windows `USERDOMAIN` and `USERDNSDOMAIN`); may be empty.
+    pub domains: Vec<String>,
+}
+
+/// Which OS conventions [`Identity::from_lookup`] reads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IdentityPlatform {
+    Windows,
+    Unix,
+}
+
+fn unavailable(item: &'static str) -> ReportError {
+    ReportError::IdentityUnavailable { item }
 }
 
 impl Identity {
-    /// Gathers the user name, host name and home directory from the OS at call time.
-    /// Fails with [`ReportError::IdentityUnavailable`] when one cannot be determined, since
-    /// redaction could not then be guaranteed.
+    /// Gathers the identity from the OS at call time ([`Identity::from_lookup`] over the
+    /// process environment and the OS host-name sources). Fails with
+    /// [`ReportError::IdentityUnavailable`] when one cannot be determined, since redaction
+    /// could not then be guaranteed.
     pub fn from_os() -> Result<Identity, ReportError> {
-        let home = os_home()?;
-        let user = os_user(&home)?;
-        let host = os_host()?;
-        Ok(Identity { user, host, home })
+        let platform = if cfg!(windows) { IdentityPlatform::Windows } else { IdentityPlatform::Unix };
+        Self::from_lookup(platform, |name| std::env::var_os(name), os_host_names)
     }
-}
 
-fn env_nonempty(name: &str, item: &'static str) -> Result<Option<String>, ReportError> {
-    match std::env::var(name) {
-        Ok(v) if !v.trim().is_empty() => Ok(Some(v.trim().to_string())),
-        Ok(_) | Err(std::env::VarError::NotPresent) => Ok(None),
-        Err(std::env::VarError::NotUnicode(_)) => Err(ReportError::IdentityUnavailable { item }),
-    }
-}
-
-fn first_env(names: &[&str], item: &'static str) -> Result<Option<String>, ReportError> {
-    for n in names {
-        if let Some(v) = env_nonempty(n, item)? {
-            return Ok(Some(v));
+    /// Builds the identity from an environment lookup and the host names the OS reports
+    /// (`sys_hosts`). A variable that is set but not valid UTF-8 fails (`identity_unavailable`
+    /// naming its item: `user`, `host`, `home` or `domain`), as does a user, home or host that
+    /// is missing or blank, or a home that is not absolute.
+    ///
+    /// - Windows: user `USERNAME`; home `USERPROFILE`, else `HOMEDRIVE` + `HOMEPATH`; hosts
+    ///   `COMPUTERNAME`, then `sys_hosts`, then each dotless host joined with each dotted
+    ///   domain; domains `USERDOMAIN`, `USERDNSDOMAIN`.
+    /// - Unix: user `USER`, else `LOGNAME`; home `HOME`; hosts `HOSTNAME`, then `sys_hosts`.
+    pub fn from_lookup(
+        platform: IdentityPlatform,
+        env: impl Fn(&str) -> Option<OsString>,
+        sys_hosts: impl FnOnce() -> Vec<String>,
+    ) -> Result<Identity, ReportError> {
+        let get = |name: &str, item: &'static str| -> Result<Option<String>, ReportError> {
+            match env(name) {
+                None => Ok(None),
+                Some(v) => match v.into_string() {
+                    Ok(s) if s.trim().is_empty() => Ok(None),
+                    Ok(s) => Ok(Some(s.trim().to_string())),
+                    Err(_) => Err(unavailable(item)),
+                },
+            }
+        };
+        let (home, user, env_hosts, domains) = match platform {
+            IdentityPlatform::Windows => {
+                let home = match get("USERPROFILE", "home")? {
+                    Some(h) => Some(h),
+                    None => match (get("HOMEDRIVE", "home")?, get("HOMEPATH", "home")?) {
+                        (Some(d), Some(p)) => Some(format!("{d}{p}")),
+                        _ => None,
+                    },
+                };
+                let user = get("USERNAME", "user")?;
+                let hosts: Vec<String> = get("COMPUTERNAME", "host")?.into_iter().collect();
+                let domains: Vec<String> =
+                    [get("USERDOMAIN", "domain")?, get("USERDNSDOMAIN", "domain")?].into_iter().flatten().collect();
+                (home, user, hosts, domains)
+            }
+            IdentityPlatform::Unix => {
+                let home = get("HOME", "home")?;
+                let user = match get("USER", "user")? {
+                    Some(u) => Some(u),
+                    None => get("LOGNAME", "user")?,
+                };
+                let hosts: Vec<String> = get("HOSTNAME", "host")?.into_iter().collect();
+                (home, user, hosts, Vec::new())
+            }
+        };
+        let home = home.filter(|h| is_absolute(&h.chars().collect::<Vec<_>>())).ok_or_else(|| unavailable("home"))?;
+        let user = user.ok_or_else(|| unavailable("user"))?;
+        let mut hosts: Vec<String> = Vec::new();
+        for h in env_hosts.into_iter().chain(sys_hosts()) {
+            if let Some(h) = host_ok(&h) {
+                if !hosts.iter().any(|x| fold_str_eq(x, &h)) {
+                    hosts.push(h);
+                }
+            }
         }
-    }
-    Ok(None)
-}
-
-fn os_home() -> Result<String, ReportError> {
-    #[cfg(windows)]
-    let found = match first_env(&["USERPROFILE"], "home")? {
-        Some(h) => Some(h),
-        None => match (env_nonempty("HOMEDRIVE", "home")?, env_nonempty("HOMEPATH", "home")?) {
-            (Some(d), Some(p)) => Some(format!("{d}{p}")),
-            _ => None,
-        },
-    };
-    #[cfg(not(windows))]
-    let found = first_env(&["HOME"], "home")?;
-    match found {
-        Some(h) if is_absolute(&h.chars().collect::<Vec<_>>()) => Ok(h),
-        _ => Err(ReportError::IdentityUnavailable { item: "home" }),
-    }
-}
-
-fn os_user(home: &str) -> Result<String, ReportError> {
-    #[cfg(windows)]
-    let names: &[&str] = &["USERNAME"];
-    #[cfg(not(windows))]
-    let names: &[&str] = &["USER", "LOGNAME"];
-    if let Some(u) = first_env(names, "user")? {
-        return Ok(u);
-    }
-    // Fall back to the home directory's last component (e.g. containers without `USER`).
-    let last = home.trim_end_matches(['/', '\\']).rsplit(['/', '\\']).next().unwrap_or("").trim();
-    if last.is_empty() {
-        Err(ReportError::IdentityUnavailable { item: "user" })
-    } else {
-        Ok(last.to_string())
+        if platform == IdentityPlatform::Windows {
+            let fqdns: Vec<String> = hosts
+                .iter()
+                .filter(|h| !h.contains('.'))
+                .flat_map(|h| domains.iter().filter(|d| d.contains('.')).map(move |d| format!("{h}.{d}")))
+                .collect();
+            for f in fqdns {
+                if let Some(f) = host_ok(&f) {
+                    if !hosts.iter().any(|x| fold_str_eq(x, &f)) {
+                        hosts.push(f);
+                    }
+                }
+            }
+        }
+        if hosts.is_empty() {
+            return Err(unavailable("host"));
+        }
+        Ok(Identity { user, hosts, home, domains })
     }
 }
 
@@ -120,44 +175,75 @@ fn host_ok(s: &str) -> Option<String> {
     }
 }
 
-#[cfg(not(windows))]
-fn read_small(path: &str) -> Option<String> {
-    use std::io::Read;
-    let f = std::fs::File::open(path).ok()?;
-    let mut buf = Vec::new();
-    f.take(MAX_HOST_BYTES as u64 + 2).read_to_end(&mut buf).ok()?;
-    String::from_utf8(buf).ok().and_then(|s| host_ok(&s))
+fn command_host(program: &str) -> Option<String> {
+    let out = std::process::Command::new(program).output().ok()?;
+    if !out.status.success() || out.stdout.len() > MAX_HOST_BYTES + 2 {
+        return None;
+    }
+    String::from_utf8(out.stdout).ok().and_then(|s| host_ok(&s))
 }
 
-fn os_host() -> Result<String, ReportError> {
-    #[cfg(windows)]
-    {
-        if let Some(h) = first_env(&["COMPUTERNAME"], "host")?.and_then(|h| host_ok(&h)) {
-            return Ok(h);
-        }
-    }
-    #[cfg(not(windows))]
-    {
-        for p in ["/proc/sys/kernel/hostname", "/etc/hostname"] {
-            if let Some(h) = read_small(p) {
-                return Ok(h);
-            }
-        }
-        if let Ok(out) = std::process::Command::new("hostname").output() {
-            if out.status.success() && out.stdout.len() <= MAX_HOST_BYTES + 2 {
-                if let Some(h) = String::from_utf8(out.stdout).ok().and_then(|s| host_ok(&s)) {
-                    return Ok(h);
-                }
-            }
-        }
-    }
-    match first_env(&["HOSTNAME"], "host")?.and_then(|h| host_ok(&h)) {
-        Some(h) => Ok(h),
-        None => Err(ReportError::IdentityUnavailable { item: "host" }),
-    }
+/// The host names the OS reports besides the environment.
+#[cfg(windows)]
+fn os_host_names() -> Vec<String> {
+    // `hostname.exe` prints the DNS host name, which may be longer than the 15-character
+    // NetBIOS `COMPUTERNAME`. Called by absolute path, not through `PATH`.
+    let root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_string());
+    command_host(&format!("{root}\\System32\\hostname.exe")).into_iter().collect()
+}
+
+/// The host names the OS reports besides the environment.
+#[cfg(not(windows))]
+fn os_host_names() -> Vec<String> {
+    use std::io::Read;
+    let read_small = |path: &str| -> Option<String> {
+        let f = std::fs::File::open(path).ok()?;
+        let mut buf = Vec::new();
+        f.take(MAX_HOST_BYTES as u64 + 2).read_to_end(&mut buf).ok()?;
+        String::from_utf8(buf).ok().and_then(|s| host_ok(&s))
+    };
+    let mut out: Vec<String> =
+        ["/proc/sys/kernel/hostname", "/etc/hostname"].into_iter().filter_map(read_small).collect();
+    out.extend(command_host("hostname"));
+    out
 }
 
 // ------------------------------------------------------------------ character classes
+
+/// Unicode simple case folding, approximated: the lowercase mapping when it is a single
+/// character, plus the simple foldings that differ from lowercase (`ς` → `σ`, `ſ` → `s`,
+/// U+0345 and U+1FBE → `ι`, `ϐ ϑ ϕ ϖ ϰ ϱ ϵ` → `β θ φ π κ ρ ε`, `ẛ` → `ṡ`). Characters whose
+/// lowercase is longer (e.g. `İ`) fold to themselves.
+pub fn fold_char(c: char) -> char {
+    match c {
+        'ς' => 'σ',
+        'ſ' => 's',
+        '\u{0345}' | '\u{1FBE}' => 'ι',
+        'ϐ' => 'β',
+        'ϑ' => 'θ',
+        'ϕ' => 'φ',
+        'ϖ' => 'π',
+        'ϰ' => 'κ',
+        'ϱ' => 'ρ',
+        'ϵ' => 'ε',
+        'ẛ' => 'ṡ',
+        _ => {
+            let mut l = c.to_lowercase();
+            match (l.next(), l.next()) {
+                (Some(x), None) => x,
+                _ => c,
+            }
+        }
+    }
+}
+
+fn fold_eq(a: char, b: char) -> bool {
+    a == b || fold_char(a) == fold_char(b)
+}
+
+fn fold_str_eq(a: &str, b: &str) -> bool {
+    a.chars().count() == b.chars().count() && a.chars().zip(b.chars()).all(|(x, y)| fold_eq(x, y))
+}
 
 fn is_sep(c: char) -> bool {
     c == '/' || c == '\\'
@@ -168,13 +254,17 @@ fn is_term(c: char) -> bool {
     c.is_whitespace() || super::is_escaped_char(c) || matches!(c, '"' | '\'' | '`' | '<' | '>' | '|')
 }
 
+fn is_line_break(c: char) -> bool {
+    matches!(c, '\n' | '\r' | '\u{b}' | '\u{c}' | '\u{85}' | '\u{2028}' | '\u{2029}')
+}
+
 /// May continue a name or path component.
 fn is_path_char(c: char) -> bool {
     c.is_alphanumeric() || matches!(c, '.' | '_' | '-' | '~')
 }
 
-fn fold_eq(a: char, b: char) -> bool {
-    a == b || (a.is_ascii() && b.is_ascii() && a.eq_ignore_ascii_case(&b))
+fn is_trailing_punct(c: char) -> bool {
+    matches!(c, '.' | ',' | ';' | ':' | '!' | '?' | ')' | ']' | '}')
 }
 
 fn path_eq(a: char, b: char, windows: bool) -> bool {
@@ -195,6 +285,20 @@ fn abs_start(c: &[char], i: usize) -> bool {
     let drive = matches!((at(0), at(1), at(2)), (Some(d), Some(':'), Some(s)) if d.is_ascii_alphabetic() && is_sep(s));
     let rooted = matches!((at(0), at(1)), (Some(s), Some(n)) if is_sep(s) && !is_term(n));
     drive || rooted
+}
+
+/// Whether `~/` or `~\` starts at `c[i]`.
+fn tilde_home(c: &[char], i: usize) -> bool {
+    c.get(i) == Some(&'~') && c.get(i + 1).is_some_and(|&s| is_sep(s))
+}
+
+/// Length of a `\\?\` prefix at `c[i]` (0 if none).
+fn verbatim_len(c: &[char], i: usize) -> usize {
+    if starts_with_at(c, i, &['\\', '\\', '?', '\\'], |a, b| a == b) {
+        4
+    } else {
+        0
+    }
 }
 
 /// A drive path (`C:\`, `C:/`) or a path starting with `/` or `\`.
@@ -246,23 +350,25 @@ pub struct Redactor {
 }
 
 impl Redactor {
-    /// Checks the identity (user, host and home non-empty, home absolute) and the install
-    /// directory (absolute, not a root, not the home directory or one of its ancestors).
+    /// Checks the identity (user, a host and home non-blank, home absolute) and the install
+    /// directory (absolute, not a root, no `..`, not the home directory or one of its
+    /// ancestors).
     pub fn new(identity: &Identity, install_dir: &str) -> Result<Self, ReportError> {
         let user = identity.user.trim();
         if user.is_empty() {
-            return Err(ReportError::IdentityUnavailable { item: "user" });
+            return Err(unavailable("user"));
         }
-        let host = identity.host.trim();
-        if host.is_empty() {
-            return Err(ReportError::IdentityUnavailable { item: "host" });
+        let hosts: Vec<&str> = identity.hosts.iter().map(|h| h.trim()).filter(|h| !h.is_empty()).collect();
+        if hosts.is_empty() {
+            return Err(unavailable("host"));
         }
         let home: Vec<char> = identity.home.trim().chars().collect();
         if !is_absolute(&home) {
-            return Err(ReportError::IdentityUnavailable { item: "home" });
+            return Err(unavailable("home"));
         }
         let mut home = strip_trailing_seps(home);
-        if components_after_root(&home).is_empty() {
+        let home_last = components_after_root(&home).pop();
+        if home_last.is_none() {
             home.clear();
         }
         let install: Vec<char> = install_dir.trim().chars().collect();
@@ -288,18 +394,34 @@ impl Redactor {
         }
         let mut names: Vec<(Vec<char>, &'static str)> = Vec::new();
         let mut push = |s: &str, mark: &'static str| {
-            let v: Vec<char> = s.chars().collect();
+            let v: Vec<char> = s.trim().chars().collect();
             let dup = names.iter().any(|(n, _)| n.len() == v.len() && n.iter().zip(&v).all(|(&a, &b)| fold_eq(a, b)));
             if !v.is_empty() && !dup {
                 names.push((v, mark));
             }
         };
-        push(host, super::PLACEHOLDER_HOST);
-        if let Some((label, _)) = host.split_once('.') {
-            push(label, super::PLACEHOLDER_HOST);
+        let with_label = |s: &str| -> Vec<String> {
+            let mut v = vec![s.to_string()];
+            if let Some((label, _)) = s.split_once('.') {
+                v.push(label.to_string());
+            }
+            v
+        };
+        for h in &hosts {
+            for n in with_label(h) {
+                push(&n, super::PLACEHOLDER_HOST);
+            }
+        }
+        for d in &identity.domains {
+            for n in with_label(d.trim()) {
+                push(&n, super::PLACEHOLDER_HOST);
+            }
         }
         push(user, super::PLACEHOLDER_USER);
-        // Longest first; ties keep the order above (host, host label, user).
+        if let Some(last) = &home_last {
+            push(last, super::PLACEHOLDER_USER);
+        }
+        // Longest first; ties keep the order above.
         names.sort_by_key(|n| std::cmp::Reverse(n.0.len()));
         Ok(Redactor { install, install_windows, home, names })
     }
@@ -308,9 +430,9 @@ impl Redactor {
     pub fn redact_text(&self, s: &str) -> String {
         let c: Vec<char> = s.chars().collect();
         let mut segs = self.path_pass(&c);
-        segs = self.split_pass(segs, |text, i| self.home_match(text, i).map(|n| (n, super::PLACEHOLDER_HOME)));
+        segs = split_pass(segs, |text, i| self.home_match(text, i).map(|n| (n, super::PLACEHOLDER_HOME)));
         for (name, mark) in &self.names {
-            segs = self.split_pass(segs, |text, i| word_match(text, i, name).map(|n| (n, *mark)));
+            segs = split_pass(segs, |text, i| word_match(text, i, name).map(|n| (n, *mark)));
         }
         let mut out = String::with_capacity(s.len());
         for seg in segs {
@@ -325,29 +447,39 @@ impl Redactor {
     fn path_pass(&self, c: &[char]) -> Vec<Seg> {
         let mut segs = Vec::new();
         let mut buf = Vec::new();
+        let flush = |buf: &mut Vec<char>, segs: &mut Vec<Seg>| {
+            if !buf.is_empty() {
+                segs.push(Seg::Text(std::mem::take(buf)));
+            }
+        };
         let mut i = 0;
         while i < c.len() {
-            let boundary = i == 0 || !(is_path_char(c[i - 1]) || is_sep(c[i - 1]));
+            let before = i.checked_sub(1).map(|k| c[k]);
+            let boundary = before.map_or(true, |p| !(is_path_char(p) || is_sep(p)));
+            if boundary && tilde_home(c, i) {
+                flush(&mut buf, &mut segs);
+                segs.push(Seg::Mark(super::PLACEHOLDER_HOME));
+                let end = redacted_end(c, self.path_end(c, i + 1), before);
+                segs.push(Seg::Mark(super::PLACEHOLDER_PATH));
+                i = end;
+                continue;
+            }
             if boundary && abs_start(c, i) {
                 let end = self.path_end(c, i);
-                let tok = &c[i..end];
-                if self.keeps(tok) {
-                    buf.extend_from_slice(tok);
+                if self.keeps(&c[i..end]) {
+                    buf.extend_from_slice(&c[i..end]);
+                    i = end;
                 } else {
-                    if !buf.is_empty() {
-                        segs.push(Seg::Text(std::mem::take(&mut buf)));
-                    }
+                    flush(&mut buf, &mut segs);
                     segs.push(Seg::Mark(super::PLACEHOLDER_PATH));
+                    i = redacted_end(c, end, before);
                 }
-                i = end;
                 continue;
             }
             buf.push(c[i]);
             i += 1;
         }
-        if !buf.is_empty() {
-            segs.push(Seg::Text(buf));
-        }
+        flush(&mut buf, &mut segs);
         segs
     }
 
@@ -360,24 +492,26 @@ impl Redactor {
         };
         let mut end = scan(i);
         let mut min_end = i + 1;
+        let base = i + verbatim_len(c, i);
         let prefixes: [(&[char], bool); 2] = [(&self.install, self.install_windows), (&self.home, true)];
         for (p, windows) in prefixes {
-            let after = i + p.len();
+            let after = base + p.len();
             if !p.is_empty()
-                && starts_with_at(c, i, p, |a, b| path_eq(a, b, windows))
+                && starts_with_at(c, base, p, |a, b| path_eq(a, b, windows))
                 && (after == c.len() || is_sep(c[after]) || is_term(c[after]))
             {
                 end = end.max(scan(after));
                 min_end = min_end.max(after);
             }
         }
-        while end > min_end && matches!(c[end - 1], '.' | ',' | ';' | ':' | '!' | '?' | ')' | ']' | '}') {
+        while end > min_end && is_trailing_punct(c[end - 1]) {
             end -= 1;
         }
         end
     }
 
     fn keeps(&self, tok: &[char]) -> bool {
+        let tok = &tok[verbatim_len(tok, 0)..];
         let n = self.install.len();
         starts_with_at(tok, 0, &self.install, |a, b| path_eq(a, b, self.install_windows))
             && (tok.len() == n || is_sep(tok[n]))
@@ -389,37 +523,69 @@ impl Redactor {
         let after_ok = !text.get(i + n).is_some_and(|&c| is_path_char(c));
         (n > 0 && starts_with_at(text, i, &self.home, |a, b| path_eq(a, b, true)) && after_ok).then_some(n)
     }
+}
 
-    fn split_pass(&self, segs: Vec<Seg>, find: impl Fn(&[char], usize) -> Option<(usize, &'static str)>) -> Vec<Seg> {
-        let mut out = Vec::with_capacity(segs.len());
-        for seg in segs {
-            let text = match seg {
-                Seg::Text(t) => t,
-                m @ Seg::Mark(_) => {
-                    out.push(m);
-                    continue;
-                }
-            };
-            let mut buf = Vec::new();
-            let mut i = 0;
-            while i < text.len() {
-                if let Some((n, mark)) = find(&text, i) {
-                    if !buf.is_empty() {
-                        out.push(Seg::Text(std::mem::take(&mut buf)));
-                    }
-                    out.push(Seg::Mark(mark));
-                    i += n;
-                } else {
-                    buf.push(text[i]);
-                    i += 1;
-                }
+/// Where a redacted path that ends at `end` stops swallowing text (pass 1).
+fn redacted_end(c: &[char], end: usize, before: Option<char>) -> usize {
+    if let Some(q) = before.filter(|q| matches!(q, '"' | '\'' | '`')) {
+        let mut j = end;
+        while j < c.len() && c[j] != q && !is_line_break(c[j]) {
+            j += 1;
+        }
+        return j;
+    }
+    let mut end = end;
+    loop {
+        let mut j = end;
+        while j < c.len() && c[j].is_whitespace() && !is_line_break(c[j]) {
+            j += 1;
+        }
+        if j == end || j >= c.len() || abs_start(c, j) || tilde_home(c, j) {
+            return end;
+        }
+        let mut k = j;
+        while k < c.len() && !is_term(c[k]) {
+            k += 1;
+        }
+        if !c[j..k].iter().any(|&x| is_sep(x)) {
+            return end;
+        }
+        while k > j + 1 && is_trailing_punct(c[k - 1]) {
+            k -= 1;
+        }
+        end = k;
+    }
+}
+
+fn split_pass(segs: Vec<Seg>, find: impl Fn(&[char], usize) -> Option<(usize, &'static str)>) -> Vec<Seg> {
+    let mut out = Vec::with_capacity(segs.len());
+    for seg in segs {
+        let text = match seg {
+            Seg::Text(t) => t,
+            m @ Seg::Mark(_) => {
+                out.push(m);
+                continue;
             }
-            if !buf.is_empty() {
-                out.push(Seg::Text(buf));
+        };
+        let mut buf = Vec::new();
+        let mut i = 0;
+        while i < text.len() {
+            if let Some((n, mark)) = find(&text, i) {
+                if !buf.is_empty() {
+                    out.push(Seg::Text(std::mem::take(&mut buf)));
+                }
+                out.push(Seg::Mark(mark));
+                i += n;
+            } else {
+                buf.push(text[i]);
+                i += 1;
             }
         }
-        out
+        if !buf.is_empty() {
+            out.push(Seg::Text(buf));
+        }
     }
+    out
 }
 
 fn word_match(text: &[char], i: usize, name: &[char]) -> Option<usize> {
