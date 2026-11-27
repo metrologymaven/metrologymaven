@@ -49,7 +49,11 @@
 //! 4. Plane: centroid `m` as in selection; covariance `C = sum (q - m)(q - m)^T` summed in
 //!    neighbour order, the six upper entries each as a plain running sum; the KRN.NUM.LA.EIG
 //!    cyclic Jacobi eigensolver with `rel_tol` = [`PLANE_RANK_TOL`] = 2^-40. Rank below 2
-//!    (collinear or coincident neighbours) keeps `p` ([`VertexStatus::KeptDegenerate`]).
+//!    (collinear or coincident neighbours) keeps `p` ([`VertexStatus::KeptDegenerate`]), and
+//!    so does a covariance whose largest entry is subnormal (the eigensolver's
+//!    `subnormal_input` refusal: the neighbours are too close together to fit a plane), so one
+//!    such neighbourhood does not abort the whole preparation. Every other eigensolver error
+//!    is [`PolyError::Numeric`].
 //!    The plane normal `n` is the eigenvector of the smallest eigenvalue.
 //! 5. Projection: `d = (n_x*(p_x - m_x) + n_y*(p_y - m_y)) + n_z*(p_z - m_z)`,
 //!    `delta = -(d * n)` per axis, `len = sqrt((delta_x^2 + delta_y^2) + delta_z^2)`.
@@ -61,6 +65,13 @@
 //!    is kept instead ([`VertexStatus::KeptBound`]), so REQ-003 holds after rounding.
 //!
 //! Kept vertices are bit-identical to their source point with displacement 0.
+//!
+//! # Normals
+//!
+//! Every vertex carries the normal of its source input point, copied bit for bit
+//! (SCAN.POLY.SURF.FAN and STITCH orient their fans with it). A smoothed or clamped vertex
+//! keeps its source normal: the fitted plane's normal is used only to move the vertex and is
+//! not output.
 //!
 //! # Determinism (D0) and threads
 //!
@@ -75,7 +86,7 @@ use core::fmt;
 
 use fid_geo_index::{dist2, PointIndex, PointIndexError};
 use fid_geo_types::{PointBuffer, PointCloud};
-use fid_num::la::{sym_eig, Mat};
+use fid_num::la::{sym_eig, LaError, Mat};
 use fid_num::NumError;
 
 /// The default sharp-edge threshold, 30 degrees [unverified: a starting value, not
@@ -132,7 +143,8 @@ pub enum VertexStatus {
     KeptEdge,
     /// Kept in place: fewer than [`MIN_NEIGHBOURS`] valid neighbours.
     KeptFewNeighbours,
-    /// Kept in place: the neighbours are collinear or coincident (plane rank below 2).
+    /// Kept in place: the neighbours are collinear or coincident (plane rank below 2), or so
+    /// close together that their covariance is subnormal.
     KeptDegenerate,
     /// Kept in place: the rounded displacement would exceed `h/2`.
     KeptBound,
@@ -165,8 +177,12 @@ pub struct PrepVertex {
     pub source: u64,
     /// The grid cell it represents.
     pub cell: [u32; 3],
-    /// Its position in metres.
+    /// Its position in metres. It is a measured input point (bit-identical to the source)
+    /// only when `!status.moved()`; a smoothed or clamped position is a computed point within
+    /// `h/2` of the source.
     pub position: [f64; 3],
+    /// The source input point's normal, bit for bit (also for a moved vertex).
+    pub normal: [f64; 3],
     /// Its distance from the source point in metres (0 unless moved; at most `h/2`).
     pub displacement_m: f64,
     /// What happened to it.
@@ -178,6 +194,10 @@ pub struct PrepVertex {
 pub struct VertexSet {
     /// The vertices.
     pub vertices: Vec<PrepVertex>,
+    /// The cell edge `h` in metres the set was prepared with.
+    pub h: f64,
+    /// Whether smoothing was on (when off, every position is a measured point).
+    pub smoothing: bool,
     /// The largest displacement in metres (0 for an empty set).
     pub max_displacement_m: f64,
 }
@@ -281,7 +301,12 @@ pub fn prepare(cloud: &PointCloud, valid: &[bool], params: &PrepParams) -> Resul
     let normals =
         cloud.attributes().normal.as_ref().ok_or_else(|| invalid("cloud.normal", "the cloud has no normals"))?;
     if !valid.iter().any(|v| *v) {
-        return Ok(VertexSet { vertices: Vec::new(), max_displacement_m: 0.0 });
+        return Ok(VertexSet {
+            vertices: Vec::new(),
+            h: params.h,
+            smoothing: params.smoothing,
+            max_displacement_m: 0.0,
+        });
     }
     let origin = cloud.aabb().map_err(|_| PolyError::Inconsistent)?.min();
     let buf = cloud.buffer();
@@ -306,15 +331,20 @@ pub fn prepare(cloud: &PointCloud, valid: &[bool], params: &PrepParams) -> Resul
         };
         max_d = fid_num::f::total_max(max_d, m.displacement_m)?;
         let source = u64::try_from(r.source).map_err(|_| PolyError::Inconsistent)?;
+        let normal = match (normals[0].get(r.source), normals[1].get(r.source), normals[2].get(r.source)) {
+            (Some(&a), Some(&b), Some(&c)) => [a, b, c],
+            _ => return Err(PolyError::Inconsistent),
+        };
         vertices.push(PrepVertex {
             source,
             cell: r.cell,
             position: m.position,
+            normal,
             displacement_m: m.displacement_m,
             status: m.status,
         });
     }
-    Ok(VertexSet { vertices, max_displacement_m: max_d })
+    Ok(VertexSet { vertices, h: params.h, smoothing: params.smoothing, max_displacement_m: max_d })
 }
 
 fn check_params(p: &PrepParams) -> Result<(), PolyError> {
@@ -530,7 +560,11 @@ fn smooth_one(ctx: &Ctx<'_>, r: &Rep) -> Result<Moved, PolyError> {
         c[5] += d[2] * d[2];
     }
     let a = Mat::from_rows(&[[c[0], c[1], c[2]], [c[1], c[3], c[4]], [c[2], c[4], c[5]]])?;
-    let eig = sym_eig(&a, PLANE_RANK_TOL)?;
+    let eig = match sym_eig(&a, PLANE_RANK_TOL) {
+        Ok(e) => e,
+        Err(e) if LaError::of(&e) == Some(LaError::Subnormal) => return Ok(kept(p, VertexStatus::KeptDegenerate)),
+        Err(e) => return Err(PolyError::Numeric(e)),
+    };
     if eig.diag().rank < 2 {
         return Ok(kept(p, VertexStatus::KeptDegenerate));
     }

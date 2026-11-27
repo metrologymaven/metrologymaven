@@ -66,6 +66,7 @@ struct Row {
     cell: [u32; 3],
     status: String,
     position: [f64; 3],
+    normal: [f64; 3],
     near_edge: Option<bool>,
 }
 
@@ -94,7 +95,8 @@ fn load_case(case: &str) -> Case {
                 cell: [t[1].parse().unwrap(), t[2].parse().unwrap(), t[3].parse().unwrap()],
                 status: t[4].to_string(),
                 position: [f(t[5]), f(t[6]), f(t[7])],
-                near_edge: match t[8] {
+                normal: [f(t[8]), f(t[9]), f(t[10])],
+                near_edge: match t[11] {
                     "-" => None,
                     v => Some(v == "1"),
                 },
@@ -125,6 +127,8 @@ fn run_case(case: &str, threads: usize) -> (Cloud, Case, VertexSet) {
     params.threads = threads;
     let got = prepare(&cloud.cloud, &cloud.valid, &params).unwrap();
     assert_eq!(got.vertices.len(), expected.rows.len(), "{case}: vertex count");
+    assert_eq!(got.h.to_bits(), params.h.to_bits());
+    assert_eq!(got.smoothing, params.smoothing);
     let half = params.h * 0.5;
     let mut max_d = 0.0f64;
     for (v, row) in got.vertices.iter().zip(&expected.rows) {
@@ -132,6 +136,9 @@ fn run_case(case: &str, threads: usize) -> (Cloud, Case, VertexSet) {
         assert_eq!(v.cell, row.cell, "{case}: cell of source {}", row.source);
         assert_eq!(v.status.as_str(), row.status, "{case}: status of source {}", row.source);
         let src = point(&cloud, v.source);
+        let src_normal = cloud.cloud.attributes().normal_at(v.source).unwrap();
+        assert_eq!(bits(v.normal), bits(src_normal), "{case}: normal of source {} not copied", v.source);
+        assert_eq!(bits(v.normal), bits(row.normal), "{case}: normal of source {} vs reference", v.source);
         assert!(cloud.valid[v.source as usize], "{case}: invalid source {}", v.source);
         if v.status.moved() {
             for (a, (got, want)) in v.position.iter().zip(&row.position).enumerate() {
@@ -230,9 +237,11 @@ fn same(a: &VertexSet, b: &VertexSet) {
     for (x, y) in a.vertices.iter().zip(&b.vertices) {
         assert_eq!((x.source, x.cell, x.status), (y.source, y.cell, y.status));
         assert_eq!(bits(x.position), bits(y.position));
+        assert_eq!(bits(x.normal), bits(y.normal));
         assert_eq!(x.displacement_m.to_bits(), y.displacement_m.to_bits());
     }
     assert_eq!(a.max_displacement_m.to_bits(), b.max_displacement_m.to_bits());
+    assert_eq!((a.h.to_bits(), a.smoothing), (b.h.to_bits(), b.smoothing));
 }
 
 #[test]
@@ -294,6 +303,57 @@ fn collinear_and_isolated_points_are_kept() {
     let src: Vec<u64> = got.vertices.iter().map(|v| v.source).collect();
     assert_eq!(src, [0, 1], "the cell with only an invalid point has no vertex");
     assert!(got.vertices.iter().all(|v| v.status == VertexStatus::KeptFewNeighbours));
+}
+
+#[test]
+fn subnormal_covariance_keeps_the_vertex_instead_of_failing() {
+    // Three valid points 1e-160 m apart (h = 1e-150): the squared deviations are about
+    // 1e-321, so the covariance is subnormal and the eigensolver refuses it. That vertex is
+    // kept; the far-away second cluster is still smoothed in the same call.
+    let e = 1e-160;
+    let mut pts = vec![[0.0, 0.0, 0.0], [e, 0.0, 0.0], [0.0, e, 0.0]];
+    let s = 1e-147;
+    for i in 0..5 {
+        for j in 0..5 {
+            let z = if (i + j) % 2 == 0 { 1e-153 } else { -1e-153 };
+            pts.push([s + i as f64 * 2e-151, j as f64 * 2e-151, z]);
+        }
+    }
+    let n = pts.len();
+    let c = build(&pts, &up(n), vec![true; n]);
+    let mut params = PrepParams::new(1e-150);
+    params.smoothing = true;
+    let got = prepare(&c.cloud, &c.valid, &params).unwrap();
+    let first = got.vertices.iter().find(|v| v.source < 3).unwrap();
+    assert_eq!(first.status, VertexStatus::KeptDegenerate);
+    assert_eq!(bits(first.position), bits(pts[first.source as usize]));
+    assert!(got.vertices.iter().any(|v| v.source >= 3 && v.status.moved()), "{:?}", got.vertices);
+}
+
+#[test]
+fn moved_vertices_keep_their_source_normal() {
+    // A tilted source normal on a flat grid: the vertex moves onto the plane z = 0 but keeps
+    // the normal it was measured with, bit for bit.
+    let mut pts = Vec::new();
+    for i in 0..11 {
+        for j in 0..11 {
+            pts.push([i as f64 * 0.1, j as f64 * 0.1, if (i + j) % 2 == 0 { 0.01 } else { -0.01 }]);
+        }
+    }
+    let tilted = [0.6, 0.0, 0.8];
+    let mut normals = up(pts.len());
+    for n in normals.iter_mut() {
+        *n = tilted;
+    }
+    let c = build(&pts, &normals, vec![true; pts.len()]);
+    let mut params = PrepParams::new(1.0);
+    params.smoothing = true;
+    let got = prepare(&c.cloud, &c.valid, &params).unwrap();
+    assert!(!got.vertices.is_empty());
+    for v in &got.vertices {
+        assert!(v.status.moved(), "{:?}", v.status);
+        assert_eq!(bits(v.normal), bits(tilted));
+    }
 }
 
 #[test]

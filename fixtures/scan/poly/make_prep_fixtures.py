@@ -33,6 +33,7 @@ crate's `prep` module documentation, computed here a different way:
   integer arithmetic (every coordinate scaled by 2^1074) and its normal by inverse
   iteration in 80-digit decimal arithmetic, where the crate uses f64 sums and the fid-num
   cyclic Jacobi eigensolver. The displacement is clamped to (h/2)(1 - 2^-40).
+* Normals: every vertex carries its source point's normal unchanged, moved or not.
 * Sharp edges: with preservation on, a representative is kept in place when any valid
   neighbour's normal has a dot product with its own normal below cos(30 degrees). The
   fixture dot products are 0, 1 or 1 +- 1e-16, so the decision does not depend on how the
@@ -333,8 +334,9 @@ def case_text(case, cloud, pts, normals, h, smoothing, sharp, plane):
             near = "-"
         rows.append((i, c, status, pos, near))
     out = ["# SCAN.POLY.SURF.PREP expected vertex set, written by make_prep_fixtures.py (CC0-1.0).",
-           "# Lines after 'vertices': source cx cy cz status x y z near_edge (near_edge: within h",
-           "# of a cube edge, '-' when not a cube). Smoothed positions are within 1e-12 m.",
+           "# Lines after 'vertices': source cx cy cz status x y z nx ny nz near_edge (n: the source",
+           "# point's normal, kept by every vertex; near_edge: within h of a cube edge, '-' when not",
+           "# a cube). Smoothed positions are within 1e-12 m; everything else is exact.",
            f"case {case}",
            f"cloud {cloud}",
            f"h {h!r}",
@@ -343,7 +345,9 @@ def case_text(case, cloud, pts, normals, h, smoothing, sharp, plane):
            f"edge_angle_rad {EDGE_ANGLE_RAD!r}",
            f"vertices {len(rows)}"]
     for i, c, status, pos, near in rows:
-        out.append(f"{i} {c[0]} {c[1]} {c[2]} {status} {pos[0]!r} {pos[1]!r} {pos[2]!r} {near}")
+        n = normals[pts[i][3]]
+        out.append(f"{i} {c[0]} {c[1]} {c[2]} {status} {pos[0]!r} {pos[1]!r} {pos[2]!r} "
+                   f"{n[0]!r} {n[1]!r} {n[2]!r} {near}")
     if plane:
         before = rms_to_plane([pts[i] for i, *_ in rows])
         after = rms_to_plane([r[3] for r in rows])
