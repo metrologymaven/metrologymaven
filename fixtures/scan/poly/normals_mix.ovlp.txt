@@ -1,0 +1,30 @@
+# SCAN.POLY.MULTI.OVLP fixture, written by make_ovlp_fixtures.py (stdlib reference; CC0-1.0).
+# Synthetic data, not measured. REQ-001/-002 ties and edge cases, dyadic coordinates, d = 2^-10 m.
+case normals_mix
+d 0.0009765625
+scans 4
+scan 0 points 4
+0.0 0.0 0.0 0.0 0.0 1.0 1 overlapping 2
+1.0 0.0 0.0 0.0 0.0 -1.0 0 overlapping 1
+2.0 0.0 0.0 0.0 0.0 1.0 1 normals_incompatible -
+3.0 0.0 0.0 0.0 0.0 1.0 1 nothing_within_d -
+scan 1 points 4
+0.0009765625 0.0 0.0 0.8660254037844386 0.0 0.5 1 normals_incompatible -
+0.00048828125 0.0 0.0 0.0 0.0 1.0 0 overlapping 0
+1.0 0.0 0.0009765625 0.0 0.0 -1.0 1 normals_incompatible -
+2.0 0.0 0.00048828125 0.0 0.0 -1.0 1 normals_incompatible -
+scan 2 points 3
+0.0 0.0009765625 0.0 0.8660248531796152 0.0 0.5000009536743164 1 overlapping 0
+1.0009765634313226 0.0 0.0 0.0 0.0 1.0 1 nothing_within_d -
+5.0 0.0 0.0 0.0 0.0 1.0 1 nothing_within_d -
+scan 3 points 0
+pairs 4
+0 1 1
+0 2 1
+1 0 1
+2 0 1
+summary
+0 4 2 1 1 1
+1 4 1 0 3 1
+2 3 1 2 0 0
+3 0 0 0 0 0
