@@ -318,21 +318,21 @@ impl FakeEnv {
 
     pub fn from_file(path: &Path) -> Result<Self, SnapshotError> {
         let meta = std::fs::symlink_metadata(path)
-            .map_err(|e| SnapshotError::new(format!("cannot stat {}: {e}", path.display())))?;
+            .map_err(|e| SnapshotError::new(format!("cannot stat the snapshot file: {}", e.kind())))?;
         if meta.file_type().is_symlink() {
-            return Err(SnapshotError::new(format!("{}: symbolic links are not allowed", path.display())));
+            return Err(SnapshotError::new("snapshot file: symbolic links are not allowed"));
         }
         if meta.len() > MAX_SNAPSHOT_BYTES as u64 {
-            return Err(SnapshotError::new(format!("{}: exceeds {MAX_SNAPSHOT_BYTES} byte limit", path.display())));
+            return Err(SnapshotError::new(format!("snapshot file: exceeds {MAX_SNAPSHOT_BYTES} byte limit")));
         }
         let file = std::fs::File::open(path)
-            .map_err(|e| SnapshotError::new(format!("cannot open {}: {e}", path.display())))?;
+            .map_err(|e| SnapshotError::new(format!("cannot open the snapshot file: {}", e.kind())))?;
         let mut buf = Vec::new();
         file.take(MAX_SNAPSHOT_BYTES as u64 + 1)
             .read_to_end(&mut buf)
-            .map_err(|e| SnapshotError::new(format!("cannot read {}: {e}", path.display())))?;
+            .map_err(|e| SnapshotError::new(format!("cannot read the snapshot file: {}", e.kind())))?;
         if buf.len() > MAX_SNAPSHOT_BYTES {
-            return Err(SnapshotError::new(format!("{}: exceeds {MAX_SNAPSHOT_BYTES} byte limit", path.display())));
+            return Err(SnapshotError::new(format!("snapshot file: exceeds {MAX_SNAPSHOT_BYTES} byte limit")));
         }
         Self::from_json(&buf)
     }
@@ -562,27 +562,31 @@ impl EnvSnapshot {
     pub fn from_json(bytes: &[u8]) -> Result<Self, SnapshotError> {
         let v = fid_canon::parse_with_limits(bytes, MAX_SNAPSHOT_BYTES, MAX_JSON_DEPTH)
             .map_err(|e| SnapshotError::new(format!("invalid JSON: {}", e.code())))?;
+        Self::from_cvalue(&v)
+    }
+
+    /// Validates an already parsed JSON value against the v1 snapshot schema (used by
+    /// [`EnvSnapshot::from_json`] and by the doctor report parser, which nests a snapshot).
+    pub fn from_cvalue(v: &CValue) -> Result<Self, SnapshotError> {
         let CValue::Obj(root) = v else {
             return Err(SnapshotError::new("snapshot root must be a JSON object"));
         };
         check_exact_keys(
-            &root,
+            root,
             &["arch", "cpu", "display", "gpu", "os", "ram", "schema_version", "storage"],
             "snapshot",
         )?;
-        let schema_version = req_u32(&root, "schema_version", "snapshot")?;
+        let schema_version = req_u32(root, "schema_version", "snapshot")?;
         if schema_version != SCHEMA_VERSION {
-            return Err(SnapshotError::new(format!(
-                "unsupported schema_version {schema_version} (expected {SCHEMA_VERSION})"
-            )));
+            return Err(SnapshotError::new(format!("unsupported schema_version (expected {SCHEMA_VERSION})")));
         }
-        let os = parse_probed(req_val(&root, "os", "snapshot")?, "os", parse_os_info)?;
-        let arch = parse_probed(req_val(&root, "arch", "snapshot")?, "arch", parse_arch)?;
-        let cpu = parse_probed(req_val(&root, "cpu", "snapshot")?, "cpu", parse_cpu_info)?;
-        let ram = parse_probed(req_val(&root, "ram", "snapshot")?, "ram", parse_ram_info)?;
-        let storage = parse_probed(req_val(&root, "storage", "snapshot")?, "storage", parse_volumes)?;
-        let display = parse_probed(req_val(&root, "display", "snapshot")?, "display", parse_display)?;
-        let gpu = parse_probed(req_val(&root, "gpu", "snapshot")?, "gpu", parse_gpu)?;
+        let os = parse_probed(req_val(root, "os", "snapshot")?, "os", parse_os_info)?;
+        let arch = parse_probed(req_val(root, "arch", "snapshot")?, "arch", parse_arch)?;
+        let cpu = parse_probed(req_val(root, "cpu", "snapshot")?, "cpu", parse_cpu_info)?;
+        let ram = parse_probed(req_val(root, "ram", "snapshot")?, "ram", parse_ram_info)?;
+        let storage = parse_probed(req_val(root, "storage", "snapshot")?, "storage", parse_volumes)?;
+        let display = parse_probed(req_val(root, "display", "snapshot")?, "display", parse_display)?;
+        let gpu = parse_probed(req_val(root, "gpu", "snapshot")?, "gpu", parse_gpu)?;
 
         Ok(EnvSnapshot { schema_version, os, arch, cpu, ram, storage, display, gpu })
     }
@@ -591,11 +595,8 @@ impl EnvSnapshot {
 fn check_exact_keys(m: &BTreeMap<String, CValue>, expected: &[&str], ctx: &str) -> Result<(), SnapshotError> {
     let keys: Vec<&str> = m.keys().map(String::as_str).collect();
     if keys != expected {
-        return Err(SnapshotError::new(format!(
-            "{ctx}: expected keys [{}], got [{}]",
-            expected.join(", "),
-            keys.join(", ")
-        )));
+        // The keys found are input: name only the expected ones.
+        return Err(SnapshotError::new(format!("{ctx}: expected exactly the keys [{}]", expected.join(", "))));
     }
     Ok(())
 }
@@ -682,14 +683,14 @@ fn parse_probed<T>(
             check_exact_keys(m, &["detail", "reason", "status"], ctx)?;
             let reason_s = req_str(m, "reason", ctx)?;
             let reason = UnknownReason::parse(reason_s)
-                .ok_or_else(|| SnapshotError::new(format!("{ctx}: unknown reason {reason_s:?}")))?;
+                .ok_or_else(|| SnapshotError::new(format!("{ctx}.reason: unknown reason")))?;
             let detail = req_str(m, "detail", ctx)?;
             if detail.chars().count() > MAX_DETAIL_CHARS {
                 return Err(SnapshotError::new(format!("{ctx}.detail: exceeds {MAX_DETAIL_CHARS} character limit")));
             }
             Ok(Probed::Unknown { reason, detail: detail.to_string() })
         }
-        other => Err(SnapshotError::new(format!("{ctx}: status must be `known` or `unknown`, got {other:?}"))),
+        _ => Err(SnapshotError::new(format!("{ctx}.status: must be `known` or `unknown`"))),
     }
 }
 
@@ -701,7 +702,7 @@ fn parse_os_info(v: &CValue, ctx: &str) -> Result<OsInfo, SnapshotError> {
 
 fn parse_arch(v: &CValue, ctx: &str) -> Result<Arch, SnapshotError> {
     let CValue::Str(s) = v else { return Err(SnapshotError::new(format!("{ctx}: must be a string"))) };
-    Arch::parse(s).ok_or_else(|| SnapshotError::new(format!("{ctx}: invalid arch {s:?}")))
+    Arch::parse(s).ok_or_else(|| SnapshotError::new(format!("{ctx}: invalid arch")))
 }
 
 fn parse_cpu_info(v: &CValue, ctx: &str) -> Result<CpuInfo, SnapshotError> {
@@ -739,7 +740,7 @@ fn parse_volumes(v: &CValue, ctx: &str) -> Result<Vec<VolumeInfo>, SnapshotError
         check_exact_keys(m, &["free_gib", "role", "total_gib"], &ic)?;
         let role_s = req_str(m, "role", &ic)?;
         let role = VolumeRole::parse(role_s)
-            .ok_or_else(|| SnapshotError::new(format!("{ic}.role: expected `install` or `data`, got {role_s:?}")))?;
+            .ok_or_else(|| SnapshotError::new(format!("{ic}.role: expected `install` or `data`")))?;
         out.push(VolumeInfo {
             role,
             free_gib: req_nonneg_f64(m, "free_gib", &ic)?,

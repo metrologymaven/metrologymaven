@@ -1,0 +1,82 @@
+Metrology Maven doctor report
+schema_version: 1
+tool_version: "0.1.0"
+phase: "P1a"
+redacted: true
+
+Platform
+  os:
+    status: "known"
+    value:
+      family: "windows"
+      version: "10.0.22631"
+  arch:
+    status: "known"
+    value: "x86_64"
+  tier:
+    status: "known"
+    value:
+      kind: "tier"
+      tier: "tier1"
+  snapshot_schema_version: 1
+
+Hardware
+  cpu:
+    status: "known"
+    value:
+      instruction_set_level: "x86-64-v3"
+      model: "Synthetic Workstation CPU 8C"
+      physical_cores: 8
+  ram:
+    status: "known"
+    value:
+      available_gib: 24
+      total_gib: 32
+  storage:
+    status: "known"
+    value:
+      [0]:
+        free_gib: 200
+        role: "install"
+        total_gib: 512
+      [1]:
+        free_gib: 450
+        role: "data"
+        total_gib: 1024
+  display:
+    status: "known"
+    value: [2560, 1440]
+
+GPU
+  gpu:
+    status: "known"
+    value:
+      adapter: "Synthetic Discrete GPU 12G"
+      backend: "dx12"
+      device_type: "discrete"
+      driver_version: "560.94"
+      fallback: false
+      fallback_cause: "none"
+      reason: ""
+      vram_gib: 12
+
+Verdicts
+  outcome: "meets_recommended"
+  exit_code: 0
+  assessment_schema_version: 1
+  profiles:
+    [0]:
+      name: "minimum"
+      reason: null
+      shortfalls: []
+      unknowns: []
+      verdict: "meets"
+    [1]:
+      name: "recommended"
+      reason: null
+      shortfalls: []
+      unknowns: []
+      verdict: "meets"
+
+Unknowns
+  none

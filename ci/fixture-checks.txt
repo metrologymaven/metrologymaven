@@ -247,6 +247,8 @@ python fixtures/plat/bench/make_expected.py --check
 python fixtures/plat/deploy/make_expected.py --check
 python fixtures/plat/doctor/lookup/make_cases.py --check
 python fixtures/plat/doctor/make_fixtures.py --check
+python fixtures/plat/doctor/report/check_report_schema.py
+python fixtures/plat/doctor/report/make_report.py --check
 python fixtures/plat/gpu/make_notice_fixtures.py --check
 python fixtures/plat/matrix/make_eol_fixtures.py --check
 python fixtures/plat/matrix/make_page.py --check

@@ -60,6 +60,11 @@ impl Field {
             Field::Display => "display",
         }
     }
+
+    /// Parses the key used in the profile file and in the assessment JSON.
+    pub fn from_name(s: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|f| f.as_str() == s)
+    }
 }
 
 impl fmt::Display for Field {
@@ -127,6 +132,11 @@ impl Verdict {
             Verdict::Indeterminate => "indeterminate",
         }
     }
+
+    /// Parses the name used in the assessment JSON.
+    pub fn from_name(s: &str) -> Option<Self> {
+        [Verdict::Meets, Verdict::Below, Verdict::Indeterminate].into_iter().find(|v| v.as_str() == s)
+    }
 }
 
 impl fmt::Display for Verdict {
@@ -151,6 +161,11 @@ impl VerdictReason {
             VerdictReason::NoProfiles => "no_profiles",
             VerdictReason::MissingProfile => "missing_profile",
         }
+    }
+
+    /// Parses the name used in the assessment JSON.
+    pub fn from_name(s: &str) -> Option<Self> {
+        [VerdictReason::NoProfiles, VerdictReason::MissingProfile].into_iter().find(|r| r.as_str() == s)
     }
 }
 
@@ -193,6 +208,20 @@ impl Outcome {
             Outcome::MeetsMinimum => "meets_minimum",
             Outcome::MeetsRecommended => "meets_recommended",
         }
+    }
+
+    /// Every outcome, in order of precedence.
+    pub const ALL: [Outcome; 5] = [
+        Outcome::UnsupportedPlatform,
+        Outcome::BelowMinimum,
+        Outcome::Indeterminate,
+        Outcome::MeetsMinimum,
+        Outcome::MeetsRecommended,
+    ];
+
+    /// Parses the name used in the assessment JSON.
+    pub fn from_name(s: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|o| o.as_str() == s)
     }
 
     /// Process exit code for `fid doctor` (REQ-PLAT.DOCTOR-005).
@@ -305,7 +334,7 @@ fn unknown_from<T>(item: &str, reason: UnknownReason, detail: &str) -> Probed<T>
 /// Precedence of REQ-PLAT.DOCTOR.LOOKUP-005. An unknown tier is not `unsupported_platform`
 /// (nothing says the platform is unlisted), but it cannot support a `meets_*` outcome either:
 /// it gives `below_minimum` when the minimum is below and `indeterminate` otherwise.
-fn outcome(tier: &Probed<EffectiveTier>, minimum: Verdict, recommended: Verdict) -> Outcome {
+pub(crate) fn outcome(tier: &Probed<EffectiveTier>, minimum: Verdict, recommended: Verdict) -> Outcome {
     let tier_known = match tier {
         Probed::Known(EffectiveTier::Tier(_)) => true,
         Probed::Known(EffectiveTier::Planned(..) | EffectiveTier::NotListed) => return Outcome::UnsupportedPlatform,
