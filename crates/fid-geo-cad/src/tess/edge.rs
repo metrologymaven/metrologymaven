@@ -384,6 +384,8 @@ fn seg_dist(p: [f64; 3], a: [f64; 3], b: [f64; 3]) -> Option<f64> {
         return dist3(p, a);
     }
     let s = dot(sub(p, a), e) / ee;
+    // Comparisons, not `clamp`: a NaN `s` passes through and fails `dist3` (fail closed).
+    #[allow(clippy::manual_clamp)]
     let s = if s < 0.0 {
         0.0
     } else if s > 1.0 {
