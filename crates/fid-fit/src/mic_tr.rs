@@ -95,12 +95,12 @@ pub const K3: f64 = 0.8864518862828913;
 const C1: f64 = 0.9807852804032304;
 const C2: f64 = 0.9238795325112867;
 const C3: f64 = 0.8314696123025452;
-const C4: f64 = 0.7071067811865476;
+const C4: f64 = core::f64::consts::FRAC_1_SQRT_2;
 const C5: f64 = 0.5555702330196022;
 const C6: f64 = 0.3826834323650898;
 const C7: f64 = 0.19509032201612828;
 /// `1 / sqrt(2)`, correctly rounded (the same value as `C4`).
-const R2: f64 = 0.7071067811865476;
+const R2: f64 = core::f64::consts::FRAC_1_SQRT_2;
 /// `1 / sqrt(3)`, correctly rounded.
 const R3: f64 = 0.5773502691896257;
 
