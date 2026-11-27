@@ -31,7 +31,10 @@
 //!    `m_p` the largest `|coordinate|` of the points, ascending. `boundary_distance_m` is the
 //!    total-order minimum over the region edges of the signed distance
 //!    `cross(q - p, c - p) / hypot(q - p)` (positive inside); `on_region_boundary` is
-//!    `boundary_distance_m <= boundary_tol` (REQ-004).
+//!    `boundary_distance_m <= boundary_tol` (REQ-004). A centre with `boundary_distance_m`
+//!    below `-floor` (rule 2) lies outside the region and is refused with
+//!    `Num(Domain{op: "xchk.mic", detail: "centre_outside_region"})` (fail closed; every
+//!    candidate of rule 4 is feasible, so this guards against a defect, not a data case).
 //!
 //! [`intersect_convex`] clips one region by another (Sutherland-Hodgman, inclusion by exact
 //! `orient2d`), drops repeated vertices and vertices that no longer turn left, and returns
@@ -87,11 +90,17 @@ fn sub(a: V2, b: V2) -> V2 {
     [a[0] - b[0], a[1] - b[1]]
 }
 
-fn edge(poly: &[V2], k: usize) -> (V2, V2) {
+/// Edge `k` of a polygon: vertices `k mod m` and `(k + 1) mod m`. An empty polygon is
+/// `InvalidParams{field: "region"}` (never a division by zero or an invented vertex).
+fn edge(poly: &[V2], k: usize) -> Result<(V2, V2), FitError> {
+    let bad = FitError::InvalidParams { field: "region" };
     let m = poly.len();
-    let a = poly.get(k % m).copied().unwrap_or([0.0, 0.0]);
-    let b = poly.get((k + 1) % m).copied().unwrap_or([0.0, 0.0]);
-    (a, b)
+    if m == 0 {
+        return Err(bad);
+    }
+    let a = poly.get(k % m).copied().ok_or(bad)?;
+    let b = poly.get((k + 1) % m).copied().ok_or(bad)?;
+    Ok((a, b))
 }
 
 /// Rule 1.
@@ -102,8 +111,8 @@ fn check_region(region: &[V2]) -> Result<(), FitError> {
         return Err(bad);
     }
     for k in 0..m {
-        let (a, b) = edge(region, k);
-        let (_, c) = edge(region, k + 1);
+        let (a, b) = edge(region, k)?;
+        let (_, c) = edge(region, k + 1)?;
         if orient2d(a, b, c) <= 0 {
             return Err(bad);
         }
@@ -155,7 +164,7 @@ pub fn intersect_convex(a: &[V2], b: &[V2]) -> Result<Vec<V2>, FitError> {
     let mut cur: Vec<V2> = alloc(a.len() + b.len())?;
     cur.extend_from_slice(a);
     for k in 0..b.len() {
-        let (p, q) = edge(b, k);
+        let (p, q) = edge(b, k)?;
         let mut next: Vec<V2> = alloc(cur.len() + 1)?;
         let m = cur.len();
         for (j, &c) in cur.iter().enumerate() {
@@ -254,11 +263,17 @@ fn consider(best: &mut Option<Best>, points: &[V2], c: V2) -> Result<(), FitErro
     Ok(())
 }
 
-fn inside_closed(region: &[V2], c: V2) -> bool {
-    (0..region.len()).all(|k| {
-        let (a, b) = edge(region, k);
-        orient2d(a, b, c) >= 0
-    })
+fn inside_closed(region: &[V2], c: V2) -> Result<bool, FitError> {
+    if region.is_empty() {
+        return Err(FitError::InvalidParams { field: "region" });
+    }
+    for k in 0..region.len() {
+        let (a, b) = edge(region, k)?;
+        if orient2d(a, b, c) < 0 {
+            return Ok(false);
+        }
+    }
+    Ok(true)
 }
 
 /// The crossing of the line `a + t d` with the region edge `p q` (rule 4).
@@ -297,7 +312,7 @@ pub fn mic_circle2d_vor(points: &[V2], region: &[V2], boundary_tol: f64) -> Resu
     // (a) Voronoi vertices inside the closed region.
     for v in &vd.vertices {
         let c = [v.x, v.y];
-        if inside_closed(region, c) {
+        if inside_closed(region, c)? {
             consider(&mut best, points, c)?;
         }
     }
@@ -318,7 +333,7 @@ pub fn mic_circle2d_vor(points: &[V2], region: &[V2], boundary_tol: f64) -> Resu
             }
         };
         for k in 0..region.len() {
-            let (p, q) = edge(region, k);
+            let (p, q) = edge(region, k)?;
             if let Some(c) = crossing(a, d, ray, p, q) {
                 consider(&mut best, points, c)?;
             }
@@ -329,7 +344,11 @@ pub fn mic_circle2d_vor(points: &[V2], region: &[V2], boundary_tol: f64) -> Resu
         consider(&mut best, points, *v)?;
     }
     let Best { r, c } = best.ok_or(FitError::InvalidParams { field: "region" })?;
+    finish(points, region, c, r, boundary_tol, floor)
+}
 
+/// Rule 6 for the chosen centre `c` and radius `r`.
+fn finish(points: &[V2], region: &[V2], c: V2, r: f64, boundary_tol: f64, floor: f64) -> Result<Inscribed, FitError> {
     let tol = (64.0 * f64::EPSILON) * (max_abs(points)? + r);
     let mut contacts: Vec<u32> = alloc(points.len())?;
     for (i, p) in points.iter().enumerate() {
@@ -340,7 +359,7 @@ pub fn mic_circle2d_vor(points: &[V2], region: &[V2], boundary_tol: f64) -> Resu
     }
     let mut dist = f64::INFINITY;
     for k in 0..region.len() {
-        let (p, q) = edge(region, k);
+        let (p, q) = edge(region, k)?;
         let e = sub(q, p);
         let len = f::hypot(e[0], e[1])?;
         let sd = cross(e, sub(c, p)) / len;
@@ -348,6 +367,9 @@ pub fn mic_circle2d_vor(points: &[V2], region: &[V2], boundary_tol: f64) -> Resu
             return Err(infinite());
         }
         dist = f::total_min(dist, sd)?;
+    }
+    if dist < -floor {
+        return Err(FitError::Num(NumError::Domain { op: OP, detail: "centre_outside_region" }));
     }
     Ok(Inscribed {
         centre: c,
@@ -357,4 +379,34 @@ pub fn mic_circle2d_vor(points: &[V2], region: &[V2], boundary_tol: f64) -> Resu
         on_region_boundary: dist <= boundary_tol,
         algorithm: mic_circle2d_id(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+    use super::*;
+
+    const SQ: [V2; 4] = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
+    const PTS: [V2; 3] = [[0.1, 0.1], [0.9, 0.2], [0.5, 0.8]];
+
+    #[test]
+    fn centre_outside_the_region_is_refused() {
+        let floor = region_tol_floor(&SQ).unwrap();
+        let out = finish(&PTS, &SQ, [1.25, 0.5], 0.1, 1e-12, floor);
+        assert_eq!(out, Err(FitError::Num(NumError::Domain { op: OP, detail: "centre_outside_region" })));
+        // Just outside by more than the floor: refused; within the floor: accepted, on the boundary.
+        let just_out = finish(&PTS, &SQ, [1.0 + 4.0 * floor, 0.5], 0.1, 1e-12, floor);
+        assert!(just_out.is_err());
+        let r = finish(&PTS, &SQ, [1.0 + floor / 4.0, 0.5], 0.1, 1e-12, floor).unwrap();
+        assert!(r.on_region_boundary);
+        assert!(r.boundary_distance_m < 0.0 && r.boundary_distance_m >= -floor);
+    }
+
+    #[test]
+    fn empty_polygon_edge_is_an_error_not_a_panic() {
+        assert_eq!(edge(&[], 0), Err(FitError::InvalidParams { field: "region" }));
+        assert_eq!(edge(&SQ, 5), Ok((SQ[1], SQ[2])));
+        assert_eq!(inside_closed(&[], [0.0, 0.0]), Err(FitError::InvalidParams { field: "region" }));
+    }
 }

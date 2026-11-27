@@ -33,8 +33,10 @@
 //!    set and not on the caller's seed. Its boundary set, sorted ascending, is the support (2
 //!    to `dim + 1` points); the ball is rebuilt from it by rule 2.
 //! 5. **Enclosure** (fail closed). A point with `|p - c|^2 > r2 * (1 + ENCLOSE_REL)` is
-//!    `Num(Domain{op: "xchk.welzl", detail: "enclosure_violated"})`: no ball that misses a
-//!    point is ever returned.
+//!    `Num(Domain{op: "xchk.welzl", detail: "enclosure_violated"})`. A returned ball may
+//!    therefore leave a point outside by up to `ENCLOSE_REL` (`2^-36`) relative on `r^2` (about
+//!    `2^-37` relative on `r`, in the scaled coordinates); no point beyond that slack is ever
+//!    outside a returned ball.
 //! 6. **Result.** The centre is mapped back by [`Normalisation::inverse`] (a circle's `z` is
 //!    `+0.0`); the radius is recomputed in metres from the support, the total-order maximum of
 //!    `red::norm2(p - centre)` over the support points (REQ-002).
