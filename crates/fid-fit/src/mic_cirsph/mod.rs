@@ -82,7 +82,10 @@
 //!     over every point decides, with `tol = CROSS_TOL * r +` the certificate's value bound,
 //!     whether some centre in the region has `f > r + tol` (`better`), none has (`passed`), or
 //!     the limits ran out (`inconclusive`). Its documentation has the bounds and rounding
-//!     margins.
+//!     margins. On `better`, the better centre is added as a start (radius lifted as in rule
+//!     7) and rules 7 to 11 run again, at most [`MAX_RESCUES`] times, so a global optimum that
+//!     every seeded start missed is found; if the last run still finds a better centre, the
+//!     result is flagged (rule 12) with that centre in the record.
 //! 12. **Flags.** `optimality` is [`Optimality::Global`] when the cross-check passed, else
 //!     [`Optimality::StrictLocal`]; `local_optimum_only` is set exactly when it did not pass
 //!     (global optimality not proven, REQ-002), on the record and on the certificate.
@@ -96,8 +99,8 @@
 //!
 //! [`trust_polygon`] gives the circle's 32-gon region as vertices (consecutive facet lines
 //! intersected), so `xchk::mic_circle2d_vor` solves on the same polygon, and
-//! [`check_agreement`] compares the two paths: centre and radius within a tolerance, and the
-//! boundary status (`UnboundedEnvelope` against `on_region_boundary`).
+//! [`check_agreement`] compares the two paths: centre (Euclidean distance) and radius within a tolerance
+//! (at least the values' rounding floor, [`agreement_tol_floor`]), and the boundary status (`UnboundedEnvelope` against `on_region_boundary`).
 //!
 //! # Determinism
 //!
@@ -164,6 +167,8 @@ pub const WORKING_CAP: usize = 16384;
 pub const WORKING_MARGIN: f64 = 1.0 / 1_048_576.0;
 /// Most working-set rounds (rule 8).
 pub const MAX_ROUNDS: u32 = 16;
+/// Most cross-check rescues (rule 11).
+pub const MAX_RESCUES: u32 = 4;
 
 const OP: &str = "fit.mic_cirsph";
 
@@ -244,6 +249,9 @@ pub struct MicFit {
     /// Global optimality not proven (the cross-check did not pass).
     pub local_optimum_only: bool,
     pub cross_check: CrossCheck,
+    /// Starts added from the cross-check's better centres (rule 11), each followed by a new
+    /// multi-start run; at most [`MAX_RESCUES`].
+    pub rescue_starts: u32,
     /// The trust region of record (metres) and the centre's distance from its boundary.
     pub trust_region: TrustRegion,
     pub boundary_distance_m: f64,
@@ -273,7 +281,7 @@ pub struct MicSphereFit {
 pub enum Disagreement {
     /// One path reports a boundary optimum and the other does not.
     Boundary { conic_on_boundary: bool, xchk_on_boundary: bool },
-    /// The largest centre coordinate difference (metres) exceeds the tolerance.
+    /// The Euclidean distance of the centres (metres) exceeds the tolerance.
     Centre { delta: f64 },
     /// The radius difference (metres) exceeds the tolerance.
     Radius { delta: f64 },
@@ -296,19 +304,31 @@ fn cert_err(e: fid_solv::cert::CertError) -> FitError {
     }
 }
 
-/// The algorithm ID of `p` (`circle2` or `sphere`).
-pub fn algorithm(p: Primitive) -> AlgorithmId {
-    algorithm_id(p, Method::MaximumInscribed, VERSION).unwrap_or_else(|_| AlgorithmId {
+/// The algorithm ID of `p` in this module: `fit.circle2.mi@1.0.0` or `fit.sphere.mi@1.0.0`.
+/// A primitive without a maximum inscribed fit is `MethodUndefined` (from the contract's
+/// `algorithm_id`); one that has one elsewhere (the cylinder, `KRN.ENV.MIC.CYL`) is
+/// `InvalidParams{field: "primitive"}`.
+pub fn algorithm(p: Primitive) -> Result<AlgorithmId, FitError> {
+    let id = algorithm_id(p, Method::MaximumInscribed, VERSION)?;
+    if !PRIMITIVES.contains(&p) {
+        return Err(FitError::InvalidParams { field: "primitive" });
+    }
+    Ok(id)
+}
+
+/// The ID of one of [`PRIMITIVES`], built directly (no fallible path, no fallback).
+fn own_id(p: Primitive) -> AlgorithmId {
+    AlgorithmId {
         module: "fit".to_string(),
         feature: p.slug().to_string(),
         method: Method::MaximumInscribed.slug().to_string(),
         version: VERSION,
-    })
+    }
 }
 
 /// The two algorithm IDs, in [`PRIMITIVES`] order (for the spec-card check).
 pub fn algorithm_ids() -> [AlgorithmId; 2] {
-    [algorithm(Primitive::Circle2), algorithm(Primitive::Sphere)]
+    [own_id(Primitive::Circle2), own_id(Primitive::Sphere)]
 }
 
 /// The command data rows `fit.mi_circle2@1` and `fit.mi_sphere@1` (W2, dry run R1, D0 per
@@ -543,7 +563,7 @@ fn run(
         stream: STREAM,
         tolerances: vec![0.0; dim + 1],
     };
-    let centres = mstart::generate_starts(&spec).map_err(|_| FitError::InvalidParams { field: "start_spec" })?;
+    let mut centres = mstart::generate_starts(&spec).map_err(|_| FitError::InvalidParams { field: "start_spec" })?;
     let mut idx = initial_working_set(c.xyz(), dim, &centres)?;
     let mut prob = Mic {
         q: c.xyz(),
@@ -559,102 +579,121 @@ fn run(
     spec.primary[dim] = r0;
     spec.tolerances = vec![AGREE_TOL * r0; dim + 1];
     let cfg = mic.seq;
-    let mut round = 0u32;
-    // Rule 8: solve on the working set until no converged start leaves a point of the cloud
-    // inside its circle (or sphere) widened by `WORKING_MARGIN`.
-    let out = loop {
-        round += 1;
-        prob.idx = idx.clone();
-        prob.start = spec.primary.clone();
-        // Rule 7: the seeded starts, each with a feasible radius (the nearest point distance).
-        let mut starts = alloc(centres.len())?;
-        for st in &centres {
-            let mut cs = [0.0; 3];
-            cs[..dim].copy_from_slice(&st[..dim]);
-            let mut s0 = st.clone();
-            s0[dim] = prob.min_dist(cs).map_err(cert_err)?;
-            starts.push(s0);
-        }
-        let out = match mstart::run_listed(&starts, &spec.tolerances, |start| {
-            let o = seq::solve(&prob, start, &cfg)?;
-            let value = o.certified.value();
-            let params = o.certified.params().to_vec();
-            Ok((o, value, params))
-        }) {
-            Ok(o) => o,
-            Err(MultiStartError::AllFailed(errs)) => {
-                let cause = errs.first().map_or("no_starts", seq_cause);
-                return Err(FitError::SeqFailed { cause, starts: mic.starts });
+    let mut rescues = 0u32;
+    // Rule 11's rescue: a better centre found by the cross-check joins the starts and the solve
+    // is repeated, at most `MAX_RESCUES` times.
+    let (out, contacts, boundary_distance_m, res, worst, feature, cross_check) = loop {
+        let mut round = 0u32;
+        // Rule 8: solve on the working set until no converged start leaves a point of the cloud
+        // inside its circle (or sphere) widened by `WORKING_MARGIN`.
+        let out = loop {
+            round += 1;
+            prob.idx = idx.clone();
+            prob.start = spec.primary.clone();
+            // Rule 7: the seeded starts, each with a feasible radius (the nearest point distance).
+            let mut starts = alloc(centres.len())?;
+            for st in &centres {
+                let bad = FitError::InvalidParams { field: "start_spec" };
+                let mut cs = [0.0; 3];
+                cs[..dim].copy_from_slice(st.get(..dim).ok_or(bad)?);
+                let mut s0 = st.clone();
+                *s0.get_mut(dim).ok_or(bad)? = prob.min_dist(cs).map_err(cert_err)?;
+                starts.push(s0);
             }
-            Err(MultiStartError::InvalidSpec(_)) => return Err(FitError::InvalidParams { field: "start_spec" }),
+            let out = match mstart::run_listed(&starts, &spec.tolerances, |start| {
+                let o = seq::solve(&prob, start, &cfg)?;
+                let value = o.certified.value();
+                let params = o.certified.params().to_vec();
+                Ok((o, value, params))
+            }) {
+                Ok(o) => o,
+                Err(MultiStartError::AllFailed(errs)) => {
+                    let cause = errs.first().map_or("no_starts", seq_cause);
+                    return Err(FitError::SeqFailed { cause, starts: mic.starts });
+                }
+                Err(MultiStartError::InvalidSpec(_)) => return Err(FitError::InvalidParams { field: "start_spec" }),
+            };
+            if idx.len() == n {
+                break out;
+            }
+            let added = violators(c.xyz(), dim, &idx, &out.per_start)?;
+            if added.is_empty() {
+                break out;
+            }
+            if round >= MAX_ROUNDS || idx.len() + added.len() > WORKING_CAP {
+                return Err(FitError::Num(NumError::Domain { op: OP, detail: "working_set_limit" }));
+            }
+            idx = merge(&idx, &added)?;
         };
-        if idx.len() == n {
-            break out;
+        let certified = &out.best.certified;
+        let p = certified.params().to_vec();
+        let (cs, _) = prob.split(&p).map_err(cert_err)?;
+        let centre_si = map.inverse(cs)?;
+        let centre_si = if dim == 2 { [centre_si[0], centre_si[1], 0.0] } else { centre_si };
+
+        // Rule 9: a facet in the active set, or a centre on the region's boundary.
+        let mut contacts: Vec<u32> = alloc(certified.certificate().active_set().len())?;
+        let mut on_facet = false;
+        for l in certified.certificate().active_set() {
+            match prob.row(*l).map_err(cert_err)? {
+                Row::Point(i) => contacts.push(prob.index(i).map_err(cert_err)?),
+                Row::Trust(_) => on_facet = true,
+            }
         }
-        let added = violators(c.xyz(), dim, &idx, &out.per_start)?;
-        if added.is_empty() {
-            break out;
+        if on_facet || contacts.is_empty() {
+            return Err(FitError::UnboundedEnvelope { boundary_distance_m: tr.boundary_distance(centre_si)? });
         }
-        if round >= MAX_ROUNDS || idx.len() + added.len() > WORKING_CAP {
-            return Err(FitError::Num(NumError::Domain { op: OP, detail: "working_set_limit" }));
+        let boundary_distance_m = tr.check_boundary(centre_si, mic.boundary_tol)?;
+        contacts.sort_unstable();
+
+        // Rule 10: the radius from the contacts and the certified centre; every point checked.
+        let dists = dists_all(c.xyz(), dim, cs)?;
+        let mut r = f64::INFINITY;
+        for &k in &contacts {
+            r = f::total_min(r, *dists.get(k as usize).ok_or(FitError::InvalidParams { field: "contacts" })?)?;
         }
-        idx = merge(&idx, &added)?;
+        let mut res = alloc(dists.len())?;
+        let mut worst = (0usize, 0.0_f64);
+        for (i, &d) in dists.iter().enumerate() {
+            let e = map.inverse_length(d - r)?;
+            if f::total_cmp(-e, worst.1)? == Ordering::Greater {
+                worst = (i, -e);
+            }
+            res.push(e);
+        }
+        if f::total_cmp(worst.1, INSIDE_TOL)? == Ordering::Greater {
+            return Err(FitError::SideViolation { index: worst.0, violation: worst.1 });
+        }
+        let feature_s =
+            if dim == 2 { FittedFeature::Circle2 { c: [cs[0], cs[1]], r } } else { FittedFeature::Sphere { c: cs, r } };
+        let feature = map.inverse_feature(&feature_s)?.canonical()?;
+
+        // Rule 11: the global cross-check.
+        let tol = CROSS_TOL * r + certified.certificate().value_bound();
+        let region =
+            global::Region { q: c.xyz(), dim, a: &prob.a, b: &prob.b, centre: centre_s, radius: tr_s.radius_m() };
+        let s = global::search(&region, r, tol)?;
+        let better = match s.better {
+            Some((m, fb)) => {
+                let ms = map.inverse(m)?;
+                Some((if dim == 2 { [ms[0], ms[1], 0.0] } else { ms }, map.inverse_length(fb)?))
+            }
+            None => None,
+        };
+        let cross_check = CrossCheck { outcome: s.outcome, cells: s.cells, work: s.work, depth: s.depth, better };
+        if let (CrossOutcome::Better, Some((m, _))) = (s.outcome, s.better) {
+            if rescues < MAX_RESCUES {
+                rescues += 1;
+                let mut st = alloc(dim + 1)?;
+                st.extend_from_slice(m.get(..dim).ok_or(FitError::InvalidParams { field: "start_spec" })?);
+                st.push(0.0);
+                centres.push(st);
+                continue;
+            }
+        }
+        break (out, contacts, boundary_distance_m, res, worst, feature, cross_check);
     };
-    let certified = &out.best.certified;
-    let p = certified.params().to_vec();
-    let (cs, _) = prob.split(&p).map_err(cert_err)?;
-    let centre_si = map.inverse(cs)?;
-    let centre_si = if dim == 2 { [centre_si[0], centre_si[1], 0.0] } else { centre_si };
-
-    // Rule 9: a facet in the active set, or a centre on the region's boundary.
-    let mut contacts: Vec<u32> = alloc(certified.certificate().active_set().len())?;
-    let mut on_facet = false;
-    for l in certified.certificate().active_set() {
-        match prob.row(*l).map_err(cert_err)? {
-            Row::Point(i) => contacts.push(prob.index(i).map_err(cert_err)?),
-            Row::Trust(_) => on_facet = true,
-        }
-    }
-    if on_facet || contacts.is_empty() {
-        return Err(FitError::UnboundedEnvelope { boundary_distance_m: tr.boundary_distance(centre_si)? });
-    }
-    let boundary_distance_m = tr.check_boundary(centre_si, mic.boundary_tol)?;
-    contacts.sort_unstable();
-
-    // Rule 10: the radius from the contacts and the certified centre; every point checked.
-    let dists = dists_all(c.xyz(), dim, cs)?;
-    let mut r = f64::INFINITY;
-    for &k in &contacts {
-        r = f::total_min(r, *dists.get(k as usize).ok_or(FitError::InvalidParams { field: "contacts" })?)?;
-    }
-    let mut res = alloc(dists.len())?;
-    let mut worst = (0usize, 0.0_f64);
-    for (i, &d) in dists.iter().enumerate() {
-        let e = map.inverse_length(d - r)?;
-        if f::total_cmp(-e, worst.1)? == Ordering::Greater {
-            worst = (i, -e);
-        }
-        res.push(e);
-    }
-    if f::total_cmp(worst.1, INSIDE_TOL)? == Ordering::Greater {
-        return Err(FitError::SideViolation { index: worst.0, violation: worst.1 });
-    }
-    let feature_s =
-        if dim == 2 { FittedFeature::Circle2 { c: [cs[0], cs[1]], r } } else { FittedFeature::Sphere { c: cs, r } };
-    let feature = map.inverse_feature(&feature_s)?.canonical()?;
-
-    // Rule 11: the global cross-check.
-    let tol = CROSS_TOL * r + certified.certificate().value_bound();
-    let region = global::Region { q: c.xyz(), dim, a: &prob.a, b: &prob.b, centre: centre_s, radius: tr_s.radius_m() };
-    let s = global::search(&region, r, tol)?;
-    let better = match s.better {
-        Some((m, fb)) => {
-            let ms = map.inverse(m)?;
-            Some((if dim == 2 { [ms[0], ms[1], 0.0] } else { ms }, map.inverse_length(fb)?))
-        }
-        None => None,
-    };
-    let cross_check = CrossCheck { outcome: s.outcome, cells: s.cells, work: s.work, depth: s.depth, better };
+    let s = cross_check;
 
     // Rule 12.
     let passed = s.outcome == CrossOutcome::Passed;
@@ -666,7 +705,7 @@ fn run(
             .map_err(|_| FitError::Num(NumError::Domain { op: OP, detail: "cert_flag" }))?;
     }
     Ok(MicFit {
-        algorithm: algorithm(prim),
+        algorithm: own_id(prim),
         feature,
         residuals: res,
         contacts,
@@ -676,6 +715,7 @@ fn run(
         agreement: out.agreement,
         local_optimum_only,
         cross_check,
+        rescue_starts: rescues,
         trust_region: tr,
         boundary_distance_m,
         start_radius: map.inverse_length(r0)?,
@@ -731,7 +771,7 @@ fn fit_scale(p: Primitive, pts: &PointsView<'_>, params: &FitParams) -> Result<f
 
 impl Fit for MicCircle2Fit {
     fn algorithm_id(&self) -> AlgorithmId {
-        algorithm(Primitive::Circle2)
+        own_id(Primitive::Circle2)
     }
 
     /// Rule 13: fails closed on a flagged fit ([`to_fit_result`]).
@@ -743,7 +783,7 @@ impl Fit for MicCircle2Fit {
 
 impl Fit for MicSphereFit {
     fn algorithm_id(&self) -> AlgorithmId {
-        algorithm(Primitive::Sphere)
+        own_id(Primitive::Sphere)
     }
 
     /// Rule 13: fails closed on a flagged fit ([`to_fit_result`]).
@@ -782,12 +822,34 @@ pub fn trust_polygon(tr: &TrustRegion) -> Result<Vec<V2>, FitError> {
     Ok(out)
 }
 
+/// The smallest tolerance [`check_agreement`] accepts: the rounding resolution
+/// `(16 * EPSILON) * (m + r)` of the compared values, with `m` the total-order maximum of the
+/// centres' `|coordinate|` and `r` of the radii (the Voronoi circle's, and the conic circle's
+/// when it exists). A non-finite value is `InvalidTolerance`.
+pub fn agreement_tol_floor(conic: &Result<MicFit, FitError>, vor: &Inscribed) -> Result<f64, Disagreement> {
+    let bad = |_| Disagreement::InvalidTolerance;
+    let mut m = f::total_max(vor.centre[0].abs(), vor.centre[1].abs()).map_err(bad)?;
+    let mut r = vor.radius.abs();
+    if let Ok(MicFit { feature: FittedFeature::Circle2 { c, r: rc }, .. }) = conic {
+        m = f::total_max(m, f::total_max(c[0].abs(), c[1].abs()).map_err(bad)?).map_err(bad)?;
+        r = f::total_max(r, rc.abs()).map_err(bad)?;
+    }
+    let floor = (16.0 * f64::EPSILON) * (m + r);
+    if floor.is_finite() {
+        Ok(floor)
+    } else {
+        Err(Disagreement::InvalidTolerance)
+    }
+}
+
 /// The agreement test of REQ-KRN.ENV.MIC.CIRSPH-004 between the conic circle `conic` and the
 /// Voronoi circle `vor` on the same polygon ([`trust_polygon`]): `Ok` when both report a
 /// boundary optimum (`UnboundedEnvelope` and `on_region_boundary`), or neither does and the
-/// centres (largest coordinate difference) and radii differ by at most `tol` metres.
+/// centres (Euclidean distance, `red::norm2`) and radii differ by at most `tol` metres.
+/// `InvalidTolerance` for a `tol` that is not finite and positive or is below
+/// [`agreement_tol_floor`].
 pub fn check_agreement(conic: &Result<MicFit, FitError>, vor: &Inscribed, tol: f64) -> Result<(), Disagreement> {
-    if !(tol.is_finite() && tol > 0.0) {
+    if !(tol.is_finite() && tol > 0.0) || tol < agreement_tol_floor(conic, vor)? {
         return Err(Disagreement::InvalidTolerance);
     }
     let fit = match conic {
@@ -808,7 +870,7 @@ pub fn check_agreement(conic: &Result<MicFit, FitError>, vor: &Inscribed, tol: f
         FittedFeature::Circle2 { c, r } => (c, r),
         _ => return Err(Disagreement::ConicFailed { code: "invalid_params" }),
     };
-    let dc = f::total_max((cc[0] - vor.centre[0]).abs(), (cc[1] - vor.centre[1]).abs())
+    let dc = red::norm2(&[cc[0] - vor.centre[0], cc[1] - vor.centre[1]])
         .map_err(|_| Disagreement::Centre { delta: f64::INFINITY })?;
     if dc.is_nan() || dc > tol {
         return Err(Disagreement::Centre { delta: dc });

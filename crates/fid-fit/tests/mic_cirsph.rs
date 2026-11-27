@@ -11,11 +11,11 @@
 //! checked against its digest, so a drift in the generator fails before any fit runs.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::result_large_err)]
 
-use fid_fit::contract::{Constraint, Fit, FitError, FitParams, FittedFeature, Method, PointsView, Weights};
+use fid_fit::contract::{Constraint, Fit, FitError, FitParams, FittedFeature, Method, PointsView, Primitive, Weights};
 use fid_fit::ls_rnd::Circle2Ls;
 use fid_fit::mic_cirsph::{
-    algorithm_ids, check_agreement, command_rows, fit_mic_circle2d, fit_mic_sphere, trust_polygon, CrossOutcome,
-    Disagreement, MicCircle2Fit, MicFit, MicParams, MicSphereFit, Optimality,
+    agreement_tol_floor, algorithm, algorithm_ids, check_agreement, command_rows, fit_mic_circle2d, fit_mic_sphere,
+    trust_polygon, CrossOutcome, Disagreement, MicCircle2Fit, MicFit, MicParams, MicSphereFit, Optimality,
 };
 use fid_fit::mic_tr::TrustRegion;
 use fid_fit::xchk::mic_circle2d_vor;
@@ -303,6 +303,7 @@ fn ac1_inscribed_radii_match_the_oracle() {
         assert!(!m.local_optimum_only && !m.certificate.flags().local_optimum_only, "{}", c.id);
         assert!(m.boundary_distance_m > BOUNDARY_TOL, "{}", c.id);
         assert_eq!(m.trust_region.fraction(), TR_FRACTION);
+        assert_eq!(m.rescue_starts, 0, "{}", c.id);
         assert_eq!(m.algorithm, algorithm_ids()[c.dim - 2]);
         if c.pts.len() > TRAIT_MAX_POINTS {
             continue;
@@ -386,6 +387,19 @@ fn ac2_agreement_job_and_injected_failures() {
                     assert!(msg.starts_with(&format!("{}: ", c.id)), "{msg}");
                     assert!(msg.contains("Centre") || msg.contains("Radius"), "{msg}");
                 }
+                // The centre is compared by Euclidean distance: a diagonal shift of 0.8 tol per
+                // coordinate (1.13 tol away) fails, though each coordinate is within tol.
+                let mut diag = m.clone();
+                let FittedFeature::Circle2 { c: cc, r } = m.feature else { panic!() };
+                let d = 0.8 * AGREE_TOL;
+                diag.feature = FittedFeature::Circle2 { c: [cc[0] + d, cc[1] + d], r };
+                let msg = disagreement(&c.id, &Ok(diag), &vor).unwrap_err();
+                assert!(msg.starts_with(&format!("{}: Centre", c.id)), "{msg}");
+                // A tolerance below the values' rounding floor is refused.
+                let floor = agreement_tol_floor(conic, &vor).unwrap();
+                assert!(floor > 0.0 && floor < 1e-13, "{}: {floor}", c.id);
+                assert_eq!(check_agreement(conic, &vor, floor / 2.0), Err(Disagreement::InvalidTolerance));
+                assert_eq!(check_agreement(conic, &vor, floor), Ok(()));
                 let mut flipped = vor.clone();
                 flipped.on_region_boundary = true;
                 let msg = disagreement(&c.id, conic, &flipped).unwrap_err();
@@ -474,6 +488,14 @@ fn ac5_spec_cards_and_command_rows() {
     assert_eq!(ids, algorithm_ids().to_vec());
     let report = check(&algorithm_ids(), &ids);
     assert!(report.is_clean(), "{report:?}");
+    // `algorithm` is fallible: no maximum inscribed 3D circle (method_undefined), and the
+    // cylinder belongs to KRN.ENV.MIC.CYL, not this module.
+    assert_eq!(algorithm(Primitive::Circle2).unwrap(), algorithm_ids()[0]);
+    assert_eq!(algorithm(Primitive::Sphere).unwrap(), algorithm_ids()[1]);
+    let e = algorithm(Primitive::Circle3).unwrap_err();
+    assert_eq!(e, FitError::MethodUndefined { primitive: Primitive::Circle3, method: Method::MaximumInscribed });
+    assert_eq!(e.code(), "method_undefined");
+    assert_eq!(algorithm(Primitive::Cylinder), Err(FitError::InvalidParams { field: "primitive" }));
     let strs: Vec<String> = algorithm_ids().iter().map(|a| a.to_string()).collect();
     assert_eq!(strs, ["fit.circle2.mi@1.0.0", "fit.sphere.mi@1.0.0"]);
     let rows = command_rows().unwrap();
