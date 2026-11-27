@@ -247,9 +247,10 @@ fn seam_samples_appear_at_both_chart_sides() {
         let (ca, cb) = (find(a), find(bl));
         let (ua, ub) = (ca.uv.as_ref().unwrap(), cb.uv.as_ref().unwrap());
         let n = out.edges[e.index()].t.len();
-        for k in 0..n {
-            let (qa, qb) = (ua[k], ub[n - 1 - k]);
-            assert_eq!(ca.vertex_ix[k], cb.vertex_ix[n - 1 - k]);
+        assert_eq!((ua.len(), ub.len()), (n, n));
+        let back: Vec<u64> = cb.vertex_ix.iter().rev().copied().collect();
+        assert_eq!(ca.vertex_ix, back);
+        for (k, (qa, qb)) in ua.iter().zip(ub.iter().rev()).enumerate() {
             let jump = (qa[period_ix] - qb[period_ix]).abs();
             assert!((jump - core::f64::consts::TAU).abs() <= 1e-9, "{name}/{seam} sample {k}: {qa:?} {qb:?}");
             let other = 1 - period_ix;
