@@ -33,7 +33,7 @@ mod geom;
 pub mod harness;
 mod id;
 mod inputs;
-mod json;
+pub(crate) mod json;
 mod params;
 mod rows;
 

@@ -1,0 +1,25 @@
+# KRN.CONS.AUTO.PAIR fixture auto-pair-block-v1 (synthetic, CC-BY-4.0).
+# Written by make_cases.py from its own generator and pairing; do not edit.
+# key	value
+seed	20261127
+points	200000
+gate_m	3f1a36e2eb1c432d
+gate_rad	3fc657184ae74487
+ac1.count.0	30000
+ac1.count.1	30000
+ac1.count.2	15000
+ac1.count.3	15000
+ac1.count.4	20000
+ac1.count.5	20000
+ac1.count.6	30000
+ac1.count.7	400
+ac1.count.8	39600
+ac1.params_digest	sha256:2b8d852c3cb95c7ae2ab225a7d56fd10c5b23ef1a09a483b09ad7378e91e45c7
+ac1.digest	sha256:1b5448c00559a486bbec6e855643b830f724ac478ada7ef1e8be15677783135b
+ac1_exclude.ambiguous	0
+ac1_exclude.digest	sha256:6b265f4c626d0fc856db1fb147cc430af7aa19cc7256b5a13b70c492f9c445a6
+ac3.unpaired.7	400
+ac3.digest	sha256:7b0088f1eb66d2bc9ef6e09871ca9a9de5307c93f412f1e5063e698da6abe855
+edge.points	461
+edge.nearest.digest	sha256:bd4219ac3d564d5ead1523711868ae81a0b1c8a64f590f6df1a89dd466e90c34
+edge.exclude.digest	sha256:a175ed8cd757c958ba06ec790d7838c82fc8e99acb23f116706ac546169b9ab3

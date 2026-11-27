@@ -41,6 +41,7 @@ python fixtures/chain/ckpt/make_fixtures.py --check
 python fixtures/chain/reslink/make_fixtures.py --check
 python fixtures/chain/tamper/make_fixtures.py --check
 python fixtures/cli/make_fixtures.py --check
+python fixtures/cons/auto-pair-block-v1/make_cases.py --check
 python fixtures/cons/check_row_schema.py
 python fixtures/cons/make_decl_fixtures.py --check
 python fixtures/cons/make_mid_fixtures.py --check
