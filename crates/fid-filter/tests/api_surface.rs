@@ -45,6 +45,10 @@ const ALLOWED: &[(&str, &str)] = &[
         "fid-filter/src/policy/mod.rs::PolicyMethod::exclude",
         "a method only proposes a mask; apply() alone turns it into a reduced set, under the guards and with its record",
     ),
+    (
+        "fid-filter/src/policy/mod.rs::PolicyMethod::exclude_reported",
+        "exclude() plus the method's status; still only a proposed mask, which apply() alone turns into a reduced set",
+    ),
     ("fid-filter/src/policy/mod.rs::ReducedPoints::exclusion", "accessor: the record of what apply() excluded"),
     ("fid-filter/src/policy/mod.rs::ReducedPoints::is_reduced", "accessor: whether apply() excluded anything"),
     (

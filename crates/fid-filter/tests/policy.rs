@@ -339,6 +339,8 @@ fn apply_returns_kept_points_with_their_record() {
     assert_eq!(ex.excluded(), &[3, 17]);
     assert_eq!(ex.excluded_count(), 2);
     assert_eq!(ex.point_count(), 20);
+    // A method that does not override exclude_reported is recorded as having decided.
+    assert_eq!(ex.status(), fid_filter::policy::MethodStatus::Decided);
     // Digest over u32le(20) u32le(3) u32le(17), computed here independently of the mask code.
     let mut pre = Vec::new();
     for v in [20u32, 3, 17] {

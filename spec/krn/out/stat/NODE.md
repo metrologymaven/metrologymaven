@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-filter]
+built_pr: 663
 satisfies: [REQ-KRN.OUT-001]
 covers: [GOM.CON.21, PCD.CON.02, SA.REL.04]
 depends_on: [KRN.OUT.POL, KRN.NUM.RED]
@@ -66,6 +68,10 @@ The two most common fit filters in incumbents: exclude points whose residual exc
 ## Open questions
 
 - True M-estimator weighting (IRLS with Huber or Tukey weights) needs per-point weights in `KRN.LSQ.TRAIT`'s `PointsView`; this leaf provides exclusion-based robust filtering only. Add weights by a later leaf if incumbents' "robust" fits are weight-based [unverified].
+- Pinned with the build (module docs of `fid_filter::stat`): the n-sigma "residual standard deviation" is the population form (divisor n) about the mean, the same value as `fid_fit::contract::ResidualStats::std_dev`, and deviations are measured from zero as REQ-001 says; the sample form (n - 1) would be a new version.
+- Qn is the exact normal-consistency constant `1 / (sqrt(2) * Phi^-1(5/8))` = 2.219144465985076 (not the 2.2219 printed in Rousseeuw and Croux 1993, a known typo) times the k-th smallest pairwise difference, with no small-sample correction factor [unverified]; the order statistic is found exactly by a bit-pattern search with a two-pointer count (O(n log n) sort plus at most 64 O(n) passes) instead of the Croux-Rousseeuw selection algorithm. One residual has no pair, so Qn refuses it (`too_few_for_qn`).
+- REQ-004's `zero_scale` is reported by `StatOutcome::status` and, through `apply`, by the new `fid_filter::policy::MethodStatus` on every `Exclusion` (a provided `PolicyMethod::exclude_reported` method, additive to KRN.OUT.POL), so an empty mask always says why it is empty. The scale counts as zero when every residual is equal (`==`), the computed scale is 0 (for example, more than half the residuals equal to the median), or the limit `k * scale` rounds to 0 (a subnormal scale). `KRN.OUT.DISC` should carry the status in its record.
+- The performance budget (1 M residuals < 120 ms) has not been measured.
 
 ## Children
 
