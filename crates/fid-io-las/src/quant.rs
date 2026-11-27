@@ -24,7 +24,7 @@
 //! exact; outside it the file is refused rather than decoded approximately. A non-positive
 //! scale is refused too: `u_quant` would be negative.
 //!
-//! **Write** ([`quantise`], [`write_las`]): the scale is the caller's per axis or
+//! **Write** ([`quantise`], [`write_las`] with an [`ExportTarget`]): the scale is the caller's per axis or
 //! [`DEFAULT_WRITE_SCALE`] = 1e-7 m. A scale above [`MAX_WRITE_SCALE`] = 1e-7 m is
 //! `scale_too_coarse{axis}` (REQ-IO.CLOUD.LAS.QUANT-003); one that is not finite or outside
 //! the envelope is `scale_invalid{axis}`. The points are checked first, in point order and
@@ -37,16 +37,21 @@
 //! grow-expansion), never from the rounded quotient alone. An exact half-way case goes to the
 //! even integer and is counted per axis in [`QuantReport::ties`]. The first integer outside
 //! the i32 range, in point order and x, y, z order, is `out_of_range{index, axis}`
-//! (REQ-IO.CLOUD.LAS.QUANT-004). Every integer is computed before [`write_las`] creates the
-//! [`LasWriter`], so a refused export writes no byte.
+//! (REQ-IO.CLOUD.LAS.QUANT-004). Every integer is computed, and the header's point count and
+//! the batch shape checked, before [`write_las`] creates the [`LasWriter`], so a refused
+//! export writes no byte.
 //!
-//! **Report** (REQ-IO.CLOUD.LAS.QUANT-005): per axis the scale, offset and `u_quant`, the
-//! number of ties, the decoded bounds and `max_err`, the largest `|c - decode(X)|` (rounded
-//! once) over the points: the error a reader of the written file actually sees. Before that
-//! last rounding, each `|c - decode(X)|` is at most half the scale plus half an ulp of
-//! `decode(X)`. The binary64 nearest 1e-7 is slightly below 1e-7, so with the default scale
-//! `max_err` can pass 5e-8 m only for a coordinate within about one ulp of a half-way point
-//! between two integers. The report states the value; it does not clamp it.
+//! **Report** (REQ-IO.CLOUD.LAS.QUANT-005): per axis the validated plan (scale, offset,
+//! `u_quant`), the number of ties, the decoded bounds and two errors:
+//! - `max_err`, the quantisation error: the largest exact residual `|c - offset - scale * X|`
+//!   rounded once to binary64 (the exact residual from the same expansion as the sign test,
+//!   then correctly rounded with exact midpoint tests). The nearest integer makes the exact
+//!   residual at most `scale / 2`, so `max_err <= scale / 2`; with the default scale (the
+//!   binary64 nearest 1e-7, slightly below it) that is below 5e-8 m.
+//! - `max_read_err`, the largest `|c - decode(X)|` (rounded once): the error a reader of the
+//!   written file sees, which adds the reader's own rounding of `offset + scale * X` (up to half
+//!   an ulp of the decoded coordinate) and so can pass `scale / 2`, and 5e-8 m with the default
+//!   scale, near a half-way case. It is reported as it is, never clamped.
 
 use crate::error::{LasError, LasField};
 use crate::header::LasHeader;
@@ -174,6 +179,14 @@ pub enum QuantError {
         /// The axis.
         axis: Axis,
     },
+    /// The exact residual of a point could not be rounded (the correction loop did not settle;
+    /// never expected, reported rather than guessed).
+    ResidualNotRounded {
+        /// The point.
+        index: u64,
+        /// The axis.
+        axis: Axis,
+    },
     /// The integer columns of a point batch have different lengths.
     ColumnMismatch {
         /// Length of the x column.
@@ -198,6 +211,7 @@ impl QuantError {
             QuantError::NonFinite { .. } => "non_finite",
             QuantError::CoordinateOutsideEnvelope { .. } => "coordinate_outside_envelope",
             QuantError::OutOfRange { .. } => "out_of_range",
+            QuantError::ResidualNotRounded { .. } => "residual_not_rounded",
             QuantError::ColumnMismatch { .. } => "column_mismatch",
             QuantError::Numeric(_) => "numeric",
         }
@@ -217,7 +231,8 @@ impl fmt::Display for QuantError {
             QuantError::EmptyPointSet => write!(f, "{code}: no points to export"),
             QuantError::NonFinite { index, axis }
             | QuantError::CoordinateOutsideEnvelope { index, axis }
-            | QuantError::OutOfRange { index, axis } => write!(f, "{code}: point {index}, axis {axis}"),
+            | QuantError::OutOfRange { index, axis }
+            | QuantError::ResidualNotRounded { index, axis } => write!(f, "{code}: point {index}, axis {axis}"),
             QuantError::ColumnMismatch { x, y, z } => write!(f, "{code}: x {x}, y {y}, z {z} values"),
             QuantError::Numeric(e) => write!(f, "{code}: {e:?}"),
         }
@@ -270,21 +285,37 @@ impl From<LasError> for ExportError {
 
 /// One axis's quantisation: scale, offset and quantisation uncertainty `scale / sqrt(12)`
 /// (the standard uncertainty of a uniform rounding error of width `scale`), all in metres.
+/// Only [`QuantPlan::new`] (and so [`QuantPlan::from_header`] and [`quantise`]) makes one, so
+/// every value has passed the envelope checks.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AxisQuant {
+    scale: f64,
+    offset: f64,
+    u_quant: f64,
+}
+
+impl AxisQuant {
     /// Scale.
-    pub scale: f64,
+    pub fn scale(&self) -> f64 {
+        self.scale
+    }
+
     /// Offset.
-    pub offset: f64,
+    pub fn offset(&self) -> f64 {
+        self.offset
+    }
+
     /// `scale / sqrt(12)`, with the square root from `fid-num`.
-    pub u_quant: f64,
+    pub fn u_quant(&self) -> f64 {
+        self.u_quant
+    }
 }
 
 /// The quantisation of all three axes: the point-set metadata of REQ-IO.CLOUD.LAS.QUANT-002.
+/// [`QuantPlan::new`] is the only constructor, so a plan always lies inside the envelope.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct QuantPlan {
-    /// x, y, z.
-    pub axes: [AxisQuant; 3],
+    axes: [AxisQuant; 3],
 }
 
 fn check_scale(axis: Axis, s: f64) -> Result<f64, QuantError> {
@@ -332,6 +363,11 @@ impl QuantPlan {
     /// The plan of a file's header (hostile input).
     pub fn from_header(header: &LasHeader) -> Result<QuantPlan, QuantError> {
         QuantPlan::new(header.scale, header.offset)
+    }
+
+    /// The three axes, x, y, z.
+    pub fn axes(&self) -> [AxisQuant; 3] {
+        self.axes
     }
 
     /// One axis.
@@ -397,11 +433,14 @@ pub enum WriteScale {
 pub struct QuantReport {
     /// Number of points.
     pub points: u64,
-    /// Chosen scale, offset and `u_quant`.
-    pub axes: [AxisQuant; 3],
-    /// Largest `|c - decode(X)|`, rounded once: the error incurred by quantisation and the
-    /// reader's rounding together.
+    /// Chosen scale, offset and `u_quant`, as validated by [`QuantPlan::new`].
+    plan: QuantPlan,
+    /// Largest exact residual `|c - offset - scale * X|`, rounded once: the quantisation
+    /// error, at most `scale / 2`.
     pub max_err: [f64; 3],
+    /// Largest `|c - decode(X)|`, rounded once: the error a reader of the file sees
+    /// (quantisation plus the reader's rounding); can exceed `scale / 2` near a half-way case.
+    pub max_read_err: [f64; 3],
     /// Number of exact half-way cases, each resolved to the even integer.
     pub ties: [u64; 3],
     /// Smallest decoded coordinate.
@@ -411,15 +450,20 @@ pub struct QuantReport {
 }
 
 impl QuantReport {
-    /// The plan the report describes.
+    /// The validated plan the export used.
     pub fn plan(&self) -> QuantPlan {
-        QuantPlan { axes: self.axes }
+        self.plan
+    }
+
+    /// The plan's three axes, x, y, z.
+    pub fn axes(&self) -> [AxisQuant; 3] {
+        self.plan.axes
     }
 
     /// Sets the header's scale, offset and bounds to what was quantised.
     pub fn apply_to(&self, header: &mut LasHeader) {
-        header.scale = self.axes.map(|q| q.scale);
-        header.offset = self.axes.map(|q| q.offset);
+        header.scale = self.plan.axes.map(|q| q.scale);
+        header.offset = self.plan.axes.map(|q| q.offset);
         header.min = self.min;
         header.max = self.max;
     }
@@ -509,20 +553,30 @@ pub fn quantise(points: &[[f64; 3]], scale: WriteScale) -> Result<Quantised, Qua
     let n = points.len();
     let mut cols = [Vec::with_capacity(n), Vec::with_capacity(n), Vec::with_capacity(n)];
     let mut max_err = [0.0f64; 3];
+    let mut max_read_err = [0.0f64; 3];
     let mut ties = [0u64; 3];
     let mut dmin = [0.0f64; 3];
     let mut dmax = [0.0f64; 3];
     for (i, p) in points.iter().enumerate() {
         for (a, (axis, &c)) in Axis::ALL.into_iter().zip(p).enumerate() {
             let q = plan.axis(axis);
-            let (v, tie) = nearest(c, q.offset, q.scale).ok_or(QuantError::OutOfRange { index: i as u64, axis })?;
+            let index = i as u64;
+            let (v, tie) = nearest(c, q.offset, q.scale).ok_or(QuantError::OutOfRange { index, axis })?;
+            let (ph, pl) = two_prod(q.scale, f64::from(v));
+            let err = residual(c, q.offset, ph, pl).ok_or(QuantError::ResidualNotRounded { index, axis })?.abs();
             let d = decode(q.scale, q.offset, v);
-            let err = (c - d).abs();
-            if let (Some(col), Some(m), Some(t), Some(lo), Some(hi)) =
-                (cols.get_mut(a), max_err.get_mut(a), ties.get_mut(a), dmin.get_mut(a), dmax.get_mut(a))
-            {
+            let read_err = (c - d).abs();
+            if let (Some(col), Some(m), Some(mr), Some(t), Some(lo), Some(hi)) = (
+                cols.get_mut(a),
+                max_err.get_mut(a),
+                max_read_err.get_mut(a),
+                ties.get_mut(a),
+                dmin.get_mut(a),
+                dmax.get_mut(a),
+            ) {
                 col.push(v);
                 *m = higher(*m, err);
+                *mr = higher(*mr, read_err);
                 *t += u64::from(tie);
                 *lo = if i == 0 { d } else { lower(*lo, d) };
                 *hi = if i == 0 { d } else { higher(*hi, d) };
@@ -530,33 +584,47 @@ pub fn quantise(points: &[[f64; 3]], scale: WriteScale) -> Result<Quantised, Qua
         }
     }
     let [xi, yi, zi] = cols;
-    let report = QuantReport { points: n as u64, axes: plan.axes, max_err, ties, min: dmin, max: dmax };
+    let report = QuantReport { points: n as u64, plan, max_err, max_read_err, ties, min: dmin, max: dmax };
     Ok(Quantised { xi, yi, zi, report })
 }
 
-/// Quantises `points` and writes a LAS file: `header` (its point count must equal the number
-/// of points, as [`LasWriter`] requires) gets the chosen scale, offset and decoded bounds;
-/// `attrs` are the points' attribute columns. Every integer is computed, and the batch shape
-/// checked, before the writer is created, so a quantisation error writes nothing
-/// (REQ-IO.CLOUD.LAS.QUANT-004). Returns the sink and the report.
-#[allow(clippy::too_many_arguments)]
+/// Everything of a LAS file except the coordinates: what [`write_las`] writes around the
+/// quantised points.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExportTarget<'a> {
+    /// The header; its declared point count must equal the number of points. Scale, offset
+    /// and bounds are replaced by the quantisation's.
+    pub header: &'a LasHeader,
+    /// VLRs.
+    pub vlrs: &'a [Vlr],
+    /// Bytes between the last VLR and the point data.
+    pub vlr_padding: &'a [u8],
+    /// EVLRs.
+    pub evlrs: &'a [Vlr],
+    /// The points' attribute columns, in point order.
+    pub attrs: AttributeColumns,
+}
+
+/// Quantises `points` and writes a LAS file around them. In order, before the writer is
+/// created: quantisation (every integer), the point format, the header's declared point count
+/// against `points.len()` (`malformed{point_count}`) and the batch shape. So any of these
+/// errors writes nothing (REQ-IO.CLOUD.LAS.QUANT-004). Returns the sink and the report.
 pub fn write_las<W: Write>(
     out: W,
-    header: &LasHeader,
-    vlrs: &[Vlr],
-    vlr_padding: &[u8],
-    evlrs: &[Vlr],
+    target: ExportTarget<'_>,
     points: &[[f64; 3]],
-    attrs: AttributeColumns,
     scale: WriteScale,
 ) -> Result<(W, QuantReport), ExportError> {
     let q = quantise(points, scale)?;
-    let mut h = header.clone();
+    let mut h = target.header.clone();
     q.report.apply_to(&mut h);
     let format = h.format().ok_or_else(|| LasError::malformed(LasField::PointDataFormat))?;
-    let batch = RawPointBatch { format, xi: q.xi, yi: q.yi, zi: q.zi, attrs };
+    if h.declared_points()? != q.report.points {
+        return Err(LasError::malformed(LasField::PointCount).into());
+    }
+    let batch = RawPointBatch { format, xi: q.xi, yi: q.yi, zi: q.zi, attrs: target.attrs };
     batch.check_shape()?;
-    let mut w = LasWriter::new(out, &h, vlrs, vlr_padding, evlrs)?;
+    let mut w = LasWriter::new(out, &h, target.vlrs, target.vlr_padding, target.evlrs)?;
     w.write_batch(&batch)?;
     Ok((w.finish()?, q.report))
 }
@@ -616,10 +684,9 @@ fn decode(scale: f64, offset: f64, v: i32) -> f64 {
     plus_zero(sum3(offset, ph, pl))
 }
 
-/// The exact sign of the sum of `terms` (no overflow assumed): Shewchuk's grow-expansion
-/// keeps a non-overlapping expansion in increasing magnitude, whose largest non-zero
-/// component has the sign of the sum.
-fn sign_of_sum<const N: usize>(terms: [f64; N]) -> Ordering {
+/// The sum of `terms` as an exact non-overlapping expansion in increasing magnitude (zeros
+/// possible), by Shewchuk's grow-expansion (no overflow assumed).
+fn expansion<const N: usize>(terms: [f64; N]) -> [f64; N] {
     let mut e = [0.0f64; N];
     for (n, b) in terms.into_iter().enumerate() {
         let mut q = b;
@@ -632,11 +699,54 @@ fn sign_of_sum<const N: usize>(terms: [f64; N]) -> Ordering {
             *slot = q;
         }
     }
-    match e.iter().rev().find(|v| **v != 0.0) {
+    e
+}
+
+/// The exact sign of the sum of `terms`: the sign of the expansion's largest non-zero
+/// component.
+fn sign_of_sum<const N: usize>(terms: [f64; N]) -> Ordering {
+    match expansion(terms).iter().rev().find(|v| **v != 0.0) {
         Some(v) if *v > 0.0 => Ordering::Greater,
         Some(_) => Ordering::Less,
         None => Ordering::Equal,
     }
+}
+
+/// Of two adjacent doubles, the one with an even last significand bit.
+fn even_of(a: f64, b: f64) -> f64 {
+    if a.to_bits() & 1 == 0 {
+        a
+    } else {
+        b
+    }
+}
+
+/// `c - offset - (ph + pl)` exactly, rounded once to nearest-even; a zero result is `+0.0`.
+/// The start is the expansion summed in increasing magnitude (within a few ulps); each step
+/// compares twice the exact residual with the sum of the candidate and a neighbour, which is
+/// twice their midpoint, by an exact sign test, and moves one ulp or stops. `None` if it has
+/// not settled after 16 steps (never expected).
+fn residual(c: f64, offset: f64, ph: f64, pl: f64) -> Option<f64> {
+    let mut y: f64 = expansion([c, -offset, -ph, -pl]).iter().sum();
+    let r2 = [2.0 * c, -2.0 * offset, -2.0 * ph, -2.0 * pl];
+    for _ in 0..16 {
+        let (up, dn) = (y.next_up(), y.next_down());
+        let [a, b, e, f] = r2;
+        match sign_of_sum([a, b, e, f, -y, -up]) {
+            Ordering::Greater => {
+                y = up;
+                continue;
+            }
+            Ordering::Equal => return Some(plus_zero(even_of(y, up))),
+            Ordering::Less => {}
+        }
+        match sign_of_sum([a, b, e, f, -y, -dn]) {
+            Ordering::Less => y = dn,
+            Ordering::Equal => return Some(plus_zero(even_of(y, dn))),
+            Ordering::Greater => return Some(plus_zero(y)),
+        }
+    }
+    None
 }
 
 /// The integer nearest to the exact `(c - offset) / scale`, ties to even (`true` when it was
@@ -695,6 +805,21 @@ mod tests {
         assert_eq!(add_round_odd(1.0, 2f64.powi(-60)), 1.0 + f64::EPSILON);
         assert_eq!(add_round_odd(1.0, -(2f64.powi(-60))), f64::from_bits(1.0f64.to_bits() - 1));
         assert_eq!(add_round_odd(1.0, 1.0), 2.0);
+    }
+
+    #[test]
+    fn residual_is_rounded_once_with_ties_to_even() {
+        let ulp = f64::EPSILON;
+        // 1 + ulp/2 and 1 + 3ulp/2 are ties: to 1 and to 1 + 2ulp.
+        assert_eq!(residual(1.0, 0.0, 0.0, -ulp / 2.0), Some(1.0));
+        assert_eq!(residual(1.0, 0.0, 0.0, -3.0 * ulp / 2.0), Some(1.0 + 2.0 * ulp));
+        // Just above a tie rounds up; cancellation leaves the product's low part exactly.
+        assert_eq!(residual(1.0, -(ulp / 2.0), 0.0, -(ulp * ulp)), Some(1.0 + ulp));
+        assert_eq!(residual(1e8, 1e8 - 0.5, 0.25, 1e-30), Some(0.25));
+        assert_eq!(residual(0.5, 0.25, 0.25, 0.0), Some(0.0));
+        assert_eq!(residual(0.5, 0.25, 0.25, 0.0).map(f64::to_bits), Some(0));
+        let tiny = f64::from_bits(1);
+        assert_eq!(residual(tiny, 0.0, 0.0, 0.0), Some(tiny));
     }
 
     #[test]

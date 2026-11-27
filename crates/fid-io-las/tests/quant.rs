@@ -6,10 +6,12 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_io_las::quant::{
-    import_batch, quantise, write_las, Axis, ExportError, QuantError, QuantPlan, ValueReason, WriteScale,
+    import_batch, quantise, write_las, Axis, ExportError, ExportTarget, QuantError, QuantPlan, ValueReason, WriteScale,
     DEFAULT_WRITE_SCALE, MAX_WRITE_SCALE,
 };
-use fid_io_las::{read_slice, AttributeColumns, LasHeader, PointFormat, RawPointBatch, ReaderOptions};
+use fid_io_las::{
+    read_slice, AttributeColumns, LasError, LasField, LasHeader, PointFormat, RawPointBatch, ReaderOptions,
+};
 use fid_num::rng::{Address, Cursor};
 use std::path::PathBuf;
 
@@ -170,9 +172,9 @@ fn ac2_import_carries_quantisation_metadata() {
     for c in &u {
         let (s, want) = (hx(&c[1]), hx(&c[2]));
         let plan = QuantPlan::new([s; 3], [0.0; 3]).unwrap();
-        for q in plan.axes {
-            assert_eq!(q.u_quant.to_bits(), want.to_bits(), "scale {s:e}");
-            assert_eq!(q.scale.to_bits(), s.to_bits());
+        for q in plan.axes() {
+            assert_eq!(q.u_quant().to_bits(), want.to_bits(), "scale {s:e}");
+            assert_eq!(q.scale().to_bits(), s.to_bits());
         }
     }
 
@@ -188,8 +190,8 @@ fn ac2_import_carries_quantisation_metadata() {
     let u001 = hx(&u.iter().find(|c| hx(&c[1]) == 0.001).unwrap()[2]);
     assert_eq!(u001, 0.0002886751345948129);
     assert_eq!(u001, 0.001 / fid_num::f::sqrt(12.0).unwrap());
-    for (q, o) in imp.quant.axes.iter().zip(h.offset) {
-        assert_eq!((q.scale, q.offset, q.u_quant), (0.001, o, u001));
+    for (q, o) in imp.quant.axes().iter().zip(h.offset) {
+        assert_eq!((q.scale(), q.offset(), q.u_quant()), (0.001, o, u001));
     }
     assert_eq!(imp.xyz.len(), 2);
     for (p, (x, (y, z))) in imp.xyz.iter().zip(b.xi.iter().zip(b.yi.iter().zip(&b.zi))) {
@@ -283,7 +285,7 @@ fn h3(v: &[String]) -> [f64; 3] {
 #[test]
 fn export_matches_reference_cases() {
     let all = export_cases();
-    assert_eq!(all.len(), 19);
+    assert_eq!(all.len(), 20);
     for case in &all {
         let got = quantise(&case.points, case.scale);
         if let Some(err) = case.lines.iter().find(|l| l[0] == "ERROR") {
@@ -306,8 +308,8 @@ fn export_matches_reference_cases() {
         let q = got.unwrap_or_else(|e| panic!("{}: {e}", case.name));
         let r = &q.report;
         assert_eq!(r.points, case.points.len() as u64);
-        assert_eq!(bits3(r.axes.map(|a| a.scale)), bits3(h3(line(case, "SCALE"))), "{} scale", case.name);
-        assert_eq!(bits3(r.axes.map(|a| a.offset)), bits3(h3(line(case, "OFFSET"))), "{} offset", case.name);
+        assert_eq!(bits3(r.axes().map(|a| a.scale())), bits3(h3(line(case, "SCALE"))), "{} scale", case.name);
+        assert_eq!(bits3(r.axes().map(|a| a.offset())), bits3(h3(line(case, "OFFSET"))), "{} offset", case.name);
         let want_x: Vec<[i32; 3]> = case
             .lines
             .iter()
@@ -319,11 +321,13 @@ fn export_matches_reference_cases() {
         let t = line(case, "TIES");
         assert_eq!(r.ties.to_vec(), t.iter().map(|v| v.parse::<u64>().unwrap()).collect::<Vec<_>>(), "{}", case.name);
         assert_eq!(bits3(r.max_err), bits3(h3(line(case, "MAXERR"))), "{} max_err", case.name);
+        assert_eq!(bits3(r.max_read_err), bits3(h3(line(case, "MAXREAD"))), "{} max_read_err", case.name);
         let b = line(case, "BOUNDS");
         assert_eq!(bits3(r.min), bits3(h3(&b[0..3])), "{} min", case.name);
         assert_eq!(bits3(r.max), bits3(h3(&b[3..6])), "{} max", case.name);
-        for (a, q) in r.axes.iter().enumerate() {
-            assert_eq!(q.u_quant, q.scale / fid_num::f::sqrt(12.0).unwrap(), "{} axis {a}", case.name);
+        for (a, q) in r.axes().iter().enumerate() {
+            assert_eq!(q.u_quant(), q.scale() / fid_num::f::sqrt(12.0).unwrap(), "{} axis {a}", case.name);
+            assert!(r.max_err[a] <= q.scale() * 0.5, "{} axis {a}", case.name);
         }
     }
 }
@@ -352,6 +356,10 @@ fn header_for(n: usize) -> LasHeader {
     LasHeader { point_count: n as u64, ..LasHeader::default() }
 }
 
+fn target(header: &LasHeader, attrs: AttributeColumns) -> ExportTarget<'_> {
+    ExportTarget { header, vlrs: &[], vlr_padding: &[], evlrs: &[], attrs }
+}
+
 /// AC-3: a 500 m cloud at scale 1e-7 m is `out_of_range{index, axis}` and no byte is
 /// written.
 #[test]
@@ -359,17 +367,9 @@ fn ac3_long_cloud_is_out_of_range_and_writes_nothing() {
     let pts: Vec<[f64; 3]> = (0..11).map(|i| [50.0 * f64::from(i), 0.0, 0.0]).collect();
     let f6 = PointFormat::new(6).unwrap();
     let mut sink: Vec<u8> = Vec::new();
-    let err = write_las(
-        &mut sink,
-        &header_for(pts.len()),
-        &[],
-        &[],
-        &[],
-        &pts,
-        attrs_for(f6, pts.len()),
-        WriteScale::PerAxis([1e-7; 3]),
-    )
-    .unwrap_err();
+    let h = header_for(pts.len());
+    let err =
+        write_las(&mut sink, target(&h, attrs_for(f6, pts.len())), &pts, WriteScale::PerAxis([1e-7; 3])).unwrap_err();
     assert_eq!(err, ExportError::Quant(QuantError::OutOfRange { index: 0, axis: Axis::X }));
     assert_eq!(err.code(), "out_of_range");
     assert!(sink.is_empty(), "{} bytes written", sink.len());
@@ -384,17 +384,9 @@ fn ac3_long_cloud_is_out_of_range_and_writes_nothing() {
     pts2[8][2] = 0.0;
     assert_eq!(quantise(&pts2, WriteScale::Default).unwrap_err(), QuantError::OutOfRange { index: 7, axis: Axis::Z });
     pts2[7][2] = 250.0;
-    let (bytes, report) = write_las(
-        Vec::new(),
-        &header_for(pts2.len()),
-        &[],
-        &[],
-        &[],
-        &pts2,
-        attrs_for(f6, pts2.len()),
-        WriteScale::Default,
-    )
-    .unwrap();
+    let h2 = header_for(pts2.len());
+    let (bytes, report) =
+        write_las(Vec::new(), target(&h2, attrs_for(f6, pts2.len())), &pts2, WriteScale::Default).unwrap();
     assert!(!bytes.is_empty());
     assert_eq!(report.points, 11);
 }
@@ -415,15 +407,15 @@ fn ac4_coarse_caller_scale_is_refused() {
     assert_eq!(MAX_WRITE_SCALE, 1e-7);
     let f6 = PointFormat::new(6).unwrap();
     let mut sink: Vec<u8> = Vec::new();
-    let err =
-        write_las(&mut sink, &header_for(1), &[], &[], &[], &pts, attrs_for(f6, 1), WriteScale::PerAxis([1e-6; 3]))
-            .unwrap_err();
+    let h = header_for(1);
+    let err = write_las(&mut sink, target(&h, attrs_for(f6, 1)), &pts, WriteScale::PerAxis([1e-6; 3])).unwrap_err();
     assert_eq!(err.code(), "scale_too_coarse");
     assert!(sink.is_empty());
 }
 
-/// AC-5: a 10 m cloud exported with defaults reports scale 1e-7 m and a maximum incurred
-/// error of at most 5e-8 m per axis; the file reads back to exactly the reported values.
+/// AC-5: a 10 m cloud exported with defaults reports scale 1e-7 m and a maximum quantisation
+/// error (`max_err`, the exact residual rounded once) of at most 5e-8 m per axis; the file
+/// reads back so that the recomputed `|c - decoded|` equals `max_read_err`.
 #[test]
 fn ac5_ten_metre_cloud_default_export() {
     let mut r = Cursor::new(Address { seed: 62, stream: 0 }, 0);
@@ -432,33 +424,68 @@ fn ac5_ten_metre_cloud_default_export() {
         .map(|_| [r.uniform_f64() * 10.0, 100.0 + r.uniform_f64() * 10.0, -5.0 + r.uniform_f64() * 10.0])
         .collect();
     let f6 = PointFormat::new(6).unwrap();
-    let (bytes, report) =
-        write_las(Vec::new(), &header_for(n), &[], &[], &[], &pts, attrs_for(f6, n), WriteScale::Default).unwrap();
-    for (a, q) in report.axes.iter().enumerate() {
-        assert_eq!(q.scale, DEFAULT_WRITE_SCALE);
-        assert_eq!(q.scale, 1e-7);
+    let h = header_for(n);
+    let (bytes, report) = write_las(Vec::new(), target(&h, attrs_for(f6, n)), &pts, WriteScale::Default).unwrap();
+    for (a, q) in report.axes().iter().enumerate() {
+        assert_eq!(q.scale(), DEFAULT_WRITE_SCALE);
+        assert_eq!(q.scale(), 1e-7);
+        assert!(report.max_err[a] <= q.scale() * 0.5, "axis {a}: {:e}", report.max_err[a]);
         assert!(report.max_err[a] <= 5e-8, "axis {a}: {:e}", report.max_err[a]);
         assert!(report.max_err[a] > 4e-8, "axis {a}: {:e}", report.max_err[a]);
     }
 
     let file = read_slice(&bytes, ReaderOptions::default()).unwrap();
     assert_eq!(file.header.scale, [1e-7; 3]);
-    assert_eq!(file.header.offset, report.axes.map(|q| q.offset));
+    assert_eq!(file.header.offset, report.axes().map(|q| q.offset()));
     assert_eq!(file.header.min, report.min);
     assert_eq!(file.header.max, report.max);
     let imp = import_batch(&file.header, &file.points).unwrap();
     assert_eq!(imp.quant, report.plan());
-    let mut max_err = [0.0f64; 3];
+    let mut read_err = [0.0f64; 3];
     for (p, d) in pts.iter().zip(&imp.xyz) {
-        for ((m, c), v) in max_err.iter_mut().zip(p).zip(d) {
+        for ((m, c), v) in read_err.iter_mut().zip(p).zip(d) {
             let e = (c - v).abs();
             *m = if e > *m { e } else { *m };
         }
     }
-    assert_eq!(max_err, report.max_err);
+    assert_eq!(read_err, report.max_read_err);
 
     // The fixture's 10 m case agrees with the reference exactly (checked in full above).
     let fx = export_cases().into_iter().find(|c| c.name == "ac5_10m_default").unwrap();
     let q = quantise(&fx.points, WriteScale::Default).unwrap();
     assert!(q.report.max_err.iter().all(|e| *e <= 5e-8));
+}
+
+/// Review of #675: here the reader's rounding takes `|c - decode(X)|` above 5e-8 m, while the
+/// quantisation error `max_err` stays at most scale / 2 (below 5e-8 m); both match the oracle.
+#[test]
+fn max_err_is_the_quantisation_residual_not_the_read_error() {
+    let c = hx("4020cbeacc92146a");
+    let pts = [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [c, 0.0, 0.0]];
+    let r = quantise(&pts, WriteScale::Default).unwrap().report;
+    assert!(r.max_err[0] <= 1e-7 * 0.5 && r.max_err[0] <= 5e-8, "{:e}", r.max_err[0]);
+    assert!(r.max_read_err[0] > 5e-8, "{:e}", r.max_read_err[0]);
+    let fx = export_cases().into_iter().find(|c| c.name == "read_err_over_half").unwrap();
+    assert_eq!(fx.points, pts.to_vec());
+    assert_eq!(bits3(r.max_err), bits3(h3(line(&fx, "MAXERR"))));
+    assert_eq!(bits3(r.max_read_err), bits3(h3(line(&fx, "MAXREAD"))));
+}
+
+/// Review of #675: a header whose declared point count differs from the points is refused
+/// before the writer is created, so nothing is written.
+#[test]
+fn point_count_mismatch_writes_nothing() {
+    let pts = [[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]];
+    let f6 = PointFormat::new(6).unwrap();
+    for declared in [0usize, 1, 3] {
+        let h = header_for(declared);
+        let mut sink: Vec<u8> = Vec::new();
+        let err = write_las(&mut sink, target(&h, attrs_for(f6, 2)), &pts, WriteScale::Default).unwrap_err();
+        assert_eq!(err, ExportError::Las(LasError::Malformed { field: LasField::PointCount }), "declared {declared}");
+        assert!(sink.is_empty(), "declared {declared}: {} bytes written", sink.len());
+    }
+    let h = header_for(2);
+    let mut sink: Vec<u8> = Vec::new();
+    write_las(&mut sink, target(&h, attrs_for(f6, 2)), &pts, WriteScale::Default).unwrap();
+    assert!(!sink.is_empty());
 }

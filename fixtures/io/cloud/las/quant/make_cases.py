@@ -27,8 +27,10 @@ Rules encoded here (the leaf's Design, plus the module's documented envelope):
 - integers: X = the integer nearest to the exact (c - offset) / scale, ties to even (each tie
   counted per axis); X outside the i32 range is out_of_range{index, axis}, the first in point
   order and x, y, z order.
-- report: max_err per axis = max over points of RN(|c - decode(X)|); bounds = min and max of
-  the decoded coordinates per axis.
+- report: max_err per axis = max over points of RN(|c - offset - scale * X|), the exact
+  quantisation residual rounded once (so at most scale / 2); max_read_err = max over points of
+  RN(|c - decode(X)|), which adds the reader's rounding; bounds = min and max of the decoded
+  coordinates per axis.
 
 Run (stdlib only):
   python fixtures/io/cloud/las/quant/make_cases.py           # rewrite cases.txt
@@ -148,17 +150,22 @@ def export(points, scale_req):
             row.append(X)
         xs.append(row)
     max_err = [0.0, 0.0, 0.0]
+    max_read = [0.0, 0.0, 0.0]
     lo = [None, None, None]
     hi = [None, None, None]
     for p, row in zip(points, xs):
         for a in range(3):
             d = decode(scale[a], offset[a], row[a])
-            e = rn(abs(Fraction(p[a]) - Fraction(d)))
+            e = rn(abs(Fraction(p[a]) - Fraction(offset[a]) - Fraction(scale[a]) * row[a]))
+            assert Fraction(e) <= Fraction(scale[a]) / 2
             if e > max_err[a]:
                 max_err[a] = e
+            er = rn(abs(Fraction(p[a]) - Fraction(d)))
+            if er > max_read[a]:
+                max_read[a] = er
             lo[a] = d if lo[a] is None or d < lo[a] else lo[a]
             hi[a] = d if hi[a] is None or d > hi[a] else hi[a]
-    return {"scale": scale, "offset": offset, "X": xs, "ties": ties, "max_err": max_err, "min": lo, "max": hi}
+    return {"scale": scale, "offset": offset, "X": xs, "ties": ties, "max_err": max_err, "max_read": max_read, "min": lo, "max": hi}
 
 
 def decode_cases(lines):
@@ -261,6 +268,10 @@ def export_cases(lines):
         ("caller_scales", [1e-7, 5e-8, q], point_grid(rng, 80, (-3.0, 17.0, 0.5), 7)),
         ("negative_zero", None, [(-0.0, 0.0, -0.0), (0.0, -0.0, 0.0)]),
         ("single_point", None, [(123.456, -78.9, 0.001)]),
+        # Review of #675: the reader's rounding pushes |c - decode(X)| above 5e-8 m here, while
+        # the quantisation residual stays below scale / 2.
+        ("read_err_over_half", None, [(0.0, 0.0, 0.0), (10.0, 0.0, 0.0),
+                                      (float.fromhex("0x1.0cbeacc92146ap+3"), 0.0, 0.0)]),
         # Errors.
         ("ac3_500m", None, [(50.0 * i, 0.0, 0.0) for i in range(11)]),
         ("out_of_range_y_later", None, [(0.0, 0.0, 0.0), (1.0, 1.0, 1.0), (2.0, 2.0, 2.0),
@@ -292,12 +303,15 @@ def export_cases(lines):
         else:
             if name.startswith("ac5"):
                 assert all(m <= 5e-8 for m in r["max_err"]), r["max_err"]
+            if name == "read_err_over_half":
+                assert r["max_err"][0] <= 5e-8 < r["max_read"][0], (r["max_err"], r["max_read"])
             lines.append("SCALE %s" % " ".join(h(v) for v in r["scale"]))
             lines.append("OFFSET %s" % " ".join(h(v) for v in r["offset"]))
             for row in r["X"]:
                 lines.append("X %d %d %d" % tuple(row))
             lines.append("TIES %d %d %d" % tuple(r["ties"]))
             lines.append("MAXERR %s" % " ".join(h(v) for v in r["max_err"]))
+            lines.append("MAXREAD %s" % " ".join(h(v) for v in r["max_read"]))
             lines.append("BOUNDS %s %s" % (" ".join(h(v) for v in r["min"]), " ".join(h(v) for v in r["max"])))
         lines.append("END")
 
@@ -306,7 +320,7 @@ def build():
     lines = [
         "# IO.CLOUD.LAS.QUANT reference cases, written by make_cases.py (do not edit).",
         "# D scale offset X expected | U scale u_quant | H name scale*3 offset*3 result",
-        "# EXPORT name n default|scale*3, P x y z, then SCALE/OFFSET/X/TIES/MAXERR/BOUNDS or ERROR, END",
+        "# EXPORT name n default|scale*3, P x y z, then SCALE/OFFSET/X/TIES/MAXERR/MAXREAD/BOUNDS or ERROR, END",
         "# Floats are IEEE-754 binary64 bits in hex.",
     ]
     naive_wrong = decode_cases(lines)
