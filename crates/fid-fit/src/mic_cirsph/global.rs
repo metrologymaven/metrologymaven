@@ -58,8 +58,9 @@ pub const MAX_WORK: u64 = 1 << 30;
 pub const MAX_DEPTH: u32 = 64;
 
 const OP: &str = "fit.mic_cirsph.global";
-const SQRT2_UP: f64 = 1.414_213_562_373_095_2;
-const SQRT3_UP: f64 = 1.732_050_807_568_877_4;
+// sqrt(2) and sqrt(3), correctly rounded; the half-diagonal is widened by `WIDEN` anyway.
+const SQRT2: f64 = core::f64::consts::SQRT_2;
+const SQRT3: f64 = 1.732_050_807_568_877_2;
 const WIDEN: f64 = 1.0 + 1.0 / 1_099_511_627_776.0;
 
 /// What the search found.
@@ -150,7 +151,7 @@ pub(crate) fn search(reg: &Region<'_>, r: f64, tol: f64) -> Result<Search, FitEr
     let e = (64.0 * f64::EPSILON) * (qmax + cmax);
     let es = (64.0 * f64::EPSILON) * (bmax + cmax);
     let goal = r + tol;
-    let diag = if dim == 2 { SQRT2_UP } else { SQRT3_UP };
+    let diag = if dim == 2 { SQRT2 } else { SQRT3 };
     if ![e, es, goal, half0].iter().all(|x| x.is_finite()) {
         return Err(FitError::Num(NumError::Infinite { op: OP, index: None }));
     }
@@ -250,7 +251,7 @@ mod tests {
         let s = 0.75_f64.sqrt();
         let q = [1.0, 0.0, 0.0, -0.5, s, 0.0, -0.5, -s, 0.0];
         let (a, b) = square();
-        let reg = Region { q: &q, dim: 2, a: &a, b: &b, centre: [0.0; 3], radius: 0.25 * SQRT2_UP };
+        let reg = Region { q: &q, dim: 2, a: &a, b: &b, centre: [0.0; 3], radius: 0.25 * SQRT2 };
         let ok = search(&reg, 1.0, 1e-9).unwrap();
         assert_eq!(ok.outcome, CrossOutcome::Passed);
         // A claimed radius below the optimum is beaten.
