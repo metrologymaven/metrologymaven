@@ -19,9 +19,12 @@
 //! 1. `g` finite with [`MIN_GAP`] = 2^-100 m `<= g <=` [`MAX_GAP`] = 2^100 m (`g`);
 //! 2. `1 <= threads <= MAX_THREADS` (`threads`);
 //! 3. every position finite with every coordinate at most `COORD_LIMIT` = 2^500 in magnitude
-//!    (`vs.position`), every normal a unit normal by GEO.TYPES `is_unit_normal`
-//!    (`vs.normal`), in vertex order;
-//! 4. no two vertices share a source (`vs.source`).
+//!    (`vs.position`);
+//! 4. every normal a unit normal by GEO.TYPES `is_unit_normal` (`vs.normal`);
+//! 5. no two vertices share a source (`vs.source`).
+//!
+//! Each check covers the whole set before the next starts, so which check fails does not
+//! depend on the vertex order.
 //!
 //! Each is [`PolyError::InvalidParameter`] (`scan.poly.invalid_parameter`).
 //!
@@ -52,6 +55,15 @@
 //!    (`v = 0`, `u > 0`), then by the exact sign of the cross product. `neighbours` are the
 //!    vertices of the kept triangles in this order, `triangles` are `[c, j, k]` (counter-
 //!    clockwise about `n`) in the order of `j`.
+//! 7. Status ([`FanStatus`], first match wins): [`FanStatus::Hidden`] when a neighbour with
+//!    a smaller source projects exactly onto `(0, 0)` (`by` = the smallest such source; the
+//!    perturbation then makes that twin the Delaunay vertex and the centre has no triangle);
+//!    [`FanStatus::NoNeighbours`] with fewer than 2 neighbours; [`FanStatus::Degenerate`]
+//!    when every `orient2d(c, j, k)` is 0 (the neighbourhood is collinear through the centre
+//!    in projection); [`FanStatus::Ok`] when a triangle is kept; else
+//!    [`FanStatus::AllEdgesLong`] (the centre has Delaunay triangles, each with an edge of at
+//!    least `g`). Only an `Ok` fan has triangles. A vertex whose status is not `Ok` is not
+//!    silently dropped: its fan says why it has no triangles, for STITCH and QUAL to report.
 //!
 //! # Predicates (REQ-SCAN.POLY.SURF.FAN-002)
 //!
@@ -97,11 +109,44 @@ pub const FLUSH: f64 = f64::from_bits((1023 - 200) << 52);
 /// The short-edge factor `1 - 2^-46` on `g*g` (module documentation, step 5).
 pub const EDGE_MARGIN: f64 = 1.0 - f64::from_bits((1023 - 46) << 52);
 
+/// Why a fan has triangles or not (module documentation, step 7).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum FanStatus {
+    /// At least one triangle is kept.
+    Ok,
+    /// Fewer than 2 compatible neighbours within `g`.
+    NoNeighbours,
+    /// A neighbour with a smaller source projects onto the centre and takes its place.
+    Hidden {
+        /// The smallest such neighbour's source.
+        by: u64,
+    },
+    /// The neighbourhood is collinear through the centre in projection.
+    Degenerate,
+    /// Every Delaunay triangle at the centre has an edge of at least `g`.
+    AllEdgesLong,
+}
+
+impl FanStatus {
+    /// A stable machine-readable name (`Hidden` without its source).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            FanStatus::Ok => "ok",
+            FanStatus::NoNeighbours => "no_neighbours",
+            FanStatus::Hidden { .. } => "hidden",
+            FanStatus::Degenerate => "degenerate",
+            FanStatus::AllEdgesLong => "all_edges_long",
+        }
+    }
+}
+
 /// The fan of one vertex.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Fan {
     /// The centre vertex's source.
     pub centre: u64,
+    /// Why the fan has triangles or not; only [`FanStatus::Ok`] has any.
+    pub status: FanStatus,
     /// The vertices of the kept triangles, by angle about the centre's normal.
     pub neighbours: Vec<u64>,
     /// The kept triangles `[centre, j, k]`, counter-clockwise about the centre's normal, in
@@ -125,15 +170,13 @@ pub fn fans(vs: &VertexSet, g: f64, threads: usize) -> Result<Vec<Fan>, PolyErro
     let n = vs.vertices.len();
     let mut sources: Vec<u64> = Vec::new();
     sources.try_reserve_exact(n).map_err(|_| PolyError::Allocation)?;
-    for v in &vs.vertices {
-        if !v.position.iter().all(|x| x.is_finite() && x.abs() <= COORD_LIMIT) {
-            return Err(invalid("vs.position", "not finite or beyond 2^500 m"));
-        }
-        if !is_unit_normal(v.normal) {
-            return Err(invalid("vs.normal", "not a unit normal"));
-        }
-        sources.push(v.source);
+    if !vs.vertices.iter().all(|v| v.position.iter().all(|x| x.is_finite() && x.abs() <= COORD_LIMIT)) {
+        return Err(invalid("vs.position", "not finite or beyond 2^500 m"));
     }
+    if !vs.vertices.iter().all(|v| is_unit_normal(v.normal)) {
+        return Err(invalid("vs.normal", "not a unit normal"));
+    }
+    sources.extend(vs.vertices.iter().map(|v| v.source));
     sources.sort_unstable();
     if sources.windows(2).any(|w| w[0] == w[1]) {
         return Err(invalid("vs.source", "two vertices share a source"));
@@ -333,7 +376,31 @@ fn star(pts: &[Local], g2_short: f64) -> Result<Fan, PolyError> {
     for &(j, kk) in &tris {
         triangles.push([centre.id, id(j)?, id(kk)?]);
     }
-    Ok(Fan { centre: centre.id, neighbours, triangles })
+    let status = status_of(pts, !triangles.is_empty())?;
+    Ok(Fan { centre: centre.id, status, neighbours, triangles })
+}
+
+/// Step 7. `kept` says whether a triangle survived; a contradiction with the geometry (a
+/// hidden or degenerate centre with triangles) is [`PolyError::Inconsistent`], never `Ok`.
+fn status_of(pts: &[Local], kept: bool) -> Result<FanStatus, PolyError> {
+    let centre = pts.first().ok_or(PolyError::Inconsistent)?;
+    let others = pts.get(1..).unwrap_or(&[]);
+    let twin = others.iter().filter(|q| q.uv == [0.0, 0.0] && q.id < centre.id).map(|q| q.id).min();
+    let status = if let Some(by) = twin {
+        FanStatus::Hidden { by }
+    } else if others.len() < 2 {
+        FanStatus::NoNeighbours
+    } else if others.iter().all(|a| others.iter().all(|b| orient2d(centre.uv, a.uv, b.uv) == 0)) {
+        FanStatus::Degenerate
+    } else if kept {
+        return Ok(FanStatus::Ok);
+    } else {
+        FanStatus::AllEdgesLong
+    };
+    if kept {
+        return Err(PolyError::Inconsistent);
+    }
+    Ok(status)
 }
 
 /// The half plane of step 6: 0 for `v > 0` or (`v = 0`, `u > 0`), else 1.

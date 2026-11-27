@@ -13,7 +13,7 @@
 pub mod fan;
 pub mod prep;
 
-pub use fan::{fans, Fan, EDGE_MARGIN, FLUSH, MAX_GAP, MAX_NEIGHBOURS, MIN_GAP, NORMAL_COS};
+pub use fan::{fans, Fan, FanStatus, EDGE_MARGIN, FLUSH, MAX_GAP, MAX_NEIGHBOURS, MIN_GAP, NORMAL_COS};
 pub use prep::{
     prepare, PolyError, PrepParams, PrepVertex, VertexSet, VertexStatus, CLAMP_FACTOR, DEFAULT_EDGE_ANGLE_RAD,
     MAX_CELL_INDEX, MAX_H, MAX_THREADS, MIN_NEIGHBOURS, PLANE_RANK_TOL,

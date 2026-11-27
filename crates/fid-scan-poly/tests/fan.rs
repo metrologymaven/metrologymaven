@@ -9,7 +9,7 @@
 
 use std::collections::BTreeMap;
 
-use fid_scan_poly::{fans, Fan, PolyError, PrepVertex, VertexSet, VertexStatus, MAX_GAP, MIN_GAP};
+use fid_scan_poly::{fans, Fan, FanStatus, PolyError, PrepVertex, VertexSet, VertexStatus, MAX_GAP, MIN_GAP};
 
 fn read(name: &str) -> String {
     std::fs::read_to_string(format!("{}/fixtures/scan/poly/{name}", fid_testkit::WORKSPACE_ROOT)).unwrap()
@@ -57,24 +57,38 @@ fn load(case: &str) -> Case {
     let expected: Vec<Fan> = lines
         .map(|l| {
             let parts: Vec<&str> = l.split(';').collect();
-            assert_eq!(parts.len(), 3, "{case}: {l}");
+            assert_eq!(parts.len(), 4, "{case}: {l}");
             let centre: u64 = parts[0].trim().parse().unwrap();
-            let triangles = parts[2]
+            let status = status(parts[1].trim());
+            let triangles = parts[3]
                 .split_whitespace()
                 .map(|t| {
                     let (j, k) = t.split_once(':').unwrap();
                     [centre, j.parse().unwrap(), k.parse().unwrap()]
                 })
                 .collect();
-            Fan { centre, neighbours: ids(parts[1]), triangles }
+            Fan { centre, status, neighbours: ids(parts[2]), triangles }
         })
         .collect();
     assert_eq!(expected.len(), n);
     Case { g, vs: set(vertices), tags, expected }
 }
 
-const CASES: [&str; 6] =
-    ["hex_grid", "hex_grid_wide", "square_grid", "square_grid_tilted", "two_patches_gap", "jitter_dense"];
+fn status(s: &str) -> FanStatus {
+    match s.split_once(':') {
+        Some(("hidden", by)) => FanStatus::Hidden { by: by.parse().unwrap() },
+        _ => match s {
+            "ok" => FanStatus::Ok,
+            "no_neighbours" => FanStatus::NoNeighbours,
+            "degenerate" => FanStatus::Degenerate,
+            "all_edges_long" => FanStatus::AllEdgesLong,
+            other => panic!("status {other}"),
+        },
+    }
+}
+
+const CASES: [&str; 7] =
+    ["hex_grid", "hex_grid_wide", "square_grid", "square_grid_tilted", "two_patches_gap", "jitter_dense", "status_mix"];
 
 /// Runs a case with `threads` and compares every fan with the reference.
 fn run(case: &str, threads: usize) -> (Case, Vec<Fan>) {
@@ -106,6 +120,7 @@ fn fans_are_centred_and_edges_shorter_than_g() {
             ((p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2) + (p[2] - q[2]).powi(2)).sqrt()
         };
         for fan in &got {
+            assert_eq!(fan.status == FanStatus::Ok, !fan.triangles.is_empty(), "{case}: status of {}", fan.centre);
             for t in &fan.triangles {
                 assert_eq!(t[0], fan.centre);
                 assert!(fan.neighbours.contains(&t[1]) && fan.neighbours.contains(&t[2]));
@@ -271,7 +286,9 @@ fn neighbourhood_limits() {
         let twin = c.vs.vertices.iter().find(|w| w.source != d && w.position == v.position).unwrap();
         let (kept, hidden) = (d.min(twin.source), d.max(twin.source));
         assert!(got.iter().all(|f| !f.neighbours.contains(&hidden)), "{hidden} is a fan vertex");
-        assert!(got.iter().find(|f| f.centre == hidden).unwrap().triangles.is_empty());
+        let own = got.iter().find(|f| f.centre == hidden).unwrap();
+        assert_eq!(own.status, FanStatus::Hidden { by: kept }, "{hidden} not reported hidden");
+        assert!(own.triangles.is_empty() && own.neighbours.is_empty());
         assert!(got.iter().any(|f| f.neighbours.contains(&kept)));
     }
 }
@@ -305,6 +322,20 @@ fn invalid_input_is_refused() {
     let mut vs = c.vs.clone();
     vs.vertices[9].source = vs.vertices[2].source;
     assert_eq!(name(fans(&vs, c.g, 1)), "vs.source");
+    // Each check covers the whole set first: a bad normal before a bad position, or a shared
+    // source before either, still reports the position, in any vertex order.
+    let mut vs = c.vs.clone();
+    vs.vertices[1].normal = [0.0, 0.0, 2.0];
+    vs.vertices[3].source = vs.vertices[2].source;
+    vs.vertices[80].position[0] = f64::INFINITY;
+    assert_eq!(name(fans(&vs, c.g, 1)), "vs.position");
+    vs.vertices.reverse();
+    assert_eq!(name(fans(&vs, c.g, 1)), "vs.position");
+    let mut vs2 = vs.clone();
+    vs2.vertices.iter_mut().for_each(|v| v.position = v.position.map(|x| if x.is_finite() { x } else { 0.0 }));
+    assert_eq!(name(fans(&vs2, c.g, 1)), "vs.normal");
+    vs2.vertices.reverse();
+    assert_eq!(name(fans(&vs2, c.g, 1)), "vs.normal");
 
     let err = fans(&c.vs, 0.0, 1).unwrap_err();
     assert_eq!(err.code(), "scan.poly.invalid_parameter");
@@ -312,13 +343,35 @@ fn invalid_input_is_refused() {
 }
 
 #[test]
-fn lone_and_paired_vertices_have_empty_fans() {
+fn every_empty_fan_says_why() {
     let n = [0.0, 0.0, 1.0];
+    let empty = |centre, status| Fan { centre, status, neighbours: vec![], triangles: vec![] };
     let one = set(vec![vertex(4, [0.0; 3], n)]);
-    assert_eq!(fans(&one, 1e-3, 1).unwrap(), vec![Fan { centre: 4, neighbours: vec![], triangles: vec![] }]);
+    assert_eq!(fans(&one, 1e-3, 1).unwrap(), vec![empty(4, FanStatus::NoNeighbours)]);
     let two = set(vec![vertex(4, [0.0; 3], n), vertex(2, [5e-4, 0.0, 0.0], n)]);
     let got = fans(&two, 1e-3, 2).unwrap();
-    assert!(got.iter().all(|f| f.triangles.is_empty() && f.neighbours.is_empty()));
+    assert_eq!(got, vec![empty(4, FanStatus::NoNeighbours), empty(2, FanStatus::NoNeighbours)]);
+    // Collinear: the middle of a row has two neighbours on one line through it.
+    let row = set(vec![vertex(7, [0.0; 3], n), vertex(3, [5e-4, 0.0, 0.0], n), vertex(9, [1e-3, 0.0, 0.0], n)]);
+    let got = fans(&row, 6e-4, 1).unwrap();
+    assert_eq!(got[1], empty(3, FanStatus::Degenerate));
+    assert_eq!(got[0].status, FanStatus::NoNeighbours);
+    // A coincident twin with a smaller source hides the centre; the twin itself is Ok.
+    let s = 1e-3;
+    let twin = set(vec![
+        vertex(20, [0.0; 3], n),
+        vertex(21, [s, 0.0, 0.0], n),
+        vertex(22, [0.0, s, 0.0], n),
+        vertex(5, [0.0; 3], n),
+    ]);
+    let got = fans(&twin, 1.5 * s, 1).unwrap();
+    assert_eq!(got[0], empty(20, FanStatus::Hidden { by: 5 }));
+    assert_eq!(got[3].status, FanStatus::Ok);
+    assert_eq!(got[3].triangles, vec![[5, 21, 22]]);
+    assert!(got.iter().all(|f| !f.neighbours.contains(&20)));
+    for (f, st) in got.iter().zip(["hidden", "ok", "ok", "ok"]) {
+        assert_eq!(f.status.as_str(), st);
+    }
     // Three vertices of an equilateral triangle with side s: one triangle each when g > s,
     // none when g = s (an edge of length g is not shorter than g).
     let s = 1e-3;
@@ -331,6 +384,14 @@ fn lone_and_paired_vertices_have_empty_fans() {
     assert_eq!(got[0].triangles, vec![[10, 11, 12]]);
     assert_eq!(got[1].triangles, vec![[11, 12, 10]]);
     assert_eq!(got[2].triangles, vec![[12, 10, 11]]);
+    assert!(got.iter().all(|f| f.status == FanStatus::Ok));
+    // Legs of exactly g: the corner has a Delaunay triangle but no short one.
     let exact = set(vec![vertex(10, [0.0; 3], n), vertex(11, [s, 0.0, 0.0], n), vertex(12, [0.0, s, 0.0], n)]);
-    assert!(fans(&exact, s, 1).unwrap().iter().all(|f| f.triangles.is_empty()));
+    let got = fans(&exact, s, 1).unwrap();
+    assert_eq!(got[0], empty(10, FanStatus::AllEdgesLong));
+    assert_eq!(got[1], empty(11, FanStatus::NoNeighbours));
+    assert_eq!(got[2], empty(12, FanStatus::NoNeighbours));
+    assert_eq!(FanStatus::AllEdgesLong.as_str(), "all_edges_long");
+    assert_eq!(FanStatus::Degenerate.as_str(), "degenerate");
+    assert_eq!(FanStatus::NoNeighbours.as_str(), "no_neighbours");
 }

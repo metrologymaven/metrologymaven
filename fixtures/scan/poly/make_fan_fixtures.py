@@ -21,6 +21,9 @@ how a platform evaluates them):
 * `jitter_dense`: a jittered 12 x 12 patch with g = 3.4 mm (the 32-neighbour cap is active),
   normals rotated by 75 degrees or flipped on some vertices (the 60-degree filter), two
   vertices duplicated exactly and two offset along the normal only.
+* `status_mix`: small far-apart groups for every fan status: a collinear row (degenerate
+  and no-neighbour ends), an isolated right triangle with legs of exactly g (every edge
+  long), and a coincident pair inside a small grid (hidden).
 
 Vertex sources are a seeded permutation, and the vertex-set order is shuffled, so neither
 order follows the geometry.
@@ -48,6 +51,11 @@ The expected fans follow REQ-SCAN.POLY.SURF.FAN-001..003 and the pinned rules of
   one triangle).
 * Neighbours and triangles are ordered by the angle of j from +e1 in [0, 2 pi): the half
   plane (v > 0, or v = 0 and u > 0) first, then by exact cross product.
+* Status, first match: hidden (a neighbour with a smaller source projected exactly onto the
+  centre), no_neighbours (fewer than 2), degenerate (every exact orientation with the centre
+  is 0), ok (a triangle kept), else all_edges_long. The reference also asserts that a hidden
+  or degenerate centre has no Delaunay triangle at all, and that any other centre with at
+  least 2 neighbours has one before the edge filter.
 """
 
 import math
@@ -175,6 +183,27 @@ def two_patch_vertices(rng, g):
     closest = min(math.dist(p, q) for p, _, _ in a for q, _, _ in b)
     assert closest >= 1.5 * g, closest
     return a + b
+
+
+def status_mix_vertices():
+    s = 2.0 ** -10
+    z = (0.0, 0.0, 1.0)
+    out = []
+    # A collinear row of 5 at spacing s (g = 1.5 s): ends have 1 neighbour, the rest 2.
+    for i in range(5):
+        out.append(((i * s, 0.0, 0.0), z, "row"))
+    # A right triangle with legs exactly g, far away: every edge is at least g long.
+    g = 1.5 * s
+    ox = 1.0
+    for p in ((ox, 0.0, 0.0), (ox + g, 0.0, 0.0), (ox, g, 0.0)):
+        out.append((p, z, "long"))
+    # A 3 x 3 grid at s with its centre doubled, far away.
+    oy = 1.0
+    for i in range(3):
+        for j in range(3):
+            out.append(((i * s, oy + j * s, 0.0), z, "grid"))
+    out.append(((s, oy + s, 0.0), z, "twin"))
+    return out
 
 
 def rotate_about_u(n, deg):
@@ -379,11 +408,25 @@ def fan_of(rows, k, g):
     ends = [kk for _, kk in delaunay]
     assert len(set(starts)) == len(starts) and len(set(ends)) == len(ends), "not a fan"
     kept = [(j, kk) for j, kk in delaunay if short(0, j) and short(0, kk) and short(j, kk)]
+    twins = [ids[i] for i in range(1, n) if ints[i] == (0, 0) and ids[i] < src]
+    collinear = all(orient(ints[0], ints[a], ints[b]) == 0 for a in range(1, n) for b in range(1, n))
+    if twins:
+        assert not delaunay
+        status = "hidden:%d" % min(twins)
+    elif n - 1 < 2:
+        assert not delaunay
+        status = "no_neighbours"
+    elif collinear:
+        assert not delaunay
+        status = "degenerate"
+    else:
+        assert delaunay, "a visible, non-collinear centre has a Delaunay triangle"
+        status = "ok" if kept else "all_edges_long"
     pt = {i: ints[i] for i in range(n)}
     order = angular_sort(sorted({x for t in kept for x in t}), pt)
     rank = {i: r for r, i in enumerate(order)}
     kept.sort(key=lambda t: rank[t[0]])
-    return (src, [ids[i] for i in order], [(ids[j], ids[kk]) for j, kk in kept], len(nb))
+    return (src, status, [ids[i] for i in order], [(ids[j], ids[kk]) for j, kk in kept], len(nb))
 
 
 # ---------------------------------------------------------------- cases
@@ -405,6 +448,8 @@ def cases():
                 "two jittered 8 x 8 patches, 1 mm, at least 1.5 g apart, g = 1.5 mm; tag = patch"))
     out.append(("jitter_dense", 3.4e-3, assign_sources(Rng(106), jitter_dense_vertices(Rng(206))),
                 "jittered 12 x 12 patch, 1 mm, g = 3.4 mm, rotated/flipped normals, duplicates; tag = kind"))
+    out.append(("status_mix", 1.5 * 2.0 ** -10, assign_sources(Rng(107), status_mix_vertices()),
+                "status groups: collinear row, right triangle with legs g, doubled grid centre"))
     return out
 
 
@@ -415,7 +460,8 @@ def render(name, g, rows, note):
         "# SCAN.POLY.SURF.FAN fixture, written by make_fan_fixtures.py (CC0-1.0).",
         "# " + note,
         "# Lines after 'vertices' (vertex-set order): source x y z nx ny nz tag.",
-        "# Lines after 'fans' (same order): centre ; neighbours in angular order ; triangles j:k",
+        "# Lines after 'fans' (same order): centre ; status ; neighbours in angular order ;",
+        "# triangles j:k (status hidden:<by> names the twin's source).",
         "# (each triangle is centre, j, k, counter-clockwise about the centre's normal).",
         "case " + name,
         "g " + repr(g),
@@ -424,12 +470,17 @@ def render(name, g, rows, note):
     for s, p, n, tag in rows:
         lines.append(" ".join([str(s)] + [repr(x) for x in p] + [repr(x) for x in n] + [tag]))
     fans = [fan_of(rows, k, g) for k in range(len(rows))]
-    capped = sum(1 for f in fans if f[3] == MAX_NEIGHBOURS)
-    lines.insert(2, "# %d fans, %d triangles, %d neighbourhoods at the 32 cap." % (
-        len(fans), sum(len(f[2]) for f in fans), capped))
+    capped = sum(1 for f in fans if f[4] == MAX_NEIGHBOURS)
+    counts = {}
+    for f in fans:
+        key = f[1].split(":")[0]
+        counts[key] = counts.get(key, 0) + 1
+    lines.insert(2, "# %d fans, %d triangles, %d neighbourhoods at the 32 cap; status %s." % (
+        len(fans), sum(len(f[3]) for f in fans), capped,
+        ", ".join("%s %d" % kv for kv in sorted(counts.items()))))
     lines.append("fans %d" % len(fans))
-    for c, nbs, tris in (f[:3] for f in fans):
-        lines.append("%d ; %s ; %s" % (c, " ".join(map(str, nbs)), " ".join("%d:%d" % t for t in tris)))
+    for c, status, nbs, tris in (f[:4] for f in fans):
+        lines.append("%d ; %s ; %s ; %s" % (c, status, " ".join(map(str, nbs)), " ".join("%d:%d" % t for t in tris)))
     return "\n".join(lines) + "\n"
 
 

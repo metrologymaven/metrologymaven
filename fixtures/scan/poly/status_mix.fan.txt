@@ -1,0 +1,47 @@
+# SCAN.POLY.SURF.FAN fixture, written by make_fan_fixtures.py (CC0-1.0).
+# status groups: collinear row, right triangle with legs g, doubled grid centre
+# 18 fans, 24 triangles, 0 neighbourhoods at the 32 cap; status all_edges_long 1, degenerate 3, hidden 1, no_neighbours 4, ok 9.
+# Lines after 'vertices' (vertex-set order): source x y z nx ny nz tag.
+# Lines after 'fans' (same order): centre ; status ; neighbours in angular order ;
+# triangles j:k (status hidden:<by> names the twin's source).
+# (each triangle is centre, j, k, counter-clockwise about the centre's normal).
+case status_mix
+g 0.00146484375
+vertices 18
+123 0.0 1.001953125 0.0 0.0 0.0 1.0 grid
+81 0.0009765625 1.001953125 0.0 0.0 0.0 1.0 grid
+60 1.0 0.00146484375 0.0 0.0 0.0 1.0 long
+67 0.0009765625 1.0 0.0 0.0 0.0 1.0 grid
+32 0.00390625 0.0 0.0 0.0 0.0 1.0 row
+46 0.001953125 1.001953125 0.0 0.0 0.0 1.0 grid
+109 0.0009765625 1.0009765625 0.0 0.0 0.0 1.0 twin
+130 0.0009765625 0.0 0.0 0.0 0.0 1.0 row
+95 0.001953125 1.0009765625 0.0 0.0 0.0 1.0 grid
+25 0.001953125 1.0 0.0 0.0 0.0 1.0 grid
+53 1.00146484375 0.0 0.0 0.0 0.0 1.0 long
+116 1.0 0.0 0.0 0.0 0.0 1.0 long
+11 0.0029296875 0.0 0.0 0.0 0.0 1.0 row
+18 0.0009765625 1.0009765625 0.0 0.0 0.0 1.0 grid
+102 0.0 1.0 0.0 0.0 0.0 1.0 grid
+74 0.0 0.0 0.0 0.0 0.0 1.0 row
+39 0.001953125 0.0 0.0 0.0 0.0 1.0 row
+88 0.0 1.0009765625 0.0 0.0 0.0 1.0 grid
+fans 18
+123 ; ok ; 88 81 ; 88:81
+81 ; ok ; 123 88 18 46 ; 123:88 88:18 18:46
+60 ; no_neighbours ;  ; 
+67 ; ok ; 18 88 102 25 ; 18:88 88:102 25:18
+32 ; no_neighbours ;  ; 
+46 ; ok ; 81 18 95 ; 81:18 18:95
+109 ; hidden:18 ;  ; 
+130 ; degenerate ;  ; 
+95 ; ok ; 46 18 25 ; 46:18 18:25
+25 ; ok ; 95 18 67 ; 95:18 18:67
+53 ; no_neighbours ;  ; 
+116 ; all_edges_long ;  ; 
+11 ; degenerate ;  ; 
+18 ; ok ; 81 88 67 25 95 46 ; 81:88 88:67 67:25 25:95 95:46 46:81
+102 ; ok ; 88 67 ; 67:88
+74 ; no_neighbours ;  ; 
+39 ; degenerate ;  ; 
+88 ; ok ; 123 102 67 18 81 ; 102:67 67:18 18:81 81:123
