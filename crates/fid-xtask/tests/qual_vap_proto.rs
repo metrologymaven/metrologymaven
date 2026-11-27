@@ -151,6 +151,66 @@ fn usage_and_input_errors() {
     two(&["--manifest", &format!("{DIR}/absent.json"), "--record-schema", &s], "registry manifest: cannot open");
     two(&["--manifest", &m, "--record-schema", &s, "--dir", &format!("{DIR}/absent")], "template directory");
     two(&["--manifest", &m, "--record-schema", &s, "--catalogue", &m], "intended-use catalogue");
+    // A directory is not a regular file.
+    two(&["--manifest", DIR, "--record-schema", &s], "is not a regular file");
+    two(&["--manifest", &m, "--record-schema", DIR], "is not a regular file");
+}
+
+/// A symbolic link is refused for the manifest and the record schema, even when it points at
+/// the right file.
+#[cfg(unix)]
+#[test]
+fn symlinked_inputs_refused() {
+    let tmp = Path::new(env!("CARGO_TARGET_TMPDIR")).join("qual_vap_proto_symlinks");
+    let _ = std::fs::remove_dir_all(&tmp);
+    std::fs::create_dir_all(&tmp).unwrap();
+    let (lm, ls) = (tmp.join("manifest.json"), tmp.join("schema.json"));
+    std::os::unix::fs::symlink(repo_root().join(DIR).join("manifest.json"), &lm).unwrap();
+    std::os::unix::fs::symlink(repo_root().join(DIR).join("qual-record-1.json"), &ls).unwrap();
+    let (m, s) = (manifest_arg(), schema_arg());
+    let (lm, ls) = (lm.to_str().unwrap(), ls.to_str().unwrap());
+    for (args, needle) in [
+        (["--manifest", lm, "--record-schema", s.as_str()], "registry manifest:"),
+        (["--manifest", m.as_str(), "--record-schema", ls], "record schema:"),
+    ] {
+        let (code, out, err) = run(&args);
+        assert_eq!(code, 2, "{out:?} {err}");
+        assert!(err.contains(needle) && err.contains("is a symbolic link"), "{err}");
+    }
+}
+
+/// Until QUAL.IQOQ.IQ, QUAL.IQOQ.BUNDLE and QUAL.IQOQ.OQ land, each protocol's purpose text
+/// says its commands are specified but not in this release. When one of those leaves records
+/// `built_in`, this test fails: drop the sentence (and this pin) for that command then.
+#[test]
+fn unbuilt_commands_are_stated() {
+    let pins = [
+        (
+            "iq-protocol",
+            "Not runnable yet: the commands validate.run_iq@1 and validate.export_bundle@1 are specified but are not in this release, so this protocol cannot be executed until a release ships them.",
+            ["spec/qual/iqoq/iq/NODE.md", "spec/qual/iqoq/bundle/NODE.md"].as_slice(),
+        ),
+        (
+            "oq-protocol",
+            "Not runnable yet: the command validate.run_oq@1 is specified but is not in this release, so this protocol cannot be executed until a release ships it.",
+            ["spec/qual/iqoq/oq/NODE.md"].as_slice(),
+        ),
+    ];
+    let cat = fid_qual::vap::tpl::Catalogue::from_path(&repo_root().join("vap/intended-uses.toml")).unwrap();
+    for (id, sentence, nodes) in pins {
+        let bytes = std::fs::read(repo_root().join(format!("vap/templates/{id}.json"))).unwrap();
+        let t = fid_qual::vap::tpl::Template::from_json(id, &bytes, &cat).unwrap();
+        let purpose = t.sections().iter().find(|s| s.id == "purpose").and_then(|s| s.text.clone()).unwrap();
+        assert!(purpose.contains(sentence), "{id}: purpose text lacks the not-in-this-release sentence");
+        for node in nodes {
+            let text = std::fs::read_to_string(repo_root().join(node)).unwrap();
+            // Only the frontmatter has a line starting with `built_in:`.
+            assert!(
+                !text.lines().any(|l| l.starts_with("built_in:")),
+                "{node} is now built: remove the not-in-this-release sentence from {id} and update this test"
+            );
+        }
+    }
 }
 
 // ------------------------------------------------------------------ library rules
@@ -214,8 +274,10 @@ fn schema_resolution() {
         "$defs":{"loop":{"$ref":"#/$defs/loop"}}}"##,
     )
     .unwrap();
-    assert!(s.resolves("a") && s.resolves("b") && s.resolves("c"));
-    assert!(!s.resolves("a.x") && !s.resolves("b.x") && !s.resolves("c.x"));
+    for bad in ["a", "b", "c", "a.x", "b.x", "c.x"] {
+        assert!(!s.resolves(bad), "{bad}");
+    }
+    assert_eq!(s.field_paths(), ["d", "d.e", "schema"]);
     assert!(s.resolves("d.e"));
 }
 

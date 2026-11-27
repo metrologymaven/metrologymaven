@@ -24,7 +24,7 @@
     {
       "id": "purpose",
       "heading": "Purpose",
-      "text": "Operational qualification shows that the installed product computes what it should on this computer: it evaluates the bundled reference data sets and, if you use them, replays your registered golden journals. Every step below runs one Metrology Maven command and names the field of the qualification record (qual-record/1) that holds its result.",
+      "text": "Operational qualification shows that the installed product computes what it should on this computer: it evaluates the bundled reference data sets and, if you use them, replays your registered golden journals. Every step below runs one Metrology Maven command and names the field of the qualification record (qual-record/1) that holds its result. Not runnable yet: the command validate.run_oq@1 is specified but is not in this release, so this protocol cannot be executed until a release ships it.",
       "fields": [
         {
           "id": "system",

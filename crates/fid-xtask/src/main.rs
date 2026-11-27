@@ -822,6 +822,14 @@ fn qual_vap_check_protocols(args: &[String]) -> ExitCode {
         return ExitCode::from(2);
     };
     let read = |p: &Path, limit: usize| -> Result<Vec<u8>, String> {
+        // Like the template directory and catalogue: no symbolic link, a regular file only.
+        let meta = std::fs::symlink_metadata(p).map_err(|e| format!("cannot open {}: {}", p.display(), e.kind()))?;
+        if meta.file_type().is_symlink() {
+            return Err(format!("{} is a symbolic link", p.display()));
+        }
+        if !meta.is_file() {
+            return Err(format!("{} is not a regular file", p.display()));
+        }
         let file = std::fs::File::open(p).map_err(|e| format!("cannot open {}: {}", p.display(), e.kind()))?;
         let mut bytes = Vec::new();
         // One byte over the limit is enough for the parser to report the input as too large.

@@ -24,7 +24,7 @@
     {
       "id": "purpose",
       "heading": "Purpose",
-      "text": "Installation qualification shows that what is installed on this computer is exactly what the project released. Every step below runs one Metrology Maven command and names the field of the qualification record (qual-record/1) that holds its result, so you can check each result against the record instead of against a screen.",
+      "text": "Installation qualification shows that what is installed on this computer is exactly what the project released. Every step below runs one Metrology Maven command and names the field of the qualification record (qual-record/1) that holds its result, so you can check each result against the record instead of against a screen. Not runnable yet: the commands validate.run_iq@1 and validate.export_bundle@1 are specified but are not in this release, so this protocol cannot be executed until a release ships them.",
       "fields": [
         {
           "id": "system",
@@ -143,8 +143,8 @@
                 "step": "iq-kernel-manifest",
                 "purpose": "Confirm that the installed kernel manifest is the one the signed evidence statement lists.",
                 "command": "validate.run_iq@1",
-                "record-field": "kernel_manifest_digest",
-                "acceptance": "The check digest:kernel_manifest has verdict PASS and a kernel manifest digest is recorded."
+                "record-field": "checks.verdict",
+                "acceptance": "The check digest:kernel_manifest has verdict PASS."
               }
             },
             {

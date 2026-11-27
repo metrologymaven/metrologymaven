@@ -98,6 +98,9 @@ RECORD_SCHEMA = {
         "rdl_subset_digest": DIGEST,
         "goldens": {"type": "array", "items": {"$ref": "#/$defs/golden"}},
     },
+    # As QualificationRecord::validate: the RDL subset digest and goldens are OQ-only.
+    "if": {"properties": {"kind": {"const": "iq"}}, "required": ["kind"]},
+    "then": {"properties": {"rdl_subset_digest": False, "goldens": False}},
     "$defs": {
         "check": {
             "type": "object",
@@ -273,7 +276,8 @@ def resolves(schema: dict, field: str) -> bool:
         if not isinstance(props, dict) or not isinstance(props.get(seg), dict):
             return False
         node = props[seg]
-    return True
+    # The last segment's schema must be usable too (no external, missing or cyclic $ref).
+    return deref(schema, node) is not None
 
 
 def debug_str(s: str) -> str:
@@ -384,6 +388,20 @@ def schema_cross_check(files: dict[str, bytes]) -> None:
     for stem in PROTOCOLS:
         jsonschema.validate(load_json(TEMPLATES / f"{stem}.json"), schema)
     jsonschema.Draft202012Validator.check_schema(RECORD_SCHEMA)
+    v = jsonschema.Draft202012Validator(RECORD_SCHEMA)
+    d = "sha256:" + "1" * 64
+    iq = {
+        "schema": "qual-record/1", "kind": "iq", "product_version": "1.4.0", "kernel_manifest_digest": d,
+        "evidence_statement_digest": d, "env_digest": d, "verdict": "PASS",
+        "checks": [{"id": "sig:sums", "verdict": "PASS", "detail": "ok"}],
+    }
+    oq = dict(iq, kind="oq", rdl_subset_digest=d, goldens=[{"golden_id": "g", "outcome": "IDENTICAL", "exceedances": []}])
+    for ok in (iq, oq):
+        if not v.is_valid(ok):
+            raise SystemExit("record schema refuses a valid record")
+    for bad in (dict(iq, rdl_subset_digest=d), dict(iq, goldens=[])):
+        if v.is_valid(bad):
+            raise SystemExit("record schema accepts an IQ record with OQ-only fields")
 
 
 def main(argv: list[str]) -> int:

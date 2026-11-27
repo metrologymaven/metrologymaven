@@ -65,6 +65,22 @@
       }
     }
   },
+  "if": {
+    "properties": {
+      "kind": {
+        "const": "iq"
+      }
+    },
+    "required": [
+      "kind"
+    ]
+  },
+  "then": {
+    "properties": {
+      "rdl_subset_digest": false,
+      "goldens": false
+    }
+  },
   "$defs": {
     "check": {
       "type": "object",

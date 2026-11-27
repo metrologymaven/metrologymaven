@@ -257,9 +257,10 @@ impl RecordSchema {
     }
 
     /// True when the dotted `field` path resolves: each segment is a property of the current
-    /// object schema, where an array schema stands for its `items`. A `$ref` to `#/$defs/...`
-    /// is followed; anything else (another `$ref`, a combinator without `properties`) does not
-    /// resolve, so the check fails closed.
+    /// object schema, where an array schema stands for its `items`, and the last segment's
+    /// schema is usable. A `$ref` to `#/$defs/...` is followed (at every segment, the last
+    /// included); anything else (an external, missing or cyclic `$ref`, a combinator without
+    /// `properties`) does not resolve, so the check fails closed.
     pub fn resolves(&self, field: &str) -> bool {
         if !is_field_path(field) {
             return false;
@@ -289,7 +290,9 @@ impl RecordSchema {
                 _ => return false,
             }
         }
-        true
+        // The last segment's schema must itself be usable: an external, missing or cyclic
+        // `$ref` there does not resolve either.
+        self.follow_refs(node).is_some()
     }
 
     /// Every field path that [`RecordSchema::resolves`], sorted, down to

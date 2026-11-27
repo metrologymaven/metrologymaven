@@ -16,7 +16,7 @@
     {
       "id": "purpose",
       "heading": "Purpose",
-      "text": "Operational qualification shows that the installed product computes what it should on this computer: it evaluates the bundled reference data sets and, if you use them, replays your registered golden journals. Every step below runs one Metrology Maven command and names the field of the qualification record (qual-record/1) that holds its result.",
+      "text": "Operational qualification shows that the installed product computes what it should on this computer: it evaluates the bundled reference data sets and, if you use them, replays your registered golden journals. Every step below runs one Metrology Maven command and names the field of the qualification record (qual-record/1) that holds its result. Not runnable yet: the command validate.run_oq@1 is specified but is not in this release, so this protocol cannot be executed until a release ships it.",
       "fields": [
         { "id": "system", "label": "System name and installed product version", "kind": "text" },
         { "id": "iq-ref", "label": "Installation qualification record this run builds on", "kind": "text" }
@@ -96,7 +96,7 @@
                 "purpose": "Only if you use golden journals: confirm that each one replays as registered.",
                 "command": "validate.run_oq@1",
                 "record-field": "goldens.outcome",
-                "acceptance": "Every golden in the record has outcome IDENTICAL or EQUIVALENT."
+                "acceptance": "Every golden in the record has outcome IDENTICAL or EQUIVALENT. A golden with outcome NOT_REPLAYABLE fails this step even if the run accepted it with accept_not_replayable; record it and its reason as a deviation."
               }
             },
             {
