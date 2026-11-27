@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-chart-series]
+built_pr: 671
 satisfies: [REQ-RPT.STATS.TREND-004, REQ-RPT.STATS.TREND-005]
 covers: []
 depends_on: [CORE.JRN.CANON, GEO.FRAME.UNITS]
@@ -92,6 +94,23 @@ Defines `ChartSeries`, the one data shape every chart source hands to report cha
 
 - `VECTOR_GROUP` is reserved for LVM's vector group plot; LVM may need extra optional fields (vector components) in a later minor version.
 - Consumers (`RPT.MODEL.BLOCKS`, VIZ) should declare `uses_artifacts: [RPT.STATS.TREND.CONTRACT]` for the schema file, or depend on the crate; that edit is theirs to make.
+- Built in `fid-chart-series` (model layer). Choices made at build time, to confirm or reword in the REQs:
+  (1) **Wire form.** f64 values are `"0x"` plus 16 lowercase hex digits of their bits (the `fid-canon` bit-significant spelling), so `-0.0` and subnormals round-trip (REQ-007); integers (`major`, `minor`, `set_version`, `source_index`) are JSON numbers; optional fields are omitted, never `null`; `markers` is always present. The full grammar of every field (label keys, record and piece IDs, algorithm IDs, binning-rule IDs, run-rule set and rule IDs, `x_label` display text) is in the crate docs.
+  (2) **Values are in the axis unit**, not SI. A reference line lies on the value axis (`x` for `HISTOGRAM`, `y` otherwise) and must carry that axis's unit; a reference line on an `ORDINAL` value axis is refused.
+  (3) **Histograms**: `x` is a quantity axis and `y` is `ORDINAL`, read as "no physical unit" (a count). The count is an integral value from +0 to 2^53, `x_upper` is not below `x` in totalOrder (equal edges are HIST's degenerate bin), and `provenance.binning_rule` is required (REQ-RPT.STATS.TREND-003). `x_upper` and `binning_rule` are refused on other kinds, and `frozen_limits` on non-control kinds.
+  (4) **One encoding per series**: markers in a point, reference lines, constants references, unverified entries and exclusions must each be strictly ascending in a stated canonical order, so repeats are refused. Two equal reference lines of one kind are `duplicate`. A reference line at `-0.0` is refused (`negative_zero`). Points keep their order. `OUT_OF_TOLERANCE` with `INDETERMINATE` on one point is refused as contradictory, and the all-zero tombstone digest is refused as a data-set digest.
+  (5) **Versions**: `parse` reads `contract` first and returns `report.chart_series_unsupported` for any other major without reading the body (AC-2 is checked both there and with `check_supported` on a typed series stating major 2). A later minor of major 1 has its unknown fields ignored at every level and listed in `Parsed::ignored_fields`; unknown enum values and missing fields are still refused. Such a series cannot be re-encoded (`not_encodable`), since writing it as minor 0 would change what it claims. Errors carry a field path and a reason name (`report.chart_series_invalid{field, reason}`) and `UnsupportedCause::{Major, Kind}`.
+  (6) The schema is `crates/fid-chart-series/schema/chart-series.schema.json` (also `fid_chart_series::SCHEMA_JSON`). Minor 0 is closed and later minors are open, through an `if`/`then`/`else` on `contract.minor`. The schema is weaker than `validate`; its `description` lists what it does not express. `trend_minor9.json` sits in `v1_examples/` as AC-3 names it, but it is not part of the AC-1 round-trip set.
+  (7) **Fixture validation (AC-1)** uses a small stdlib JSON Schema 2020-12 validator inside `fixtures/rpt/stats/chart_series/make_fixtures.py`, which implements only the keywords the schema uses and fails on any other. It does not use the `jsonschema` package.
+  (8) **Review status and what a series rests on.** These fields are required in 1.0, because a 1.0 consumer would ignore them if a later minor added them (REQ-006). They were added after review of #671, to serve RPT.STATS.SPC.CHART-004/006 and RPT.STATS.TREND.BUILD-008.
+    - A `RULE_VIOLATION` marker carries the rule set's `review` (`UNVERIFIED`, `CLAIMED_BY_FILE` or `EXPERT_REVIEWED`), the three kept distinct, mirroring `fid_stats::RuleViolation::review` (D-045).
+    - `provenance.constants` lists the constants tables the series rests on (`spc.constants.normal@1.0.0`). It holds at least one on a control chart and none elsewhere.
+    - `provenance.unverified` lists every constants table and rule set the series rests on that is not `EXPERT_REVIEWED`. It is cross-checked against the constants list and against every marker's review (`not_referenced`, `not_in_unverified`, `conflicting_review`). A rule set evaluated without any violation leaves no marker, so its absence from the list cannot be detected.
+    - `provenance.excluded` is `[{source_index, reason}]`, ascending and possibly empty, so an entry left out upstream leaves a trace (coordinator decision).
+    - A top-level `status` is `OK` (at least one point) or `INSUFFICIENT_DATA`. With `INSUFFICIENT_DATA`, a trend, histogram or vector group has no points, and a control chart has no `CENTRE`/`LCL`/`UCL` line and no rule marker.
+    - `RULE_VIOLATION` markers and `CENTRE`/`LCL`/`UCL` lines are refused on `TREND`, `HISTOGRAM` and `VECTOR_GROUP`.
+    - All of these are the producer's statements, checked for form and mutual consistency only. In a parsed series, `EXPERT_REVIEWED` is the document's claim, never a review this crate has seen.
+  (9) The 100 000-point validation budget (20 ms) has not been measured.
 
 ## Children
 

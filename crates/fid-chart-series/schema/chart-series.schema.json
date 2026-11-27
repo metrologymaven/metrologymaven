@@ -1,0 +1,883 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:metrologymaven:schema:chart-series:1",
+  "title": "ChartSeries contract, major 1 (RPT.STATS.TREND.CONTRACT)",
+  "description": "One chart data series handed to report chart blocks and viewers. Contract minor 0 is closed; a series of a later minor (1 and up) of major 1 may carry optional fields a 1.0 consumer ignores (REQ-006). The crate fid-chart-series is stricter than this schema: markers and reference lines in canonical order, reference-line units equal to the value axis, histogram counts, kind-specific markers, lines and provenance fields, the status rules, the review cross-checks between markers and provenance.unverified, -0.0 reference lines and forbidden display characters. Written by fixtures/rpt/stats/chart_series/make_fixtures.py.",
+  "type": "object",
+  "required": [
+    "contract"
+  ],
+  "properties": {
+    "contract": {
+      "type": "object",
+      "required": [
+        "minor"
+      ]
+    }
+  },
+  "if": {
+    "properties": {
+      "contract": {
+        "properties": {
+          "minor": {
+            "const": 0
+          }
+        }
+      }
+    }
+  },
+  "then": {
+    "$ref": "#/$defs/series_strict"
+  },
+  "else": {
+    "$ref": "#/$defs/series_open"
+  },
+  "$defs": {
+    "f64": {
+      "type": "string",
+      "pattern": "^0x(?!7ff|fff)[0-9a-f]{16}$",
+      "description": "IEEE 754 binary64 bits: 0x and 16 lowercase hex digits; NaN and infinities refused."
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$",
+      "description": "sha256: and 64 lowercase hex digits; the all-zero tombstone digest refused."
+    },
+    "algorithm": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}@(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})$",
+      "maxLength": 128
+    },
+    "kernel_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})$"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "binning_rule": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,55}@[1-9][0-9]{0,5}$"
+    },
+    "set_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+    },
+    "rule_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_]{0,31}$"
+    },
+    "label_key": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$",
+      "maxLength": 128
+    },
+    "x_label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Display text; the contract also refuses the fid-types forbidden code points, which this schema does not express."
+    },
+    "unit": {
+      "enum": [
+        "m",
+        "cm",
+        "mm",
+        "um",
+        "nm",
+        "in",
+        "ft",
+        "thou",
+        "rad",
+        "deg",
+        "arcmin",
+        "arcsec",
+        "gon"
+      ]
+    },
+    "review": {
+      "enum": [
+        "UNVERIFIED",
+        "CLAIMED_BY_FILE",
+        "EXPERT_REVIEWED"
+      ]
+    },
+    "constants": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*@(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})$",
+      "maxLength": 128
+    },
+    "set_version": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 999999
+    },
+    "contract_strict": {
+      "type": "object",
+      "required": [
+        "major",
+        "minor"
+      ],
+      "properties": {
+        "major": {
+          "type": "integer",
+          "const": 1
+        },
+        "minor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999999
+        }
+      },
+      "additionalProperties": false
+    },
+    "axis_strict": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "label_key"
+          ],
+          "properties": {
+            "kind": {
+              "const": "ORDINAL"
+            },
+            "label_key": {
+              "$ref": "#/$defs/label_key"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "label_key",
+            "quantity",
+            "unit"
+          ],
+          "properties": {
+            "kind": {
+              "const": "QUANTITY"
+            },
+            "label_key": {
+              "$ref": "#/$defs/label_key"
+            },
+            "quantity": {
+              "const": "LENGTH"
+            },
+            "unit": {
+              "enum": [
+                "m",
+                "cm",
+                "mm",
+                "um",
+                "nm",
+                "in",
+                "ft",
+                "thou"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "label_key",
+            "quantity",
+            "unit"
+          ],
+          "properties": {
+            "kind": {
+              "const": "QUANTITY"
+            },
+            "label_key": {
+              "$ref": "#/$defs/label_key"
+            },
+            "quantity": {
+              "const": "ANGLE"
+            },
+            "unit": {
+              "enum": [
+                "rad",
+                "deg",
+                "arcmin",
+                "arcsec",
+                "gon"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "marker_strict": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "OUT_OF_TOLERANCE"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "INDETERMINATE"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "review",
+            "rule_id",
+            "set_id",
+            "set_version"
+          ],
+          "properties": {
+            "kind": {
+              "const": "RULE_VIOLATION"
+            },
+            "set_id": {
+              "$ref": "#/$defs/set_id"
+            },
+            "set_version": {
+              "$ref": "#/$defs/set_version"
+            },
+            "rule_id": {
+              "$ref": "#/$defs/rule_id"
+            },
+            "review": {
+              "$ref": "#/$defs/review"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "unverified_strict": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "ref"
+          ],
+          "properties": {
+            "kind": {
+              "const": "CONSTANTS"
+            },
+            "ref": {
+              "$ref": "#/$defs/constants"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "set_id",
+            "set_version"
+          ],
+          "properties": {
+            "kind": {
+              "const": "RULE_SET"
+            },
+            "set_id": {
+              "$ref": "#/$defs/set_id"
+            },
+            "set_version": {
+              "$ref": "#/$defs/set_version"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "exclusion_strict": {
+      "type": "object",
+      "required": [
+        "reason",
+        "source_index"
+      ],
+      "properties": {
+        "source_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "reason": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "point_strict": {
+      "type": "object",
+      "required": [
+        "markers",
+        "x",
+        "y"
+      ],
+      "properties": {
+        "x": {
+          "$ref": "#/$defs/f64"
+        },
+        "y": {
+          "$ref": "#/$defs/f64"
+        },
+        "x_upper": {
+          "$ref": "#/$defs/f64"
+        },
+        "x_label": {
+          "$ref": "#/$defs/x_label"
+        },
+        "record": {
+          "$ref": "#/$defs/id"
+        },
+        "piece": {
+          "$ref": "#/$defs/id"
+        },
+        "markers": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/marker_strict"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ref_line_strict": {
+      "type": "object",
+      "required": [
+        "kind",
+        "unit",
+        "value"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "NOMINAL",
+            "LSL",
+            "USL",
+            "CENTRE",
+            "LCL",
+            "UCL"
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/f64"
+        },
+        "unit": {
+          "$ref": "#/$defs/unit"
+        }
+      },
+      "additionalProperties": false
+    },
+    "provenance_strict": {
+      "type": "object",
+      "required": [
+        "algorithm",
+        "constants",
+        "dataset_digest",
+        "excluded",
+        "kernel_version",
+        "unverified"
+      ],
+      "properties": {
+        "dataset_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "algorithm": {
+          "$ref": "#/$defs/algorithm"
+        },
+        "kernel_version": {
+          "$ref": "#/$defs/kernel_version"
+        },
+        "frozen_limits": {
+          "$ref": "#/$defs/id"
+        },
+        "binning_rule": {
+          "$ref": "#/$defs/binning_rule"
+        },
+        "constants": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/constants"
+          }
+        },
+        "unverified": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/unverified_strict"
+          }
+        },
+        "excluded": {
+          "type": "array",
+          "maxItems": 1000000,
+          "items": {
+            "$ref": "#/$defs/exclusion_strict"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "series_strict": {
+      "type": "object",
+      "required": [
+        "contract",
+        "kind",
+        "points",
+        "provenance",
+        "ref_lines",
+        "status",
+        "x",
+        "y"
+      ],
+      "properties": {
+        "contract": {
+          "$ref": "#/$defs/contract_strict"
+        },
+        "kind": {
+          "enum": [
+            "TREND",
+            "HISTOGRAM",
+            "CONTROL_XBAR",
+            "CONTROL_R",
+            "CONTROL_S",
+            "CONTROL_I",
+            "CONTROL_MR",
+            "VECTOR_GROUP"
+          ]
+        },
+        "status": {
+          "enum": [
+            "OK",
+            "INSUFFICIENT_DATA"
+          ]
+        },
+        "x": {
+          "$ref": "#/$defs/axis_strict"
+        },
+        "y": {
+          "$ref": "#/$defs/axis_strict"
+        },
+        "points": {
+          "type": "array",
+          "maxItems": 1000000,
+          "items": {
+            "$ref": "#/$defs/point_strict"
+          }
+        },
+        "ref_lines": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/ref_line_strict"
+          }
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance_strict"
+        }
+      },
+      "additionalProperties": false
+    },
+    "contract_open": {
+      "type": "object",
+      "required": [
+        "major",
+        "minor"
+      ],
+      "properties": {
+        "major": {
+          "type": "integer",
+          "const": 1
+        },
+        "minor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999999
+        }
+      }
+    },
+    "axis_open": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "label_key"
+          ],
+          "properties": {
+            "kind": {
+              "const": "ORDINAL"
+            },
+            "label_key": {
+              "$ref": "#/$defs/label_key"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "label_key",
+            "quantity",
+            "unit"
+          ],
+          "properties": {
+            "kind": {
+              "const": "QUANTITY"
+            },
+            "label_key": {
+              "$ref": "#/$defs/label_key"
+            },
+            "quantity": {
+              "const": "LENGTH"
+            },
+            "unit": {
+              "enum": [
+                "m",
+                "cm",
+                "mm",
+                "um",
+                "nm",
+                "in",
+                "ft",
+                "thou"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "label_key",
+            "quantity",
+            "unit"
+          ],
+          "properties": {
+            "kind": {
+              "const": "QUANTITY"
+            },
+            "label_key": {
+              "$ref": "#/$defs/label_key"
+            },
+            "quantity": {
+              "const": "ANGLE"
+            },
+            "unit": {
+              "enum": [
+                "rad",
+                "deg",
+                "arcmin",
+                "arcsec",
+                "gon"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "marker_open": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "OUT_OF_TOLERANCE"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "INDETERMINATE"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "review",
+            "rule_id",
+            "set_id",
+            "set_version"
+          ],
+          "properties": {
+            "kind": {
+              "const": "RULE_VIOLATION"
+            },
+            "set_id": {
+              "$ref": "#/$defs/set_id"
+            },
+            "set_version": {
+              "$ref": "#/$defs/set_version"
+            },
+            "rule_id": {
+              "$ref": "#/$defs/rule_id"
+            },
+            "review": {
+              "$ref": "#/$defs/review"
+            }
+          }
+        }
+      ]
+    },
+    "unverified_open": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "ref"
+          ],
+          "properties": {
+            "kind": {
+              "const": "CONSTANTS"
+            },
+            "ref": {
+              "$ref": "#/$defs/constants"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "set_id",
+            "set_version"
+          ],
+          "properties": {
+            "kind": {
+              "const": "RULE_SET"
+            },
+            "set_id": {
+              "$ref": "#/$defs/set_id"
+            },
+            "set_version": {
+              "$ref": "#/$defs/set_version"
+            }
+          }
+        }
+      ]
+    },
+    "exclusion_open": {
+      "type": "object",
+      "required": [
+        "reason",
+        "source_index"
+      ],
+      "properties": {
+        "source_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "reason": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+        }
+      }
+    },
+    "point_open": {
+      "type": "object",
+      "required": [
+        "markers",
+        "x",
+        "y"
+      ],
+      "properties": {
+        "x": {
+          "$ref": "#/$defs/f64"
+        },
+        "y": {
+          "$ref": "#/$defs/f64"
+        },
+        "x_upper": {
+          "$ref": "#/$defs/f64"
+        },
+        "x_label": {
+          "$ref": "#/$defs/x_label"
+        },
+        "record": {
+          "$ref": "#/$defs/id"
+        },
+        "piece": {
+          "$ref": "#/$defs/id"
+        },
+        "markers": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/marker_open"
+          }
+        }
+      }
+    },
+    "ref_line_open": {
+      "type": "object",
+      "required": [
+        "kind",
+        "unit",
+        "value"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "NOMINAL",
+            "LSL",
+            "USL",
+            "CENTRE",
+            "LCL",
+            "UCL"
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/f64"
+        },
+        "unit": {
+          "$ref": "#/$defs/unit"
+        }
+      }
+    },
+    "provenance_open": {
+      "type": "object",
+      "required": [
+        "algorithm",
+        "constants",
+        "dataset_digest",
+        "excluded",
+        "kernel_version",
+        "unverified"
+      ],
+      "properties": {
+        "dataset_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "algorithm": {
+          "$ref": "#/$defs/algorithm"
+        },
+        "kernel_version": {
+          "$ref": "#/$defs/kernel_version"
+        },
+        "frozen_limits": {
+          "$ref": "#/$defs/id"
+        },
+        "binning_rule": {
+          "$ref": "#/$defs/binning_rule"
+        },
+        "constants": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/constants"
+          }
+        },
+        "unverified": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/unverified_open"
+          }
+        },
+        "excluded": {
+          "type": "array",
+          "maxItems": 1000000,
+          "items": {
+            "$ref": "#/$defs/exclusion_open"
+          }
+        }
+      }
+    },
+    "series_open": {
+      "type": "object",
+      "required": [
+        "contract",
+        "kind",
+        "points",
+        "provenance",
+        "ref_lines",
+        "status",
+        "x",
+        "y"
+      ],
+      "properties": {
+        "contract": {
+          "$ref": "#/$defs/contract_open"
+        },
+        "kind": {
+          "enum": [
+            "TREND",
+            "HISTOGRAM",
+            "CONTROL_XBAR",
+            "CONTROL_R",
+            "CONTROL_S",
+            "CONTROL_I",
+            "CONTROL_MR",
+            "VECTOR_GROUP"
+          ]
+        },
+        "status": {
+          "enum": [
+            "OK",
+            "INSUFFICIENT_DATA"
+          ]
+        },
+        "x": {
+          "$ref": "#/$defs/axis_open"
+        },
+        "y": {
+          "$ref": "#/$defs/axis_open"
+        },
+        "points": {
+          "type": "array",
+          "maxItems": 1000000,
+          "items": {
+            "$ref": "#/$defs/point_open"
+          }
+        },
+        "ref_lines": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/ref_line_open"
+          }
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance_open"
+        }
+      }
+    }
+  }
+}

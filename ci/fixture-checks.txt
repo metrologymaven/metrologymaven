@@ -308,6 +308,7 @@ python fixtures/rpt/model/tmpl/starter/make_fixtures.py --check
 python fixtures/rpt/model/tmpl/ver/make_cases.py --check
 python fixtures/rpt/output/text/check_pdf_text.py
 python fixtures/rpt/output/text/make_fixtures.py --check
+python fixtures/rpt/stats/chart_series/make_fixtures.py --check
 python fixtures/rpt/stats/make_cap_cases.py --check
 python fixtures/rpt/stats/make_hist_cases.py --check
 python fixtures/rpt/stats/make_rule_cases.py --check

@@ -43,6 +43,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # ALN.BFIT.CONSTR locks and weights (adds fid-geo-frame, kernel).
 "fid-align-solve" = "kernel"
 "fid-canon" = "model"
+# ChartSeries contract (RPT.STATS.TREND.CONTRACT): types, schema and validation only, no I/O; over
+# fid-canon (model), fid-geo-frame (kernel, the unit catalogue) and fid-types.
+"fid-chart-series" = "model"
 # Bus API (CORE.BUS.API): call, reply and channel types and the BusPort trait, over fid-canon and
 # fid-types only; below fid-bus (engine) so surface crates may link it (CORE.BUS.LINT `bus_api`).
 "fid-bus-api" = "model"
