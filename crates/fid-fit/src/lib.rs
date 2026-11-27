@@ -18,7 +18,9 @@
 //! (spec node `KRN.ENV.MIC.TR`) is the trust region, the `unbounded_envelope` check and the
 //! defined-primitives table of the maximum inscribed fits. [`xchk`] (spec node `KRN.ENV.XCHK`)
 //! holds the solver-free cross-checks of the envelope fits: Welzl minimum enclosing circle and
-//! sphere, and the Voronoi maximum inscribed circle in a convex region.
+//! sphere, and the Voronoi maximum inscribed circle in a convex region. [`mic_cirsph`] (spec node
+//! `KRN.ENV.MIC.CIRSPH`) is the certified maximum inscribed 2D circle and sphere in that trust
+//! region, with a global cross-check and the agreement test against the Voronoi circle.
 
 // `FitError` wraps `fid_solv::nlls::SolverError` by value (about 150 bytes, see the note in
 // `fid-solv`). It is returned at most once per fit, never in a loop, and boxing it would add an
@@ -32,6 +34,7 @@ pub mod ls_cyl;
 pub mod ls_lin;
 pub mod ls_rnd;
 pub mod mcc_cyl;
+pub mod mic_cirsph;
 pub mod mic_tr;
 pub mod plan2d_assign;
 pub mod tan_plane;
