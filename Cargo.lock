@@ -2392,6 +2392,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-scan-sect"
+version = "0.0.1"
+dependencies = [
+ "fid-construct",
+ "fid-fit",
+ "fid-geo-cad",
+ "fid-geo-frame",
+ "fid-kci",
+ "fid-num",
+ "fid-testkit",
+ "fid-types",
+]
+
+[[package]]
 name = "fid-shlint"
 version = "0.0.1"
 dependencies = [
