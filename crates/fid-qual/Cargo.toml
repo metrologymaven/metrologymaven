@@ -1,6 +1,6 @@
 [package]
 name = "fid-qual"
-description = "Metrology Maven installation and operational qualification records, status computation, validate.show_record@1 (QUAL.IQOQ.RECORD) and golden-journal registration validate.register_golden@1 (QUAL.IQOQ.GOLDEN)"
+description = "Metrology Maven installation and operational qualification records, status computation, validate.show_record@1 (QUAL.IQOQ.RECORD) and golden-journal registration validate.register_golden@1 (QUAL.IQOQ.GOLDEN), and the vap-template/1 format, renderers and template-set check (QUAL.VAP.TPL)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -20,6 +20,9 @@ fid-surface = { path = "../fid-surface" }
 fid-types = { path = "../fid-types" }
 # Shared 128-bit UUID value type for golden IDs (UUIDv7). Layer model.
 fid-uuid = { path = "../fid-uuid" }
+# Parses the VAP intended-use catalogue (vap/intended-uses.toml) as an untyped table; same
+# version and feature set as fid-xtask and fid-knp1-lint, so no new crate enters the lock.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
 
 [dev-dependencies]
 # Command-schema tests validate real parameters and results with the bus's own compiled

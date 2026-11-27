@@ -1,0 +1,19 @@
+# Intended-use catalogue of the Validation Accelerator Pack (spec node QUAL.VAP.TPL).
+# Templates name these IDs in their pre-fill rules; `fid-qual` refuses any other ID.
+# Project-written; CC-BY-4.0.
+format = "vap-intended-uses/1"
+
+[[intended_use]]
+id = "transcription_reports"
+title = "Transcription reports"
+summary = "Results from another measurement system's reports are transcribed into Metrology Maven and reported as transcribed, without re-evaluation."
+
+[[intended_use]]
+id = "prismatic_gdt"
+title = "Prismatic GD&T subset"
+summary = "Measured points of prismatic features are evaluated against the launch-1 subset of geometric tolerances."
+
+[[intended_use]]
+id = "scan_inspection"
+title = "Scan inspection"
+summary = "Point clouds or meshes are aligned to nominal geometry and their deviations are reported."

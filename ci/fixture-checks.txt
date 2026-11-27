@@ -261,6 +261,7 @@ python fixtures/program/retarget/make_fixtures.py --check
 python fixtures/program/types/make_fixtures.py --check
 python fixtures/qual/iqoq/golden/make_fixtures.py --check
 python fixtures/qual/iqoq/records/make_fixtures.py --check
+python fixtures/qual/vap/tpl/make_cases.py --check
 python fixtures/rdl/ext/lic/make_fixtures.py --check
 python fixtures/rdl/format/make_fixtures.py --check
 python fixtures/rdl/gen/hprec/make_fixtures.py --check

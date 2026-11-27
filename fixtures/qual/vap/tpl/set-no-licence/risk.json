@@ -1,0 +1,21 @@
+{
+  "format": "vap-template/1",
+  "id": "risk",
+  "title": "Risk assessment",
+  "version": "0.1.0",
+  "interpretation": "provisional",
+  "refs": [],
+  "sections": [
+    {
+      "id": "main",
+      "heading": "Fixture section",
+      "fields": [
+        {
+          "id": "note",
+          "label": "Note",
+          "kind": "text"
+        }
+      ]
+    }
+  ]
+}

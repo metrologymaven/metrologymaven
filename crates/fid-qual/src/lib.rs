@@ -11,9 +11,13 @@
 //!   via `validate.register_golden@1` (W2, D0, `human_only: true`, MCP `request_only`),
 //!   computing `expected_digest` as SHA-256 of the canonical JSON array of `ResultRecord`
 //!   digests and supporting superseding retirement and [`golden::GoldenJournal::active_goldens`].
+//! - [`vap`]: Validation Accelerator Pack templates: the `vap-template/1` format, the
+//!   intended-use catalogue, deterministic Markdown and ODF Text renderers and the
+//!   template-set check (`QUAL.VAP.TPL`).
 
 pub mod golden;
 pub mod record;
+pub mod vap;
 
 pub use golden::{
     build_register_golden_entry, compute_expected_digest, deterministic_uuid_v7, register_golden, uuid_v7_from_parts,

@@ -1,0 +1,11 @@
+{
+  "urs": [
+    "transcription_reports"
+  ],
+  "risk": [
+    "scan_inspection",
+    "prismatic_gdt"
+  ],
+  "pq-guidance": [],
+  "periodic-review": []
+}

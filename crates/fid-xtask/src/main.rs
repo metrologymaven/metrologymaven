@@ -65,6 +65,8 @@ const MIG_TAXONOMY_USAGE: &str =
     "usage: cargo xtask mig taxonomy-check --dir <dir> [--dmis-conf <json>] [--reports <dir>] [--previous <dir>]";
 const GEN_SURFACES_USAGE: &str =
     "usage: cargo xtask gen-surfaces --manifest <registry manifest json> --out <dir> [--test-emitter echo]...";
+const QUAL_VAP_TPL_USAGE: &str =
+    "usage: cargo xtask qual vap check-templates --dir <dir> [--catalogue <intended-uses.toml>]";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
@@ -107,6 +109,12 @@ fn main() -> ExitCode {
         Some("surface-check") => surface_check(&args[1..]),
         Some("crash-harness") => crash_harness(&args[1..]),
         Some("personas-check") => personas_check(&args[1..]),
+        Some("qual")
+            if args.get(1).map(String::as_str) == Some("vap")
+                && args.get(2).map(String::as_str) == Some("check-templates") =>
+        {
+            qual_vap_check_templates(&args[3..])
+        }
         Some("apps-policy") => apps_policy_check(&args[1..]),
         Some("study-tasks-check") => study_tasks_check(&args[1..]),
         Some("rel") if args.get(1).map(String::as_str) == Some("version-check") => version_check(&args[2..]),
@@ -132,6 +140,7 @@ fn main() -> ExitCode {
             eprintln!("{}", fid_xtask::convergence::CHECK_USAGE);
             eprintln!("{}", fid_xtask::convergence::DOC_USAGE);
             eprintln!("{GEN_SURFACES_USAGE}");
+            eprintln!("{QUAL_VAP_TPL_USAGE}");
             eprintln!("{}", fid_xtask::rel::notes::USAGE);
             eprintln!("{}", fid_xtask::fmt::USAGE);
             ExitCode::from(2)
@@ -717,6 +726,59 @@ fn personas_check(args: &[String]) -> ExitCode {
         ExitCode::SUCCESS
     } else {
         println!("personas-check: {} findings", report.findings.len());
+        ExitCode::from(1)
+    }
+}
+
+/// QUAL.VAP.TPL: `qual vap check-templates`. Checks every `*.json` template in `--dir`
+/// against `vap-template/1` and the licence rule, and that the eight required documents are
+/// present. Exit 0: clean; 1: findings (one `TPL-SCHEMA|TPL-LICENCE|TPL-MISSING` line each);
+/// 2: usage error or an unreadable directory or catalogue.
+fn qual_vap_check_templates(args: &[String]) -> ExitCode {
+    use fid_qual::vap::tpl;
+    let mut dir: Option<PathBuf> = None;
+    let mut catalogue = PathBuf::from("vap/intended-uses.toml");
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--dir", Some(v)) if dir.is_none() => dir = Some(PathBuf::from(v)),
+            ("--catalogue", Some(v)) => catalogue = PathBuf::from(v),
+            _ => {
+                eprintln!("{QUAL_VAP_TPL_USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let Some(dir) = dir else {
+        eprintln!(
+            "check-templates: --dir is required
+{QUAL_VAP_TPL_USAGE}"
+        );
+        return ExitCode::from(2);
+    };
+    let catalogue = match tpl::Catalogue::from_path(&catalogue) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("check-templates: intended-use catalogue: {e}");
+            return ExitCode::from(2);
+        }
+    };
+    let files = match tpl::read_set_dir(&dir) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("check-templates: template directory: {e}");
+            return ExitCode::from(2);
+        }
+    };
+    let report = tpl::check_set(&files, &catalogue);
+    for f in &report.findings {
+        println!("{f}");
+    }
+    if report.is_ok() {
+        println!("check-templates: ok, {} templates", report.valid.len());
+        ExitCode::SUCCESS
+    } else {
+        println!("check-templates: {} findings", report.findings.len());
         ExitCode::from(1)
     }
 }

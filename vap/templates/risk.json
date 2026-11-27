@@ -1,0 +1,134 @@
+{
+  "format": "vap-template/1",
+  "id": "risk",
+  "title": "Risk assessment",
+  "version": "0.1.0",
+  "interpretation": "provisional",
+  "licence": {
+    "spdx": "CC-BY-4.0",
+    "notice": "This template is part of the Metrology Maven Validation Accelerator Pack and is licensed under the Creative Commons Attribution 4.0 International licence (CC-BY-4.0). You may copy, modify and reuse it, including for your own validation documents and commercially, provided you give attribution."
+  },
+  "refs": [
+    { "designator": "FDA guidance: Computer Software Assurance", "edition": "2022 draft [unverified]", "clause": "V [unverified]" },
+    { "designator": "ICH Q9(R1)", "edition": "2023", "clause": "4 [unverified]" },
+    { "designator": "EU GMP Annex 11", "edition": "2011", "clause": "1" },
+    { "designator": "ISPE GAMP 5", "edition": "2nd (2022)", "clause": "5 [unverified]" }
+  ],
+  "sections": [
+    {
+      "id": "context",
+      "heading": "Context",
+      "text": "This assessment traces each intended use to the features it relies on and to the risk to your process if a feature fails. It then chooses how much testing each feature needs. You own the assessment; the proposed failure modes are a starting point.",
+      "fields": [
+        { "id": "system", "label": "System name and version", "kind": "text" },
+        { "id": "process", "label": "Process the system supports", "kind": "text" },
+        { "id": "urs-ref", "label": "User requirements specification (document ID and version)", "kind": "text" }
+      ]
+    },
+    {
+      "id": "method",
+      "heading": "Method",
+      "text": "For each row, decide whether a failure of the feature would be a high process risk, meaning it could compromise product quality or patient safety without being caught. High process risk calls for scripted testing with recorded evidence. Other rows can use unscripted or ad hoc testing, recorded briefly. Write down the reason for every decision.",
+      "fields": [
+        {
+          "id": "default-approach",
+          "label": "Default assurance approach for rows that are not high process risk",
+          "kind": "choice",
+          "options": ["unscripted testing", "ad hoc testing", "scripted testing"]
+        }
+      ]
+    },
+    {
+      "id": "register",
+      "heading": "Risk register",
+      "fields": [
+        {
+          "id": "risk-register",
+          "label": "Intended use, feature and process risk",
+          "kind": "table",
+          "columns": [
+            { "id": "ra", "heading": "ID", "fill": "static" },
+            { "id": "use", "heading": "Intended use", "fill": "static" },
+            { "id": "feature", "heading": "Feature", "fill": "static" },
+            { "id": "failure", "heading": "What could go wrong", "fill": "prefill" },
+            { "id": "process-risk", "heading": "Process risk (high or not high)", "fill": "customer" },
+            { "id": "assurance", "heading": "Assurance activity", "fill": "customer" },
+            { "id": "rationale", "heading": "Rationale", "fill": "customer" }
+          ],
+          "rows": [
+            {
+              "id": "ra-tr-01",
+              "prefill": ["transcription_reports"],
+              "cells": {
+                "ra": "RA-TR-01",
+                "use": "Transcription reports",
+                "feature": "Manual entry of transcribed values",
+                "failure": "A value, unit or tolerance is entered wrongly and released without the second-person check."
+              }
+            },
+            {
+              "id": "ra-tr-02",
+              "prefill": ["transcription_reports"],
+              "cells": {
+                "ra": "RA-TR-02",
+                "use": "Transcription reports",
+                "feature": "Report generation",
+                "failure": "A report shows a transcribed result as if the system had measured it."
+              }
+            },
+            {
+              "id": "ra-gd-01",
+              "prefill": ["prismatic_gdt"],
+              "cells": {
+                "ra": "RA-GD-01",
+                "use": "Prismatic GD&T subset",
+                "feature": "Tolerance evaluation",
+                "failure": "A tolerance is evaluated under an interpretation you did not intend, and the result looks settled."
+              }
+            },
+            {
+              "id": "ra-gd-02",
+              "prefill": ["prismatic_gdt"],
+              "cells": {
+                "ra": "RA-GD-02",
+                "use": "Prismatic GD&T subset",
+                "feature": "Datum reference frames",
+                "failure": "A datum feature is fitted with the wrong method and every dependent result shifts."
+              }
+            },
+            {
+              "id": "ra-sc-01",
+              "prefill": ["scan_inspection"],
+              "cells": {
+                "ra": "RA-SC-01",
+                "use": "Scan inspection",
+                "feature": "Alignment",
+                "failure": "Deviations are computed in a wrong or out-of-date alignment."
+              }
+            },
+            {
+              "id": "ra-sc-02",
+              "prefill": ["scan_inspection"],
+              "cells": {
+                "ra": "RA-SC-02",
+                "use": "Scan inspection",
+                "feature": "Point filtering and smoothing",
+                "failure": "Filtering removes or moves points that show a real defect."
+              }
+            },
+            { "id": "ra-cu-01", "cells": { "ra": "RA-CU-01", "use": "Your intended use", "feature": "Your feature" } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "conclusion",
+      "heading": "Conclusion",
+      "fields": [
+        { "id": "summary", "label": "Summary of the testing chosen", "kind": "text" },
+        { "id": "author", "label": "Author", "kind": "signature" },
+        { "id": "approver", "label": "Approver (quality)", "kind": "signature" }
+      ]
+    }
+  ]
+}
