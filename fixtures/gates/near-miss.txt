@@ -1,0 +1,4 @@
+specs/x.md
+house-rules
+CLAUDE.md.bak
+crates/fid-num/Cargo.toml.orig

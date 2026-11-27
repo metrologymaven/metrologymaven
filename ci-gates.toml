@@ -1,0 +1,53 @@
+# Governed CI gates and the paths they govern (spec node ECO.CI.GATES).
+#
+# `cargo xtask ci-plan --config ci-gates.toml --changed <file> --json` reads this file and a
+# list of changed repo-relative paths (one per line) and prints the gates that change must
+# run, as {"gates":[...]} sorted by id:
+# - a gate is selected when a changed path matches one of its globs, or when it has
+#   `always = true`;
+# - a change to any file named ci-gates.toml, or to a path matching [shared] tool_globs,
+#   selects every gate;
+# - a change that touches a path matching [isolation] ci_globs together with any other path
+#   has no plan: the planner exits 1 with one `CI-MIXED <path>` line per non-CI path.
+# Globs: `*` and `?` match within one path segment; `**` (a whole segment) matches any number
+# of segments, so `**/Cargo.toml` also matches the root Cargo.toml. Nothing else is glob syntax.
+#
+# Not wired into CI yet. Calling the planner from the workflows and running the planned
+# gates as jobs belongs to ECO.CI.WF; until then .github/workflows/*.yml decide what runs, by
+# their own conditions, and editing this file changes nothing about what CI runs.
+
+[isolation]
+# The planner's default is .github/workflows/**, .github/actions/** and ci/**. This repository
+# leaves ci/** out: leaf PRs add their lines to ci/fixture-checks.txt and ci/wasm32-crates.txt
+# together with their code (AGENTS.md, "CI lists"), so that rule would refuse ordinary PRs.
+ci_globs = [".github/workflows/**", ".github/actions/**"]
+
+[shared]
+# The planner and the xtask checks it plans, and the `cargo xtask` alias that runs them.
+tool_globs = ["crates/fid-xtask/**", ".cargo/config.toml"]
+
+[[gate]]
+id = "apps"
+# The app-list check (`cargo xtask apps-check`, spec node ECO.APPS.LIST) is not built yet and
+# apps.toml does not exist, so this command exits with a usage error: the gate fails closed
+# until that leaf lands.
+run = "cargo xtask apps-check --list apps.toml"
+globs = ["apps.toml"]
+
+[[gate]]
+id = "layers"
+# Crate layering (ECO.REPO.LAYERS) and the kernel-graph dependency allowlist (ECO.REPO.ALLOW).
+run = "cargo xtask layers && cargo xtask kernel-allow"
+globs = ["layers.toml", "kernel-allowlist.toml", "**/Cargo.toml", "Cargo.lock"]
+
+[[gate]]
+id = "rules"
+# The house-rules check (ECO.RULES.CHECK) against the canonical house-rules source.
+run = "PYTHONPATH=tools python -m house_rules check --target . --repo-id metrologymaven --manifest house-rules/manifest.toml --current-rev \"$GITHUB_SHA\""
+globs = ["AGENTS.md", "CLAUDE.md", "house-rules/**", "tools/house_rules/**"]
+
+[[gate]]
+id = "spec"
+# The spec-tree check and the milestone report (ECO.COMM.SCOPE), as spec-check.yml runs them.
+run = "python tools/scope.py check && python tools/scope.py milestone milestones/launch-1.md"
+globs = ["spec/**", "seeds/**", "decisions/**", "milestones/**", "tools/scope.py"]

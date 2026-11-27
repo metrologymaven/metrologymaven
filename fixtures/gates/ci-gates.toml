@@ -1,0 +1,23 @@
+# ECO.CI.GATES test configuration (hand-written; MIT OR Apache-2.0).
+# No [isolation] and no [shared] table, so the planner's defaults apply:
+# ci_globs = .github/workflows/**, .github/actions/**, ci/**; tool_globs = xtask/**.
+
+[[gate]]
+id = "spec"
+run = "python tools/scope.py check"
+globs = ["spec/**", "seeds/**", "decisions/**"]
+
+[[gate]]
+id = "layers"
+run = "cargo xtask layers"
+globs = ["layers.toml", "kernel-allowlist.toml", "**/Cargo.toml", "Cargo.lock"]
+
+[[gate]]
+id = "rules"
+run = "python -m house_rules check"
+globs = ["AGENTS.md", "CLAUDE.md", "house-rules/**"]
+
+[[gate]]
+id = "apps"
+run = "cargo xtask apps-check --list apps.toml"
+globs = ["apps.toml"]

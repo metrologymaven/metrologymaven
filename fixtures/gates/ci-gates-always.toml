@@ -1,0 +1,25 @@
+# ECO.CI.GATES test configuration with an always gate, explicit isolation and shared-tool
+# globs, and single-segment wildcards (hand-written; MIT OR Apache-2.0).
+
+[isolation]
+ci_globs = [".github/**"]
+
+[shared]
+tool_globs = ["tools/check-*.py"]
+
+[[gate]]
+id = "bot-blocking"
+run = "cargo xtask bot-blocking"
+globs = []
+always = true
+
+[[gate]]
+id = "docs"
+run = "python tools/check-docs.py"
+globs = ["docs/*.md", "README.?d"]
+
+[[gate]]
+id = "layers"
+run = "cargo xtask layers"
+globs = ["**/Cargo.toml"]
+always = false

@@ -82,6 +82,7 @@ fn main() -> ExitCode {
         Some("datasets-check" | "data") => datasets_check(&args),
         Some("bench") => fid_xtask::bench::cli(&args[1..]),
         Some("bots-check") => bots_check(&args[1..]),
+        Some("ci-plan") => fid_xtask::ci_plan::cli(&args[1..]),
         Some("bot-blocking") => bot_blocking(&args[1..]),
         Some("plat-matrix") if args.get(1).map(String::as_str) == Some("lint-tiers") => lint_tiers(&args[2..]),
         Some("plat-matrix") => fid_platform(&args, "plat-matrix"),
@@ -150,6 +151,7 @@ fn main() -> ExitCode {
             eprintln!("{QUAL_VAP_TPL_USAGE}");
             eprintln!("{}", fid_xtask::rel::notes::USAGE);
             eprintln!("{}", fid_xtask::fmt::USAGE);
+            eprintln!("{}", fid_xtask::ci_plan::USAGE);
             ExitCode::from(2)
         }
     }

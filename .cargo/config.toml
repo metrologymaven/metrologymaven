@@ -5,6 +5,7 @@
 # cargo xtask datasets-check --catalogue <toml> --domains <file>  (ECO.DATA.CAT)
 # cargo xtask data fetch (<id>...|--all|--owner <DOMAIN>) [--cache <dir>] [--offline]  (ECO.DATA.FETCH)
 # cargo xtask data path <id> [--cache <dir>] [--offline] | cargo xtask data verify [--cache <dir>]  (ECO.DATA.FETCH)
+# cargo xtask ci-plan --config <ci-gates.toml> --changed <file> [--json]  (ECO.CI.GATES)
 # cargo xtask bots-check --register <toml> --restricted <txt> --today <date> [--review-export <json>]  (ECO.CI.BOTS.REG)
 # cargo xtask plat-matrix validate <file>  (PLAT.MATRIX.FILE)
 # cargo xtask plat-matrix lint-tiers [<file>]  (PLAT.MATRIX.POLICY.DEFS)
