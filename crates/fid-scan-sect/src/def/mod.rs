@@ -408,7 +408,7 @@ impl FromElement {
     fn plane<R: ElementResolver + ?Sized>(&self, resolver: &R) -> Result<Plane, SectError> {
         let resolved = resolve(&self.element, resolver)?;
         if resolved.digest != self.digest {
-            return Err(Reason::ElementStale { recorded: self.digest.clone(), current: resolved.digest }.into());
+            return Err(Reason::ElementStale { recorded: self.digest, current: resolved.digest }.into());
         }
         plane_of(&resolved)
     }

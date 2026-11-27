@@ -171,7 +171,7 @@ fn ac1_parallel_planes_are_the_f64_products() {
     );
     let planes = expand(&def, &NoElements).unwrap();
     let z: Vec<f64> = planes.iter().map(|p| p.point()[2]).collect();
-    assert_eq!(z, vec![0.0, 0.01, 0.02, 0.03, 0.04]);
+    assert_eq!(z, [0.0, 0.01, 0.02, 0.03, 0.04]);
     for (i, p) in planes.iter().enumerate() {
         assert_eq!(p.point()[2].to_bits(), (i as f64 * 0.01).to_bits());
         assert_eq!(bits(p.normal()), bits([0.0, 0.0, 1.0]));
@@ -230,7 +230,7 @@ fn pinned_constants() {
 // ---------------------------------------------------------------- AC-3: the CAD box
 
 /// The builder script of `cad_box.txt`, with an optional edit of one face line.
-fn box_body(edit: impl Fn(&str, &mut Vec<f64>)) -> Body {
+fn box_body(edit: impl Fn(&str, &mut [f64])) -> Body {
     let text = read("cpt_box_offset/cad_box.txt");
     let mut b: Option<BodyBuilder> = None;
     for line in text.lines() {
@@ -352,7 +352,7 @@ fn a_stored_claim_is_checked_against_the_element() {
     let mut res = ModelResolver::new();
     res.add_body(&body).unwrap();
     let claim = Digest::parse(&format!("sha256:{}", "ab".repeat(32))).unwrap();
-    let def = SectionDef::FromElement(FromElement::recorded(face_ref(&body, "f.y0"), claim.clone()));
+    let def = SectionDef::FromElement(FromElement::recorded(face_ref(&body, "f.y0"), claim));
     let e = validate(&def, &res).unwrap_err();
     assert_eq!(e.reason(), &Reason::ElementStale { recorded: claim, current: body_digest(&body) });
     let honest = SectionDef::FromElement(FromElement::recorded(face_ref(&body, "f.y0"), body_digest(&body)));

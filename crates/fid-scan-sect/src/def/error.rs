@@ -110,10 +110,11 @@ impl fmt::Display for Reason {
     }
 }
 
-/// `scan.sect.bad_definition`: the one error of this module, with its [`Reason`].
+/// `scan.sect.bad_definition`: the one error of this module, with its [`Reason`] (boxed, so a
+/// `Result` stays small: a stale-element reason carries two digests).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SectError {
-    reason: Reason,
+    reason: Box<Reason>,
 }
 
 impl SectError {
@@ -121,7 +122,7 @@ impl SectError {
     pub const CODE: &'static str = "scan.sect.bad_definition";
 
     pub(crate) fn new(reason: Reason) -> SectError {
-        SectError { reason }
+        SectError { reason: Box::new(reason) }
     }
 
     /// Always [`SectError::CODE`].
