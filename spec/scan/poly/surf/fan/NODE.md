@@ -9,6 +9,8 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-scan-poly]
+built_pr: 658
 satisfies: [REQ-SCAN.POLY.SURF-003, REQ-SCAN.POLY.SURF-006]
 covers: []
 depends_on: [SCAN.POLY.SURF.PREP, GEO.INDEX.KDTREE, KRN.NUM]
@@ -71,6 +73,8 @@ The first half of the chosen reconstruction (localized tangent-plane Delaunay, a
 
 - **Revise for D-035 (accepted 2026-11-17):** use KRN.NUM.PRED for all in-circle and orientation tests.
 - Exact predicates are assumed from `KRN.NUM`, which has no predicates child yet (shared gap with `SCAN.MESHOP.CUT`); `KRN.MZ.VOR` holds the only current implementation.
+- **Built (fid-scan-poly `fan`):** `KRN.NUM.PRED` is not built yet, so the fans use the exact-sign `orient2d`/`incircle` of `KRN.MZ.VOR` (`fid_fit::vor`), the code that `KRN.NUM.PRED` is scoped to migrate; switch the import when it lands. The output is the unique Delaunay triangulation of the perturbed neighbourhood, computed by an empty-circumcircle test over the centre's candidate triangles rather than by incremental insertion (same triangles, no order dependence). "Vertex index" for ties and the perturbation is the vertex's `source`, so AC-4 holds for a shuffled `VertexSet`. Pinned choices beyond this node: `g` in [2^-100, 2^100] m, projected coordinates below 2^-200 m flushed to zero (keeps the predicates exact), short edge = `dist2 < (g*g)(1 - 2^-46)`, the largest source is lifted most, fan order by angle from the first basis axis. Performance against REQ-SCAN.POLY.SURF-007 is not measured.
+- **Fan status (review of #658):** every fan carries a `FanStatus` (`Ok`, `NoNeighbours`, `Hidden { by }` for a vertex hidden by a coincident twin with a smaller source, `Degenerate` for a neighbourhood collinear through the centre in projection, `AllEdgesLong`), so no vertex is silently dropped. STITCH (`SCAN.POLY.SURF.STITCH`) and QUAL (`SCAN.POLY.QUAL`) should report every vertex whose status is not `Ok`.
 
 ## Children
 

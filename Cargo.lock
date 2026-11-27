@@ -2373,6 +2373,7 @@ dependencies = [
 name = "fid-scan-poly"
 version = "0.0.1"
 dependencies = [
+ "fid-fit",
  "fid-geo-index",
  "fid-geo-types",
  "fid-num",
