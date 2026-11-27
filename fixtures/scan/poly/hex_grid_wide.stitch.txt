@@ -3,7 +3,8 @@
 # expect: candidates, kept3/kept2 (output triangles with 3/2 votes), facts = boundary_edges
 # nonmanifold_edges misoriented_pairs components closed oriented; triangles as mesh indices
 # (vertex i = i-th smallest source) in output order and winding; rejected = sources a b c,
-# votes, reason [edge sources]; unused = source and fan status.
+# votes, reason [edge sources]; unused = source and fan status; used_without_ok_fan = vertices
+# in an output triangle whose own fan is not ok; fan_status = each vertex's own fan, by index.
 case hex_grid_wide
 from hex_grid_wide.fan.txt
 expect
@@ -232,3 +233,5 @@ rejected 4
 214 823 844 1 single_vote
 263 291 438 1 single_vote
 unused 0
+used_without_ok_fan 0
+fan_status ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok

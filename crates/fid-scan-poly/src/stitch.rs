@@ -67,13 +67,19 @@
 //!    removed ([`RejectReason::NonManifold`] names the edge). Removals only lower the use of
 //!    other edges, so after the pass no edge is used more than twice
 //!    (REQ-SCAN.POLY.SURF.STITCH-002); the mesh's own topology facts are checked to confirm it.
+//!    Because one removed triangle also leaves its other two edges, the pass can leave an edge
+//!    with fewer than two triangles (a boundary edge, reported in the mesh facts) where a
+//!    removed triangle was the edge's second.
 //! 7. **Output.** The surviving triangles, wound as in step 2, in ascending triple order. No
 //!    surviving triangle is [`PolyError::EmptyMesh`] (`scan.poly.empty_mesh`).
 //!
 //! # Nothing is dropped silently
 //!
 //! [`StitchReport`] lists every rejected triple with its vote count and reason, every vertex
-//! no output triangle uses with its fan status, and every vertex's PREP status: a smoothed
+//! no output triangle uses with its fan status, every vertex's own fan status (a vertex
+//! whose own fan is not `Ok`, such as `Hidden` or `AllEdgesLong`, can still be in kept
+//! triangles through the votes of its neighbours' fans, and the report says so), and every
+//! vertex's PREP status: a smoothed
 //! or clamped vertex is a computed position, not a measured point, and the report says so
 //! (D-045).
 //!
@@ -148,6 +154,12 @@ pub struct StitchReport {
     /// The PREP status of each mesh vertex, by mesh index. A `moved()` status is a computed
     /// position within `h/2` of its source point, not a measured point (D-045).
     pub vertex_status: Vec<VertexStatus>,
+    /// The status of each mesh vertex's own fan, by mesh index. A vertex whose own fan is not
+    /// `Ok` (for example `Hidden` or `AllEdgesLong`) can still be in kept triangles, voted in
+    /// by its neighbours' fans; this is where that is reported.
+    pub fan_status: Vec<FanStatus>,
+    /// Mesh vertices in at least one output triangle whose own fan is not `Ok`.
+    pub used_without_ok_fan: u64,
     /// How many mesh vertices are moved (smoothed or clamped) positions.
     pub moved_vertices: u64,
     /// Distinct candidate triples over all fans.
@@ -555,9 +567,13 @@ pub fn stitch(fans: &[Fan], vs: &VertexSet, frame: FrameRef) -> Result<Stitched,
         return Err(PolyError::Inconsistent);
     }
     let moved_vertices = to_u64(v.status.iter().filter(|s| s.moved()).count())?;
+    let used_without_ok_fan =
+        to_u64(used.iter().zip(&fan_status).filter(|(u, st)| **u && **st != FanStatus::Ok).count())?;
     let report = StitchReport {
         vertex_sources: v.sources,
         vertex_status: v.status,
+        fan_status,
+        used_without_ok_fan,
         moved_vertices,
         candidates,
         kept_three_vote: kept_three,

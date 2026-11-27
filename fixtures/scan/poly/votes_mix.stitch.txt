@@ -3,103 +3,120 @@
 # expect: candidates, kept3/kept2 (output triangles with 3/2 votes), facts = boundary_edges
 # nonmanifold_edges misoriented_pairs components closed oriented; triangles as mesh indices
 # (vertex i = i-th smallest source) in output order and winding; rejected = sources a b c,
-# votes, reason [edge sources]; unused = source and fan status.
+# votes, reason [edge sources]; unused = source and fan status; used_without_ok_fan = vertices
+# in an output triangle whose own fan is not ok; fan_status = each vertex's own fan, by index.
 case votes_mix
-vertices 29
-78 0.5 -1.0 0.0 0.0 0.0 1.0 D
-138 21.0 0.0 0.0 0.0 0.0 1.0 Q
-113 20.0 1.0 0.0 0.0 0.0 1.0 S
-103 31.0 0.0 0.0 0.0 0.0 1.0 K2
+vertices 35
+138 30.0 1.0 0.0 0.0 0.0 1.0 K3
+53 0.5 1.0 0.0 0.0 0.0 1.0 C
+123 10.5 2.0 0.0 0.0 0.0 1.0 H2
+173 41.0 0.0 0.0 0.0 0.0 1.0 L2
+63 53.0 0.0 0.0 0.0 0.0 1.0 N4
+13 11.0 0.0 0.0 0.0 0.0 1.0 G
+143 31.0 0.0 0.0 0.0 0.0 1.0 K2
+3 1.0 0.0 0.0 0.0 0.0 1.0 B
+148 22.0 0.5 0.0 0.0 0.0 1.0 U
+33 50.0 0.0 0.0 0.0 0.0 1.0 N1
+83 10.0 0.0 0.0 0.0 0.0 1.0 F
+98 0.5 -1.0 0.0 0.0 0.0 1.0 D
+88 42.0 0.0 0.0 0.0 0.0 1.0 L3
+163 61.0 0.0 0.0 0.0 0.0 1.0 Y2
+43 70.0 0.0 0.0 0.0 0.0 1.0 Z1
+168 20.5 2.0 0.0 0.0 0.0 1.0 T
+73 21.0 0.0 0.0 0.0 0.0 1.0 Q
+38 40.0 0.0 0.0 0.0 0.0 1.0 L1
+103 21.0 1.0 0.0 0.0 0.0 1.0 R
+8 51.0 0.0 0.0 0.0 0.0 1.0 N2
+23 30.0 0.0 0.0 0.0 0.0 1.0 K1
+68 70.5 1.0 0.0 0.0 0.0 1.0 Z3
+118 20.0 1.0 0.0 0.0 0.0 1.0 S
+128 43.0 0.0 0.0 0.0 0.0 1.0 L4
+28 60.5 1.0 0.0 0.0 0.0 1.0 Y3
+18 71.0 0.0 0.0 0.0 0.0 1.0 Z2
+58 0.0 0.0 0.0 0.0 0.0 1.0 A
+153 0.5 0.0 1.0 0.0 -0.6 0.8 E
+93 22.0 1.5 0.0 0.0 0.0 1.0 W
+78 60.0 0.0 0.0 0.0 0.0 1.0 Y1
+113 10.5 1.0 0.0 0.0 0.0 1.0 H1
+108 19.0 0.5 0.0 0.0 0.0 1.0 X
+48 10.5 -1.0 0.0 0.0 0.0 1.0 H3
+158 52.0 0.0 0.0 0.0 0.0 1.0 N3
 133 20.0 0.0 0.0 0.0 0.0 1.0 P
-68 10.5 1.0 0.0 0.0 0.0 1.0 H1
-118 10.5 2.0 0.0 0.0 0.0 1.0 H2
-8 40.0 0.0 0.0 0.0 0.0 1.0 L1
-13 51.0 0.0 0.0 0.0 0.0 1.0 N2
-128 20.5 2.0 0.0 0.0 0.0 1.0 T
-143 1.0 0.0 0.0 0.0 0.0 1.0 B
-43 22.0 1.5 0.0 0.0 0.0 1.0 W
-3 0.5 1.0 0.0 0.0 0.0 1.0 C
-33 0.0 0.0 0.0 0.0 0.0 1.0 A
-48 43.0 0.0 0.0 0.0 0.0 1.0 L4
-53 0.5 0.0 1.0 0.0 -0.6 0.8 E
-93 19.0 0.5 0.0 0.0 0.0 1.0 X
-123 10.0 0.0 0.0 0.0 0.0 1.0 F
-108 52.0 0.0 0.0 0.0 0.0 1.0 N3
-63 10.5 -1.0 0.0 0.0 0.0 1.0 H3
-18 42.0 0.0 0.0 0.0 0.0 1.0 L3
-88 22.0 0.5 0.0 0.0 0.0 1.0 U
-38 21.0 1.0 0.0 0.0 0.0 1.0 R
-98 50.0 0.0 0.0 0.0 0.0 1.0 N1
-73 41.0 0.0 0.0 0.0 0.0 1.0 L2
-23 11.0 0.0 0.0 0.0 0.0 1.0 G
-58 53.0 0.0 0.0 0.0 0.0 1.0 N4
-28 30.0 0.0 0.0 0.0 0.0 1.0 K1
-83 30.0 1.0 0.0 0.0 0.0 1.0 K3
-fans 29
-48 ; ok ; 73:18
-88 ; ok ; 38:138
-3 ; ok ; 33:143
-108 ; hidden:58 ; 
-28 ; ok ; 103:83
-98 ; no_neighbours ; 
-58 ; all_edges_long ; 
-103 ; no_neighbours ; 
-118 ; ok ; 123:23
-53 ; ok ; 33:143
-43 ; ok ; 38:138
-113 ; ok ; 133:38 93:133
-93 ; ok ; 133:113
-128 ; ok ; 133:38
-38 ; ok ; 133:138 113:133
-138 ; ok ; 38:133 88:38 43:38
-8 ; ok ; 73:18
-18 ; ok ; 8:73
-68 ; ok ; 123:23
-63 ; ok ; 123:23
-83 ; no_neighbours ; 
-13 ; degenerate ; 
-33 ; ok ; 143:3 78:143 143:53
-143 ; ok ; 3:33 33:78 53:33
-23 ; ok ; 68:123 118:123 63:123
-133 ; ok ; 138:38 38:113 38:128
-73 ; ok ; 18:8 18:48
-78 ; ok ; 143:33
-123 ; ok ; 23:68 23:118 23:63
+fans 35
+78 ; ok ; 163:28
+153 ; ok ; 58:3
+118 ; ok ; 133:103 108:133
+133 ; ok ; 73:103 103:118 103:168
+63 ; all_edges_long ; 
+18 ; ok ; 68:43
+163 ; ok ; 28:78
+88 ; ok ; 38:173
+38 ; ok ; 173:88
+128 ; ok ; 173:88
+93 ; ok ; 103:73
+53 ; ok ; 58:3
+33 ; no_neighbours ; 
+173 ; ok ; 88:38 88:128
+3 ; ok ; 53:58 58:98 153:58
+83 ; ok ; 13:113 13:123 13:48
+148 ; ok ; 103:73
+138 ; no_neighbours ; 
+48 ; ok ; 83:13
+98 ; ok ; 3:58
+168 ; ok ; 133:103
+73 ; ok ; 103:133 148:103 93:103
+103 ; ok ; 133:73 118:133
+28 ; hidden:78 ; 
+158 ; hidden:63 ; 
+43 ; ok ; 18:68
+8 ; degenerate ; 
+13 ; ok ; 113:83 123:83 48:83
+123 ; ok ; 83:13
+68 ; all_edges_long ; 
+143 ; no_neighbours ; 
+58 ; ok ; 3:53 98:3 3:153
+23 ; ok ; 143:138
+108 ; ok ; 133:118
+113 ; ok ; 83:13
 expect
-candidates 15
+candidates 17
 kept3 6
-kept2 2
-facts 14 0 0 3 0 1
-triangles 8
-0 6 28
-4 24 12
-4 13 24
-6 15 28
-7 27 8
-7 22 26
-7 26 27
-18 26 22
+kept2 4
+facts 20 0 0 5 0 1
+triangles 10
+0 10 11
+0 11 19
+2 16 9
+2 22 16
+3 13 8
+5 15 32
+14 18 20
+14 20 26
+20 23 26
+21 26 23
 rejected 7
-8 18 73 3 unorientable
-18 48 73 2 unorientable
-23 118 123 3 non_manifold 23 123
-28 83 103 1 single_vote
-33 53 143 3 non_manifold 33 143
-38 88 138 2 edge_full 38 138
-38 128 133 2 edge_full 38 133
+3 58 153 3 non_manifold 3 58
+13 83 123 3 non_manifold 13 83
+23 138 143 1 single_vote
+38 88 173 3 unorientable
+73 103 148 2 edge_full 73 103
+88 128 173 2 unorientable
+103 133 168 2 edge_full 103 133
 unused 15
-8 ok
-13 degenerate
-18 ok
-28 ok
-48 ok
-53 ok
-58 all_edges_long
-73 ok
-83 no_neighbours
+8 degenerate
+23 ok
+33 no_neighbours
+38 ok
+63 all_edges_long
 88 ok
-98 no_neighbours
-103 no_neighbours
-108 hidden:58
-118 ok
+123 ok
 128 ok
+138 no_neighbours
+143 no_neighbours
+148 ok
+153 ok
+158 hidden:63
+168 ok
+173 ok
+used_without_ok_fan 2
+fan_status ok degenerate ok ok ok hidden:78 no_neighbours ok ok ok ok ok all_edges_long all_edges_long ok ok ok ok ok ok ok ok ok ok ok ok ok no_neighbours no_neighbours ok ok hidden:63 ok ok ok

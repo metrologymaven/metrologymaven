@@ -3,7 +3,8 @@
 # expect: candidates, kept3/kept2 (output triangles with 3/2 votes), facts = boundary_edges
 # nonmanifold_edges misoriented_pairs components closed oriented; triangles as mesh indices
 # (vertex i = i-th smallest source) in output order and winding; rejected = sources a b c,
-# votes, reason [edge sources]; unused = source and fan status.
+# votes, reason [edge sources]; unused = source and fan status; used_without_ok_fan = vertices
+# in an output triangle whose own fan is not ok; fan_status = each vertex's own fan, by index.
 case jitter_dense
 from jitter_dense.fan.txt
 expect
@@ -288,3 +289,5 @@ unused 12
 725 hidden:445
 788 no_neighbours
 851 no_neighbours
+used_without_ok_fan 0
+fan_status ok ok ok ok ok ok ok ok no_neighbours ok ok ok ok ok ok ok ok ok ok no_neighbours ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok hidden:172 ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok no_neighbours ok ok ok ok ok no_neighbours ok ok ok no_neighbours ok ok ok ok ok no_neighbours no_neighbours all_edges_long hidden:445 ok ok ok ok ok ok ok ok no_neighbours ok ok ok ok ok ok ok ok no_neighbours ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok

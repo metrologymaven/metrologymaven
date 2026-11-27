@@ -3,7 +3,8 @@
 # expect: candidates, kept3/kept2 (output triangles with 3/2 votes), facts = boundary_edges
 # nonmanifold_edges misoriented_pairs components closed oriented; triangles as mesh indices
 # (vertex i = i-th smallest source) in output order and winding; rejected = sources a b c,
-# votes, reason [edge sources]; unused = source and fan status.
+# votes, reason [edge sources]; unused = source and fan status; used_without_ok_fan = vertices
+# in an output triangle whose own fan is not ok; fan_status = each vertex's own fan, by index.
 case status_mix
 from status_mix.fan.txt
 expect
@@ -31,3 +32,5 @@ unused 9
 109 hidden:18
 116 all_edges_long
 130 degenerate
+used_without_ok_fan 0
+fan_status degenerate ok ok no_neighbours degenerate ok no_neighbours no_neighbours ok no_neighbours ok ok ok ok hidden:18 all_edges_long ok degenerate

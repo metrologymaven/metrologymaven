@@ -113,6 +113,8 @@ struct Expect {
     triangles: Vec<[u64; 3]>,
     rejected: Vec<([u64; 3], u8, RejectReason)>,
     unused: Vec<(u64, FanStatus)>,
+    used_without_ok_fan: u64,
+    fan_status: Vec<FanStatus>,
     loops: Option<Vec<Vec<u64>>>,
 }
 
@@ -154,11 +156,13 @@ fn expect(l: &mut Lines<'_>) -> Expect {
             (u(s), status(st))
         })
         .collect();
+    let used_without_ok_fan = u(l.field("used_without_ok_fan"));
+    let fan_status = l.field("fan_status").split_whitespace().map(status).collect();
     let loops = l.0.peek().is_some().then(|| {
         let n = l.count("loops");
         (0..n).map(|_| l.next().split_whitespace().map(u).collect()).collect()
     });
-    Expect { candidates, kept3, kept2, facts, triangles, rejected, unused, loops }
+    Expect { candidates, kept3, kept2, facts, triangles, rejected, unused, used_without_ok_fan, fan_status, loops }
 }
 
 /// The boundary loops of a mesh as vertex sources, walked along the winding from the smallest
@@ -217,6 +221,8 @@ fn compare(case: &str, got: &Stitched, e: &Expect, vs: &VertexSet) {
     assert_eq!(rej, e.rejected, "{case}: rejected");
     let unused: Vec<(u64, FanStatus)> = r.unused.iter().map(|x| (x.source, x.fan)).collect();
     assert_eq!(unused, e.unused, "{case}: unused");
+    assert_eq!(r.fan_status, e.fan_status, "{case}: fan status by vertex");
+    assert_eq!(r.used_without_ok_fan, e.used_without_ok_fan, "{case}: used without an ok fan");
     assert_eq!(r.candidates, r.kept_three_vote + r.kept_two_vote + r.rejected.len() as u64);
     let ft = got.mesh.facts();
     let facts = [
@@ -282,6 +288,19 @@ fn every_rule_on_hand_built_fans() {
         assert!(reasons.contains(&want), "{want}");
     }
     assert!(got.report.kept_two_vote > 0);
+    // A hidden and an all-edges-long vertex sit in kept triangles; their status is reported.
+    let used: Vec<u64> = got.mesh.triangles().flatten().collect();
+    for want in [FanStatus::AllEdgesLong, FanStatus::Hidden { by: 0 }] {
+        let found = got.report.fan_status.iter().enumerate().any(|(i, st)| {
+            let same = match (st, want) {
+                (FanStatus::Hidden { .. }, FanStatus::Hidden { .. }) => true,
+                (a, b) => *a == b,
+            };
+            same && used.contains(&(i as u64))
+        });
+        assert!(found, "{want:?} vertex in a kept triangle");
+    }
+    assert_eq!(got.report.used_without_ok_fan, 2);
 }
 
 #[test]

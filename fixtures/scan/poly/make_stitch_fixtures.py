@@ -16,7 +16,8 @@ Files:
   every rule: three-vote triangles on a fin edge (cleanup by fit), three equally fitting
   triangles on one edge (cleanup tie by triple), a flipped winding, two-vote triangles accepted
   and refused in ascending order, a single vote, collinear (unorientable) triangles, and a
-  vertex for every fan status.
+  vertex for every fan status, and a hidden and an all-edges-long vertex (no triangle in their
+  own fans) used by kept two-vote triangles.
 * `plate_gap.stitch.txt` (AC-2): a jittered triangular lattice plate at 1 mm, 24.5 x 13.9 mm,
   on a tilted plane, with a 5 mm x 7 mm slot cut out; g = 1.5 mm. The vertex set, the fans
   (computed here with `make_fan_fixtures.fan_of`), the expected mesh and report, and the
@@ -188,6 +189,8 @@ def stitch(rows, fans):
         "srcs": srcs, "candidates": len(votes), "kept3": kept[3], "kept2": kept[2], "tris": tris,
         "rejected": rejected, "unused": unused, "facts": facts(tris, len(srcs)),
         "ok_fans": sum(1 for _, st, _ in fans if st == "ok"),
+        "fan_status": [status[s] for s in srcs],
+        "used_without_ok_fan": sum(1 for s in srcs if s in used and status[s] != "ok"),
     }
 
 
@@ -265,6 +268,8 @@ def render_expect(r, loops=None):
         lines.append("%d %d %d %d %s%s" % (t + (v, fate[0], extra)))
     lines.append("unused %d" % len(r["unused"]))
     lines += ["%d %s" % u for u in r["unused"]]
+    lines.append("used_without_ok_fan %d" % r["used_without_ok_fan"])
+    lines.append("fan_status " + " ".join(r["fan_status"]))
     if loops is not None:
         lines.append("loops %d" % len(loops))
         lines += [" ".join(map(str, l)) for l in loops]
@@ -286,7 +291,8 @@ EXPECT_DOC = [
     "# expect: candidates, kept3/kept2 (output triangles with 3/2 votes), facts = boundary_edges",
     "# nonmanifold_edges misoriented_pairs components closed oriented; triangles as mesh indices",
     "# (vertex i = i-th smallest source) in output order and winding; rejected = sources a b c,",
-    "# votes, reason [edge sources]; unused = source and fan status.",
+    "# votes, reason [edge sources]; unused = source and fan status; used_without_ok_fan = vertices",
+    "# in an output triangle whose own fan is not ok; fan_status = each vertex's own fan, by index.",
 ]
 
 
@@ -323,6 +329,9 @@ def votes_mix():
         # One vertex per non-Ok fan status.
         ("N1", (50.0, 0.0, 0.0), z), ("N2", (51.0, 0.0, 0.0), z), ("N3", (52.0, 0.0, 0.0), z),
         ("N4", (53.0, 0.0, 0.0), z),
+        # Vertices whose own fan is not Ok (hidden, all edges long) in kept two-vote triangles.
+        ("Y1", (60.0, 0.0, 0.0), z), ("Y2", (61.0, 0.0, 0.0), z), ("Y3", (60.5, 1.0, 0.0), z),
+        ("Z1", (70.0, 0.0, 0.0), z), ("Z2", (71.0, 0.0, 0.0), z), ("Z3", (70.5, 1.0, 0.0), z),
     ]
     # (triangle as names in fan order (centre first is set per voter), voters).
     tri = [
@@ -338,6 +347,8 @@ def votes_mix():
         (("K1", "K2", "K3"), "K1"),
         # Collinear: three votes and two votes.
         (("L1", "L2", "L3"), "L1L2L3"), (("L2", "L3", "L4"), "L2L4"),
+        # Two votes from the neighbours of a hidden and of an all-edges-long vertex.
+        (("Y1", "Y2", "Y3"), "Y1Y2"), (("Z1", "Z2", "Z3"), "Z1Z2"),
     ]
     names = [n for n, _, _ in named]
     for t, voters in tri:
@@ -361,7 +372,8 @@ def votes_mix():
     src = {n: 5 * ids[k] + 3 for k, (n, _, _) in enumerate(named)}
     status = {n: "ok" for n in names}
     status.update({"N1": "no_neighbours", "N2": "degenerate", "N3": "hidden:%d" % src["N4"],
-                   "N4": "all_edges_long", "K2": "no_neighbours", "K3": "no_neighbours"})
+                   "N4": "all_edges_long", "K2": "no_neighbours", "K3": "no_neighbours",
+                   "Y3": "hidden:%d" % src["Y1"], "Z3": "all_edges_long"})
     fan_tris = {n: [] for n in names}
     for t, voters in tri:
         for v in voter_list(t, voters):
