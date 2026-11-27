@@ -230,6 +230,20 @@ fn more_than_64_scans_use_sorted_lists() {
     assert_eq!(m.scans[33].sets.scans_of(1).unwrap(), vec![0, 64, 65]);
 }
 
+#[test]
+fn exactly_64_scans_use_masks_up_to_bit_63() {
+    let c = load("sixty_four_scans");
+    assert_eq!(c.scans.len(), 64);
+    let m = run(&c);
+    check("sixty_four_scans", &c, &m);
+    assert!(m.scans.iter().all(|s| matches!(s.sets, OverlapSets::Bits(_))));
+    assert_eq!(m.scans[31].sets.scans_of(1).unwrap(), vec![0, 62, 63]);
+    match &m.scans[31].sets {
+        OverlapSets::Bits(b) => assert_eq!(b[1], 1 | (1 << 62) | (1 << 63)),
+        OverlapSets::Lists { .. } => panic!("64 scans are masks"),
+    }
+}
+
 // ------------------------------------------------------------------ errors
 
 fn small() -> (PointCloud, Vec<bool>) {
@@ -331,6 +345,13 @@ fn broken_views_are_refused_and_errors_pass_through() {
     // incompatible true hit, so the kernel reads on).
     let b = fake(&[([0.0, 0.0, 1e-4], down), ([1.0, 0.0, 0.0], up)], Mode::ExtraFarHit);
     assert_eq!(detect_overlap(&[&a, &b], 1e-3).unwrap_err(), PolyError::Inconsistent);
+    // The same broken hit after a compatible true hit: every hit is checked, so the result
+    // does not depend on the order the view returns its hits in.
+    let b = fake(&[([0.0, 0.0, 1e-4], up), ([1.0, 0.0, 0.0], up)], Mode::ExtraFarHit);
+    assert_eq!(detect_overlap(&[&a, &b], 1e-3).unwrap_err(), PolyError::Inconsistent);
+    let b = fake(&[([1.0, 0.0, 0.0], up), ([1.0, 0.0, 0.0], up)], Mode::OutOfRangeHit);
+    let near = fake(&[([1.0, 0.0, 0.0], up)], Mode::BruteForce);
+    assert_eq!(detect_overlap(&[&near, &b], 1e-3).unwrap_err(), PolyError::Inconsistent);
     let b = fake(&[([1.0, 0.0, 0.0], down), ([1.0, 0.0, 0.0], down)], Mode::OutOfRangeHit);
     let near = fake(&[([1.0, 0.0, 0.0], up)], Mode::BruteForce);
     assert_eq!(detect_overlap(&[&near, &b], 1e-3).unwrap_err(), PolyError::Inconsistent);
@@ -363,4 +384,54 @@ fn prefilter_skips_only_scans_beyond_d() {
     let a = fake(&[([1.0 + u + f64::EPSILON, 0.0, 0.0], up)], Mode::BruteForce);
     let m = detect_overlap(&[&a, &b], u).unwrap();
     assert_eq!(m.scans[0].status, vec![PointStatus::NothingWithinD]);
+}
+
+/// A view whose points pass the input checks on the first `good` reads and come back with a
+/// NaN coordinate afterwards.
+struct Flaky {
+    pts: Vec<ScanPoint>,
+    good: u64,
+    reads: std::cell::Cell<u64>,
+}
+
+impl ScanView for Flaky {
+    fn frame(&self) -> FrameRef {
+        frame()
+    }
+    fn point_count(&self) -> u64 {
+        self.pts.len() as u64
+    }
+    fn point(&self, i: u64) -> Result<ScanPoint, PolyError> {
+        self.reads.set(self.reads.get() + 1);
+        let mut p = *self.pts.get(i as usize).ok_or(PolyError::Inconsistent)?;
+        if self.reads.get() > self.good {
+            p.position[0] = f64::NAN;
+        }
+        Ok(p)
+    }
+    fn radius(&self, x: [f64; 3], r: f64) -> Result<Vec<Neighbour>, PolyError> {
+        Ok(self
+            .pts
+            .iter()
+            .enumerate()
+            .map(|(i, p)| Neighbour { index: i as u64, dist2: fid_geo_index::dist2(p.position, x) })
+            .filter(|h| h.dist2 <= r * r)
+            .collect())
+    }
+}
+
+#[test]
+fn a_nan_on_a_re_read_is_refused() {
+    let up = Some([0.0, 0.0, 1.0]);
+    let a = fake(&[([0.0; 3], up)], Mode::BruteForce);
+    let flaky = || Flaky { pts: vec![ScanPoint { position: [0.0, 0.0, 1e-4], normal: up }], good: 1, reads: 0.into() };
+    // The neighbour turns NaN when the kernel re-reads it for scan 0's query.
+    let b = flaky();
+    assert_eq!(detect_overlap(&[&a, &b], 1e-3).unwrap_err(), PolyError::Inconsistent);
+    // The query point itself turns NaN when its scan is processed.
+    let b = flaky();
+    assert_eq!(detect_overlap(&[&b, &a], 1e-3).unwrap_err(), PolyError::Inconsistent);
+    // Read once only (the input check), a NaN is the input check's refusal.
+    let b = Flaky { good: 0, ..flaky() };
+    assert_eq!(invalid_name(detect_overlap(&[&a, &b], 1e-3).unwrap_err()), "scan.position");
 }

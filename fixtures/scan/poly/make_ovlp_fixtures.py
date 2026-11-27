@@ -25,6 +25,8 @@ Cases:
   counts), a neighbour just beyond d, and an empty fourth scan.
 * `many_scans`: 66 scans (more than 64, the sorted-list representation): one isolated
   point per scan plus a hub where scans 0, 33, 64 and 65 meet with mixed normals.
+* `sixty_four_scans`: exactly 64 scans (the top of the 64-bit mask range), laid out like
+  `many_scans` with the hub on scans 0, 31, 62 and 63, so bit 63 is used.
 
 The expected result follows REQ-SCAN.POLY.MULTI.OVLP-001 and -002 and the pinned rules of
 the crate's `multi::overlap` module documentation, computed here by brute force over all
@@ -179,17 +181,27 @@ def case_normals_mix():
     return u, [s0, s1, s2, []]
 
 
-def case_many_scans():
+def hub_scans(count, a, b, c, dd):
+    """`count` scans with one isolated point each; a hub on scans a (up), b (no valid
+    normal), c (up, near a) and dd (down, inserted first)."""
     u = 2.0 ** -10
     e = 2.0 ** -12
     up, down = (0.0, 0.0, 1.0), (0.0, 0.0, -1.0)
-    scans = [[((float(j), 10.0, 0.0), up, True)] for j in range(66)]
-    scans[0].append(((100.0, 0.0, 0.0), up, True))
-    scans[64].append(((100.0 + e, 0.0, 0.0), up, True))
-    scans[65].insert(0, ((100.0, e, 0.0), down, True))
-    scans[33].append(((100.0, 0.0, e), down, False))
+    scans = [[((float(j), 10.0, 0.0), up, True)] for j in range(count)]
+    scans[a].append(((100.0, 0.0, 0.0), up, True))
+    scans[c].append(((100.0 + e, 0.0, 0.0), up, True))
+    scans[dd].insert(0, ((100.0, e, 0.0), down, True))
+    scans[b].append(((100.0, 0.0, e), down, False))
     assert 2.0 * e < u
     return u, scans
+
+
+def case_many_scans():
+    return hub_scans(66, 0, 33, 64, 65)
+
+
+def case_sixty_four_scans():
+    return hub_scans(64, 0, 31, 62, 63)
 
 
 def cases():
@@ -198,6 +210,7 @@ def cases():
         ("thin_wall_two_scans", case_thin_wall, "AC-2: the two sides of a 1 mm wall (normals opposed), d = 1.5 mm"),
         ("normals_mix", case_normals_mix, "REQ-001/-002 ties and edge cases, dyadic coordinates, d = 2^-10 m"),
         ("many_scans", case_many_scans, "66 scans (sorted-list sets), a hub of four scans with mixed normals"),
+        ("sixty_four_scans", case_sixty_four_scans, "64 scans (64-bit mask sets, bit 63 used), a hub of four scans"),
     ]
 
 
@@ -257,9 +270,10 @@ def hand_checks(name, d, scans, res):
             [],
         ]
         assert res == expect, res
-    if name == "many_scans":
-        hub = {0: ([64], "overlapping"), 33: ([0, 64, 65], "overlapping"), 64: ([0], "overlapping"),
-               65: ([], "normals_incompatible")}
+    if name in ("many_scans", "sixty_four_scans"):
+        a, b, c, dd = (0, 33, 64, 65) if name == "many_scans" else (0, 31, 62, 63)
+        hub = {a: ([c], "overlapping"), b: ([a, c, dd], "overlapping"), c: ([a], "overlapping"),
+               dd: ([], "normals_incompatible")}
         for j, rows in enumerate(res):
             for (p, _, _), row in zip(scans[j], rows):
                 if p[1] == 10.0:

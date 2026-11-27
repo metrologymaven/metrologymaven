@@ -46,15 +46,17 @@
 //!    `d*d` skips the scan. This is exact, not a tolerance: for every point `q` of `j`,
 //!    `|q_k - x_k| >= g_k` and rounding is monotone, so the pinned `dist2(q, x)` is at least
 //!    the bound; no point the query would accept is skipped (the GEO.INDEX pruning argument).
-//! 2. Query: scan `j`'s radius query at `x` with radius `d`. For every hit, in the order the
-//!    view returns them, the kernel re-reads the point and recomputes
-//!    `dist2 = (dx*dx + dy*dy) + dz*dz` itself; a hit beyond `d*d` or with an index outside
-//!    the scan is [`PolyError::Inconsistent`] (a broken view is refused, never trusted).
+//! 2. Query: scan `j`'s radius query at `x` with radius `d`. For every hit (all of them,
+//!    whatever their order) the kernel re-reads the point, checks it again as in input
+//!    check 4 and recomputes `dist2 = (dx*dx + dy*dy) + dz*dz` itself; a hit that no longer
+//!    passes check 4, lies beyond `d*d` or has an index outside the scan is
+//!    [`PolyError::Inconsistent`] (a broken view is refused, never trusted). The query point
+//!    itself is re-read and re-checked the same way.
 //! 3. Compatibility: with a normal `n`, a hit `q` counts when it has a normal `m` and
 //!    `(n0*m0 + n1*m1) + n2*m2 >` [`OVERLAP_NORMAL_COS`] = 0.5, the angle strictly below 60
 //!    degrees (a hit without a valid normal does not count: REQ-001 needs its normal); without
-//!    a normal every hit counts (REQ-002). The first counting hit marks `j` and ends the scan's
-//!    hits; the result does not depend on the hit order.
+//!    a normal every hit counts (REQ-002). Any counting hit marks `j`; the result does not
+//!    depend on the hit order.
 //!
 //! The point's [`PointStatus`] says why its set is what it is, so an empty set always carries
 //! a reason: [`PointStatus::Overlapping`] (some scan marked),
@@ -336,6 +338,27 @@ impl OverlapMap {
 /// The per-axis bounds of a scan's positions (`None` for a scan without points).
 type Bounds = Option<([f64; 3], [f64; 3])>;
 
+/// The position check of input check 4.
+fn position_ok(p: &ScanPoint) -> bool {
+    p.position.iter().all(|c| c.is_finite() && c.abs() <= COORD_LIMIT)
+}
+
+/// The normal check of input check 4.
+fn normal_ok(p: &ScanPoint) -> bool {
+    p.normal.is_none_or(is_unit_normal)
+}
+
+/// Re-reads point `i` of a view after the input checks: a point that no longer passes them
+/// is a broken view, refused as [`PolyError::Inconsistent`].
+fn reread(view: &dyn ScanView, i: u64) -> Result<ScanPoint, PolyError> {
+    let p = view.point(i)?;
+    if position_ok(&p) && normal_ok(&p) {
+        Ok(p)
+    } else {
+        Err(PolyError::Inconsistent)
+    }
+}
+
 /// Checks 4 of the module documentation for one scan; returns its point count and bounds.
 fn check_scan(view: &dyn ScanView) -> Result<(usize, Bounds), PolyError> {
     let count = view.point_count();
@@ -344,13 +367,11 @@ fn check_scan(view: &dyn ScanView) -> Result<(usize, Bounds), PolyError> {
     let mut bounds: Bounds = None;
     for i in 0..count {
         let p = view.point(i)?;
-        if !p.position.iter().all(|c| c.is_finite() && c.abs() <= COORD_LIMIT) {
+        if !position_ok(&p) {
             return Err(invalid("scan.position", "a coordinate is not finite or exceeds 2^500 m"));
         }
-        if let Some(nv) = p.normal {
-            if !is_unit_normal(nv) {
-                return Err(invalid("scan.normal", "a present normal is not a unit normal"));
-            }
+        if !normal_ok(&p) {
+            return Err(invalid("scan.normal", "a present normal is not a unit normal"));
         }
         bounds = Some(match bounds {
             None => (p.position, p.position),
@@ -405,19 +426,23 @@ enum Contribution {
 fn against(view: &dyn ScanView, n_points: usize, p: &ScanPoint, d: f64, d2: f64) -> Result<Contribution, PolyError> {
     let hits = view.radius(p.position, d)?;
     let mut seen = Contribution::Nothing;
+    // Every hit is checked before the result is returned, so a broken view is refused
+    // whatever order it returns its hits in.
     for hit in &hits {
         let k = usize::try_from(hit.index).map_err(|_| PolyError::Inconsistent)?;
         if k >= n_points {
             return Err(PolyError::Inconsistent);
         }
-        let q = view.point(hit.index)?;
+        // Re-validated, so dist2 is finite and the comparison below cannot miss a NaN.
+        let q = reread(view, hit.index)?;
         if dist2(p.position, q.position) > d2 {
             return Err(PolyError::Inconsistent);
         }
         if compatible(p.normal, q.normal) {
-            return Ok(Contribution::Overlap);
+            seen = Contribution::Overlap;
+        } else if seen == Contribution::Nothing {
+            seen = Contribution::Incompatible;
         }
-        seen = Contribution::Incompatible;
     }
     Ok(seen)
 }
@@ -519,7 +544,7 @@ pub fn detect_overlap(scans: &[&dyn ScanView], d: f64) -> Result<OverlapMap, Pol
             ScanSummary { points: u64::try_from(n_i).map_err(|_| PolyError::Inconsistent)?, ..ScanSummary::default() };
 
         for k in 0..summary.points {
-            let p = view.point(k)?;
+            let p = reread(*view, k)?;
             set.clear();
             let mut any_within = false;
             for (j, (other, &(n_j, bounds))) in scans.iter().zip(info.iter()).enumerate() {

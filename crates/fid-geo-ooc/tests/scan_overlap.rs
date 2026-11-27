@@ -158,7 +158,7 @@ fn expected_matches(case: &str, c: &Case, m: &OverlapMap) {
 
 #[test]
 fn ac3_chunked_and_in_memory_results_are_identical() {
-    for case in ["two_sheets_overlap", "thin_wall_two_scans", "normals_mix", "many_scans"] {
+    for case in ["two_sheets_overlap", "thin_wall_two_scans", "normals_mix", "many_scans", "sixty_four_scans"] {
         let c = load(case);
         let clouds: Vec<(PointCloud, Vec<bool>)> = c.scans.iter().map(Vec::as_slice).map(cloud).collect();
         let reference = in_memory(&clouds, c.d);
