@@ -353,6 +353,6 @@ fn constant_tables() {
             assert_ne!(u, w, "dir3 {k} {j}");
         }
     }
-    assert!(K2 > 0.995 && K2 < 0.9952);
-    assert!(K3 > 0.8864 && K3 < 0.8865);
+    const { assert!(K2 > 0.995 && K2 < 0.9952) };
+    const { assert!(K3 > 0.8864 && K3 < 0.8865) };
 }
