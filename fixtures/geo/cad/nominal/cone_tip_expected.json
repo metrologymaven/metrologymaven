@@ -1,0 +1,37 @@
+{
+ "description": "GEO.CAD.NOMINAL.DIRECT expected nominal elements of cone_tip.json (make_nominal_fixtures.py; material from design intent checked against Su x Sv, extents exact)",
+ "edges": {
+  "e.tip.rim": {
+   "extent": {
+    "angular": [
+     0.0,
+     6.283185307179586
+    ]
+   },
+   "kind": "circle"
+  }
+ },
+ "faces": {
+  "f.tip": {
+   "extent": {
+    "axial": [
+     0.0,
+     0.015625
+    ]
+   },
+   "kind": "cone",
+   "material": "Inside"
+  }
+ },
+ "license": "CC-BY-4.0",
+ "vertices": {
+  "v.tip.rim": {
+   "kind": "point",
+   "point": [
+    0.015625,
+    0.0,
+    0.015625
+   ]
+  }
+ }
+}

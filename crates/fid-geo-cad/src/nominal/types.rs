@@ -111,6 +111,13 @@ impl NominalParams {
 /// The part of the element's surface or curve that the CAD entity covers, in the element's
 /// own placement (local coordinates `x = (q - O) . X`, `y = (q - O) . Y`, `z = (q - O) . Z`
 /// of the orthonormalised frame).
+///
+/// Face extents are **computed, and rounded**: each bound comes from `Placement::to_local`,
+/// a dot product, `hypot` (and for a cone tip `tan`) in binary64, so it is the true boundary
+/// value only up to a few ulps of the coordinates involved, not an exact copy of any CAD
+/// value. Edge extents (`Axial` of a line, `Angular` of a circle) are the edge's recorded
+/// parameter range, copied. [`NominalElement::max_deviation_m`] being `0` refers to the
+/// parameters only, never to the extent.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Extent {
     /// Cylinder and cone faces: the range of `z` (metres along the axis). Line edges: the
@@ -201,13 +208,15 @@ impl NominalElement {
         self.method
     }
 
-    /// Largest distance between the element and its source geometry; `0` for `Direct`.
+    /// Largest distance between the element's parameters and its source geometry; `0` for
+    /// `Direct` (the parameters are copied). It says nothing about the extent, which is
+    /// computed and rounded (see [`Extent`]).
     pub fn max_deviation_m(&self) -> f64 {
         self.max_deviation_m
     }
 
-    /// For a plane face element, the unit normal pointing out of the material: the given
-    /// placement axis for [`Material::Outside`], its exact negation (computed as `0 - x`, so a
+    /// For a plane face element, the normal pointing out of the material: the given axis (unit
+    /// within `FRAME_TOL`, not re-normalised) for [`Material::Outside`], its exact negation (computed as `0 - x`, so a
     /// zero component stays `+0.0`) for [`Material::Inside`].
     /// `None` for every other element.
     pub fn plane_normal_out_of_material(&self) -> Option<[f64; 3]> {

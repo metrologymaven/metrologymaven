@@ -9,6 +9,10 @@ Writes, next to this script:
                        countersink half-angle pi/4 and the arc ranges (pi, 3 pi / 2, 2 pi as f64).
   expected.json        per face, edge and vertex label the expected nominal element: kind,
                        material side and extent (AC-1, AC-2, AC-4).
+  cone_tip.json        a drill-point tip: one cone face (r0 = 0, apex at the placement origin)
+                       whose only loop is a single circle, so the apex is inside the face and on
+                       no boundary entity.
+  cone_tip_expected.json  its expected element: the axial extent reaches the apex height 0.
 
 Run:  python fixtures/geo/cad/nominal/make_nominal_fixtures.py          (writes both files)
       python fixtures/geo/cad/nominal/make_nominal_fixtures.py --check  (fails if anything is stale)
@@ -30,7 +34,10 @@ How the expected values are found:
   products, and a full circle in a plane parallel to a local axis reaches centre +- r along it
   (the closed-form maximum of a cos t + b sin t is sqrt(a^2 + b^2); here a^2 + b^2 is 0 or 1,
   checked). Every expected extent is then exactly a binary64 value (checked), so the Rust result
-  must match bit for bit on every platform (AC-4).
+  must match bit for bit on every platform (AC-4). Plane extents use the outer loop. A cylinder or
+  cone face must be a band: its boundary edges are full circles coaxial with the surface or seams
+  (edges used twice by the face), the circles at two heights (checked); a cone with one circle
+  height is a tip cap, whose range also takes the apex height -r0 / tan(a) (60-digit decimal).
 """
 
 import importlib.util
@@ -315,7 +322,7 @@ def as_f64(q, what):
     return f
 
 
-def boundary_ranges(sc, face):
+def boundary_ranges(sc, face, loops):
     """Exact [min, max] of the three local coordinates over the face's boundary vertices and the
     closed-form extremes of its circle edges (lines reach their extremes at their vertices)."""
     fr = face["surface"]
@@ -327,7 +334,7 @@ def boundary_ranges(sc, face):
 
     _, fx, fy, fz = exact_frame(fr)
     axes = (fx, fy, fz)
-    for li in face["loops"]:
+    for li in loops:
         for c in sc["loops"][li]["coedges"]:
             e = sc["edges"][sc["coedges"][c]["edge"]]
             for vi in (e["start"], e["end"]):
@@ -350,6 +357,38 @@ def boundary_ranges(sc, face):
                 take(k, centre[k] + r * h2)
                 take(k, centre[k] - r * h2)
     return lo, hi
+
+
+def band_heights(sc, face):
+    """Distinct heights of the face's coaxial full circles; every other boundary edge must be a
+    seam (used twice by the face)."""
+    fr = face["surface"]
+    _, _, _, fz = exact_frame(fr)
+    uses = {}
+    for li in face["loops"]:
+        for c in sc["loops"][li]["coedges"]:
+            e = sc["coedges"][c]["edge"]
+            uses[e] = uses.get(e, 0) + 1
+    heights = set()
+    for ei, n in uses.items():
+        e = sc["edges"][ei]
+        cv = e["curve"]
+        if cv["type"] == "circle" and e["start"] == e["end"] and e["range"][1] - e["range"][0] >= TAU:
+            _, _, _, cz = exact_frame(cv)
+            centre = local(fr, cv["origin"])
+            if abs(qdot(cz, fz)) == 1 and centre[0] == 0 and centre[1] == 0:
+                heights.add(centre[2])
+                continue
+        if n != 2:
+            die("%s: edge %s is neither a coaxial full circle nor a seam" % (face["label"], e["label"]))
+    return heights
+
+
+def apex_height(surface):
+    with localcontext() as ctx:
+        ctx.prec = 60
+        sa, ca = OR.sin_cos(D(surface["half_angle"]))
+        return -D(surface["radius"]) * ca / sa
 
 
 def natural_normal_side(surface, sense, u, v):
@@ -410,6 +449,7 @@ INTENT = {
     "f.boss": ("Outside", 1.0, 0.005),
     "f.boss.top": ("Outside", 0.0, 0.0),
     "f.dimple": ("Inside", 1.0, -1.2),       # material outside the sphere
+    "f.tip": ("Inside", 1.0, 0.005),         # drill point: material outside the cone
 }
 
 
@@ -434,7 +474,7 @@ def ccw_ok(sc, face):
     return area2 * sign > 0
 
 
-def expected(sc):
+def expected(sc, name):
     out_faces = {}
     for face in sc["faces"]:
         lab = face["label"]
@@ -451,13 +491,22 @@ def expected(sc):
         if typ == "plane" and lab.startswith("f.box.") and not ccw_ok(sc, face):
             die("%s: outer loop is not counter-clockwise about the out-of-material normal" % lab)
         rec = {"kind": typ, "material": mat}
-        if typ in ("plane", "cylinder", "cone"):
-            lo, hi = boundary_ranges(sc, face)
-            if typ == "plane":
-                rec["extent"] = {"planar": {"u": [as_f64(lo[0], lab), as_f64(hi[0], lab)],
-                                            "v": [as_f64(lo[1], lab), as_f64(hi[1], lab)]}}
-            else:
-                rec["extent"] = {"axial": [as_f64(lo[2], lab), as_f64(hi[2], lab)]}
+        if typ == "plane":
+            outer = [li for li in face["loops"] if sc["loops"][li]["outer"]]
+            lo, hi = boundary_ranges(sc, face, outer)
+            rec["extent"] = {"planar": {"u": [as_f64(lo[0], lab), as_f64(hi[0], lab)],
+                                        "v": [as_f64(lo[1], lab), as_f64(hi[1], lab)]}}
+        elif typ in ("cylinder", "cone"):
+            lo, hi = boundary_ranges(sc, face, face["loops"])
+            n = len(band_heights(sc, face))
+            if typ == "cone" and n == 1:
+                if apex_height(face["surface"]) != 0:
+                    die("%s: the fixtures keep the apex at height 0 (r0 = 0) so it is exact" % lab)
+                va = Q(0)
+                lo[2], hi[2] = min(lo[2], va), max(hi[2], va)
+            elif n != 2:
+                die("%s: %d circle heights, not a band" % (lab, n))
+            rec["extent"] = {"axial": [as_f64(lo[2], lab), as_f64(hi[2], lab)]}
         else:
             rec["extent"] = "not_defined"
         out_faces[lab] = rec
@@ -471,12 +520,35 @@ def expected(sc):
         out_edges[e["label"]] = rec
     out_vertices = {vx["label"]: {"kind": "point", "point": vx["point"]} for vx in sc["vertices"]}
     return {
-        "description": "GEO.CAD.NOMINAL.DIRECT expected nominal elements of analytic_block.json "
+        "description": "GEO.CAD.NOMINAL.DIRECT expected nominal elements of " + name + " "
         "(make_nominal_fixtures.py; material from design intent checked against Su x Sv, extents exact)",
         "license": LICENSE,
         "faces": out_faces,
         "edges": out_edges,
         "vertices": out_vertices,
+    }
+
+
+TIP_H = 0.015625
+
+
+def cone_tip():
+    """One cone face, apex at the origin (r0 = 0), half-angle pi/4, bounded only by the rim circle
+    at height TIP_H (radius TIP_H: the nominal rim of a 90 degree point; tan(pi/4) as f64 differs
+    from 1 by one ulp, which the builder does not check). Open shell."""
+    rim = circle_curve((0.0, 0.0, TIP_H), EZ, EX, TIP_H)
+    return {
+        "description": "drill-point tip: cone face r0 = 0 whose only loop is its rim circle; the apex is "
+        "inside the face and on no boundary entity",
+        "license": LICENSE,
+        "body_id": "636f6e652d7469702d61706578303031",
+        "vertices": [{"label": "v.tip.rim", "point": [TIP_H, 0.0, TIP_H]}],
+        "edges": [{"curve": rim, "end": 0, "label": "e.tip.rim", "range": [0.0, TAU], "start": 0}],
+        "coedges": [{"edge": 0, "label": "c.tip", "pcurve": None, "sense": "same"}],
+        "loops": [{"coedges": [0], "label": "l.tip", "outer": True}],
+        "faces": [{"label": "f.tip", "loops": [0], "sense": "reversed",
+                   "surface": dict(type="cone", radius=0.0, half_angle=FRAC_PI_4, **frame((0.0, 0.0, 0.0), EZ, EX))}],
+        "shells": [{"closed": False, "faces": [0]}],
     }
 
 
@@ -487,7 +559,9 @@ def dumps(obj):
 def main():
     check = "--check" in sys.argv[1:]
     sc = build().json()
-    files = {"analytic_block.json": dumps(sc), "expected.json": dumps(expected(sc))}
+    tip = cone_tip()
+    files = {"analytic_block.json": dumps(sc), "expected.json": dumps(expected(sc, "analytic_block.json")),
+             "cone_tip.json": dumps(tip), "cone_tip_expected.json": dumps(expected(tip, "cone_tip.json"))}
     if check:
         stale = [n for n, text in files.items()
                  if not (HERE / n).exists() or (HERE / n).read_text(encoding="utf-8") != text]

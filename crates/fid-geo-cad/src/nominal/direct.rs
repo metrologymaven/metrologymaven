@@ -15,9 +15,9 @@
 //!   ellipse edge [`DirectResult::UnsupportedKind`]; nothing is approximated.
 //! - **Extents** (REQ-005): in the element's orthonormalised placement (GEO.NURBS.ANALYTIC
 //!   `Placement`), local coordinates `l = ((q - O) . X, (q - O) . Y, (q - O) . Z)` as computed by
-//!   `Placement::to_local`. A plane face's extent is the box of `l.x`, `l.y`, a cylinder or cone
-//!   face's the range of `l.z`, over the face's boundary: every vertex of every coedge of every
-//!   loop, plus the interior extremes of its circle and ellipse edges. On such an edge
+//!   `Placement::to_local`. A plane face's extent is the box of `l.x`, `l.y` over its outer loop;
+//!   a cylinder or cone face's the range of `l.z` over all its loops. Over a boundary means: every
+//!   vertex of every coedge, plus the interior extremes of its circle and ellipse edges. On such an edge
 //!   `l.k(t) = c.k + A cos t + B sin t` with `c` the local centre, `A = (Xc . D) a` and
 //!   `B = (Yc . D) b` (`D` the world direction of local axis `k`, `Xc`, `Yc` the curve's
 //!   orthonormalised frame, `a`, `b` its semi-axes, both the radius for a circle), so the
@@ -25,13 +25,27 @@
 //!   (plus whole turns) lies in the edge's parameter range (every angle when the range spans a
 //!   full turn). Line edges reach their extremes at their vertices. The extremes of these
 //!   coordinate functions over the face lie on its boundary (they are linear on planes,
-//!   cylinders and cones), so the boundary gives the extent exactly up to rounding. Every value
+//!   cylinders and cones, and the cone apex is handled below), so the boundary gives the extent
+//!   up to rounding (the values are computed, not copied). Every value
 //!   is computed in the fixed order written here with `fid_num::f` for `hypot` and `atan2` and
 //!   the total-order min and max (KNP-1: no FMA, no `f64::min` or `f64::max`), so the result is
 //!   D0. A face without loops is [`Extent::Unbounded`]; sphere and torus faces (whose height
 //!   can peak inside the face) and points are [`Extent::NotDefined`]; a line edge's extent is
 //!   its parameter range ([`Extent::Axial`]), a circle edge's its angle range
 //!   ([`Extent::Angular`]), both as recorded on the edge.
+//! - **Which side of the boundary** (the face is never classified point by point here):
+//!   - A plane face with loops but none marked outer is refused ([`DirectError::NoOuterLoop`]):
+//!     its holes do not bound it.
+//!   - A cylinder or cone face must be a provable band: every boundary edge is either a
+//!     *wrapping circle* (a closed circle edge, start vertex = end vertex, parameter range of at
+//!     least a full turn, axis parallel to the surface axis within `1e-12` and centre on it within
+//!     `1e-12 (r + |z|)`) or a seam (an edge used twice by the face's coedges). On a cylinder the
+//!     wrapping circles must lie at exactly two heights (the face is the band between them; a
+//!     single height bounds only half-infinite pieces). On a cone two heights are a band; a
+//!     single height is the tip cap (a drill point), whose range is widened to the apex height
+//!     `v_a = 0 - r0 / tan(a)` so the apex is never missed. Anything else (windows, partial
+//!     arcs, three or more heights) is refused ([`DirectError::NotABand`]) rather than measured
+//!     on the wrong side.
 //! - **Failing closed:** an extent that needs a boundary edge with no curve
 //!   ([`DirectError::EdgeWithoutCurve`]) or a NURBS boundary edge, whose extremes have no closed
 //!   form ([`DirectError::NurbsBoundary`]), is refused rather than estimated from vertices.
@@ -42,7 +56,7 @@ use core::fmt;
 use fid_geo_nurbs::{AnalyticCurve, AnalyticSurface, Placement};
 
 use super::types::{DirectResult, Extent, Material, NominalElement, NominalParams, UnsupportedKind};
-use crate::topo::{Body, CurveParams, EdgeIx, EntityKind, Face, FaceIx, Sense, SurfaceParams, VertexIx};
+use crate::topo::{Body, CurveParams, EdgeIx, EntityKind, Face, FaceIx, LoopIx, Sense, SurfaceParams, VertexIx};
 
 /// Why an entity could not be mapped.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -54,6 +68,11 @@ pub enum DirectError {
     /// A boundary edge of an analytic plane, cylinder or cone face is NURBS; its extremes have
     /// no closed form, so the face extent is refused rather than estimated.
     NurbsBoundary { edge: EdgeIx },
+    /// A plane face has loops but none is marked outer, so its boundary does not bound it.
+    NoOuterLoop,
+    /// A cylinder or cone face is not a provable band (or cone tip cap) of wrapping circles and
+    /// seams (module documentation), so its side of the boundary is not known.
+    NotABand,
     /// A local coordinate or an extreme overflowed.
     NonFinite,
 }
@@ -65,6 +84,8 @@ impl DirectError {
             DirectError::UnknownEntity { .. } => "UnknownEntity",
             DirectError::EdgeWithoutCurve { .. } => "EdgeWithoutCurve",
             DirectError::NurbsBoundary { .. } => "NurbsBoundary",
+            DirectError::NoOuterLoop => "NoOuterLoop",
+            DirectError::NotABand => "NotABand",
             DirectError::NonFinite => "NonFinite",
         }
     }
@@ -78,6 +99,8 @@ impl fmt::Display for DirectError {
             DirectError::NurbsBoundary { edge } => {
                 write!(f, "boundary edge {} is NURBS: the face extent has no closed form", edge.index())
             }
+            DirectError::NoOuterLoop => f.write_str("plane face has loops but no outer loop"),
+            DirectError::NotABand => f.write_str("cylinder or cone face is not a band of wrapping circles and seams"),
             DirectError::NonFinite => f.write_str("a local coordinate or an extreme overflowed"),
         }
     }
@@ -102,17 +125,28 @@ pub fn map_face(body: &Body, face: FaceIx) -> Result<DirectResult, DirectError> 
     };
     let (nominal, extent) = match params {
         SurfaceParams::Plane { frame } => {
-            let extent = match boundary_ranges(body, f, placement_of(surface))? {
-                Some(r) => Extent::Planar { u: r[0], v: r[1] },
-                None => Extent::Unbounded,
+            let extent = if f.loops().is_empty() {
+                Extent::Unbounded
+            } else {
+                let mut outer = Vec::new();
+                for &li in f.loops() {
+                    if body.r#loop(li).ok_or(unknown(EntityKind::Loop, li.index()))?.outer() {
+                        outer.push(li);
+                    }
+                }
+                match boundary_ranges(body, &outer, placement_of(surface))? {
+                    Some(r) => Extent::Planar { u: r[0], v: r[1] },
+                    None => return Err(DirectError::NoOuterLoop),
+                }
             };
             (NominalParams::Plane { frame }, extent)
         }
         SurfaceParams::Cylinder { frame, radius } => {
-            (NominalParams::Cylinder { frame, radius }, axial(body, f, placement_of(surface))?)
+            (NominalParams::Cylinder { frame, radius }, axial(body, f, placement_of(surface), None)?)
         }
         SurfaceParams::Cone { frame, radius, half_angle } => {
-            (NominalParams::Cone { frame, radius, half_angle }, axial(body, f, placement_of(surface))?)
+            let apex = Some((radius, half_angle));
+            (NominalParams::Cone { frame, radius, half_angle }, axial(body, f, placement_of(surface), apex)?)
         }
         SurfaceParams::Sphere { frame, radius } => (NominalParams::Sphere { frame, radius }, Extent::NotDefined),
         SurfaceParams::Torus { frame, major_radius, minor_radius } => {
@@ -158,11 +192,84 @@ fn placement_of(surface: &AnalyticSurface) -> &Placement {
     }
 }
 
-fn axial(body: &Body, f: &Face, pl: &Placement) -> Result<Extent, DirectError> {
-    Ok(match boundary_ranges(body, f, pl)? {
-        Some(r) => Extent::Axial { h_min: r[2][0], h_max: r[2][1] },
-        None => Extent::Unbounded,
-    })
+/// Axial extent of a cylinder face (`cone = None`) or a cone face (`Some((r0, half_angle))`).
+fn axial(body: &Body, f: &Face, pl: &Placement, cone: Option<(f64, f64)>) -> Result<Extent, DirectError> {
+    if f.loops().is_empty() {
+        return Ok(Extent::Unbounded);
+    }
+    let heights = band_heights(body, f, pl)?;
+    let [mut lo, mut hi] = match boundary_ranges(body, f.loops(), pl)? {
+        Some(r) => r[2],
+        None => return Err(DirectError::NotABand),
+    };
+    match (heights, cone) {
+        (2, _) => {}
+        (1, Some((r0, half_angle))) => {
+            // Tip cap: the face runs from its one wrapping circle to the apex.
+            let t = num(fid_num::f::tan(half_angle))?;
+            let apex = 0.0 - r0 / t;
+            if !apex.is_finite() {
+                return Err(DirectError::NonFinite);
+            }
+            lo = num(fid_num::f::total_min(lo, apex))?;
+            hi = num(fid_num::f::total_max(hi, apex))?;
+        }
+        _ => return Err(DirectError::NotABand),
+    }
+    Ok(Extent::Axial { h_min: lo, h_max: hi })
+}
+
+/// Relative tolerance of the wrapping-circle tests (parallel axis, centre on the axis).
+const WRAP_REL: f64 = 1e-12;
+
+/// The number of distinct heights of the face's wrapping circles, when every boundary edge is a
+/// wrapping circle or a seam (module documentation); otherwise `NotABand`.
+fn band_heights(body: &Body, f: &Face, pl: &Placement) -> Result<usize, DirectError> {
+    let mut uses: Vec<(EdgeIx, usize)> = Vec::new();
+    for &li in f.loops() {
+        let lp = body.r#loop(li).ok_or(unknown(EntityKind::Loop, li.index()))?;
+        for &ci in lp.coedges() {
+            let ei = body.coedge(ci).ok_or(unknown(EntityKind::Coedge, ci.index()))?.edge();
+            match uses.binary_search_by(|(e, _)| e.cmp(&ei)) {
+                Ok(i) => {
+                    if let Some(u) = uses.get_mut(i) {
+                        u.1 += 1;
+                    }
+                }
+                Err(i) => uses.insert(i, (ei, 1)),
+            }
+        }
+    }
+    let mut heights: Vec<f64> = Vec::new();
+    for (ei, n) in uses {
+        let e = body.edge(ei).ok_or(unknown(EntityKind::Edge, ei.index()))?;
+        let curve = e.curve().ok_or(DirectError::EdgeWithoutCurve { edge: ei })?;
+        let [t0, t1] = e.param_range();
+        let wrapping = match curve.as_analytic() {
+            Some(AnalyticCurve::Circle(c)) if e.start() == e.end() && t1 - t0 >= TAU => {
+                let cpl = c.placement();
+                let l = pl.to_local(cpl.origin()).map_err(|_| DirectError::NonFinite)?;
+                let rho = num(fid_num::f::hypot(l[0], l[1]))?;
+                let parallel = dot(cpl.axis(), pl.axis()).abs() >= 1.0 - WRAP_REL;
+                if parallel && rho <= WRAP_REL * (c.radius() + l[2].abs()) {
+                    Some(l[2])
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+        match wrapping {
+            Some(h) => {
+                if !heights.iter().any(|&x| x == h) {
+                    heights.push(h);
+                }
+            }
+            None if n == 2 => {}
+            None => return Err(DirectError::NotABand),
+        }
+    }
+    Ok(heights.len())
 }
 
 /// `(a0 b0 + a1 b1) + a2 b2`, one rounding per operation.
@@ -233,13 +340,13 @@ fn wrap(a: f64) -> f64 {
     }
 }
 
-/// Local coordinate ranges over the face boundary (module documentation), or `None` for a face
-/// without loops.
-fn boundary_ranges(body: &Body, f: &Face, pl: &Placement) -> Result<Option<[[f64; 2]; 3]>, DirectError> {
+/// Local coordinate ranges over the boundary formed by `loops` (module documentation), or
+/// `None` when `loops` is empty.
+fn boundary_ranges(body: &Body, loops: &[LoopIx], pl: &Placement) -> Result<Option<[[f64; 2]; 3]>, DirectError> {
     let axes = [pl.ref_dir(), pl.y_dir(), pl.axis()];
     let local = |q: [f64; 3]| pl.to_local(q).map_err(|_| DirectError::NonFinite);
     let mut ranges = Ranges { r: [None; 3] };
-    for &li in f.loops() {
+    for &li in loops {
         let lp = body.r#loop(li).ok_or(unknown(EntityKind::Loop, li.index()))?;
         for &ci in lp.coedges() {
             let co = body.coedge(ci).ok_or(unknown(EntityKind::Coedge, ci.index()))?;

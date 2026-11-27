@@ -474,3 +474,127 @@ fn an_index_from_another_body_is_refused() {
         assert_eq!(map_vertex(&small, v).unwrap_err().code(), "UnknownEntity");
     }
 }
+
+// ---------------------------------------------------------------- sides of the boundary
+
+#[test]
+fn cone_tip_extent_reaches_the_apex() {
+    // Oracle case: a drill point whose only loop is its rim circle; the apex is on no entity.
+    let sc = common::load("../nominal/cone_tip.json");
+    let exp = common::load("../nominal/cone_tip_expected.json");
+    let body = common::builder(&sc).build().unwrap();
+    let e = element(map_face(&body, face_ix(&body, "f.tip")));
+    let want = exp.get("faces").get("f.tip");
+    check_surface_params(&e, sc.get("faces").arr()[0].get("surface"));
+    check_extent(e.extent(), want.get("extent"));
+    assert_eq!(e.material(), Some(material(want.get("material").str())));
+    assert_eq!(e.extent(), &Extent::Axial { h_min: 0.0, h_max: 0.015625 });
+}
+
+/// One cone or cylinder face bounded only by circles at the given heights (one loop each).
+fn circles_face(surface: SurfaceParams, heights: &[(f64, f64)]) -> Body {
+    let mut bb = BodyBuilder::new([4; 16]);
+    let mut loops = Vec::new();
+    for (i, &(z, r)) in heights.iter().enumerate() {
+        let v = bb.add_vertex([r, 0.0, z], Some(&format!("v{i}")));
+        let frame = Frame { origin: [0.0, 0.0, z], axis: [0.0, 0.0, 1.0], ref_dir: [1.0, 0.0, 0.0] };
+        let c = CurveDef::analytic(CurveParams::Circle { frame, radius: r }).unwrap();
+        let e = bb.add_edge(Some(c), v, v, [0.0, TAU], Some(&format!("e{i}")));
+        let co = bb.add_coedge(e, Sense::Same, None, None);
+        loops.push(bb.add_loop(vec![co], i == 0, None));
+    }
+    let f = bb.add_face(SurfaceDef::analytic(surface).unwrap(), Sense::Same, loops, Some("f"));
+    bb.add_shell(vec![f], false);
+    bb.build().unwrap()
+}
+
+#[test]
+fn cone_tip_with_offset_origin_takes_the_computed_apex() {
+    // r0 = 0.01 at z = 0, half-angle pi/4: apex at z = -0.01 / tan(pi/4) ~ -0.01; rim at 0.005.
+    let cone = SurfaceParams::Cone { frame: Z, radius: 0.01, half_angle: core::f64::consts::FRAC_PI_4 };
+    let body = circles_face(cone, &[(0.005, 0.015)]);
+    match *element(map_face(&body, face_ix(&body, "f"))).extent() {
+        Extent::Axial { h_min, h_max } => {
+            assert!((h_min + 0.01).abs() <= 1e-17, "{h_min}");
+            same(h_max, 0.005);
+        }
+        x => panic!("{x:?}"),
+    }
+    // Two circles: a band; the apex below it is not in the face.
+    let body = circles_face(cone, &[(0.005, 0.015), (0.0025, 0.0125)]);
+    assert_eq!(element(map_face(&body, face_ix(&body, "f"))).extent(), &Extent::Axial { h_min: 0.0025, h_max: 0.005 });
+}
+
+#[test]
+fn cylinder_needs_a_band_of_two_circle_heights() {
+    let cyl = SurfaceParams::Cylinder { frame: Z, radius: 0.5 };
+    let one = circles_face(cyl, &[(0.0, 0.5)]);
+    assert_eq!(map_face(&one, face_ix(&one, "f")), Err(DirectError::NotABand));
+    let two = circles_face(cyl, &[(0.0, 0.5), (0.25, 0.5)]);
+    assert_eq!(element(map_face(&two, face_ix(&two, "f"))).extent(), &Extent::Axial { h_min: 0.0, h_max: 0.25 });
+    let three = circles_face(cyl, &[(0.0, 0.5), (0.25, 0.5), (0.5, 0.5)]);
+    assert_eq!(map_face(&three, face_ix(&three, "f")), Err(DirectError::NotABand));
+    // An off-axis circle does not wrap the cylinder.
+    let mut bb = BodyBuilder::new([5; 16]);
+    let v = bb.add_vertex([0.6, 0.0, 0.0], Some("v"));
+    let frame = Frame { origin: [0.1, 0.0, 0.0], axis: [0.0, 0.0, 1.0], ref_dir: [1.0, 0.0, 0.0] };
+    let e = bb.add_edge(
+        Some(CurveDef::analytic(CurveParams::Circle { frame, radius: 0.5 }).unwrap()),
+        v,
+        v,
+        [0.0, TAU],
+        None,
+    );
+    let c = bb.add_coedge(e, Sense::Same, None, None);
+    let l = bb.add_loop(vec![c], true, None);
+    let f = bb.add_face(SurfaceDef::analytic(cyl).unwrap(), Sense::Same, vec![l], Some("f"));
+    bb.add_shell(vec![f], false);
+    let body = bb.build().unwrap();
+    assert_eq!(map_face(&body, face_ix(&body, "f")), Err(DirectError::NotABand));
+}
+
+#[test]
+fn cylinder_window_patch_is_not_a_band() {
+    // Half cylinder r = 1, z in [0, 1]: two half-circle arcs and two lines.
+    let cyl = SurfaceParams::Cylinder { frame: Z, radius: 1.0 };
+    let mut bb = BodyBuilder::new([6; 16]);
+    let p = [[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0], [-1.0, 0.0, 1.0], [1.0, 0.0, 1.0]];
+    let v: Vec<usize> = p.iter().enumerate().map(|(i, q)| bb.add_vertex(*q, Some(&format!("v{i}")))).collect();
+    let arc = |z: f64| {
+        let frame = Frame { origin: [0.0, 0.0, z], axis: [0.0, 0.0, 1.0], ref_dir: [1.0, 0.0, 0.0] };
+        Some(CurveDef::analytic(CurveParams::Circle { frame, radius: 1.0 }).unwrap())
+    };
+    let e0 = bb.add_edge(arc(0.0), v[0], v[1], [0.0, PI], None);
+    let up = |x: f64| {
+        let frame = Frame { origin: [x, 0.0, 0.0], axis: [1.0, 0.0, 0.0], ref_dir: [0.0, 0.0, 1.0] };
+        Some(CurveDef::analytic(CurveParams::Line { frame }).unwrap())
+    };
+    let e1 = bb.add_edge(up(-1.0), v[1], v[2], [0.0, 1.0], None);
+    let e2 = bb.add_edge(arc(1.0), v[3], v[2], [0.0, PI], None);
+    let e3 = bb.add_edge(up(1.0), v[0], v[3], [0.0, 1.0], None);
+    let cs = vec![
+        bb.add_coedge(e0, Sense::Same, None, None),
+        bb.add_coedge(e1, Sense::Same, None, None),
+        bb.add_coedge(e2, Sense::Reversed, None, None),
+        bb.add_coedge(e3, Sense::Reversed, None, None),
+    ];
+    let l = bb.add_loop(cs, true, None);
+    let f = bb.add_face(SurfaceDef::analytic(cyl).unwrap(), Sense::Same, vec![l], Some("f"));
+    bb.add_shell(vec![f], false);
+    let body = bb.build().unwrap();
+    assert_eq!(map_face(&body, face_ix(&body, "f")), Err(DirectError::NotABand));
+    assert_eq!(DirectError::NotABand.code(), "NotABand");
+}
+
+#[test]
+fn plane_with_holes_but_no_outer_loop_is_refused() {
+    let mut bb = BodyBuilder::new([8; 16]);
+    let v = bb.add_vertex([1.0, 0.0, 0.0], Some("v"));
+    let e = bb.add_edge(Some(unit_circle()), v, v, [0.0, TAU], None);
+    let c = bb.add_coedge(e, Sense::Reversed, None, None);
+    let l = bb.add_loop(vec![c], false, None);
+    let f = bb.add_face(plane(), Sense::Same, vec![l], Some("f"));
+    bb.add_shell(vec![f], false);
+    let body = bb.build().unwrap();
+    assert_eq!(map_face(&body, face_ix(&body, "f")), Err(DirectError::NoOuterLoop));
+}

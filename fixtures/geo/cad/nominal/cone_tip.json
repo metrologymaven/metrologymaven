@@ -1,0 +1,99 @@
+{
+ "body_id": "636f6e652d7469702d61706578303031",
+ "coedges": [
+  {
+   "edge": 0,
+   "label": "c.tip",
+   "pcurve": null,
+   "sense": "same"
+  }
+ ],
+ "description": "drill-point tip: cone face r0 = 0 whose only loop is its rim circle; the apex is inside the face and on no boundary entity",
+ "edges": [
+  {
+   "curve": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "origin": [
+     0.0,
+     0.0,
+     0.015625
+    ],
+    "radius": 0.015625,
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "circle"
+   },
+   "end": 0,
+   "label": "e.tip.rim",
+   "range": [
+    0.0,
+    6.283185307179586
+   ],
+   "start": 0
+  }
+ ],
+ "faces": [
+  {
+   "label": "f.tip",
+   "loops": [
+    0
+   ],
+   "sense": "reversed",
+   "surface": {
+    "axis": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "half_angle": 0.7853981633974483,
+    "origin": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "radius": 0.0,
+    "ref_dir": [
+     1.0,
+     0.0,
+     0.0
+    ],
+    "type": "cone"
+   }
+  }
+ ],
+ "license": "CC-BY-4.0",
+ "loops": [
+  {
+   "coedges": [
+    0
+   ],
+   "label": "l.tip",
+   "outer": true
+  }
+ ],
+ "shells": [
+  {
+   "closed": false,
+   "faces": [
+    0
+   ]
+  }
+ ],
+ "vertices": [
+  {
+   "label": "v.tip.rim",
+   "point": [
+    0.015625,
+    0.0,
+    0.015625
+   ]
+  }
+ ]
+}
