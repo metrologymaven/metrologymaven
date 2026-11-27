@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-scan-sect]
+built_pr: 672
 satisfies: [REQ-SCAN.SECT-001, REQ-SCAN.SECT-002]
 covers: [PW.CMP.02]
 depends_on: [GEO.FRAME, KRN.CONS]
