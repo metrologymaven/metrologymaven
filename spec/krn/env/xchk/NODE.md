@@ -9,6 +9,7 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-fit]
 satisfies: [REQ-KRN.ENV-004, REQ-KRN.ENV-008]
 covers: []
 depends_on: [KRN.MZ.VOR, KRN.NUM.RNG, KRN.LSQ.TRAIT]
@@ -17,7 +18,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-27
 ---
 
 # KRN.ENV.XCHK: Combinatorial cross-checks for MCC and MIC
@@ -67,6 +68,10 @@ Independent, solver-free algorithms that check the conic envelope fits: Welzl's 
 ## Open questions
 
 - A sphere MIC cross-check (3D Voronoi) is not included; it is costly and has no simple exact path [unverified]. Sphere and cylinder MIC rely on multi-start and ORS cases.
+- Built in `fid-fit` module `xchk` (`mcc_circle2d_welzl`, `mcc_sphere_welzl`, `mic_circle2d_vor`, with `hull_region` and `intersect_convex` for the region). The region is any strictly convex counter-clockwise polygon, so the `KRN.ENV.MIC.CIRSPH` agreement job can pass the convex hull intersected with the same 32-gon trust polygon it solves in (its Open question).
+- Seed independence (REQ-002) is made exact by a canonical second pass: the contacts of the seeded run's ball are re-run in a fixed-seed order and the radius is recomputed from that pass's support, so the radius is bit-identical across seeds unless a point lies within the `2^-30` relative contact band's edge. A result that leaves any point outside by more than `2^-36` relative is refused (`Num`, `enclosure_violated`).
+- `on_region_boundary` uses a caller `boundary_tol` floored at the region's rounding resolution `16 EPSILON max|coordinate|` (as `KRN.ENV.MIC.TR` floors its own), refused below it.
+- The Voronoi MIC scores every candidate against every point (O(n^2)); the 100 000-point Welzl budget (< 20 ms) is not measured yet.
 
 ## Children
 
