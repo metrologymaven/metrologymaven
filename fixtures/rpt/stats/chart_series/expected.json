@@ -1,0 +1,67 @@
+{
+ "examples": {
+  "control_i.json": {
+   "digest": "sha256:2bf93934c78a4ebf17706a700bf25471999e8af15eeb31ec800de372fd715298",
+   "kind": "CONTROL_I",
+   "points": 3,
+   "ref_lines": 5
+  },
+  "control_mr.json": {
+   "digest": "sha256:5203056ce8e2244f4aaa0586fa7fe1430030fc7a9f82fabd0a71773e883d807a",
+   "kind": "CONTROL_MR",
+   "points": 2,
+   "ref_lines": 3
+  },
+  "control_r.json": {
+   "digest": "sha256:c7356cc536aaf684b1460968e42839255082a57db81ac8b074907bb492cd5f6b",
+   "kind": "CONTROL_R",
+   "points": 3,
+   "ref_lines": 3
+  },
+  "control_s.json": {
+   "digest": "sha256:3a209bc908e74226d0423ca0dc3de1a80fddca6da888df5eadc8f66120d75618",
+   "kind": "CONTROL_S",
+   "points": 2,
+   "ref_lines": 3
+  },
+  "control_xbar.json": {
+   "digest": "sha256:932fe30ece0b7b57178638ec28f699f5e2e8f8002ff80eab66c1e7366211dd30",
+   "kind": "CONTROL_XBAR",
+   "points": 3,
+   "ref_lines": 3
+  },
+  "histogram.json": {
+   "digest": "sha256:7c9d701b7492e2427f46b8b205be49cf36c1e3899a166894ebe8414b747f0c95",
+   "kind": "HISTOGRAM",
+   "points": 4,
+   "ref_lines": 3
+  },
+  "trend.json": {
+   "digest": "sha256:c513fb875fea6b72a9adafabe6a9b772a2bd324d78cfc107e42181362b4fea24",
+   "kind": "TREND",
+   "points": 5,
+   "ref_lines": 3
+  },
+  "vector_group.json": {
+   "digest": "sha256:924b649034333198d073c8c60cf71b764a23627ccab3770b8060ac5f718e074d",
+   "kind": "VECTOR_GROUP",
+   "points": 3,
+   "ref_lines": 0
+  }
+ },
+ "minor9": {
+  "file": "v1_examples/trend_minor9.json",
+  "ignored": [
+   "subtitle_key"
+  ],
+  "minor": 9,
+  "same_as_with_minor_0": "v1_examples/trend.json"
+ },
+ "v2": {
+  "code": "report.chart_series_unsupported",
+  "file": "v2_trend.json",
+  "kind": "TREND",
+  "major": 2,
+  "minor": 0
+ }
+}

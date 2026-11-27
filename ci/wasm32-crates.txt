@@ -4,6 +4,7 @@
 fid-align-solve
 fid-bus-api
 fid-canon
+fid-chart-series
 fid-clarabel
 fid-construct
 fid-filter

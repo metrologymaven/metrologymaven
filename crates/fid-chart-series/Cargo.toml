@@ -1,0 +1,21 @@
+[package]
+name = "fid-chart-series"
+description = "The ChartSeries contract (major 1): the one data shape every chart source hands to report chart blocks and viewers, with its JSON Schema, validation and version check (spec node RPT.STATS.TREND.CONTRACT)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+# RFC 8785 canonical JSON parser and writer (CORE.JRN.CANON): bounded, duplicate-key-refusing
+# parsing and the bit-exact `0x` f64 encoding of the round trip (REQ-007).
+fid-canon = { path = "../fid-canon" }
+# The unit catalogue (GEO.FRAME.UNITS): axis and reference-line units and their quantity kinds.
+fid-geo-frame = { path = "../fid-geo-frame" }
+# The shared `sha256:` digest wire form (data-set digest) and the forbidden display code points.
+fid-types = { path = "../fid-types" }
+
+[lints]
+workspace = true

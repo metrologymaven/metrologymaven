@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-chart-series]
 satisfies: [REQ-RPT.STATS.TREND-004, REQ-RPT.STATS.TREND-005]
 covers: []
 depends_on: [CORE.JRN.CANON, GEO.FRAME.UNITS]
@@ -92,6 +93,16 @@ Defines `ChartSeries`, the one data shape every chart source hands to report cha
 
 - `VECTOR_GROUP` is reserved for LVM's vector group plot; LVM may need extra optional fields (vector components) in a later minor version.
 - Consumers (`RPT.MODEL.BLOCKS`, VIZ) should declare `uses_artifacts: [RPT.STATS.TREND.CONTRACT]` for the schema file, or depend on the crate; that edit is theirs to make.
+- Built in `fid-chart-series` (model layer). Choices made at build time, to confirm or reword in the REQs:
+  (1) **Wire form.** f64 values are `"0x"` plus 16 lowercase hex digits of their bits (the `fid-canon` bit-significant spelling), so `-0.0` and subnormals round-trip (REQ-007); integers (`major`, `minor`, `set_version`) are JSON numbers; optional fields are omitted, never `null`; `markers` is always present. The full grammar of every field (label keys, record and piece IDs, algorithm IDs, binning-rule IDs, run-rule set and rule IDs, `x_label` display text) is in the crate docs.
+  (2) **Values are in the axis unit**, not SI. A reference line lies on the value axis (`x` for `HISTOGRAM`, `y` otherwise) and must carry that axis's unit; a reference line on an `ORDINAL` value axis is refused.
+  (3) **Histograms**: `x` is a quantity axis and `y` is `ORDINAL`, read as "no physical unit" (a count). The count is an integral value from +0 to 2^53, `x_upper` is not below `x` in totalOrder (equal edges are HIST's degenerate bin), and `provenance.binning_rule` is required (REQ-RPT.STATS.TREND-003). `x_upper` and `binning_rule` are refused on other kinds, and `frozen_limits` on non-control kinds.
+  (4) **One encoding per series**: markers in a point and the reference lines must be strictly ascending in a stated canonical order (so duplicates are refused); points keep their order. `OUT_OF_TOLERANCE` with `INDETERMINATE` on one point is refused as contradictory, and the all-zero tombstone digest is refused as a data-set digest.
+  (5) **Versions**: `parse` reads `contract` first and returns `report.chart_series_unsupported` for any other major without reading the body (AC-2 is checked both there and with `check_supported` on a typed series stating major 2). A later minor of major 1 has its unknown fields ignored at every level and listed in `Parsed::ignored_fields`; unknown enum values and missing fields are still refused. Such a series cannot be re-encoded (`not_encodable`), since writing it as minor 0 would change what it claims. Errors carry a field path and a reason name (`report.chart_series_invalid{field, reason}`) and `UnsupportedCause::{Major, Kind}`.
+  (6) The schema is `crates/fid-chart-series/schema/chart-series.schema.json` (also `fid_chart_series::SCHEMA_JSON`). Minor 0 is closed and later minors are open, through an `if`/`then`/`else` on `contract.minor`. The schema is weaker than `validate`; its `description` lists what it does not express. `trend_minor9.json` sits in `v1_examples/` as AC-3 names it, but it is not part of the AC-1 round-trip set.
+  (7) **Fixture validation (AC-1)** uses a small stdlib JSON Schema 2020-12 validator inside `fixtures/rpt/stats/chart_series/make_fixtures.py`, which implements only the keywords the schema uses and fails on any other. It does not use the `jsonschema` package.
+  (8) A `RULE_VIOLATION` marker does not carry the rule set's review status: consumers look the set up by ID and version (RPT.STATS.SPC.RULES), so no review claim in a loaded series can pass as verified (D-045). Provenance fields are checked for form only.
+  (9) The 100 000-point validation budget (20 ms) has not been measured.
 
 ## Children
 
