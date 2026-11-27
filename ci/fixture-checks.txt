@@ -304,6 +304,7 @@ python fixtures/scan/cmp/make_field_golden.py --check
 python fixtures/scan/make_mesh_quality.py --check
 python fixtures/scan/meshop/make_invert_cases.py --check
 python fixtures/scan/meshop/make_prov_cases.py --check
+python fixtures/scan/poly/make_fan_fixtures.py --check
 python fixtures/scan/poly/make_prep_fixtures.py --check
 python fixtures/solv/cert/as-ties-v1/make_cases.py --check
 python fixtures/solv/cert/as-v1/make_cases.py --check

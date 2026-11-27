@@ -1,6 +1,6 @@
 [package]
 name = "fid-scan-poly"
-description = "Metrology Maven cloud polygonization kernel: vertex-set preparation (SCAN.POLY.SURF.PREP)"
+description = "Metrology Maven cloud polygonization kernel: vertex-set preparation and tangent-plane Delaunay fans (SCAN.POLY.SURF.PREP, FAN)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,8 +11,10 @@ repository.workspace = true
 # fid-geo-types (the GEO.TYPES PointCloud with its normals and bounding box), fid-geo-index
 # (the GEO.INDEX.KDTREE radius query for the 2h neighbourhoods and its pinned squared
 # distance) and fid-num (the KRN.NUM.LA.EIG symmetric eigensolver, `sqrt`, `cos` and the
-# total-order maximum).
+# total-order maximum), and fid-fit for the exact-sign orient2d/incircle predicates of
+# KRN.MZ.VOR (SCAN.POLY.SURF.FAN; the only implementation until KRN.NUM.PRED exists).
 [dependencies]
+fid-fit = { path = "../fid-fit" }
 fid-geo-index = { path = "../fid-geo-index" }
 fid-geo-types = { path = "../fid-geo-types" }
 fid-num = { path = "../fid-num" }

@@ -33,8 +33,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # inversion (SCAN.MESHOP.CUT.INVERT): KNP-1, only fid-geo-sel, fid-geo-types, fid-kci, fid-num
 # and fid-types.
 "fid-scan-mesh" = "kernel"
-# Cloud polygonization (SCAN.POLY.SURF.PREP first): KNP-1, only fid-geo-index, fid-geo-types
-# and fid-num.
+# Cloud polygonization (SCAN.POLY.SURF.PREP, FAN): KNP-1, only fid-fit (exact predicates),
+# fid-geo-index, fid-geo-types and fid-num.
 "fid-scan-poly" = "kernel"
 # B-rep model (GEO.CAD.TOPO.MODEL, ADJ, PCURVE) and assembly instances (GEO.CAD.ASSY.MODEL): L0
 # library code, KNP-1; only fid-geo-frame, fid-geo-nurbs, fid-num, fid-kci, fid-types.
