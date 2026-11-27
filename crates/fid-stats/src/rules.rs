@@ -22,7 +22,9 @@
 //! Technology*, 1984 [unverified citation details and parameters]; no text is copied. **Every
 //! shipped set is `UNVERIFIED`**, `beyond_limits@1` included: its single rule is definitional,
 //! but the boundary conventions of REQ-002 that it applies have not been reviewed by an expert
-//! either. The review status travels with every result and every violation.
+//! either. The review status travels with every result and every violation. A review claimed
+//! by a loaded file is [`ReviewStatus::ClaimedByFile`], never [`ReviewStatus::ExpertReviewed`]
+//! (D-045); only shipped data can carry the latter, and no shipped set does today.
 //!
 //! # Primitives (REQ-001, REQ-002)
 //!
@@ -68,7 +70,9 @@
 //!    `stats.too_many_points`; the first NaN or infinite value is `stats.non_finite{index}`.
 //! 3. Each rule's thresholds, in set order: a non-finite threshold is `stats.bad_lines`
 //!    (`threshold_not_finite`), and a zone that rounds onto the centre line
-//!    (`upper ≤ centre` or `lower ≥ centre`) is `stats.bad_lines` (`zone_below_resolution`).
+//!    (`upper ≤ centre` or `lower ≥ centre`), or whose `z · sigma` on either side is below the
+//!    same rounding-resolution floor as the half-widths (for `z ≠ 3`), is `stats.bad_lines`
+//!    (`zone_below_resolution`).
 //!
 //! A rule that needs more points than the sequence has cannot fire; it is reported as
 //! [`RuleStatus::TooFewPoints`] in [`RuleEvaluation::rules`], never silently as "no violation".
@@ -150,7 +154,8 @@ pub enum RulesetReason {
     BadId,
     /// The version is not an integer in `1..=`[`MAX_VERSION`].
     BadVersion,
-    /// The review status is not `UNVERIFIED` or `EXPERT_REVIEWED`.
+    /// The review status is not `UNVERIFIED`, `EXPERT_REVIEWED` or `CLAIMED_BY_FILE`, or a set
+    /// built in code claims [`ReviewStatus::ExpertReviewed`].
     BadReview,
     /// `rules` is not an array.
     BadRules,
@@ -225,7 +230,8 @@ pub enum LinesReason {
     SigmaBelowResolution,
     /// A rule's threshold `centre ± z · sigma` overflows.
     ThresholdNotFinite,
-    /// A rule's zone rounds onto the centre line.
+    /// A rule's zone rounds onto the centre line, or its `z · sigma` is below the
+    /// rounding-resolution floor.
     ZoneBelowResolution,
 }
 
@@ -428,9 +434,23 @@ pub struct RuleSet {
 }
 
 impl RuleSet {
-    /// A rule set, or `stats.ruleset_invalid` (`bad_id`, `bad_version`, `no_rules`,
-    /// `too_many_rules`, `duplicate_rule_id`).
+    /// A rule set, or `stats.ruleset_invalid` (`bad_id`, `bad_version`, `bad_review`, `no_rules`,
+    /// `too_many_rules`, `duplicate_rule_id`). A set built in code cannot claim
+    /// [`ReviewStatus::ExpertReviewed`] (`bad_review`): only the shipped sets can (D-045).
     pub fn new(id: &str, version: u32, review: ReviewStatus, rules: Vec<Rule>) -> Result<RuleSet, StatsError> {
+        RuleSet::build(id, version, review, rules, false)
+    }
+
+    pub(crate) fn build(
+        id: &str,
+        version: u32,
+        review: ReviewStatus,
+        rules: Vec<Rule>,
+        shipped: bool,
+    ) -> Result<RuleSet, StatsError> {
+        if review == ReviewStatus::ExpertReviewed && !shipped {
+            return Err(invalid(RulesetReason::BadReview));
+        }
         if !set_id_ok(id) {
             return Err(invalid(RulesetReason::BadId));
         }
@@ -459,8 +479,11 @@ impl RuleSet {
     /// Loads a rule-set file (canonical JSON or any JSON of the same shape; see
     /// [`crate::rules_load`]), or `stats.ruleset_invalid{reason}`: no rule of a refused file is
     /// ever evaluated (REQ-007).
+    ///
+    /// A review the file claims (`EXPERT_REVIEWED` or `CLAIMED_BY_FILE`) is loaded as
+    /// [`ReviewStatus::ClaimedByFile`], never as [`ReviewStatus::ExpertReviewed`] (D-045).
     pub fn parse(bytes: &[u8]) -> Result<RuleSet, StatsError> {
-        rules_load::parse(bytes).map_err(invalid)
+        rules_load::parse(bytes, rules_load::Origin::File).map_err(invalid)
     }
 
     /// The set in canonical JSON: sorted keys, no whitespace, integers without a fraction, and
@@ -494,7 +517,7 @@ impl RuleSet {
 /// The shipped rule set `id@version` (REQ-004), or `stats.ruleset_invalid` (`unknown_rule_set`).
 pub fn shipped_rule_set(id: &str, version: u32) -> Result<RuleSet, StatsError> {
     match SHIPPED_RULE_SETS.iter().find(|(i, v, _)| *i == id && *v == version) {
-        Some((_, _, bytes)) => RuleSet::parse(bytes),
+        Some((_, _, bytes)) => rules_load::parse(bytes, rules_load::Origin::Shipped).map_err(invalid),
         None => Err(invalid(RulesetReason::UnknownRuleSet)),
     }
 }
@@ -588,6 +611,8 @@ struct Zones {
     lcl: f64,
     sigma_above: f64,
     sigma_below: f64,
+    /// The rounding-resolution floor `SIGMA_FLOOR_EPS · ε · max|line|`.
+    floor: f64,
 }
 
 /// `a > b` in IEEE 754 totalOrder (both already finite and normalised).
@@ -630,21 +655,26 @@ impl Zones {
         if lt(up, floor) || lt(down, floor) {
             return Err(bad_lines(LinesReason::SigmaBelowResolution));
         }
-        Ok(Zones { centre, ucl, lcl, sigma_above: up / 3.0, sigma_below: down / 3.0 })
+        Ok(Zones { centre, ucl, lcl, sigma_above: up / 3.0, sigma_below: down / 3.0, floor })
     }
 
     /// `(upper, lower)` for zone `z`; `z = 3` is the control limits themselves.
     fn thresholds(&self, z: f64) -> Result<(f64, f64), StatsError> {
-        // Exactly 3 (bit for bit): the control limits themselves.
-        let (upper, lower) = if z.to_bits() == 3.0_f64.to_bits() {
-            (self.ucl, self.lcl)
-        } else {
-            (self.centre + z * self.sigma_above + 0.0, self.centre - z * self.sigma_below + 0.0)
-        };
+        // Exactly 3 (bit for bit): the control limits themselves, whose half-widths already
+        // passed the floor in `Zones::new`.
+        let three = z.to_bits() == 3.0_f64.to_bits();
+        let (above, below) = (z * self.sigma_above, z * self.sigma_below);
+        let (upper, lower) =
+            if three { (self.ucl, self.lcl) } else { (self.centre + above + 0.0, self.centre - below + 0.0) };
         if !upper.is_finite() || !lower.is_finite() {
             return Err(bad_lines(LinesReason::ThresholdNotFinite));
         }
-        if !gt(upper, self.centre) || !lt(lower, self.centre) {
+        // The same rounding-resolution floor as the half-widths applies to z · sigma, so a tiny z
+        // cannot make a zone only an ulp or two wide.
+        if (!three && (lt(above, self.floor) || lt(below, self.floor)))
+            || !gt(upper, self.centre)
+            || !lt(lower, self.centre)
+        {
             return Err(bad_lines(LinesReason::ZoneBelowResolution));
         }
         Ok((upper, lower))
@@ -816,6 +846,8 @@ pub fn evaluate_rules(points: &[f64], lines: &Lines, set: &RuleSet) -> Result<Ru
     if points.is_empty() {
         return Err(StatsError::InsufficientData);
     }
+    // Not covered by a test: reaching it needs a slice of more than u32::MAX f64 values (over
+    // 32 GiB), which no CI runner can allocate, and wasm32 cannot even address it.
     let n_points = u32::try_from(points.len()).map_err(|_| StatsError::TooManyPoints)?;
     let mut xs = Vec::with_capacity(points.len());
     for (index, &x) in points.iter().enumerate() {

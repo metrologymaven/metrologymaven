@@ -330,9 +330,11 @@ def load(raw):
     if ver is None or not 1 <= ver <= MAX_VERSION:
         raise Refused("bad_version")
     v = lookup(m, "review")
-    if v not in (("str", "UNVERIFIED"), ("str", "EXPERT_REVIEWED")):
+    if v not in (("str", "UNVERIFIED"), ("str", "EXPERT_REVIEWED"), ("str", "CLAIMED_BY_FILE")):
         raise Refused("bad_review")
-    review = v[1]
+    # D-045: any review a loaded file claims is CLAIMED_BY_FILE; only shipped sets may be EXPERT_REVIEWED
+    # (none is today, so this reference never produces it).
+    review = "UNVERIFIED" if v[1] == "UNVERIFIED" else "CLAIMED_BY_FILE"
     v = lookup(m, "rules")
     if v[0] != "arr":
         raise Refused("bad_rules")
@@ -419,18 +421,19 @@ def zones(centre, ucl, lcl):
     floor = 16.0 * EPS * max(abs(c), abs(u), abs(l))
     if up < floor or down < floor:
         raise Refused("stats.bad_lines:sigma_below_resolution")
-    return c, u, l, up / 3.0, down / 3.0
+    return c, u, l, up / 3.0, down / 3.0, floor
 
 
 def thresholds(zn, z):
-    c, u, l, sa, sb = zn
+    c, u, l, sa, sb, floor = zn
+    above, below = z * sa, z * sb
     if z == 3.0:
         hi, lo = u, l
     else:
-        hi, lo = norm(c + z * sa), norm(c - z * sb)
+        hi, lo = norm(c + above), norm(c - below)
     if not finite(hi) or not finite(lo):
         raise Refused("stats.bad_lines:threshold_not_finite")
-    if not hi > c or not lo < c:
+    if (z != 3.0 and (above < floor or below < floor)) or not hi > c or not lo < c:
         raise Refused("stats.bad_lines:zone_below_resolution")
     return hi, lo
 
@@ -586,6 +589,10 @@ EVAL = [
     ("inf_point", "points", L1, [0, -INF], one(B(3)), "stats.non_finite:1"),
     ("zone_underflow", "z sigma rounds onto the centre", (0.0, 1e-300, -1e-300), [0], one(B(1e-30)),
      "stats.bad_lines:zone_below_resolution"),
+    ("zone_floor", "z * sigma of 2e-10 at 1e6 is 2 ulp wide, below the 16 eps floor", (1e6, 1e6 + 3.0, 1e6 - 3.0),
+     [1e6], one(B(2e-10)), "stats.bad_lines:zone_below_resolution"),
+    ("zone_floor_ok", "z * sigma of 1e-8 at 1e6 is above the floor", (1e6, 1e6 + 3.0, 1e6 - 3.0),
+     [1e6, 1e6 + 2e-8], one(B(1e-8)), [[1, "r", 1, 1]]),
     ("threshold_overflow", "1000 sigma overflows", (0.0, 1e308, -1e308), [0], one(B(1000)),
      "stats.bad_lines:threshold_not_finite"),
 ]
@@ -628,8 +635,11 @@ LOAD = [
     ("pretty", PRETTY, "ok", PRETTY_CANON, None),
     ("z_max", replace_rule('{"id":"1","primitive":"BEYOND","z":1000}'), "ok",
      replace_rule('{"id":"1","primitive":"BEYOND","z":1000}'), None),
-    ("reviewed", replace_root(review='"EXPERT_REVIEWED"'), "ok",
-     '{"id":"x","review":"EXPERT_REVIEWED","rules":[{"id":"1","primitive":"BEYOND","z":3}],'
+    ("reviewed_claim", replace_root(review='"EXPERT_REVIEWED"'), "ok",
+     '{"id":"x","review":"CLAIMED_BY_FILE","rules":[{"id":"1","primitive":"BEYOND","z":3}],'
+     '"schema":"fid.stats.ruleset/1","version":1}', None),
+    ("claimed_by_file", replace_root(review='"CLAIMED_BY_FILE"'), "ok",
+     '{"id":"x","review":"CLAIMED_BY_FILE","rules":[{"id":"1","primitive":"BEYOND","z":3}],'
      '"schema":"fid.stats.ruleset/1","version":1}', None),
     ("max_rules", replace_root(rules="[" + ",".join('{"id":"r%d","primitive":"BEYOND","z":3}' % n
                                                    for n in range(64)) + "]"), "ok", None, None),

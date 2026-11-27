@@ -389,3 +389,62 @@ fn codes_and_signed_zero() {
     assert_eq!(a, b);
     assert_eq!(a.violations.len(), 1);
 }
+
+/// D-045: a review claimed by a loaded file is `ClaimedByFile`, never `ExpertReviewed`, and a set
+/// built in code cannot claim `ExpertReviewed` either; only shipped data could, and none does.
+#[test]
+fn file_review_claim_stays_distinguishable() {
+    let body = |review: &str| {
+        format!(
+            r#"{{"id":"x","review":"{review}","rules":[{{"id":"1","primitive":"BEYOND","z":3}}],"schema":"fid.stats.ruleset/1","version":1}}"#
+        )
+    };
+    for claim in ["EXPERT_REVIEWED", "CLAIMED_BY_FILE"] {
+        let set = RuleSet::parse(body(claim).as_bytes()).unwrap();
+        assert_eq!(set.review(), ReviewStatus::ClaimedByFile, "{claim}");
+        assert_ne!(set.review(), ReviewStatus::ExpertReviewed);
+        assert_eq!(set.review().as_str(), "CLAIMED_BY_FILE");
+        assert_eq!(set.to_canonical_json(), body("CLAIMED_BY_FILE"));
+        let ev = evaluate_rules(&[0.0, 3.5], &Lines { centre: 0.0, ucl: 3.0, lcl: -3.0 }, &set).unwrap();
+        assert_eq!(ev.review, ReviewStatus::ClaimedByFile);
+        assert!(ev.violations.iter().all(|v| v.review == ReviewStatus::ClaimedByFile));
+    }
+    assert_eq!(RuleSet::parse(body("UNVERIFIED").as_bytes()).unwrap().review(), ReviewStatus::Unverified);
+    let r = Rule::new("r", Primitive::Beyond { z: 3.0 }).unwrap();
+    assert_eq!(
+        RuleSet::new("x", 1, ReviewStatus::ExpertReviewed, vec![r.clone()]).unwrap_err(),
+        StatsError::RulesetInvalid { reason: RulesetReason::BadReview }
+    );
+    assert_eq!(
+        RuleSet::new("x", 1, ReviewStatus::ClaimedByFile, vec![r]).unwrap().review(),
+        ReviewStatus::ClaimedByFile
+    );
+    for (id, version, _) in SHIPPED_RULE_SETS {
+        assert_ne!(shipped_rule_set(id, version).unwrap().review(), ReviewStatus::ExpertReviewed, "{id}");
+    }
+}
+
+/// The rounding-resolution floor applies to z · sigma too: at a centre of 1e6 (ulp 1.2e-10, floor
+/// 16 ε · 1e6 = 3.6e-9) a zone of 2e-10 is two ulp wide and refused, one of 1e-8 is accepted.
+#[test]
+fn zone_floor_on_z_sigma() {
+    let lines = Lines { centre: 1e6, ucl: 1e6 + 3.0, lcl: 1e6 - 3.0 };
+    let tiny =
+        RuleSet::new("x", 1, ReviewStatus::Unverified, vec![Rule::new("r", Primitive::Beyond { z: 2e-10 }).unwrap()])
+            .unwrap();
+    // 1e6 + 2e-10 is two ulp above 1e6, so the zone does not round onto the centre: only the
+    // floor refuses it.
+    assert_eq!(
+        evaluate_rules(&[1e6], &lines, &tiny).unwrap_err(),
+        StatsError::BadLines { reason: LinesReason::ZoneBelowResolution }
+    );
+    let ok = RuleSet::new(
+        "x",
+        1,
+        ReviewStatus::Unverified,
+        vec![Rule::new("r", Primitive::RunOutside { len: 2, z: 1e-8 }).unwrap()],
+    )
+    .unwrap();
+    let ev = evaluate_rules(&[1e6 + 2e-8, 1e6 - 2e-8], &lines, &ok).unwrap();
+    assert_eq!(ev.violations.len(), 1);
+}

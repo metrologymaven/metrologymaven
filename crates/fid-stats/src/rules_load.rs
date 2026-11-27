@@ -23,7 +23,10 @@
 //!    detected when that object closes: `duplicate_key`;
 //! 3. the top level: not an object `wrong_type`; a key outside the five (first in text order)
 //!    `unknown_key`; a missing key (in the order `schema`, `id`, `version`, `review`, `rules`)
-//!    `missing_key`; then `bad_schema`, `bad_id`, `bad_version`, `bad_review`, `bad_rules`
+//!    `missing_key`; then `bad_schema`, `bad_id`, `bad_version`, `bad_review` (the review must
+//!    be `UNVERIFIED`, `EXPERT_REVIEWED` or `CLAIMED_BY_FILE`; in a loaded file either of the
+//!    last two becomes [`ReviewStatus::ClaimedByFile`], and only the shipped sets can carry
+//!    [`ReviewStatus::ExpertReviewed`], D-045), `bad_rules`
 //!    (not an array), `no_rules`, `too_many_rules`;
 //! 4. each rule in order: not an object `bad_rule`; no `primitive` `missing_key`; `primitive`
 //!    not a string `bad_rule`; not a known name `unknown_primitive`; a key outside the rule's set
@@ -323,8 +326,19 @@ fn rule(v: &Val<'_>, earlier: &[Rule]) -> R<Rule> {
     Rule::new(id, primitive).map_err(|_| RulesetReason::BadParameter)
 }
 
+/// Where a rule-set file comes from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Origin {
+    /// A file handed to [`RuleSet::parse`]: any review it claims becomes
+    /// [`ReviewStatus::ClaimedByFile`].
+    File,
+    /// A set embedded in this crate ([`crate::rules::SHIPPED_RULE_SETS`]): the only source of
+    /// [`ReviewStatus::ExpertReviewed`].
+    Shipped,
+}
+
 /// Loads a rule-set file (see the module documentation for the order of checks).
-pub(crate) fn parse(bytes: &[u8]) -> R<RuleSet> {
+pub(crate) fn parse(bytes: &[u8], origin: Origin) -> R<RuleSet> {
     if bytes.len() > MAX_RULESET_BYTES {
         return Err(RulesetReason::TooLarge);
     }
@@ -353,9 +367,11 @@ pub(crate) fn parse(bytes: &[u8]) -> R<RuleSet> {
         }
         _ => return Err(RulesetReason::BadVersion),
     };
-    let review = match get(members, "review") {
-        Some(Val::Str("UNVERIFIED")) => ReviewStatus::Unverified,
-        Some(Val::Str("EXPERT_REVIEWED")) => ReviewStatus::ExpertReviewed,
+    // D-045: a review claimed by a loaded file stays distinguishable from reviewed shipped data.
+    let review = match (get(members, "review"), origin) {
+        (Some(Val::Str("UNVERIFIED")), _) => ReviewStatus::Unverified,
+        (Some(Val::Str("EXPERT_REVIEWED")), Origin::Shipped) => ReviewStatus::ExpertReviewed,
+        (Some(Val::Str("EXPERT_REVIEWED" | "CLAIMED_BY_FILE")), _) => ReviewStatus::ClaimedByFile,
         _ => return Err(RulesetReason::BadReview),
     };
     let items = match get(members, "rules") {
@@ -373,7 +389,7 @@ pub(crate) fn parse(bytes: &[u8]) -> R<RuleSet> {
         let r = rule(v, &rules)?;
         rules.push(r);
     }
-    RuleSet::new(id, version, review, rules).map_err(|e| match e {
+    RuleSet::build(id, version, review, rules, origin == Origin::Shipped).map_err(|e| match e {
         crate::StatsError::RulesetInvalid { reason } => reason,
         _ => RulesetReason::Malformed,
     })

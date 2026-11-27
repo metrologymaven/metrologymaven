@@ -1104,6 +1104,55 @@
    }
   },
   {
+   "id": "zone_floor",
+   "note": "z * sigma of 2e-10 at 1e6 is 2 ulp wide, below the 16 eps floor",
+   "lines": [
+    "412e848000000000",
+    "412e848600000000",
+    "412e847a00000000"
+   ],
+   "points": [
+    "412e848000000000"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":0.0000000002}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "error": "stats.bad_lines:zone_below_resolution"
+   }
+  },
+  {
+   "id": "zone_floor_ok",
+   "note": "z * sigma of 1e-8 at 1e6 is above the floor",
+   "lines": [
+    "412e848000000000",
+    "412e848600000000",
+    "412e847a00000000"
+   ],
+   "points": [
+    "412e848000000000",
+    "412e8480000000ac"
+   ],
+   "ruleset": "{\"id\":\"case\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"r\",\"primitive\":\"BEYOND\",\"z\":0.00000001}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}",
+   "expect": {
+    "violations": [
+     [
+      1,
+      "r",
+      1,
+      1
+     ]
+    ],
+    "rules": [
+     [
+      "r",
+      "evaluated",
+      1,
+      "412e848000000056",
+      "412e847fffffffaa"
+     ]
+    ]
+   }
+  },
+  {
    "id": "threshold_overflow",
    "note": "1000 sigma overflows",
    "lines": [
@@ -1120,7 +1169,7 @@
    }
   }
  ],
- "eval_digest": "6b475b54f6649206adb471e621bd3efc6fc49f278d7a79121d8c53a33eac202d",
+ "eval_digest": "9ad63eddad446b76d5ca9dd8006958eda3183c668730e8b3b4f1919a47de14c8",
  "load_cases": [
   {
    "id": "magic",
@@ -1146,10 +1195,16 @@
    "canonical": "{\"id\":\"x\",\"review\":\"UNVERIFIED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":1000}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}"
   },
   {
-   "id": "reviewed",
+   "id": "reviewed_claim",
    "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"version\":1,\"review\":\"EXPERT_REVIEWED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
    "expect": "ok",
-   "canonical": "{\"id\":\"x\",\"review\":\"EXPERT_REVIEWED\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}"
+   "canonical": "{\"id\":\"x\",\"review\":\"CLAIMED_BY_FILE\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}"
+  },
+  {
+   "id": "claimed_by_file",
+   "text": "{\"schema\":\"fid.stats.ruleset/1\",\"id\":\"x\",\"version\":1,\"review\":\"CLAIMED_BY_FILE\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}]}",
+   "expect": "ok",
+   "canonical": "{\"id\":\"x\",\"review\":\"CLAIMED_BY_FILE\",\"rules\":[{\"id\":\"1\",\"primitive\":\"BEYOND\",\"z\":3}],\"schema\":\"fid.stats.ruleset/1\",\"version\":1}"
   },
   {
    "id": "max_rules",
