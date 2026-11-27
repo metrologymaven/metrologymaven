@@ -106,8 +106,9 @@ pub enum DiscloseError {
     /// The parameters, the algorithm ID, the excluded set or the guards (see the module
     /// documentation, steps 1 to 4).
     Policy(PolicyError),
-    /// A feature failed `fid_fit` validation, or its encoding could not be allocated.
-    Fit(FitError),
+    /// A feature failed `fid_fit` validation, or its encoding could not be allocated. Boxed:
+    /// `FitError` is large, and this keeps every `Result` of this module small.
+    Fit(Box<FitError>),
     /// The method reported `status` with a non-empty excluded set.
     StatusMismatch { status: MethodStatus, excluded: usize },
     /// Points were excluded but no impact disclosure was given (REQ-KRN.OUT.DISC-002).
@@ -191,7 +192,7 @@ impl From<PolicyError> for DiscloseError {
 
 impl From<FitError> for DiscloseError {
     fn from(e: FitError) -> Self {
-        DiscloseError::Fit(e)
+        DiscloseError::Fit(Box::new(e))
     }
 }
 
