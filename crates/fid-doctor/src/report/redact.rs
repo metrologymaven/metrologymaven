@@ -14,8 +14,8 @@
 //!    A path runs until whitespace, a control or format character, or one of
 //!    ``" ' ` < > |``; when the install directory or the home directory starts there (after
 //!    a `\\?\` prefix, if any), it runs at least to that directory's end, so a directory name
-//!    with spaces is taken whole. Trailing `. , ; : ! ? ) ] }` are left outside it. A path
-//!    under the install directory (component-wise prefix; case-insensitive and `/` = `\`
+//!    with spaces is taken whole; the same holds for the identity's user folders (OneDrive).
+//!    Trailing `. , ; : ! ? ) ] }` are left outside it. A path under the install directory (component-wise prefix; case-insensitive and `/` = `\`
 //!    only for a Windows-style install directory) with no `..` component is kept; every
 //!    other path becomes [`PLACEHOLDER_PATH`]. A redacted path then swallows more text, to
 //!    catch the rest of a path with spaces: when the path opens a quoted string (`"`, `'` or
@@ -64,6 +64,10 @@ pub struct Identity {
     pub hosts: Vec<String>,
     /// Absolute home directory.
     pub home: String,
+    /// Folders under the user's name that hold spaces (Windows `OneDrive`,
+    /// `OneDriveCommercial`, `OneDriveConsumer`): a path that starts with one always runs at
+    /// least to its end, like the home directory. Relative entries are ignored.
+    pub user_dirs: Vec<String>,
     /// Logon or DNS domains (Windows `USERDOMAIN` and `USERDNSDOMAIN`; elsewhere the domain
     /// part of the dotted host names); may be empty.
     pub domains: Vec<String>,
@@ -97,7 +101,8 @@ impl Identity {
     ///
     /// - Windows: user `USERNAME`; home `USERPROFILE`, else `HOMEDRIVE` + `HOMEPATH`; hosts
     ///   `COMPUTERNAME`, then `sys_hosts`, then each dotless host joined with each dotted
-    ///   domain; domains `USERDOMAIN`, `USERDNSDOMAIN`.
+    ///   domain; domains `USERDOMAIN`, `USERDNSDOMAIN`; user folders `OneDrive`,
+    ///   `OneDriveCommercial`, `OneDriveConsumer`.
     /// - Unix: user `USER`, else `LOGNAME`; home `HOME`; hosts `HOSTNAME`, then `sys_hosts`;
     ///   domains the part after the first dot of each dotted host name.
     pub fn from_lookup(
@@ -115,7 +120,7 @@ impl Identity {
                 },
             }
         };
-        let (home, user, env_hosts, domains) = match platform {
+        let (home, user, env_hosts, domains, user_dirs) = match platform {
             IdentityPlatform::Windows => {
                 let home = match get("USERPROFILE", "home")? {
                     Some(h) => Some(h),
@@ -128,7 +133,15 @@ impl Identity {
                 let hosts: Vec<String> = get("COMPUTERNAME", "host")?.into_iter().collect();
                 let domains: Vec<String> =
                     [get("USERDOMAIN", "domain")?, get("USERDNSDOMAIN", "domain")?].into_iter().flatten().collect();
-                (home, user, hosts, domains)
+                let mut dirs: Vec<String> = Vec::new();
+                for name in ["OneDrive", "OneDriveCommercial", "OneDriveConsumer"] {
+                    if let Some(d) = get(name, "home")? {
+                        if !dirs.iter().any(|x| fold_str_eq(x, &d)) {
+                            dirs.push(d);
+                        }
+                    }
+                }
+                (home, user, hosts, domains, dirs)
             }
             IdentityPlatform::Unix => {
                 let home = get("HOME", "home")?;
@@ -138,7 +151,7 @@ impl Identity {
                 };
                 let hosts: Vec<String> = get("HOSTNAME", "host")?.into_iter().collect();
                 // Domains are derived below from the dotted host names.
-                (home, user, hosts, Vec::new())
+                (home, user, hosts, Vec::new(), Vec::new())
             }
         };
         let home = home.filter(|h| is_absolute(&h.chars().collect::<Vec<_>>())).ok_or_else(|| unavailable("home"))?;
@@ -178,7 +191,7 @@ impl Identity {
                 }
             }
         }
-        Ok(Identity { user, hosts, home, domains })
+        Ok(Identity { user, hosts, home, user_dirs, domains })
     }
 }
 
@@ -369,6 +382,8 @@ pub struct Redactor {
     install_windows: bool,
     /// Empty when the home directory is a root (nothing identifying to replace).
     home: Vec<char>,
+    /// The identity's absolute user folders (separators trimmed).
+    user_dirs: Vec<Vec<char>>,
     names: Vec<(Vec<char>, &'static str)>,
 }
 
@@ -446,7 +461,15 @@ impl Redactor {
         }
         // Longest first; ties keep the order above.
         names.sort_by_key(|n| std::cmp::Reverse(n.0.len()));
-        Ok(Redactor { install, install_windows, home, names })
+        let user_dirs: Vec<Vec<char>> = identity
+            .user_dirs
+            .iter()
+            .map(|d| d.trim().chars().collect::<Vec<char>>())
+            .filter(|d| is_absolute(d))
+            .map(strip_trailing_seps)
+            .filter(|d| !components_after_root(d).is_empty())
+            .collect();
+        Ok(Redactor { install, install_windows, home, user_dirs, names })
     }
 
     /// The redacted form of `s` (see the module documentation for the rules).
@@ -516,12 +539,13 @@ impl Redactor {
         let mut end = scan(i);
         let mut min_end = i + 1;
         let base = i + verbatim_len(c, i);
-        let prefixes: [(&[char], bool); 2] = [(&self.install, self.install_windows), (&self.home, true)];
+        let mut prefixes: Vec<(&[char], bool)> = vec![(&self.install, self.install_windows), (&self.home, true)];
+        prefixes.extend(self.user_dirs.iter().map(|d| (d.as_slice(), true)));
         for (p, windows) in prefixes {
             let after = base + p.len();
             if !p.is_empty()
                 && starts_with_at(c, base, p, |a, b| path_eq(a, b, windows))
-                && (after == c.len() || is_sep(c[after]) || is_term(c[after]))
+                && (after == c.len() || is_sep(c[after]) || is_term(c[after]) || is_trailing_punct(c[after]))
             {
                 end = end.max(scan(after));
                 min_end = min_end.max(after);

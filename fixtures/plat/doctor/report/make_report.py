@@ -405,6 +405,13 @@ def make_redactor(identity, install_dir):
         len(home) == len(inst) or is_sep(home[len(inst)])
     ):
         raise RedactError("invalid_install_dir", "contains the home directory")
+    dirs = []
+    for d in identity.get("user_dirs", []):
+        d = d.strip()
+        if is_absolute(d):
+            d = strip_seps(d)
+            if comps_after_root(d):
+                dirs.append(d)
     names = []
 
     def push(s, mark):
@@ -425,7 +432,7 @@ def make_redactor(identity, install_dir):
     if home_last is not None:
         push(home_last, USER)
     names.sort(key=lambda nm: -len(nm[0]))  # stable: ties keep the push order
-    return {"install": inst, "win": win, "home": home, "names": names}
+    return {"install": inst, "win": win, "home": home, "dirs": dirs, "names": names}
 
 
 def path_end(r, c, i):
@@ -436,10 +443,10 @@ def path_end(r, c, i):
 
     end, min_end = scan(i), i + 1
     base = i + verbatim_len(c, i)
-    for p, win in [(r["install"], r["win"]), (r["home"], True)]:
+    for p, win in [(r["install"], r["win"]), (r["home"], True)] + [(d, True) for d in r["dirs"]]:
         after = base + len(p)
         if p and starts_at(c, base, p, lambda a, b: path_eq(a, b, win)) and (
-            after == len(c) or is_sep(c[after]) or is_term(c[after])
+            after == len(c) or is_sep(c[after]) or is_term(c[after]) or is_trailing_punct(c[after])
         ):
             end = max(end, scan(after))
             min_end = max(min_end, after)
@@ -607,8 +614,8 @@ def redact_report(report, identity, install_dir):
 # ------------------------------------------------------------------ redaction cases (hand-labelled)
 
 
-def ident(user, hosts, home, domains=()):
-    return {"domains": list(domains), "home": home, "hosts": list(hosts), "user": user}
+def ident(user, hosts, home, domains=(), user_dirs=()):
+    return {"domains": list(domains), "home": home, "hosts": list(hosts), "user": user, "user_dirs": list(user_dirs)}
 
 
 ID_WIN = ident("jdoe", ["WS-QA-17.lab.example"], "C:\\Users\\jdoe")
@@ -624,6 +631,8 @@ ID_WORDS = ident("user", ["host"], "/home/user")
 INSTALL_FID = "/opt/fid"
 ID_JOSE = ident("Jos\u00e9", ["taller"], "/home/jose")
 ID_SOFIA = ident("\u03a3\u03bf\u03c6\u03af\u03b1", ["lab"], "/home/sofia")
+ID_ONEDRIVE = ident("jdoe", ["WS-QA-17"], "C:\\Users\\jdoe",
+                    user_dirs=["C:\\Users\\jdoe\\OneDrive - Acme Corp", "C:\\Users\\jdoe\\OneDrive"])
 ID_RENAMED = ident("jdoe", ["WS-QA-17"], "C:\\Users\\john.doe.CORP")
 
 # (name, identity, install_dir, input, expected) -- expected written by hand from the rules.
@@ -648,6 +657,18 @@ REDACT_CASES = [
      "read C:\\Data\\My Scans\\part 7 failed", "read <redacted:path> 7 failed"),
     ("swallow_onedrive_folder_with_dash", ID_WIN, INSTALL_WIN, "C:\\Users\\jdoe\\OneDrive - Acme Corp\\Docs\\x",
      "<redacted:path>"),
+    ("onedrive_root_bare", ID_ONEDRIVE, INSTALL_WIN, "cannot access C:\\Users\\jdoe\\OneDrive - Acme Corp",
+     "cannot access <redacted:path>"),
+    ("onedrive_root_trailing_word", ID_ONEDRIVE, INSTALL_WIN, "cannot access C:\\Users\\jdoe\\OneDrive - Acme Corp now",
+     "cannot access <redacted:path> now"),
+    ("onedrive_root_trailing_period", ID_ONEDRIVE, INSTALL_WIN, "at C:\\Users\\jdoe\\OneDrive - Acme Corp.",
+     "at <redacted:path>."),
+    ("onedrive_root_quoted_forward_slashes", ID_ONEDRIVE, INSTALL_WIN, "dir (c:/users/jdoe/onedrive - acme corp) gone",
+     "dir (<redacted:path>) gone"),
+    ("onedrive_personal_root_trailing_word", ID_ONEDRIVE, INSTALL_WIN, "sync C:\\Users\\jdoe\\OneDrive paused",
+     "sync <redacted:path> paused"),
+    ("install_dir_with_trailing_period_kept", ID_WIN, INSTALL_WIN, "in C:\\Program Files\\Metrology Maven.",
+     "in C:\\Program Files\\Metrology Maven."),
     ("swallow_other_home_with_two_spaces", ID_WIN, INSTALL_WIN, "C:\\Users\\Ann Marie Lee\\Documents\\x",
      "<redacted:path>"),
     ("swallow_client_folder_with_spaces", ID_WIN, INSTALL_WIN, "read D:\\Clients\\Acme Bank Audit\\part.stp failed",

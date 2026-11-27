@@ -65,12 +65,19 @@ fn identity_of(v: &CValue) -> Identity {
         user: s(v, "user").to_string(),
         hosts: strings(v, "hosts"),
         home: s(v, "home").to_string(),
+        user_dirs: strings(v, "user_dirs"),
         domains: strings(v, "domains"),
     }
 }
 
 fn simple_identity(user: &str, host: &str, home: &str) -> Identity {
-    Identity { user: user.into(), hosts: vec![host.into()], home: home.into(), domains: Vec::new() }
+    Identity {
+        user: user.into(),
+        hosts: vec![host.into()],
+        home: home.into(),
+        user_dirs: Vec::new(),
+        domains: Vec::new(),
+    }
 }
 
 fn id_win() -> Identity {
@@ -417,6 +424,7 @@ fn identity_from_lookup_windows_gathers_dns_names_and_domains() {
                 "ws-qa-17-long-name.CORP.EXAMPLE.COM".into(),
             ],
             home: "C:\\Users\\jdoe".into(),
+            user_dirs: Vec::new(),
             domains: vec!["CORP".into(), "CORP.EXAMPLE.COM".into()],
         }
     );
@@ -452,6 +460,7 @@ fn identity_from_lookup_unix_falls_back_to_logname() {
             user: "mtest".into(),
             hosts: vec!["rig-04".into(), "rig-04.lab".into()],
             home: "/home/mtest".into(),
+            user_dirs: Vec::new(),
             domains: vec!["lab".into()],
         }
     );
@@ -501,6 +510,9 @@ fn identity_unavailable_for_each_missing_blank_or_non_utf8_item() {
         ("win host control only", Windows, with(win_env(), "COMPUTERNAME", None), vec!["\u{7}".into()], "host"),
         ("win domain non-utf8", Windows, with(win_env(), "USERDOMAIN", bad()), vec![], "domain"),
         ("win dns domain non-utf8", Windows, with(win_env(), "USERDNSDOMAIN", bad()), vec![], "domain"),
+        ("win onedrive non-utf8", Windows, with(win_env(), "OneDrive", bad()), vec![], "home"),
+        ("win onedrive commercial non-utf8", Windows, with(win_env(), "OneDriveCommercial", bad()), vec![], "home"),
+        ("win onedrive consumer non-utf8", Windows, with(win_env(), "OneDriveConsumer", bad()), vec![], "home"),
         ("unix user missing", Unix, with(unix_env(), "USER", None), vec![], "user"),
         ("unix user blank", Unix, with(unix_env(), "USER", blank()), vec![], "user"),
         ("unix user non-utf8", Unix, with(unix_env(), "USER", bad()), vec![], "user"),
@@ -559,4 +571,32 @@ fn profile_names_redacted_resorted_and_checked() {
         long.redact(&redactor).unwrap_err(),
         ReportError::RedactionOverflow { pointer: "/assessment/profiles/2/name".into() }
     );
+}
+
+/// Windows OneDrive folders are gathered and a path starting with one runs to its end.
+#[test]
+fn identity_from_lookup_windows_onedrive_folders() {
+    let env = with(
+        with(
+            with(win_env(), "OneDrive", Some(os("C:\\Users\\jdoe\\OneDrive - Acme Corp"))),
+            "OneDriveCommercial",
+            Some(os("C:\\Users\\jdoe\\OneDrive - Acme Corp")),
+        ),
+        "OneDriveConsumer",
+        Some(os("C:\\Users\\jdoe\\OneDrive")),
+    );
+    let id = Identity::from_lookup(IdentityPlatform::Windows, lookup(&env), Vec::new).unwrap();
+    assert_eq!(
+        id.user_dirs,
+        vec!["C:\\Users\\jdoe\\OneDrive - Acme Corp".to_string(), "C:\\Users\\jdoe\\OneDrive".to_string()]
+    );
+    let r = Redactor::new(&id, INSTALL_WIN).unwrap();
+    assert_eq!(r.redact_text("cannot access C:\\Users\\jdoe\\OneDrive - Acme Corp"), "cannot access <redacted:path>");
+    assert_eq!(
+        r.redact_text("cannot access C:\\Users\\jdoe\\OneDrive - Acme Corp now"),
+        "cannot access <redacted:path> now"
+    );
+    // A blank OneDrive variable is ignored.
+    let env = with(win_env(), "OneDrive", Some(os("  ")));
+    assert!(Identity::from_lookup(IdentityPlatform::Windows, lookup(&env), Vec::new).unwrap().user_dirs.is_empty());
 }
