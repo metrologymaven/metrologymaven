@@ -231,6 +231,7 @@ python fixtures/num/la/make_svd_fixtures.py --check
 python fixtures/num/make_red_fixtures.py --check
 python fixtures/operator/make_fixtures.py --check
 python fixtures/ors/trace/make_fixtures.py --check
+python fixtures/out/make_disc_fixtures.py --check
 python fixtures/out/make_gate_fixtures.py --check
 python fixtures/out/make_pol_fixtures.py --check
 python fixtures/out/make_stat_fixtures.py --check

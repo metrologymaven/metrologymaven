@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-filter]
+built_pr: 666
 satisfies: [REQ-KRN.OUT-002, REQ-KRN.OUT-003]
 covers: []
 depends_on: [KRN.OUT.POL, KRN.LSQ.TRAIT]
@@ -17,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-27
 ---
 
 # KRN.OUT.DISC: Excluded-set record and impact disclosure
@@ -65,7 +67,11 @@ The audit record of a point removal: which policy, which parameters, which point
 
 ## Open questions
 
-- None.
+- Built in `fid-filter` module `disclose` (`crates/fid-filter/src/disclose.rs`, which pins the construction order, the difference rules and the encoding). AC-1..AC-4 are tested in `crates/fid-filter/tests/disclose.rs` against `fixtures/out/disc-record-v1/`, written by the independent `fixtures/out/make_disc_fixtures.py`; AC-2 runs on x86-64 (Linux, Windows), ARM64 (macOS) and wasm32-wasip1 under wasmtime.
+- Additions beyond the Design's data structures, all additive, for review: the record also carries the method's `MethodStatus` (so an empty set says why it is empty, e.g. `zero_scale`) and the excluded-set digest itself; the encoding starts with `"format":"filter.exclusion_record@1"`; the disclosure also carries `stats_delta` (after minus before for rms, max, min, mean, std_dev, as Scope's "and their differences" covers the statistics too) and `opposed_directions` (directions whose before and after vectors have a negative dot product, where the per-component deltas describe a canonical sign flip rather than a tilt).
+- Construction refuses, with a typed reason, anything a record must not describe: parameters that are not a canonical `PolicySpec`, an algorithm ID that is not `filter.outlier.<that spec's method>@..`, an exclusion the `KRN.OUT.POL` guards refuse, `zero_scale` with exclusions, a missing or unexpected impact, fits of another primitive or with the wrong residual count, directions outside the canonical sign convention, and invalid statistics. The record stores the features it is given, so it also refuses values fid-fit's `canonical` would rewrite: a direction or axis that is not unit length (`|sum_sq(u) - 1| <= UNIT_LENGTH_TOL`, 8 ulp of 1, a fixed floor) and a slot `length` or `width` of `-0.0`, so the same geometry has one encoding.
+- Only outlier policies have a record now. `KRN.OUT.SEL` (parent split rationale: "SEL's selections use the same record") will need `filter.select.*` IDs and its own parameter encoding accepted here.
+- The performance budget (1 M indices < 10 ms) is not measured.
 
 ## Children
 
