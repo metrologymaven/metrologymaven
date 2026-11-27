@@ -245,9 +245,9 @@ fn real_templates_valid() {
     }
 }
 
-/// The repository template directory holds the four templates of this leaf; the other four
-/// required documents belong to QUAL.VAP.PROTO, CHECK and SUPQ and are reported missing until
-/// those leaves land.
+/// The repository template directory holds the four templates of this leaf and the IQ and OQ
+/// protocols of QUAL.VAP.PROTO; the other three required documents belong to QUAL.VAP.CHECK
+/// and SUPQ and are reported missing until those leaves land.
 #[test]
 fn repository_set_reports_sibling_documents_missing() {
     let files = read_set_dir(&root().join("vap/templates")).unwrap();
@@ -255,15 +255,9 @@ fn repository_set_reports_sibling_documents_missing() {
     let missing: Vec<String> = report.findings.iter().map(|f| f.to_string()).collect();
     assert_eq!(
         missing,
-        [
-            "TPL-MISSING iq-protocol",
-            "TPL-MISSING oq-protocol",
-            "TPL-MISSING checklist-17025",
-            "TPL-MISSING checklist-part11-annex11",
-            "TPL-MISSING supplier-questionnaire"
-        ]
+        ["TPL-MISSING checklist-17025", "TPL-MISSING checklist-part11-annex11", "TPL-MISSING supplier-questionnaire"]
     );
-    assert_eq!(report.valid, ["periodic-review", "pq-guidance", "risk", "urs"]);
+    assert_eq!(report.valid, ["iq-protocol", "oq-protocol", "periodic-review", "pq-guidance", "risk", "urs"]);
 }
 
 // ------------------------------------------------------------------ AC-1, AC-2, AC-4 (library)

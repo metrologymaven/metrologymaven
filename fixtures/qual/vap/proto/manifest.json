@@ -1,0 +1,30 @@
+{
+  "format": 1,
+  "commands": [
+    {
+      "id": "validate.export_bundle",
+      "major": 1,
+      "title": "Export qualification bundle"
+    },
+    {
+      "id": "validate.register_golden",
+      "major": 1,
+      "title": "Register golden journal"
+    },
+    {
+      "id": "validate.run_iq",
+      "major": 1,
+      "title": "Run installation qualification"
+    },
+    {
+      "id": "validate.run_oq",
+      "major": 1,
+      "title": "Run operational qualification"
+    },
+    {
+      "id": "validate.show_record",
+      "major": 1,
+      "title": "Show qualification record or status"
+    }
+  ]
+}
