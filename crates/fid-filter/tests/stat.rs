@@ -302,6 +302,39 @@ fn zero_mad_and_qn_with_unequal_residuals_report_zero_scale() {
     assert_eq!(o.status, MethodStatus::Decided);
 }
 
+/// REQ-004: a subnormal scale whose limit `k * scale` rounds to zero is a zero scale too, not
+/// a zero limit that would exclude every point off the centre. Hand-labelled with
+/// a = 5e-324 and k = 0.25: residuals -a 0 a give a MAD scale of 1.4826 a = a, a standard
+/// deviation of about 0.82 a = a and a Qn scale of 2.219 a = 2a, so every limit is
+/// 0.25 a or 0.5 a, which rounds to 0.
+#[test]
+fn limit_rounding_to_zero_reports_zero_scale() {
+    let a = 5e-324;
+    let r = [-a, 0.0, a];
+    let mut outcomes = vec![NSigma::new(0.25, Side::Both).unwrap().evaluate(&r).unwrap()];
+    for &est in ScaleEstimator::ALL {
+        outcomes.push(RobustScale::new(0.25, est, Side::Both).unwrap().evaluate(&r).unwrap());
+    }
+    for o in outcomes {
+        assert_eq!(o.status, MethodStatus::ZeroScale);
+        assert!(o.mask.is_empty());
+        assert_eq!((o.scale, o.threshold), (0.0, 0.0));
+    }
+    // With k = 3 the limit is 3a: positive, so the method decides (and nothing is beyond it).
+    let o = RobustScale::new(3.0, ScaleEstimator::Mad, Side::Both).unwrap().evaluate(&r).unwrap();
+    assert_eq!(o.status, MethodStatus::Decided);
+    same_bits(o.threshold, 3.0 * a, "limit");
+    assert!(o.mask.is_empty());
+}
+
+/// The Qn factor is the exact normal-consistency constant 1 / (sqrt(2) Phi^-1(5/8)),
+/// correctly rounded (not the 2.2219 printed in 1993).
+#[test]
+fn qn_factor_is_the_exact_constant() {
+    assert_eq!(QN_FACTOR.to_bits(), 0x4001_c0ce_d054_0ad3);
+    assert_eq!(MAD_FACTOR, 1.4826);
+}
+
 /// Hand-labelled medians and Qn order statistics.
 #[test]
 fn median_and_qn_hand_cases() {

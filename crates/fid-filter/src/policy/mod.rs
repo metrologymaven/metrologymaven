@@ -20,9 +20,10 @@
 //!   a reduced point set (REQ-KRN.OUT.POL-006, REQ-KRN.OUT-004). Its result,
 //!   [`ReducedPoints`], cannot be built any other way and always carries its [`Exclusion`]:
 //!   the policy's algorithm ID, its canonical parameters, the excluded index set, that
-//!   set's digest and the method's [`MethodStatus`] (why an empty mask is empty). A fit computed on the kept points therefore always has the record of what
-//!   was removed next to it; excluded points never silently change a result that looks
-//!   measured (D-045's "no silent wrong results", REQ-KRN.OUT-002).
+//!   set's digest and the method's [`MethodStatus`] (why an empty mask is empty). A fit
+//!   computed on the kept points therefore always has the record of what was removed next
+//!   to it; excluded points never silently change a result that looks measured (D-045's
+//!   "no silent wrong results", REQ-KRN.OUT-002).
 //!
 //! # Validation (pinned)
 //!
@@ -400,7 +401,9 @@ pub trait PolicyMethod {
     /// [`PolicyMethod::exclude`] together with the method's [`MethodStatus`]; [`apply`] calls
     /// this one. The provided implementation reports [`MethodStatus::Decided`]; a method that
     /// can decline to decide (a zero scale) overrides it, and its `exclude` must return the
-    /// same mask.
+    /// same mask. Any method with a degenerate case in which it excludes nothing without
+    /// having decided must override this method and report that case, so that its empty
+    /// mask is never recorded as [`MethodStatus::Decided`].
     fn exclude_reported(
         &self,
         pts: &PointsView<'_>,

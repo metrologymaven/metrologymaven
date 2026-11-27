@@ -35,7 +35,7 @@
 //!      `fid_fit::contract::ResidualStats::std_dev` (divisor `n`).
 //!    - robust scale: centre `m` = the median of `r`; `d_i = r_i - m`.
 //!      - MAD: `scale = 1.4826 * median(|d_i|)`.
-//!      - Qn: `scale = 2.2219 * q`, where `q` is the `k`-th smallest (1-based) of the
+//!      - Qn: `scale = QN_FACTOR * q`, where `q` is the `k`-th smallest (1-based) of the
 //!        `n (n - 1) / 2` pairwise differences `y_j - y_i` (`i < j`) of the sorted list,
 //!        `k = h (h - 1) / 2`, `h = floor(n / 2) + 1` (Rousseeuw and Croux 1993); no
 //!        finite-sample correction factor. `q` is found exactly: the smallest non-negative
@@ -44,9 +44,11 @@
 //!        difference is the rounded `y_j - y_i`, which is monotone in `j` and in `i`, so the
 //!        count is exact and `q` is one of the differences.
 //! 4. **Zero scale** (REQ-KRN.OUT.STAT-004). If every residual is equal (`==`, so `-0.0` and
-//!    `+0.0` are equal) or the scale is `0`, nothing is excluded and the status is
-//!    [`MethodStatus::ZeroScale`]. The first test catches equal residuals whose rounded mean
-//!    differs from them by an ulp, which would otherwise give a tiny positive scale.
+//!    `+0.0` are equal), the scale is `0`, or the limit `k * scale` rounds to `0` (a
+//!    subnormal scale), nothing is excluded and the status is [`MethodStatus::ZeroScale`].
+//!    The first test catches equal residuals whose rounded mean differs from them by an ulp,
+//!    which would otherwise give a tiny positive scale; the last keeps a zero limit from
+//!    excluding every point that is not exactly at the centre.
 //! 5. **Limit.** `threshold = k * scale`. A deviation, scale or threshold that is not finite
 //!    is [`PolicyError::Num`] `Infinite`: an overflow never silently widens or narrows a
 //!    limit.
@@ -60,8 +62,11 @@
 //! `residuals`); then the rules above apply. [`crate::policy::apply`] additionally runs the
 //! guards and records the exclusion with its [`MethodStatus`].
 //!
-//! The constants 1.4826 (MAD) and 2.2219 (Qn) are the normal-consistency factors as usually
-//! printed [unverified]; they are part of each method's version.
+//! The constants are part of each method's version. [`MAD_FACTOR`] is 1.4826, the
+//! normal-consistency factor of the MAD as usually printed [unverified]. [`QN_FACTOR`] is the
+//! exact normal-consistency constant `1 / (sqrt(2) * Phi^-1(5/8))` = 2.219144465985076 (the
+//! correctly rounded binary64 value), not the 2.2219 printed in Rousseeuw and Croux (1993).
+//! No small-sample correction factor is applied [unverified].
 
 use core::cmp::Ordering;
 
@@ -76,8 +81,10 @@ pub const VERSION: (u32, u32, u32) = (1, 0, 0);
 /// The normal-consistency factor of the median absolute deviation.
 pub const MAD_FACTOR: f64 = 1.4826;
 
-/// The normal-consistency factor of the Qn estimator (Rousseeuw and Croux 1993).
-pub const QN_FACTOR: f64 = 2.2219;
+/// The normal-consistency factor of the Qn estimator: the exact constant
+/// `1 / (sqrt(2) * Phi^-1(5/8))`, correctly rounded to binary64 (not the 2.2219 printed in
+/// Rousseeuw and Croux 1993).
+pub const QN_FACTOR: f64 = 2.219144465985076;
 
 /// Everything a residual-statistics method decided, with the values it decided by.
 #[derive(Debug, Clone, PartialEq)]
@@ -89,7 +96,7 @@ pub struct StatOutcome {
     pub status: MethodStatus,
     /// The centre deviations are measured from: `0` for n-sigma, the median for robust scale.
     pub center: f64,
-    /// The scale: the standard deviation, `1.4826 * MAD` or `2.2219 * Qn` (metres); `0` on a
+    /// The scale: the standard deviation, `1.4826 * MAD` or `QN_FACTOR * Qn` (metres); `0` on a
     /// zero scale.
     pub scale: f64,
     /// `k * scale` (metres); `0` on a zero scale.
@@ -396,11 +403,11 @@ fn decide(residuals: &[f64], center: f64, scale: f64, k: f64, side: Side) -> Res
         Some(&r0) => residuals.iter().all(|&r| r == r0),
         None => true,
     };
-    if all_equal || scale == 0.0 {
+    let threshold = finite("filter.stat.threshold", k * scale, None)?;
+    if all_equal || scale == 0.0 || threshold == 0.0 {
         let mask = ExclusionMask::none(n)?;
         return Ok(StatOutcome { mask, status: MethodStatus::ZeroScale, center, scale: 0.0, threshold: 0.0 });
     }
-    let threshold = finite("filter.stat.threshold", k * scale, None)?;
     let beyond = |r: f64| {
         let x = r - center;
         match side {

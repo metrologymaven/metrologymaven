@@ -1010,9 +1010,9 @@ planted 93 115 226 255 320 321 376 422 465 472
 robust mad both 3e9320d0f7e36000 3ed796fc29a50c9f 3ef1b13d1f3bc977 decided 93 115 226 255 320 321 376 398 422 465 472
 robust mad positive 3e9320d0f7e36000 3ed796fc29a50c9f 3ef1b13d1f3bc977 decided 226 255 320 398 422 465
 robust mad negative 3e9320d0f7e36000 3ed796fc29a50c9f 3ef1b13d1f3bc977 decided 93 115 321 376 472
-robust qn both 3e9320d0f7e36000 3ed85ce0fe98d894 3ef245a8bef2a26f decided 93 115 226 255 320 321 376 398 422 465 472
-robust qn positive 3e9320d0f7e36000 3ed85ce0fe98d894 3ef245a8bef2a26f decided 226 255 320 398 422 465
-robust qn negative 3e9320d0f7e36000 3ed85ce0fe98d894 3ef245a8bef2a26f decided 93 115 321 376 472
+robust qn both 3e9320d0f7e36000 3ed85524e35719b4 3ef23fdbaa815347 decided 93 115 226 255 320 321 376 398 422 465 472
+robust qn positive 3e9320d0f7e36000 3ed85524e35719b4 3ef23fdbaa815347 decided 226 255 320 398 422 465
+robust qn negative 3e9320d0f7e36000 3ed85524e35719b4 3ef23fdbaa815347 decided 93 115 321 376 472
 nsigma both 3f02b798c7688cba decided 93 115 226 255 320 321 376 422 465 472
 nsigma positive 3f02b798c7688cba decided 226 255 320 422 465
 nsigma negative 3f02b798c7688cba decided 93 115 321 376 472
@@ -1822,9 +1822,9 @@ planted 48 96 167 168 198 263 310 396
 robust mad both be37844353da0000 3ec0bf467b65da66 3ed91ee9b918c799 decided 48 96 167 168 198 263 310 396
 robust mad positive be37844353da0000 3ec0bf467b65da66 3ed91ee9b918c799 decided 96 167 263 310
 robust mad negative be37844353da0000 3ec0bf467b65da66 3ed91ee9b918c799 decided 48 168 198 396
-robust qn both be37844353da0000 3ec1a8f4c77f8e76 3eda7d6f2b3f55b1 decided 48 96 167 168 198 263 310 396
-robust qn positive be37844353da0000 3ec1a8f4c77f8e76 3eda7d6f2b3f55b1 decided 96 167 263 310
-robust qn negative be37844353da0000 3ec1a8f4c77f8e76 3eda7d6f2b3f55b1 decided 48 168 198 396
+robust qn both be37844353da0000 3ec1a35973371d0d 3eda75062cd2ab94 decided 48 96 167 168 198 263 310 396
+robust qn positive be37844353da0000 3ec1a35973371d0d 3eda75062cd2ab94 decided 96 167 263 310
+robust qn negative be37844353da0000 3ec1a35973371d0d 3eda75062cd2ab94 decided 48 168 198 396
 nsigma both 3eede2e019087ac8 decided 48 96 167 168 198 263 310 396
 nsigma positive 3eede2e019087ac8 decided 96 167 263 310
 nsigma negative 3eede2e019087ac8 decided 48 168 198 396
@@ -2434,9 +2434,9 @@ planted 18 127 185 262 264 290
 robust mad both bec09f10faa2e000 3ecc9cb4acab0046 3ee5758781804034 decided 18 38 127 185 262 264 290
 robust mad positive bec09f10faa2e000 3ecc9cb4acab0046 3ee5758781804034 decided 18 38 127 185 264 290
 robust mad negative bec09f10faa2e000 3ecc9cb4acab0046 3ee5758781804034 decided 262
-robust qn both bec09f10faa2e000 3ecdac82204c282f 3ee6416198391e23 decided 18 38 127 185 262 264 290
-robust qn positive bec09f10faa2e000 3ecdac82204c282f 3ee6416198391e23 decided 18 38 127 185 264 290
-robust qn negative bec09f10faa2e000 3ecdac82204c282f 3ee6416198391e23 decided 262
+robust qn both bec09f10faa2e000 3ecda3165c15f5a3 3ee63a50c510783a decided 18 38 127 185 262 264 290
+robust qn positive bec09f10faa2e000 3ecda3165c15f5a3 3ee63a50c510783a decided 18 38 127 185 264 290
+robust qn negative bec09f10faa2e000 3ecda3165c15f5a3 3ee63a50c510783a decided 262
 nsigma both 3ef6493c30b13cf6 decided 18 127 185 262 264 290
 nsigma positive 3ef6493c30b13cf6 decided 18 127 185 264 290
 nsigma negative 3ef6493c30b13cf6 decided 262
@@ -2946,9 +2946,9 @@ planted 8 56 85 132 201
 robust mad both be8f79e455640000 3eb1f0aa0726b1c4 3ecae8ff0aba0aa6 decided 8 45 56 85 132 201
 robust mad positive be8f79e455640000 3eb1f0aa0726b1c4 3ecae8ff0aba0aa6 decided 8 45 85 132
 robust mad negative be8f79e455640000 3eb1f0aa0726b1c4 3ecae8ff0aba0aa6 decided 56 201
-robust qn both be8f79e455640000 3eb2a513febb383b 3ecbf79dfe18d458 decided 8 45 56 85 132 201
-robust qn positive be8f79e455640000 3eb2a513febb383b 3ecbf79dfe18d458 decided 8 45 85 132
-robust qn negative be8f79e455640000 3eb2a513febb383b 3ecbf79dfe18d458 decided 56 201
+robust qn both be8f79e455640000 3eb29f289f09f1ca 3ecbeebcee8eeaaf decided 8 45 56 85 132 201
+robust qn positive be8f79e455640000 3eb29f289f09f1ca 3ecbeebcee8eeaaf decided 8 45 85 132
+robust qn negative be8f79e455640000 3eb29f289f09f1ca 3ecbeebcee8eeaaf decided 56 201
 nsigma both 3edded1b768c66bc decided 8 56 85 132 201
 nsigma positive 3edded1b768c66bc decided 8 85 132
 nsigma negative 3edded1b768c66bc decided 56 201
