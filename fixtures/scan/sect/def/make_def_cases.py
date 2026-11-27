@@ -43,9 +43,11 @@ Rules reproduced (binary64; Python floats are IEEE binary64 and never fused):
   sorted, f64 as the 16 lowercase hex digits of its bits, counts in decimal, IDs as
   hyphenated lowercase UUIDs, an imported face label as its text; digest = sha256.
 
-The radial cosines and sines come from this platform's `math`, which may differ from the
-`fid-num` vendored libm by an ulp, so radial planes are compared within 1e-15 (AC-2's
-tolerance); parallel planes and every digest are exact.
+The radial cosines and sines are computed here without libm (a Taylor series in 80-digit
+decimal arithmetic, correctly rounded to binary64), so the written file is the same on every
+platform; the `fid-num` vendored libm may differ from the correctly rounded value by an ulp,
+so radial planes are compared within 1e-15 (AC-2's tolerance). Parallel planes and every
+digest are exact.
 
 File format of `cases.txt` ('#' lines are comments), one block per case:
 
@@ -68,6 +70,7 @@ Floats are Python `repr` (round-trip exact), or `nan` / `inf` / `-inf`.
 Usage: python make_def_cases.py [--check]
 """
 
+import decimal
 import hashlib
 import json
 import math
@@ -206,7 +209,7 @@ def radial(a, d, r, step, mode, value):
     planes = []
     for i in range(k):
         phi = float(i) * step
-        c, s = math.cos(phi), math.sin(phi)
+        c, s = exact_cos(phi), exact_sin(phi)
         rot = [r[j] * c + dxr[j] * s + d[j] * ddr * (1.0 - c) for j in range(3)]
         m = cross(d, rot)
         ln = math.sqrt(m[0] * m[0] + m[1] * m[1] + m[2] * m[2])
@@ -231,6 +234,34 @@ def single(p, n):
 
 def uuid_text(h):
     return "%s-%s-%s-%s-%s" % (h[0:8], h[8:12], h[12:16], h[16:20], h[20:32])
+
+
+def _sin_cos(x):
+    """sin and cos of the binary64 value x (|x| <= 2 pi here), each correctly rounded to binary64:
+    Taylor series in 80-digit decimal arithmetic on the exact value of x, then one rounding.
+    Platform independent (no libm), unlike math.sin / math.cos."""
+    ctx = decimal.Context(prec=80)
+    d = decimal.Decimal(x)  # exact
+    term_s, term_c = d, decimal.Decimal(1)
+    s, c = term_s, term_c
+    d2 = ctx.multiply(d, d)
+    k = 1
+    while True:
+        term_s = ctx.divide(ctx.multiply(-term_s, d2), (2 * k) * (2 * k + 1))
+        term_c = ctx.divide(ctx.multiply(-term_c, d2), (2 * k - 1) * (2 * k))
+        s, c = ctx.add(s, term_s), ctx.add(c, term_c)
+        if term_s.is_zero() or (abs(term_s) < decimal.Decimal("1e-75") and abs(term_c) < decimal.Decimal("1e-75")):
+            break
+        k += 1
+    return float(s), float(c)
+
+
+def exact_sin(x):
+    return _sin_cos(x)[0]
+
+
+def exact_cos(x):
+    return _sin_cos(x)[1]
 
 
 def distinct(planes, plane):
