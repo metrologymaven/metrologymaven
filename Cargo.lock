@@ -1912,6 +1912,7 @@ dependencies = [
 name = "fid-kunc"
 version = "0.0.1"
 dependencies = [
+ "fid-fit",
  "fid-kci",
  "fid-kunc",
  "fid-num",
