@@ -51,6 +51,7 @@ use core::fmt;
 use fid_num::f::total_min;
 
 use crate::hist::BinningReason;
+use crate::rules::{LinesReason, RulesetReason};
 
 /// The algorithm ID every [`IndexPair`] carries (REQ-RPT.STATS.CAP.INDEX-006).
 pub const CAP_INDEX_ALGORITHM_ID: &str = "stats.cap.index@1.0.0";
@@ -266,11 +267,26 @@ pub enum StatsError {
     /// `stats.insufficient_data`: there are no values to work on (the `INSUFFICIENT_DATA` of
     /// REQ-RPT.STATS.TREND.HIST-006).
     InsufficientData,
+    /// `stats.ruleset_invalid{reason}`: a run-rule set is malformed or names an unknown
+    /// primitive, and no rule is evaluated (REQ-RPT.STATS.SPC.RULES-007).
+    RulesetInvalid {
+        /// Why.
+        reason: RulesetReason,
+    },
+    /// `stats.bad_lines{reason}`: the centre line and control limits cannot judge points
+    /// (`RPT.STATS.SPC.RULES`), and no rule is evaluated.
+    BadLines {
+        /// Why.
+        reason: LinesReason,
+    },
+    /// `stats.too_many_points`: more points than a `u32` index can name.
+    TooManyPoints,
 }
 
 impl StatsError {
     /// The error code: `stats.bad_capability_input`, `stats.subgroup_size_unsupported`,
-    /// `stats.bad_binning`, `stats.non_finite` or `stats.insufficient_data`.
+    /// `stats.bad_binning`, `stats.non_finite`, `stats.insufficient_data`,
+    /// `stats.ruleset_invalid`, `stats.bad_lines` or `stats.too_many_points`.
     pub fn code(self) -> &'static str {
         match self {
             StatsError::BadCapabilityInput { .. } => "stats.bad_capability_input",
@@ -278,6 +294,9 @@ impl StatsError {
             StatsError::BadBinning { .. } => "stats.bad_binning",
             StatsError::NonFinite { .. } => "stats.non_finite",
             StatsError::InsufficientData => "stats.insufficient_data",
+            StatsError::RulesetInvalid { .. } => "stats.ruleset_invalid",
+            StatsError::BadLines { .. } => "stats.bad_lines",
+            StatsError::TooManyPoints => "stats.too_many_points",
         }
     }
 }
@@ -289,7 +308,9 @@ impl fmt::Display for StatsError {
             StatsError::SubgroupSizeUnsupported { n } => write!(f, "{}: n = {n}", self.code()),
             StatsError::BadBinning { reason } => write!(f, "{}: {}", self.code(), reason.as_str()),
             StatsError::NonFinite { index } => write!(f, "{}: index {index}", self.code()),
-            StatsError::InsufficientData => f.write_str(self.code()),
+            StatsError::InsufficientData | StatsError::TooManyPoints => f.write_str(self.code()),
+            StatsError::RulesetInvalid { reason } => write!(f, "{}: {}", self.code(), reason.as_str()),
+            StatsError::BadLines { reason } => write!(f, "{}: {}", self.code(), reason.as_str()),
         }
     }
 }
