@@ -19,8 +19,8 @@
 //! - [`apply`]: the only public function in the kernel that takes a [`PointsView`] and returns
 //!   a reduced point set (REQ-KRN.OUT.POL-006, REQ-KRN.OUT-004). Its result,
 //!   [`ReducedPoints`], cannot be built any other way and always carries its [`Exclusion`]:
-//!   the policy's algorithm ID, its canonical parameters, the excluded index set and that
-//!   set's digest. A fit computed on the kept points therefore always has the record of what
+//!   the policy's algorithm ID, its canonical parameters, the excluded index set, that
+//!   set's digest and the method's [`MethodStatus`] (why an empty mask is empty). A fit computed on the kept points therefore always has the record of what
 //!   was removed next to it; excluded points never silently change a result that looks
 //!   measured (D-045's "no silent wrong results", REQ-KRN.OUT-002).
 //!
@@ -347,6 +347,28 @@ pub fn select_algorithm_id(method: &str, version: (u32, u32, u32)) -> Result<Alg
     Ok(id)
 }
 
+/// What a method reports with its mask, so that an empty mask always says why it is empty.
+/// Recorded on every [`Exclusion`] by [`apply`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum MethodStatus {
+    /// The method decided on the evidence: the mask holds exactly the points beyond its
+    /// limit, which may be none.
+    Decided,
+    /// The method's scale is zero (for example, every residual is equal), so it has no limit
+    /// to decide by: it excludes nothing and says so (`KRN.OUT.STAT` REQ-004).
+    ZeroScale,
+}
+
+impl MethodStatus {
+    /// Stable code.
+    pub const fn code(self) -> &'static str {
+        match self {
+            MethodStatus::Decided => "decided",
+            MethodStatus::ZeroScale => "zero_scale",
+        }
+    }
+}
+
 /// A method that turns per-point evidence into an exclusion mask (REQ-KRN.OUT.POL-002).
 /// Implemented by `KRN.OUT.STAT`, `KRN.OUT.RANSAC` and `KRN.OUT.GATE`. Callers never use
 /// [`PolicyMethod::exclude`] to reduce a point set themselves: [`apply`] runs it under the
@@ -374,6 +396,20 @@ pub trait PolicyMethod {
         residuals: &[f64],
         nominal_dist: Option<&[f64]>,
     ) -> Result<ExclusionMask, PolicyError>;
+
+    /// [`PolicyMethod::exclude`] together with the method's [`MethodStatus`]; [`apply`] calls
+    /// this one. The provided implementation reports [`MethodStatus::Decided`]; a method that
+    /// can decline to decide (a zero scale) overrides it, and its `exclude` must return the
+    /// same mask.
+    fn exclude_reported(
+        &self,
+        pts: &PointsView<'_>,
+        fit: &FittedFeature,
+        residuals: &[f64],
+        nominal_dist: Option<&[f64]>,
+    ) -> Result<(ExclusionMask, MethodStatus), PolicyError> {
+        Ok((self.exclude(pts, fit, residuals, nominal_dist)?, MethodStatus::Decided))
+    }
 }
 
 /// The minimum-points and maximum-fraction guards, in the pinned order (see the
@@ -404,6 +440,7 @@ pub struct Exclusion {
     params: Vec<u8>,
     mask: ExclusionMask,
     digest: Digest,
+    status: MethodStatus,
 }
 
 impl Exclusion {
@@ -440,6 +477,12 @@ impl Exclusion {
     /// The digest of the excluded set ([`ExclusionMask::digest`]).
     pub fn digest(&self) -> &Digest {
         &self.digest
+    }
+
+    /// What the method reported with its mask ([`PolicyMethod::exclude_reported`]); for an
+    /// empty mask, why it is empty.
+    pub fn status(&self) -> MethodStatus {
+        self.status
     }
 }
 
@@ -491,7 +534,8 @@ impl ReducedPoints {
 /// 4. one residual per point ([`PolicyError::LengthMismatch`] `residuals`), every residual
 ///    finite ([`PolicyError::Num`]); the same for `nominal_dist` when given
 ///    (`nominal_distances`);
-/// 5. `method.exclude(..)`, whose mask must cover `pts.len()` points (`LengthMismatch` `mask`);
+/// 5. `method.exclude_reported(..)`, whose mask must cover `pts.len()` points
+///    (`LengthMismatch` `mask`); its [`MethodStatus`] is recorded on the [`Exclusion`];
 /// 6. [`check_guards`];
 /// 7. the kept points are copied in input order and returned with their [`Exclusion`].
 pub fn apply(
@@ -526,7 +570,7 @@ pub fn apply(
         }
         check_finite_slice("filter.policy.nominal_distances", d)?;
     }
-    let mask = method.exclude(pts, fit, residuals, nominal_dist)?;
+    let (mask, status) = method.exclude_reported(pts, fit, residuals, nominal_dist)?;
     if mask.point_count() != n {
         return Err(PolicyError::LengthMismatch { what: "mask", expected: n, got: mask.point_count() });
     }
@@ -558,5 +602,5 @@ pub fn apply(
         }
     }
     let digest = mask.digest();
-    Ok(ReducedPoints { exclusion: Exclusion { algorithm, params, mask, digest }, kept, xyz, normals })
+    Ok(ReducedPoints { exclusion: Exclusion { algorithm, params, mask, digest, status }, kept, xyz, normals })
 }

@@ -8,9 +8,11 @@
 //! [`policy::apply`], the one entry point in the kernel through which a fit's input set is
 //! reduced (REQ-KRN.OUT.POL-006). Methods: [`gate`] (spec node `KRN.OUT.GATE`), the
 //! distance-to-nominal gate and the tolerance band over caller-supplied signed nominal
-//! distances. The other methods (`KRN.OUT.STAT`, `KRN.OUT.RANSAC`), the full record with its
+//! distances; [`stat`] (spec node `KRN.OUT.STAT`), the n-sigma and robust-scale policies on
+//! the fit's residuals. The other method (`KRN.OUT.RANSAC`), the full record with its
 //! impact disclosure (`KRN.OUT.DISC`), the reject-and-refit loop (`KRN.OUT.RUN`) and point
 //! selection (`KRN.OUT.SEL`) are separate leaves.
 
 pub mod gate;
 pub mod policy;
+pub mod stat;
