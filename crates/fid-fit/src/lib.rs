@@ -16,7 +16,9 @@
 //! `KRN.LSQ.PLAN2D.ASSIGN`) provides deterministic segment assignment and per-segment
 //! residual statistics for compound planar profiles (slots, rounded rectangles). [`mic_tr`]
 //! (spec node `KRN.ENV.MIC.TR`) is the trust region, the `unbounded_envelope` check and the
-//! defined-primitives table of the maximum inscribed fits.
+//! defined-primitives table of the maximum inscribed fits. [`xchk`] (spec node `KRN.ENV.XCHK`)
+//! holds the solver-free cross-checks of the envelope fits: Welzl minimum enclosing circle and
+//! sphere, and the Voronoi maximum inscribed circle in a convex region.
 
 // `FitError` wraps `fid_solv::nlls::SolverError` by value (about 150 bytes, see the note in
 // `fid-solv`). It is returned at most once per fit, never in a loop, and boxing it would add an
@@ -35,3 +37,4 @@ pub mod plan2d_assign;
 pub mod tan_plane;
 pub mod tan_rock;
 pub mod vor;
+pub mod xchk;

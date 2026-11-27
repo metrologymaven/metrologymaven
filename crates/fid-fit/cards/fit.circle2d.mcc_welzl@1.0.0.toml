@@ -1,0 +1,18 @@
+# Spec card (KRN.ENV.XCHK). Cite designators and clause numbers only; never paste standards text.
+id = "fit.circle2d.mcc_welzl@1.0.0"
+title = "Minimum enclosing 2D circle by move-to-front Welzl (cross-check)"
+method = "Centres and scales the points (power-of-two scale), checks the numerical rank, then runs Welzl's algorithm in the iterative move-to-front form with an explicit frame stack (no recursion) over a Fisher-Yates shuffle from the fid-num Philox RNG with the caller's seed. Boundary balls of 1 to 3 points come from a Gram-system least-squares solve (fid_num::la::lstsq). A second pass over the contact set in a fixed-seed order makes the support set canonical, so the support and the radius recomputed from it do not depend on the seed; a final check refuses any result that leaves a point outside."
+applicability = "At least 3 planar points in SI metres, finite and not subnormal, not all collinear (numerical rank 2 under the contract rank tolerance). Used as the global-optimum cross-check of the conic minimum circumscribed circle (KRN.ENV.MCC); deterministic (D0), solver-free."
+references = [
+  "Welzl, E. (1991). Smallest enclosing disks (balls and ellipsoids). In New Results and New Trends in Computer Science, LNCS 555, 359-370.",
+  "Gaertner, B. (1999). Fast and robust smallest enclosing balls. In Algorithms - ESA'99, LNCS 1643, 325-338 [unverified citation details].",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "Fewer than 3 points: TooFewPoints.",
+  "Numerical rank below 2 (all points on a line): Collinear.",
+  "Non-finite or subnormal coordinates: NonFinite or Subnormal; more than MAX_POINTS points: TooLarge.",
+  "A result that leaves a point outside by more than 2^-36 relative, or more than 2^36 scan steps: Num (enclosure_violated, step_limit).",
+]
+validation = "fixtures/fit/xchk-mcc-v1 (make_xchk_fixtures.py): 550 planar sets of 3 to 5000 points with an exact integer brute-force oracle for n <= 30 and an exact incremental oracle above; radius within 1e-12 m, bit-identical across seeds 1, 2 and 3, and a cross-target output-bit pin."

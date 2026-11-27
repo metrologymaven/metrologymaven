@@ -1,0 +1,18 @@
+# Spec card (KRN.ENV.XCHK). Cite designators and clause numbers only; never paste standards text.
+id = "fit.circle2d.mic_vor@1.0.0"
+title = "Maximum inscribed 2D circle in a convex region by the Voronoi diagram (cross-check)"
+method = "Builds the nearest-point Voronoi diagram (KRN.MZ.VOR, exact-sign predicates) and scores, by the distance to the nearest point, every Voronoi vertex inside the closed convex region, every crossing of a Voronoi edge or ray with a region edge, and every region vertex: the vertices of the Voronoi cells intersected with the region, where the largest empty circle centred in the region must have its centre. The largest radius wins, ties by total order on the centre. The result reports on_region_boundary when the centre is within boundary_tol of the region's boundary."
+applicability = "At least 3 distinct planar points in SI metres, not all collinear, and a strictly convex counter-clockwise region polygon (for example the convex hull of the points, intersected with a trust-region polygon). boundary_tol at least the region's rounding floor 16 EPSILON max|coordinate|. Used as the cross-check of the conic maximum inscribed circle (KRN.ENV.MIC); deterministic (D0), solver-free; O(n^2) scoring."
+references = [
+  "Toussaint, G. T. (1983). Computing largest empty circles with location constraints. International Journal of Computer and Information Sciences 12(5), 347-358 [unverified citation details].",
+  "Shewchuk, J. R. (1997). Adaptive precision floating-point arithmetic and fast robust geometric predicates. Discrete & Computational Geometry 18(3), 305-363.",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "Fewer than 3 distinct points: TooFewPoints; all points collinear: Collinear.",
+  "Non-finite or subnormal coordinates: NonFinite or Subnormal; more than MAX_POINTS points: TooLarge.",
+  "Region with fewer than 3 vertices, non-finite, not strictly convex or not counter-clockwise: InvalidParams (region); an empty or degenerate intersection: InvalidParams (region_intersection).",
+  "boundary_tol not finite or below the floor: InvalidParams (boundary_tol).",
+]
+validation = "fixtures/fit/xchk-mic-v1 (make_xchk_fixtures.py): 24 seeded lobed hole sections with 360, 180 and 90 degrees of coverage, region the convex hull (3 also clipped by a square), against a branch-and-bound grid-refinement oracle: radius within 1e-9 m, centre within 1e-9 m at full coverage, on_region_boundary as the oracle reports it (set for every 90-degree case); cross-target output-bit pin."
