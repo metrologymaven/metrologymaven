@@ -1,0 +1,33 @@
+# SCAN.POLY.SURF.STITCH fixture, written by make_stitch_fixtures.py (CC0-1.0).
+# Stitching the expected fans of status_mix.fan.txt.
+# expect: candidates, kept3/kept2 (output triangles with 3/2 votes), facts = boundary_edges
+# nonmanifold_edges misoriented_pairs components closed oriented; triangles as mesh indices
+# (vertex i = i-th smallest source) in output order and winding; rejected = sources a b c,
+# votes, reason [edge sources]; unused = source and fan status.
+case status_mix
+from status_mix.fan.txt
+expect
+candidates 8
+kept3 8
+kept2 0
+facts 8 0 0 1 0 1
+triangles 8
+1 8 2
+1 2 12
+1 5 10
+1 12 5
+1 11 8
+1 10 11
+8 11 13
+10 16 11
+rejected 0
+unused 9
+11 degenerate
+32 no_neighbours
+39 degenerate
+53 no_neighbours
+60 no_neighbours
+74 no_neighbours
+109 hidden:18
+116 all_edges_long
+130 degenerate

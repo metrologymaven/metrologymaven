@@ -202,7 +202,7 @@ pub struct VertexSet {
     pub max_displacement_m: f64,
 }
 
-/// Every error of [`prepare`]. Errors are values; nothing panics.
+/// Every error of the crate. Errors are values; nothing panics.
 #[derive(Debug, Clone, PartialEq)]
 pub enum PolyError {
     /// A parameter or input is outside its domain.
@@ -227,6 +227,13 @@ pub enum PolyError {
     WorkerFailed,
     /// An internal invariant does not hold (unreachable for a validated cloud).
     Inconsistent,
+    /// Stitching kept no triangle (SCAN.POLY.SURF.STITCH).
+    EmptyMesh {
+        /// Distinct candidate triangles over all fans (each was rejected).
+        candidates: u64,
+        /// Fans with status `Ok`.
+        ok_fans: u64,
+    },
 }
 
 impl PolyError {
@@ -240,6 +247,7 @@ impl PolyError {
             PolyError::Allocation => "scan.poly.allocation",
             PolyError::WorkerFailed => "scan.poly.worker_failed",
             PolyError::Inconsistent => "scan.poly.inconsistent",
+            PolyError::EmptyMesh { .. } => "scan.poly.empty_mesh",
         }
     }
 }
@@ -251,6 +259,9 @@ impl fmt::Display for PolyError {
             PolyError::OutOfRange { index } => write!(f, "{}: cell of point {index}", self.code()),
             PolyError::Index(e) => write!(f, "{}: {e}", self.code()),
             PolyError::Numeric(e) => write!(f, "{}: {e}", self.code()),
+            PolyError::EmptyMesh { candidates, ok_fans } => {
+                write!(f, "{}: no triangle kept ({candidates} candidates, {ok_fans} ok fans)", self.code())
+            }
             _ => f.write_str(self.code()),
         }
     }

@@ -1,0 +1,105 @@
+# SCAN.POLY.SURF.STITCH fixture, written by make_stitch_fixtures.py (CC0-1.0).
+# Hand-built vertex set and fans (not Delaunay fans) for every STITCH rule; tag = name.
+# expect: candidates, kept3/kept2 (output triangles with 3/2 votes), facts = boundary_edges
+# nonmanifold_edges misoriented_pairs components closed oriented; triangles as mesh indices
+# (vertex i = i-th smallest source) in output order and winding; rejected = sources a b c,
+# votes, reason [edge sources]; unused = source and fan status.
+case votes_mix
+vertices 29
+78 0.5 -1.0 0.0 0.0 0.0 1.0 D
+138 21.0 0.0 0.0 0.0 0.0 1.0 Q
+113 20.0 1.0 0.0 0.0 0.0 1.0 S
+103 31.0 0.0 0.0 0.0 0.0 1.0 K2
+133 20.0 0.0 0.0 0.0 0.0 1.0 P
+68 10.5 1.0 0.0 0.0 0.0 1.0 H1
+118 10.5 2.0 0.0 0.0 0.0 1.0 H2
+8 40.0 0.0 0.0 0.0 0.0 1.0 L1
+13 51.0 0.0 0.0 0.0 0.0 1.0 N2
+128 20.5 2.0 0.0 0.0 0.0 1.0 T
+143 1.0 0.0 0.0 0.0 0.0 1.0 B
+43 22.0 1.5 0.0 0.0 0.0 1.0 W
+3 0.5 1.0 0.0 0.0 0.0 1.0 C
+33 0.0 0.0 0.0 0.0 0.0 1.0 A
+48 43.0 0.0 0.0 0.0 0.0 1.0 L4
+53 0.5 0.0 1.0 0.0 -0.6 0.8 E
+93 19.0 0.5 0.0 0.0 0.0 1.0 X
+123 10.0 0.0 0.0 0.0 0.0 1.0 F
+108 52.0 0.0 0.0 0.0 0.0 1.0 N3
+63 10.5 -1.0 0.0 0.0 0.0 1.0 H3
+18 42.0 0.0 0.0 0.0 0.0 1.0 L3
+88 22.0 0.5 0.0 0.0 0.0 1.0 U
+38 21.0 1.0 0.0 0.0 0.0 1.0 R
+98 50.0 0.0 0.0 0.0 0.0 1.0 N1
+73 41.0 0.0 0.0 0.0 0.0 1.0 L2
+23 11.0 0.0 0.0 0.0 0.0 1.0 G
+58 53.0 0.0 0.0 0.0 0.0 1.0 N4
+28 30.0 0.0 0.0 0.0 0.0 1.0 K1
+83 30.0 1.0 0.0 0.0 0.0 1.0 K3
+fans 29
+48 ; ok ; 73:18
+88 ; ok ; 38:138
+3 ; ok ; 33:143
+108 ; hidden:58 ; 
+28 ; ok ; 103:83
+98 ; no_neighbours ; 
+58 ; all_edges_long ; 
+103 ; no_neighbours ; 
+118 ; ok ; 123:23
+53 ; ok ; 33:143
+43 ; ok ; 38:138
+113 ; ok ; 133:38 93:133
+93 ; ok ; 133:113
+128 ; ok ; 133:38
+38 ; ok ; 133:138 113:133
+138 ; ok ; 38:133 88:38 43:38
+8 ; ok ; 73:18
+18 ; ok ; 8:73
+68 ; ok ; 123:23
+63 ; ok ; 123:23
+83 ; no_neighbours ; 
+13 ; degenerate ; 
+33 ; ok ; 143:3 78:143 143:53
+143 ; ok ; 3:33 33:78 53:33
+23 ; ok ; 68:123 118:123 63:123
+133 ; ok ; 138:38 38:113 38:128
+73 ; ok ; 18:8 18:48
+78 ; ok ; 143:33
+123 ; ok ; 23:68 23:118 23:63
+expect
+candidates 15
+kept3 6
+kept2 2
+facts 14 0 0 3 0 1
+triangles 8
+0 6 28
+4 24 12
+4 13 24
+6 15 28
+7 27 8
+7 22 26
+7 26 27
+18 26 22
+rejected 7
+8 18 73 3 unorientable
+18 48 73 2 unorientable
+23 118 123 3 non_manifold 23 123
+28 83 103 1 single_vote
+33 53 143 3 non_manifold 33 143
+38 88 138 2 edge_full 38 138
+38 128 133 2 edge_full 38 133
+unused 15
+8 ok
+13 degenerate
+18 ok
+28 ok
+48 ok
+53 ok
+58 all_edges_long
+73 ok
+83 no_neighbours
+88 ok
+98 no_neighbours
+103 no_neighbours
+108 hidden:58
+118 ok
+128 ok

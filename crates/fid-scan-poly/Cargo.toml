@@ -1,6 +1,6 @@
 [package]
 name = "fid-scan-poly"
-description = "Metrology Maven cloud polygonization kernel: vertex-set preparation and tangent-plane Delaunay fans (SCAN.POLY.SURF.PREP, FAN)"
+description = "Metrology Maven cloud polygonization kernel: vertex-set preparation, tangent-plane Delaunay fans and their stitching into a mesh (SCAN.POLY.SURF.PREP, FAN, STITCH)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,7 +8,8 @@ license.workspace = true
 repository.workspace = true
 
 # Kernel crate (KNP-1): no third-party dependencies. Only kernel-layer workspace crates:
-# fid-geo-types (the GEO.TYPES PointCloud with its normals and bounding box), fid-geo-index
+# fid-geo-types (the GEO.TYPES PointCloud with its normals and bounding box, and the Mesh that
+# SCAN.POLY.SURF.STITCH builds), fid-geo-index
 # (the GEO.INDEX.KDTREE radius query for the 2h neighbourhoods and its pinned squared
 # distance) and fid-num (the KRN.NUM.LA.EIG symmetric eigensolver, `sqrt`, `cos` and the
 # total-order maximum), and fid-fit for the exact-sign orient2d/incircle predicates of
