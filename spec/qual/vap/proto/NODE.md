@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-xtask]
 satisfies: [REQ-QUAL.VAP-001, REQ-QUAL.VAP-002]
 covers: []
 depends_on: [QUAL.VAP.TPL]
@@ -18,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-26
 ---
 
 # QUAL.VAP.PROTO: IQ and OQ protocol templates and their command check
@@ -70,7 +71,11 @@ The IQ and OQ protocol templates a customer executes and signs: each step names 
 
 ## Open questions
 
-- None.
+- **Record schema location (for QUAL.IQOQ.RECORD).** No shipped JSON Schema for `qual-record/1` exists on main (QUAL.IQOQ.RECORD's Scope names one; `fid-qual` has the type only). This leaf ships it as the fixture `fixtures/qual/vap/proto/qual-record-1.json`, written by `make_fixtures.py`, and a test in `crates/fid-xtask/tests/qual_vap_proto.rs` pins its field paths to exactly the key paths `fid_qual::QualificationRecord::to_value` writes for a full IQ and OQ record. If QUAL.IQOQ.RECORD later publishes `schemas/qual/qual-record-1.schema.json`, CI should pass that file as `--record-schema` and the fixture can go.
+- **Manifest read is structural (judgement call).** `check-protocols` reads only `format` (must be 1) and each command's `id` and `major` (a repeated pair is refused); it does not re-verify definitions or digests, which is `registry.show_manifest@1 --check`'s job against the catalogue in force. The fixture `manifest.json` is a reduced synthetic manifest (id, major, title) and says so.
+- **Step table convention (pinned here).** A protocol's steps are one `vap-template/1` table field `steps` with columns `step`, `purpose`, `command`, `record-field`, `acceptance` (static) and `result`, `signature` (customer), in that order, and each row's `step` cell equals its row ID. `QUAL.VAP.GEN` should render it as is.
+- **"When goldens are used" (REQ-003).** Read as: the OQ protocol needs a `validate.register_golden@1` step when any OQ step names a record field under `goldens`. The shipped OQ protocol has golden steps marked optional for the customer, so it always carries the registration step.
+- **`validate.export_bundle@1` record field.** The bundle command writes no record field of its own; its IQ step names `verdict` (the bundled record's overall verdict). QUAL.IQOQ.BUNDLE may want a better anchor.
 
 ## Children
 

@@ -1,0 +1,82 @@
+{
+  "shipped": {
+    "dir": "vap/templates",
+    "exit": 0,
+    "stdout": [
+      "check-protocols: ok, 2 protocols, 13 steps"
+    ]
+  },
+  "bad-columns": {
+    "dir": "fixtures/qual/vap/proto/bad-columns",
+    "exit": 1,
+    "stdout": [
+      "PROTO-TEMPLATE oq-protocol: step table columns must be, in order: step (static), purpose (static), command (static), record-field (static), acceptance (static), result (customer), signature (customer)",
+      "check-protocols: 1 findings"
+    ]
+  },
+  "bad-command": {
+    "dir": "fixtures/qual/vap/proto/bad-command",
+    "exit": 1,
+    "stdout": [
+      "PROTO-COMMAND iq-protocol/iq-signatures: validate.run_iq@2 is not in the registry manifest",
+      "check-protocols: 1 findings"
+    ]
+  },
+  "bad-field": {
+    "dir": "fixtures/qual/vap/proto/bad-field",
+    "exit": 1,
+    "stdout": [
+      "PROTO-FIELD iq-protocol/iq-artefacts: checks.verdictt is not a field of qual-record/1",
+      "check-protocols: 1 findings"
+    ]
+  },
+  "goldens-no-register": {
+    "dir": "fixtures/qual/vap/proto/goldens-no-register",
+    "exit": 1,
+    "stdout": [
+      "PROTO-REQUIRED validate.register_golden@1: oq-protocol uses goldens but has no step that runs it",
+      "check-protocols: 1 findings"
+    ]
+  },
+  "malformed-step": {
+    "dir": "fixtures/qual/vap/proto/malformed-step",
+    "exit": 1,
+    "stdout": [
+      "PROTO-COMMAND oq-protocol/oq-version: \"validate.run_oq\" is not a command ID (name@major)",
+      "PROTO-FIELD oq-protocol/oq-version: \"Product version\" is not a record field path",
+      "check-protocols: 2 findings"
+    ]
+  },
+  "missing-oq": {
+    "dir": "fixtures/qual/vap/proto/missing-oq",
+    "exit": 1,
+    "stdout": [
+      "PROTO-TEMPLATE oq-protocol: oq-protocol.json is missing",
+      "check-protocols: 1 findings"
+    ]
+  },
+  "no-export": {
+    "dir": "fixtures/qual/vap/proto/no-export",
+    "exit": 1,
+    "stdout": [
+      "PROTO-REQUIRED validate.export_bundle@1: iq-protocol has no step that runs it",
+      "check-protocols: 1 findings"
+    ]
+  },
+  "no-run-oq": {
+    "dir": "fixtures/qual/vap/proto/no-run-oq",
+    "exit": 1,
+    "stdout": [
+      "PROTO-REQUIRED validate.run_oq@1: oq-protocol has no step that runs it",
+      "check-protocols: 1 findings"
+    ]
+  },
+  "step-id-mismatch": {
+    "dir": "fixtures/qual/vap/proto/step-id-mismatch",
+    "exit": 1,
+    "stdout": [
+      "PROTO-TEMPLATE iq-protocol: step iq-version: the step cell \"iq-versions\" differs from the row ID",
+      "check-protocols: 1 findings"
+    ]
+  }
+}

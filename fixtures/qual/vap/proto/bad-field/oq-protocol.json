@@ -1,0 +1,200 @@
+{
+  "format": "vap-template/1",
+  "id": "oq-protocol",
+  "title": "Operational qualification protocol",
+  "version": "0.1.0",
+  "interpretation": "provisional",
+  "licence": {
+    "spdx": "CC-BY-4.0",
+    "notice": "This template is part of the Metrology Maven Validation Accelerator Pack and is licensed under the Creative Commons Attribution 4.0 International licence (CC-BY-4.0). You may copy, modify and reuse it, including for your own validation documents and commercially, provided you give attribution."
+  },
+  "refs": [
+    {
+      "designator": "EU GMP Annex 15",
+      "edition": "2015",
+      "clause": "3.10 [unverified]"
+    },
+    {
+      "designator": "ISPE GAMP 5",
+      "edition": "Second Edition",
+      "clause": "whole document [unverified]"
+    }
+  ],
+  "sections": [
+    {
+      "id": "purpose",
+      "heading": "Purpose",
+      "text": "Operational qualification shows that the installed product computes what it should on this computer: it evaluates the bundled reference data sets and, if you use them, replays your registered golden journals. Every step below runs one Metrology Maven command and names the field of the qualification record (qual-record/1) that holds its result.",
+      "fields": [
+        {
+          "id": "system",
+          "label": "System name and installed product version",
+          "kind": "text"
+        },
+        {
+          "id": "iq-ref",
+          "label": "Installation qualification record this run builds on",
+          "kind": "text"
+        }
+      ]
+    },
+    {
+      "id": "prerequisites",
+      "heading": "Before you start",
+      "text": "Complete installation qualification first; its overall verdict must be PASS for the same product version. Golden journals are optional: skip the golden steps if you do not use them, and say so in the deviations field.",
+      "fields": [
+        {
+          "id": "goldens-used",
+          "label": "Golden journals used in this run",
+          "kind": "choice",
+          "options": [
+            "Yes",
+            "No"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "execution",
+      "heading": "Steps",
+      "text": "Run each step in order and write the result and the qualification record ID in the result column. A step passes only when the named record field shows the result its acceptance criterion asks for.",
+      "fields": [
+        {
+          "id": "steps",
+          "label": "Operational qualification steps",
+          "kind": "table",
+          "columns": [
+            {
+              "id": "step",
+              "heading": "Step",
+              "fill": "static"
+            },
+            {
+              "id": "purpose",
+              "heading": "Purpose",
+              "fill": "static"
+            },
+            {
+              "id": "command",
+              "heading": "Command",
+              "fill": "static"
+            },
+            {
+              "id": "record-field",
+              "heading": "Record field",
+              "fill": "static"
+            },
+            {
+              "id": "acceptance",
+              "heading": "Acceptance criterion",
+              "fill": "static"
+            },
+            {
+              "id": "result",
+              "heading": "Result (pass or fail) and record ID",
+              "fill": "customer"
+            },
+            {
+              "id": "signature",
+              "heading": "Initials and date",
+              "fill": "customer"
+            }
+          ],
+          "rows": [
+            {
+              "id": "oq-golden-register",
+              "cells": {
+                "step": "oq-golden-register",
+                "purpose": "Only if you use golden journals: register each golden journal before the run.",
+                "command": "validate.register_golden@1",
+                "record-field": "goldens.golden_id",
+                "acceptance": "Every golden journal you rely on is registered, and its ID appears in the goldens list of the record from step oq-verdict."
+              }
+            },
+            {
+              "id": "oq-version",
+              "cells": {
+                "step": "oq-version",
+                "purpose": "Confirm which product version was qualified.",
+                "command": "validate.run_oq@1",
+                "record-field": "product_version",
+                "acceptance": "The recorded product version equals the version in the installation qualification record."
+              }
+            },
+            {
+              "id": "oq-reference-data",
+              "cells": {
+                "step": "oq-reference-data",
+                "purpose": "Confirm which bundled reference data sets were evaluated.",
+                "command": "validate.run_oq@1",
+                "record-field": "rdl_subset_digest",
+                "acceptance": "A reference data subset digest is recorded."
+              }
+            },
+            {
+              "id": "oq-reference-checks",
+              "cells": {
+                "step": "oq-reference-checks",
+                "purpose": "Confirm that every bundled reference data set evaluates within its stated limits.",
+                "command": "validate.run_oq@1",
+                "record-field": "checks.verdict",
+                "acceptance": "Every check whose ID starts with rdl: has verdict PASS."
+              }
+            },
+            {
+              "id": "oq-goldens",
+              "cells": {
+                "step": "oq-goldens",
+                "purpose": "Only if you use golden journals: confirm that each one replays as registered.",
+                "command": "validate.run_oq@1",
+                "record-field": "goldens.outcome",
+                "acceptance": "Every golden in the record has outcome IDENTICAL or EQUIVALENT."
+              }
+            },
+            {
+              "id": "oq-verdict",
+              "cells": {
+                "step": "oq-verdict",
+                "purpose": "Confirm the overall operational qualification result.",
+                "command": "validate.run_oq@1",
+                "record-field": "verdict",
+                "acceptance": "The overall verdict is PASS."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "conclusion",
+      "heading": "Conclusion",
+      "fields": [
+        {
+          "id": "outcome",
+          "label": "Operational qualification outcome",
+          "kind": "choice",
+          "options": [
+            "Passed",
+            "Failed",
+            "Passed with deviations"
+          ]
+        },
+        {
+          "id": "deviations",
+          "label": "Deviations and how they were resolved",
+          "kind": "text"
+        },
+        {
+          "id": "performed-by",
+          "label": "Performed by",
+          "kind": "signature"
+        },
+        {
+          "id": "approver",
+          "label": "Approver (quality)",
+          "kind": "signature"
+        }
+      ]
+    }
+  ]
+}

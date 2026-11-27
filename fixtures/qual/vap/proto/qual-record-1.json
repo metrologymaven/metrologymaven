@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "qual-record/1",
+  "title": "Qualification record (qual-record/1, spec node QUAL.IQOQ.RECORD)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "kind",
+    "product_version",
+    "kernel_manifest_digest",
+    "evidence_statement_digest",
+    "env_digest",
+    "checks",
+    "verdict"
+  ],
+  "properties": {
+    "schema": {
+      "const": "qual-record/1"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "iq",
+        "oq"
+      ]
+    },
+    "product_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kernel_manifest_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "evidence_statement_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "env_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/check"
+      }
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL"
+      ]
+    },
+    "rdl_subset_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "goldens": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/golden"
+      }
+    }
+  },
+  "$defs": {
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "verdict",
+        "detail"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL"
+          ]
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "golden": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "golden_id",
+        "outcome",
+        "exceedances"
+      ],
+      "properties": {
+        "golden_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "IDENTICAL",
+            "EQUIVALENT",
+            "DIVERGENT",
+            "NOT_REPLAYABLE"
+          ]
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exceedances": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/exceedance"
+          }
+        }
+      }
+    },
+    "exceedance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "characteristic",
+        "delta",
+        "decision_changed"
+      ],
+      "properties": {
+        "characteristic": {
+          "type": "string",
+          "minLength": 1
+        },
+        "delta": {
+          "type": "string"
+        },
+        "decision_changed": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

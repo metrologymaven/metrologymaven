@@ -67,6 +67,7 @@ const GEN_SURFACES_USAGE: &str =
     "usage: cargo xtask gen-surfaces --manifest <registry manifest json> --out <dir> [--test-emitter echo]...";
 const QUAL_VAP_TPL_USAGE: &str =
     "usage: cargo xtask qual vap check-templates --dir <dir> [--catalogue <intended-uses.toml>]";
+const QUAL_VAP_PROTO_USAGE: &str = "usage: cargo xtask qual vap check-protocols --manifest <registry manifest json>      --record-schema <qual-record/1 schema json> [--dir <template dir>] [--catalogue <intended-uses.toml>]";
 const LINT_USAGE: &str =
     "usage: cargo xtask lint-crate-graph [--workspace <dir>] [--allowlist <file>] [--writers <file>]";
 
@@ -114,6 +115,12 @@ fn main() -> ExitCode {
                 && args.get(2).map(String::as_str) == Some("check-templates") =>
         {
             qual_vap_check_templates(&args[3..])
+        }
+        Some("qual")
+            if args.get(1).map(String::as_str) == Some("vap")
+                && args.get(2).map(String::as_str) == Some("check-protocols") =>
+        {
+            qual_vap_check_protocols(&args[3..])
         }
         Some("apps-policy") => apps_policy_check(&args[1..]),
         Some("study-tasks-check") => study_tasks_check(&args[1..]),
@@ -780,6 +787,88 @@ fn qual_vap_check_templates(args: &[String]) -> ExitCode {
         ExitCode::SUCCESS
     } else {
         println!("check-templates: {} findings", report.findings.len());
+        ExitCode::from(1)
+    }
+}
+
+/// QUAL.VAP.PROTO: `qual vap check-protocols`. Checks the IQ and OQ protocol templates in
+/// `--dir` (default `vap/templates`): each passes `vap-template/1`, has a well-formed step
+/// table, names only commands the Registry Manifest lists and record fields the
+/// `qual-record/1` schema has, and has a step for every required command. Exit 0: clean;
+/// 1: findings (one `PROTO-*` line each); 2: usage error, or an unreadable or invalid
+/// directory, catalogue, manifest or schema.
+fn qual_vap_check_protocols(args: &[String]) -> ExitCode {
+    use fid_qual::vap::tpl;
+    use fid_xtask::qual::vap::proto;
+    let (mut dir, mut catalogue, mut manifest, mut schema) = (None, None, None, None);
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match (a.as_str(), it.next()) {
+            ("--dir", Some(v)) if dir.is_none() => dir = Some(PathBuf::from(v)),
+            ("--catalogue", Some(v)) if catalogue.is_none() => catalogue = Some(PathBuf::from(v)),
+            ("--manifest", Some(v)) if manifest.is_none() => manifest = Some(PathBuf::from(v)),
+            ("--record-schema", Some(v)) if schema.is_none() => schema = Some(PathBuf::from(v)),
+            _ => {
+                eprintln!("{QUAL_VAP_PROTO_USAGE}");
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let (Some(manifest), Some(schema)) = (manifest, schema) else {
+        eprintln!(
+            "check-protocols: --manifest and --record-schema are required
+{QUAL_VAP_PROTO_USAGE}"
+        );
+        return ExitCode::from(2);
+    };
+    let read = |p: &Path, limit: usize| -> Result<Vec<u8>, String> {
+        let file = std::fs::File::open(p).map_err(|e| format!("cannot open {}: {}", p.display(), e.kind()))?;
+        let mut bytes = Vec::new();
+        // One byte over the limit is enough for the parser to report the input as too large.
+        let cap = u64::try_from(limit).unwrap_or(u64::MAX).saturating_add(1);
+        file.take(cap).read_to_end(&mut bytes).map_err(|e| format!("cannot read {}: {}", p.display(), e.kind()))?;
+        Ok(bytes)
+    };
+    let dir = dir.unwrap_or_else(|| PathBuf::from("vap/templates"));
+    let catalogue = catalogue.unwrap_or_else(|| PathBuf::from("vap/intended-uses.toml"));
+    let catalogue = match tpl::Catalogue::from_path(&catalogue) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("check-protocols: intended-use catalogue: {e}");
+            return ExitCode::from(2);
+        }
+    };
+    let manifest = match read(&manifest, proto::MAX_MANIFEST_BYTES).and_then(|b| proto::ManifestCommands::from_json(&b))
+    {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("check-protocols: registry manifest: {e}");
+            return ExitCode::from(2);
+        }
+    };
+    let schema = match read(&schema, proto::MAX_SCHEMA_BYTES).and_then(|b| proto::RecordSchema::from_json(&b)) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("check-protocols: record schema: {e}");
+            return ExitCode::from(2);
+        }
+    };
+    let files = match tpl::read_set_dir(&dir) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("check-protocols: template directory: {e}");
+            return ExitCode::from(2);
+        }
+    };
+    let report = proto::check(&files, &catalogue, &manifest, &schema);
+    for f in &report.findings {
+        println!("{f}");
+    }
+    if report.is_ok() {
+        println!("check-protocols: ok, {} protocols, {} steps", report.steps.len(), report.step_count());
+        ExitCode::SUCCESS
+    } else {
+        println!("check-protocols: {} findings", report.findings.len());
         ExitCode::from(1)
     }
 }

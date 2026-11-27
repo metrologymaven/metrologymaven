@@ -1,0 +1,216 @@
+{
+  "format": "vap-template/1",
+  "id": "iq-protocol",
+  "title": "Installation qualification protocol",
+  "version": "0.1.0",
+  "interpretation": "provisional",
+  "licence": {
+    "spdx": "CC-BY-4.0",
+    "notice": "This template is part of the Metrology Maven Validation Accelerator Pack and is licensed under the Creative Commons Attribution 4.0 International licence (CC-BY-4.0). You may copy, modify and reuse it, including for your own validation documents and commercially, provided you give attribution."
+  },
+  "refs": [
+    {
+      "designator": "EU GMP Annex 15",
+      "edition": "2015",
+      "clause": "3.5 [unverified]"
+    },
+    {
+      "designator": "ISPE GAMP 5",
+      "edition": "Second Edition",
+      "clause": "whole document [unverified]"
+    }
+  ],
+  "sections": [
+    {
+      "id": "purpose",
+      "heading": "Purpose",
+      "text": "Installation qualification shows that what is installed on this computer is exactly what the project released. Every step below runs one Metrology Maven command and names the field of the qualification record (qual-record/1) that holds its result, so you can check each result against the record instead of against a screen.",
+      "fields": [
+        {
+          "id": "system",
+          "label": "System name and installed product version",
+          "kind": "text"
+        },
+        {
+          "id": "computer",
+          "label": "Computer and installation directory",
+          "kind": "text"
+        },
+        {
+          "id": "release-ref",
+          "label": "Release this installation came from (version and download reference)",
+          "kind": "text"
+        }
+      ]
+    },
+    {
+      "id": "prerequisites",
+      "heading": "Before you start",
+      "text": "Install the product from the release files without changing them. The installation directory must hold the release checksum list, its signed statement, the signed evidence statement, the kernel manifest and the trust root. No network connection or account is needed.",
+      "fields": [
+        {
+          "id": "installer",
+          "label": "Installed by",
+          "kind": "text"
+        },
+        {
+          "id": "install-date",
+          "label": "Installation date",
+          "kind": "text"
+        }
+      ]
+    },
+    {
+      "id": "execution",
+      "heading": "Steps",
+      "text": "Run each step in order and write the result and the qualification record ID in the result column. A step passes only when the named record field shows the result its acceptance criterion asks for.",
+      "fields": [
+        {
+          "id": "steps",
+          "label": "Installation qualification steps",
+          "kind": "table",
+          "columns": [
+            {
+              "id": "step",
+              "heading": "Step",
+              "fill": "static"
+            },
+            {
+              "id": "purpose",
+              "heading": "Purpose",
+              "fill": "static"
+            },
+            {
+              "id": "command",
+              "heading": "Command",
+              "fill": "static"
+            },
+            {
+              "id": "record-field",
+              "heading": "Record field",
+              "fill": "static"
+            },
+            {
+              "id": "acceptance",
+              "heading": "Acceptance criterion",
+              "fill": "static"
+            },
+            {
+              "id": "result",
+              "heading": "Result (pass or fail) and record ID",
+              "fill": "customer"
+            },
+            {
+              "id": "signature",
+              "heading": "Initials and date",
+              "fill": "customer"
+            }
+          ],
+          "rows": [
+            {
+              "id": "iq-version",
+              "cells": {
+                "step": "iq-versions",
+                "purpose": "Confirm which product version was qualified.",
+                "command": "validate.run_iq@1",
+                "record-field": "product_version",
+                "acceptance": "The recorded product version equals the version you installed."
+              }
+            },
+            {
+              "id": "iq-artefacts",
+              "cells": {
+                "step": "iq-artefacts",
+                "purpose": "Confirm that every installed file listed in the release checksum list is unchanged.",
+                "command": "validate.run_iq@1",
+                "record-field": "checks.verdict",
+                "acceptance": "Every check whose ID starts with artefact: has verdict PASS."
+              }
+            },
+            {
+              "id": "iq-signatures",
+              "cells": {
+                "step": "iq-signatures",
+                "purpose": "Confirm that the checksum list and the evidence statement are signed by a key your trust root trusts.",
+                "command": "validate.run_iq@1",
+                "record-field": "checks.verdict",
+                "acceptance": "The checks sig:sums and sig:evidence have verdict PASS."
+              }
+            },
+            {
+              "id": "iq-kernel-manifest",
+              "cells": {
+                "step": "iq-kernel-manifest",
+                "purpose": "Confirm that the installed kernel manifest is the one the signed evidence statement lists.",
+                "command": "validate.run_iq@1",
+                "record-field": "kernel_manifest_digest",
+                "acceptance": "The check digest:kernel_manifest has verdict PASS and a kernel manifest digest is recorded."
+              }
+            },
+            {
+              "id": "iq-environment",
+              "cells": {
+                "step": "iq-environment",
+                "purpose": "Record the computer environment the installation was qualified on.",
+                "command": "validate.run_iq@1",
+                "record-field": "env_digest",
+                "acceptance": "An environment snapshot digest is recorded."
+              }
+            },
+            {
+              "id": "iq-verdict",
+              "cells": {
+                "step": "iq-verdict",
+                "purpose": "Confirm the overall installation qualification result.",
+                "command": "validate.run_iq@1",
+                "record-field": "verdict",
+                "acceptance": "The overall verdict is PASS."
+              }
+            },
+            {
+              "id": "iq-bundle",
+              "cells": {
+                "step": "iq-bundle",
+                "purpose": "Export the qualification record and its evidence as an unsigned bundle for your files.",
+                "command": "validate.export_bundle@1",
+                "record-field": "verdict",
+                "acceptance": "The bundle holds the record from step iq-verdict, and the record in the bundle has overall verdict PASS."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "conclusion",
+      "heading": "Conclusion",
+      "fields": [
+        {
+          "id": "outcome",
+          "label": "Installation qualification outcome",
+          "kind": "choice",
+          "options": [
+            "Passed",
+            "Failed",
+            "Passed with deviations"
+          ]
+        },
+        {
+          "id": "deviations",
+          "label": "Deviations and how they were resolved",
+          "kind": "text"
+        },
+        {
+          "id": "performed-by",
+          "label": "Performed by",
+          "kind": "signature"
+        },
+        {
+          "id": "approver",
+          "label": "Approver (quality)",
+          "kind": "signature"
+        }
+      ]
+    }
+  ]
+}

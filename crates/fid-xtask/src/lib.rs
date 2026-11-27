@@ -49,6 +49,9 @@
 //! `ECO.REPO.ALLOW`), in [`kernel_allow`]; it reuses the layer map and the resolved graph
 //! built here.
 //!
+//! `qual vap check-protocols`: the IQ and OQ protocol templates checked against the Registry
+//! Manifest and the `qual-record/1` schema (spec node `QUAL.VAP.PROTO`), in [`qual::vap::proto`].
+//!
 //! `fmt`: cross-platform batched workspace formatting (`cargo fmt` / `rustfmt`) staying within
 //! Windows' 32 KiB `CreateProcess` command-line limit, in [`fmt`].
 
@@ -65,6 +68,7 @@ pub mod licence_check;
 pub mod plat_deploy_netlist;
 pub mod plat_gpu_invar;
 pub mod plat_matrix_tiers;
+pub mod qual;
 pub mod registry_gate;
 pub mod rel;
 
