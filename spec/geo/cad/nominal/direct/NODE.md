@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-geo-cad]
+built_pr: 660
 satisfies: [REQ-GEO.CAD.NOMINAL-001, REQ-GEO.CAD.NOMINAL-006]
 covers: []
 depends_on: [GEO.CAD.TOPO.MODEL, GEO.CAD.TOPO.ADJ, GEO.NURBS.ANALYTIC]
