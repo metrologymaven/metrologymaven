@@ -21,7 +21,9 @@
 //! tangent contract, the tangent table and the `tangent-coverage@1` report, see
 //! [`prop::lpu::tan`]; its test-only central-difference harness is `tangent_harness`, behind
 //! the `tangent-harness` feature) and `UNC.PROP.MVAR.PARAM` (the feature covariance type and
-//! the `fcov-param@1` parameterisations, see [`prop::mvar::param`]).
+//! the `fcov-param@1` parameterisations, see [`prop::mvar::param`]) and `UNC.PROP.MVAR.VMCM`
+//! (joint Monte Carlo sample covariance and Mahalanobis coverage region of a characteristic
+//! group, see [`prop::mvar::vmcm`]).
 //!
 //! The `statement` module never computes an uncertainty. It holds what other nodes computed
 //! or a person declared, and refuses any statement that breaks the invariants.
