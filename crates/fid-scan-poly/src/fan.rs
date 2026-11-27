@@ -161,9 +161,7 @@ fn invalid(name: &'static str, reason: &'static str) -> PolyError {
 /// The fans of every vertex of `vs`, in vertex-set order, for the maximum gap `g` in metres
 /// (module documentation).
 pub fn fans(vs: &VertexSet, g: f64, threads: usize) -> Result<Vec<Fan>, PolyError> {
-    if !(g.is_finite() && (MIN_GAP..=MAX_GAP).contains(&g)) {
-        return Err(invalid("g", "not a finite value in [2^-100, 2^100] m"));
-    }
+    check_gap(g)?;
     if threads == 0 || threads > MAX_THREADS {
         return Err(invalid("threads", "not in 1..=256"));
     }
@@ -226,6 +224,15 @@ pub fn fans(vs: &VertexSet, g: f64, threads: usize) -> Result<Vec<Fan>, PolyErro
         out.extend(r?);
     }
     Ok(out)
+}
+
+/// Input check 1: the maximum gap `g`.
+pub(crate) fn check_gap(g: f64) -> Result<(), PolyError> {
+    if g.is_finite() && (MIN_GAP..=MAX_GAP).contains(&g) {
+        Ok(())
+    } else {
+        Err(invalid("g", "not a finite value in [2^-100, 2^100] m"))
+    }
 }
 
 /// Read-only context shared by the workers.

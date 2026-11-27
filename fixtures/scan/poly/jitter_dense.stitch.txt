@@ -1,0 +1,293 @@
+# SCAN.POLY.SURF.STITCH fixture, written by make_stitch_fixtures.py (CC0-1.0).
+# Stitching the expected fans of jitter_dense.fan.txt.
+# expect: candidates, kept3/kept2 (output triangles with 3/2 votes), facts = boundary_edges
+# nonmanifold_edges misoriented_pairs components closed oriented; triangles as mesh indices
+# (vertex i = i-th smallest source) in output order and winding; rejected = sources a b c,
+# votes, reason [edge sources]; unused = source and fan status; used_without_ok_fan = vertices
+# in an output triangle whose own fan is not ok; fan_status = each vertex's own fan, by index.
+case jitter_dense
+from jitter_dense.fan.txt
+expect
+candidates 262
+kept3 238
+kept2 9
+facts 29 0 5 1 0 0
+triangles 247
+0 24 88
+0 88 116
+1 17 63
+1 90 17
+1 63 31
+1 31 81
+1 81 114
+1 114 90
+2 14 38
+2 85 14
+2 38 23
+2 23 140
+2 123 85
+2 140 123
+3 85 73
+3 73 122
+3 139 85
+3 127 117
+3 117 139
+3 122 127
+4 15 7
+4 7 22
+4 121 15
+4 22 87
+4 87 128
+4 128 121
+5 11 13
+5 40 11
+5 13 142
+5 18 35
+5 142 18
+5 35 40
+6 27 72
+6 88 27
+6 72 119
+6 116 88
+6 94 116
+6 119 94
+7 12 22
+7 105 12
+7 15 105
+9 52 54
+9 76 52
+9 54 105
+9 136 76
+9 105 146
+9 146 136
+10 15 121
+10 133 15
+10 62 65
+10 121 62
+10 65 133
+11 75 13
+11 48 29
+11 29 75
+11 40 48
+12 144 22
+12 54 104
+12 105 54
+12 104 144
+13 75 106
+13 106 141
+13 141 142
+14 74 38
+14 129 74
+14 85 139
+14 139 129
+15 133 64
+15 64 146
+15 146 105
+16 52 36
+16 36 56
+16 104 52
+16 56 66
+16 66 104
+17 82 63
+17 109 82
+17 90 109
+18 68 35
+18 115 68
+18 142 115
+20 136 26
+20 26 147
+20 76 136
+21 31 63
+21 137 31
+21 63 126
+21 79 92
+21 126 79
+21 92 91
+21 91 137
+22 25 87
+22 144 25
+23 34 40
+23 124 34
+23 40 35
+23 35 140
+23 38 124
+24 30 88
+24 141 30
+24 110 141
+25 47 67
+25 113 47
+25 67 87
+25 78 113
+25 144 78
+26 64 71
+26 146 64
+26 71 147
+26 136 146
+27 88 30
+27 30 141
+27 141 72
+28 41 42
+28 53 41
+28 42 60
+28 81 53
+28 60 131
+28 98 81
+28 131 98
+29 70 46
+29 103 46
+29 48 70
+29 103 75
+31 53 81
+31 137 53
+32 108 56
+32 78 144
+32 104 108
+32 144 104
+33 43 55
+33 130 43
+33 55 109
+33 90 57
+33 57 132
+33 109 90
+33 132 130
+34 48 40
+34 86 48
+34 124 86
+35 68 138
+35 138 140
+36 52 76
+36 76 56
+37 80 57
+37 57 90
+37 59 80
+37 98 59
+37 90 114
+37 114 98
+38 74 124
+39 57 80
+39 132 57
+39 80 96
+39 96 132
+41 53 143
+41 70 60
+41 143 70
+42 60 95
+42 86 62
+42 62 95
+42 70 86
+43 82 55
+43 63 82
+44 45 69
+44 72 45
+44 69 84
+44 119 72
+44 84 107
+44 107 119
+45 112 69
+45 72 75
+45 75 103
+45 103 112
+46 70 143
+47 59 67
+47 80 59
+47 96 80
+47 125 96
+47 113 125
+48 86 70
+49 58 77
+49 123 58
+49 73 85
+49 145 73
+49 77 145
+49 85 123
+51 117 127
+51 134 117
+51 127 147
+51 147 134
+52 104 54
+53 137 97
+53 97 143
+55 82 109
+56 108 66
+58 138 61
+58 145 77
+58 123 138
+59 131 67
+59 98 131
+60 95 131
+61 68 115
+61 138 68
+61 115 110
+62 86 65
+62 121 95
+64 118 71
+64 133 118
+65 74 118
+65 124 74
+65 86 124
+65 118 133
+66 108 104
+67 128 87
+67 131 128
+69 79 84
+69 92 79
+69 91 92
+69 112 91
+71 118 129
+71 129 134
+71 134 147
+72 106 75
+72 141 106
+73 145 122
+74 129 118
+78 96 113
+79 126 84
+81 98 114
+84 116 107
+91 112 97
+91 97 137
+94 107 116
+94 119 107
+95 121 128
+95 128 131
+96 125 113
+97 112 103
+97 103 143
+110 115 142
+110 142 141
+117 134 139
+122 135 127
+122 145 135
+123 140 138
+129 139 134
+rejected 15
+179 627 781 1 single_vote
+207 298 431 1 single_vote
+207 305 928 1 single_vote
+214 501 1012 1 single_vote
+214 732 1012 2 edge_full 214 732
+284 921 935 1 single_vote
+298 305 431 1 single_vote
+298 305 501 1 single_vote
+305 431 928 1 single_vote
+333 536 732 1 single_vote
+333 732 1012 1 single_vote
+396 452 893 1 single_vote
+417 438 550 1 single_vote
+431 445 676 1 single_vote
+431 501 613 1 single_vote
+unused 12
+67 no_neighbours
+144 no_neighbours
+361 hidden:172
+592 no_neighbours
+634 no_neighbours
+662 no_neighbours
+704 no_neighbours
+711 no_neighbours
+718 all_edges_long
+725 hidden:445
+788 no_neighbours
+851 no_neighbours
+used_without_ok_fan 0
+fan_status ok ok ok ok ok ok ok ok no_neighbours ok ok ok ok ok ok ok ok ok ok no_neighbours ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok hidden:172 ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok no_neighbours ok ok ok ok ok no_neighbours ok ok ok no_neighbours ok ok ok ok ok no_neighbours no_neighbours all_edges_long hidden:445 ok ok ok ok ok ok ok ok no_neighbours ok ok ok ok ok ok ok ok no_neighbours ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok

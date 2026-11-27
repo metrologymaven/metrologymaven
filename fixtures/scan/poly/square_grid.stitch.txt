@@ -1,0 +1,181 @@
+# SCAN.POLY.SURF.STITCH fixture, written by make_stitch_fixtures.py (CC0-1.0).
+# Stitching the expected fans of square_grid.fan.txt.
+# expect: candidates, kept3/kept2 (output triangles with 3/2 votes), facts = boundary_edges
+# nonmanifold_edges misoriented_pairs components closed oriented; triangles as mesh indices
+# (vertex i = i-th smallest source) in output order and winding; rejected = sources a b c,
+# votes, reason [edge sources]; unused = source and fan status; used_without_ok_fan = vertices
+# in an output triangle whose own fan is not ok; fan_status = each vertex's own fan, by index.
+case square_grid
+from square_grid.fan.txt
+expect
+candidates 162
+kept3 162
+kept2 0
+facts 36 0 0 1 0 1
+triangles 162
+0 11 18
+0 92 11
+0 18 42
+0 42 61
+0 61 47
+0 47 92
+1 4 23
+1 48 4
+1 45 22
+1 22 48
+1 23 45
+2 10 33
+2 72 10
+2 33 60
+2 60 48
+2 48 79
+2 70 72
+2 79 70
+3 9 26
+3 29 9
+3 25 29
+3 38 25
+3 26 55
+3 44 38
+3 55 44
+4 57 23
+4 60 33
+4 33 78
+4 48 60
+4 69 57
+4 78 69
+5 43 31
+5 31 77
+5 64 43
+5 47 64
+5 92 47
+5 77 92
+6 20 12
+6 12 82
+6 19 35
+6 58 19
+6 35 20
+6 41 58
+6 82 41
+7 36 54
+7 54 65
+7 65 74
+8 32 80
+8 90 32
+8 42 51
+8 80 42
+9 50 26
+9 29 71
+9 30 50
+9 71 30
+10 19 58
+10 85 19
+10 41 33
+10 58 41
+10 72 85
+11 17 18
+11 89 17
+11 99 89
+11 92 99
+12 20 24
+12 24 31
+12 31 43
+12 43 82
+13 25 28
+13 29 25
+13 52 29
+14 33 41
+14 78 33
+14 41 43
+14 43 64
+14 64 87
+14 69 78
+14 87 69
+15 35 19
+15 19 39
+15 53 35
+16 84 17
+16 17 89
+16 21 49
+16 89 21
+17 46 18
+17 84 46
+18 46 40
+18 40 59
+18 51 42
+18 59 51
+19 83 39
+19 85 83
+20 68 24
+20 35 73
+20 73 68
+21 36 49
+21 54 36
+21 77 54
+21 89 77
+22 62 48
+23 30 27
+23 27 86
+23 50 30
+23 86 45
+23 57 50
+24 94 31
+24 65 54
+24 54 94
+24 68 65
+26 32 55
+26 63 32
+26 50 66
+26 66 63
+27 30 52
+29 52 71
+30 71 52
+31 94 77
+32 44 55
+32 90 44
+32 63 61
+32 61 80
+34 40 46
+34 46 96
+35 53 73
+37 70 56
+37 72 70
+37 75 72
+41 82 43
+42 80 61
+46 84 96
+47 61 63
+47 63 93
+47 87 64
+47 93 87
+48 62 79
+50 57 66
+53 95 73
+54 77 94
+56 70 76
+57 69 66
+62 76 70
+62 70 79
+63 66 93
+65 68 81
+65 81 74
+66 69 87
+66 87 93
+67 81 68
+67 68 98
+67 74 81
+67 97 74
+67 88 91
+67 95 88
+67 91 97
+67 98 95
+68 73 98
+72 75 83
+72 83 85
+73 95 98
+77 89 99
+77 99 92
+rejected 0
+unused 0
+used_without_ok_fan 0
+fan_status ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok

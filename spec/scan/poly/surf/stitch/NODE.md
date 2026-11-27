@@ -9,6 +9,8 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-scan-poly]
+built_pr: 662
 satisfies: [REQ-SCAN.POLY.SURF-003, REQ-SCAN.POLY.SURF-006]
 covers: []
 depends_on: [SCAN.POLY.SURF.FAN, GEO.TYPES.MESH]
@@ -70,6 +72,10 @@ The second half of the reconstruction: keep a triangle only when the fans of its
 ## Open questions
 
 - Mesh quality on thin walls (two sheets closer than g) is a known weakness of local methods; the 60° normal compatibility in FAN mitigates it [unverified]. Measure on the corpus before release.
+- **Built (fid-scan-poly `stitch`), choices made at the build:** `stitch(fans, vs, frame) -> Stitched { mesh, report }`: the frame is an argument because a `VertexSet` carries none and a GEO.TYPES `Mesh` needs one, and the report lists every rejected candidate with its votes and reason (single vote, unorientable, edge full, non-manifold cleanup), every vertex no triangle uses with its fan status, every vertex's own fan status by mesh index (`fan_status`, with a `used_without_ok_fan` count: a vertex whose own fan is `Hidden` or `AllEdgesLong` can still be in kept two-vote triangles through its neighbours' fans, fixture `votes_mix`), and every vertex's PREP status, so moved (smoothed) positions are never presented as measured points (D-045). `reconstruct_in_memory(cloud, valid, ReconParams { prep, g })` returns the same. Mesh vertex `i` is the vertex with the `i`-th smallest source, so the mesh does not depend on fan or vertex order. The "maximum angle deviation" of the cleanup is computed as the smallest cosine between the oriented unit face normal and the three vertex normals (no `acos`). A triangle whose face normal has a zero dot product with its normal sum (zero area, or perpendicular) is rejected as unorientable before the vote passes instead of being wound by chance. Exactly one fan per vertex is required; a missing fan is refused, not read as no votes. The pinned steps are in the module documentation.
+- AC-1's 125 664-point sphere is committed as a generator with bit-exact samples (`fixtures/scan/poly/sphere_points.txt`), not as a point file; "0.5 mm spacing" is read as the mean spacing of a golden-angle (Fibonacci) sampling, N = round(4 pi R^2 / s^2). AC-2's spacing is not stated; `plate_gap` uses a jittered 1 mm triangular lattice with a 5 mm x 7 mm slot.
+- With a locally flipped input normal (fixture `jitter_dense`), REQ-003's per-triangle rule winds that vertex's triangles the other way, which shows up as misoriented pairs in the mesh facts. Consistent normal orientation is SCAN.CLOUD.NORM's job; whether STITCH (or QUAL) should report such vertices explicitly is open.
+- SCAN.POLY.SURF.OOC may need to stitch the fans of a chunk without a fan for every vertex; today that is refused (`fans.centre`).
 
 ## Children
 
