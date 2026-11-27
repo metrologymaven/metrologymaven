@@ -15,7 +15,7 @@
     {
       "id": "period",
       "heading": "Review period",
-      "text": "A periodic review checks that the system is still in a validated state. The record tables below are filled from the journal by the review-report command; review each row and record your conclusion.",
+      "text": "A periodic review checks that the system remains in the validated state your organisation established. When produced by `fid validate make-review-report`, these tables are filled from the journal; otherwise complete them. Review each row and record your conclusion.",
       "fields": [
         { "id": "from", "label": "From (date)", "kind": "text" },
         { "id": "to", "label": "To (date)", "kind": "text" },
@@ -33,8 +33,9 @@
           "columns": [
             { "id": "record", "heading": "Record", "fill": "customer" },
             { "id": "kind", "heading": "Kind (IQ or OQ)", "fill": "customer" },
+            { "id": "product-version", "heading": "Product version", "fill": "customer" },
             { "id": "date", "heading": "Date", "fill": "customer" },
-            { "id": "status", "heading": "Status", "fill": "customer" }
+            { "id": "verdict", "heading": "Verdict", "fill": "customer" }
           ],
           "rows": []
         },

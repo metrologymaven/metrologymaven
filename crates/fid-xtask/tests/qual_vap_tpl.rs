@@ -61,6 +61,8 @@ fn usage_and_io_errors() {
     assert_eq!(run(&[]).0, 2);
     assert_eq!(run(&["--dir"]).0, 2);
     assert_eq!(run(&["--dir", "a", "--dir", "b"]).0, 2);
+    let cat = "vap/intended-uses.toml";
+    assert_eq!(run(&["--dir", &format!("{DIR}/set-ok"), "--catalogue", cat, "--catalogue", cat]).0, 2);
     assert_eq!(run(&["--dir", &format!("{DIR}/set-ok"), "--catalogue", "no/such/file.toml"]).0, 2);
     assert_eq!(run(&["--dir", &format!("{DIR}/no-such-dir")]).0, 2);
 }

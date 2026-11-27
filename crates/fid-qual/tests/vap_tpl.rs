@@ -5,7 +5,7 @@
 //! finding below is hand-labelled from the spec.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use fid_qual::vap::tpl::odf::{crc32, package, MIMETYPE};
+use fid_qual::vap::tpl::odf::{crc32, package, zip_stored, MIMETYPE};
 use fid_qual::vap::tpl::render::{blocks, markdown, odt, Block};
 use fid_qual::vap::tpl::{
     check_set, check_template, read_set_dir, Catalogue, FindingCode, Selection, Template, TplError, LICENCE_NOTICE,
@@ -132,6 +132,22 @@ fn all_goldens_match() {
     }
 }
 
+/// AC-5 on the exact AC-3 pair: `urs` with `[transcription_reports]`, rendered twice in both
+/// formats from freshly loaded inputs, is byte-identical.
+#[test]
+fn ac5_urs_transcription_twice() {
+    let render = || {
+        let c = catalogue();
+        let sel = Selection::new(&c, &["transcription_reports"]).unwrap();
+        let t = real("urs");
+        (markdown(&t, &sel).into_bytes(), odt(&t, &sel).unwrap())
+    };
+    let first = render();
+    let second = render();
+    assert_eq!(first.0, second.0, "urs.md");
+    assert_eq!(first.1, second.1, "urs.odt");
+}
+
 /// AC-5: rendering twice gives byte-identical files, and so does a reordered selection.
 #[test]
 fn ac5_deterministic() {
@@ -200,6 +216,19 @@ fn odt_layout() {
     let eocd = &z[z.len() - 22..];
     assert_eq!(&eocd[0..4], &[0x50, 0x4b, 0x05, 0x06]);
     assert_eq!(u16::from_le_bytes([eocd[10], eocd[11]]), 3, "three members");
+}
+
+/// Member names that could escape an extraction folder, or that are not printable ASCII, are
+/// refused; plain relative names are accepted.
+#[test]
+fn zip_member_names() {
+    assert!(zip_stored(&[("META-INF/manifest.xml", b"x")]).is_ok());
+    for bad in ["", "../x", "a/../b", "/abs", "a\\b", "a//b", "./a", "a/", "caf\u{e9}", "a b", "a\nb"] {
+        match zip_stored(&[(bad, b"x")]) {
+            Err(e @ TplError::Limit(_)) => assert!(e.to_string().contains("unsafe ZIP member name"), "{e}"),
+            other => panic!("{bad:?}: {other:?}"),
+        }
+    }
 }
 
 // ------------------------------------------------------------------ real templates
@@ -469,4 +498,39 @@ fn catalogue_contents() {
     let md = markdown(&real("urs"), &Selection::default());
     assert!(!md.contains("pre-filled for:"), "{md}");
     assert!(md.contains("Pre-filled for intended uses: none"));
+}
+
+/// A symbolic link given as the template folder or as the catalogue is refused, even when its
+/// target is valid.
+#[cfg(unix)]
+#[test]
+fn symlinked_dir_and_catalogue_refused() {
+    let tmp = std::env::temp_dir().join(format!("fid-qual-vap-tpl-link-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&tmp);
+    std::fs::create_dir_all(&tmp).unwrap();
+    let dir_link = tmp.join("set");
+    let cat_link = tmp.join("intended-uses.toml");
+    std::os::unix::fs::symlink(root().join(FIX).join("set-ok"), &dir_link).unwrap();
+    std::os::unix::fs::symlink(root().join("vap/intended-uses.toml"), &cat_link).unwrap();
+    let dir_err = read_set_dir(&dir_link).unwrap_err();
+    assert!(dir_err.contains("symbolic link"), "{dir_err}");
+    match Catalogue::from_path(&cat_link) {
+        Err(e @ TplError::Catalogue(_)) => assert!(e.to_string().contains("symbolic link"), "{e}"),
+        other => panic!("{other:?}"),
+    }
+    // The targets themselves are fine.
+    assert!(read_set_dir(&root().join(FIX).join("set-ok")).is_ok());
+    assert!(Catalogue::from_path(&root().join("vap/intended-uses.toml")).is_ok());
+    let _ = std::fs::remove_dir_all(&tmp);
+}
+
+/// A file given as the template folder, or a folder given as the catalogue, is refused.
+#[test]
+fn wrong_kind_of_path_refused() {
+    let file = root().join("vap/intended-uses.toml");
+    assert!(read_set_dir(&file).unwrap_err().contains("not a directory"));
+    match Catalogue::from_path(&root().join("vap/templates")) {
+        Err(e @ TplError::Catalogue(_)) => assert!(e.to_string().contains("not a regular file"), "{e}"),
+        other => panic!("{other:?}"),
+    }
 }

@@ -62,8 +62,22 @@ fn len32(n: usize, what: &str) -> Result<u32, TplError> {
     u32::try_from(n).ok().filter(|v| *v < u32::MAX).ok_or_else(|| TplError::Limit(format!("{what} needs ZIP64")))
 }
 
-/// Writes a stored ZIP archive of `members` (name, data) in the given order.
+/// True for a safe member name: non-empty printable ASCII, no `\`, no leading `/`, and
+/// no empty, `.` or `..` path segment.
+fn safe_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.bytes().all(|b| (0x21..=0x7e).contains(&b) && b != b'\\')
+        && !name.starts_with('/')
+        && name.split('/').all(|seg| !seg.is_empty() && seg != "." && seg != "..")
+}
+
+/// Writes a stored ZIP archive of `members` (name, data) in the given order. A member name
+/// that is not printable ASCII, holds `\`, starts with `/` or has an empty, `.` or `..`
+/// segment is refused ([`TplError::Limit`]), so no archive can carry a path-traversal entry.
 pub fn zip_stored(members: &[(&str, &[u8])]) -> Result<Vec<u8>, TplError> {
+    if let Some((bad, _)) = members.iter().find(|(n, _)| !safe_name(n)) {
+        return Err(TplError::Limit(format!("unsafe ZIP member name {bad:?}")));
+    }
     let count = u16::try_from(members.len())
         .ok()
         .filter(|n| *n < u16::MAX)

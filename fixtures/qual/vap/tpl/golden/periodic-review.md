@@ -16,7 +16,7 @@ This template is part of the Metrology Maven Validation Accelerator Pack and is 
 
 ## Review period
 
-A periodic review checks that the system is still in a validated state. The record tables below are filled from the journal by the review-report command; review each row and record your conclusion.
+A periodic review checks that the system remains in the validated state your organisation established. When produced by \`fid validate make-review-report\`, these tables are filled from the journal; otherwise complete them. Review each row and record your conclusion.
 
 **From (date):** (to be completed)
 
@@ -28,8 +28,8 @@ A periodic review checks that the system is still in a validated state. The reco
 
 **Qualification records in the period**
 
-| Record | Kind (IQ or OQ) | Date | Status |
-| --- | --- | --- | --- |
+| Record | Kind (IQ or OQ) | Product version | Date | Verdict |
+| --- | --- | --- | --- | --- |
 
 **Version changes in the period**
 

@@ -337,7 +337,9 @@ impl Catalogue {
     }
 
     /// Reads and parses a catalogue file (at most [`MAX_CATALOGUE_BYTES`]).
+    /// A symbolic link is refused, as is anything other than a regular file.
     pub fn from_path(path: &Path) -> Result<Catalogue, TplError> {
+        require_not_symlink(path, true).map_err(TplError::Catalogue)?;
         let bytes = read_bounded(path, MAX_CATALOGUE_BYTES).map_err(TplError::Catalogue)?;
         let text = String::from_utf8(bytes).map_err(|_| TplError::Catalogue("not UTF-8".to_string()))?;
         Catalogue::from_toml(&text)
@@ -921,6 +923,23 @@ pub fn check_set(files: &[(String, Vec<u8>)], catalogue: &Catalogue) -> SetRepor
     SetReport { valid, findings }
 }
 
+/// Refuses `path` when it is a symbolic link (checked with `symlink_metadata`, so the link
+/// itself is inspected, not its target), and when it is not a regular file (`file`) or not a
+/// directory (`!file`).
+fn require_not_symlink(path: &Path, file: bool) -> Result<(), String> {
+    let meta = std::fs::symlink_metadata(path).map_err(|e| format!("cannot stat: {}", e.kind()))?;
+    if meta.file_type().is_symlink() {
+        return Err("is a symbolic link".to_string());
+    }
+    if file && !meta.is_file() {
+        return Err("is not a regular file".to_string());
+    }
+    if !file && !meta.is_dir() {
+        return Err("is not a directory".to_string());
+    }
+    Ok(())
+}
+
 fn read_bounded(path: &Path, max: usize) -> Result<Vec<u8>, String> {
     let f = std::fs::File::open(path).map_err(|e| format!("cannot open: {}", e.kind()))?;
     let mut buf = Vec::new();
@@ -932,11 +951,12 @@ fn read_bounded(path: &Path, max: usize) -> Result<Vec<u8>, String> {
 }
 
 /// Reads the `*.json` files of a template-set directory as (file stem, bytes) pairs, sorted
-/// by stem. Fails closed on a symbolic link, a non-UTF-8 name or more than
+/// by stem. Fails closed when `dir` itself or an entry in it is a symbolic link, on a non-UTF-8 name or more than
 /// [`MAX_TEMPLATES_IN_SET`] templates; other entries that do not end in `.json` (a README,
 /// say) are ignored. A file over [`MAX_TEMPLATE_BYTES`] is returned truncated to one byte over
 /// the limit, so the check reports it as too large without reading it whole.
 pub fn read_set_dir(dir: &Path) -> Result<Vec<(String, Vec<u8>)>, String> {
+    require_not_symlink(dir, false)?;
     let entries = std::fs::read_dir(dir).map_err(|e| format!("cannot list the directory: {}", e.kind()))?;
     let mut out: Vec<(String, Vec<u8>)> = Vec::new();
     for entry in entries {

@@ -737,12 +737,12 @@ fn personas_check(args: &[String]) -> ExitCode {
 fn qual_vap_check_templates(args: &[String]) -> ExitCode {
     use fid_qual::vap::tpl;
     let mut dir: Option<PathBuf> = None;
-    let mut catalogue = PathBuf::from("vap/intended-uses.toml");
+    let mut catalogue: Option<PathBuf> = None;
     let mut it = args.iter();
     while let Some(a) = it.next() {
         match (a.as_str(), it.next()) {
             ("--dir", Some(v)) if dir.is_none() => dir = Some(PathBuf::from(v)),
-            ("--catalogue", Some(v)) => catalogue = PathBuf::from(v),
+            ("--catalogue", Some(v)) if catalogue.is_none() => catalogue = Some(PathBuf::from(v)),
             _ => {
                 eprintln!("{QUAL_VAP_TPL_USAGE}");
                 return ExitCode::from(2);
@@ -756,6 +756,7 @@ fn qual_vap_check_templates(args: &[String]) -> ExitCode {
         );
         return ExitCode::from(2);
     };
+    let catalogue = catalogue.unwrap_or_else(|| PathBuf::from("vap/intended-uses.toml"));
     let catalogue = match tpl::Catalogue::from_path(&catalogue) {
         Ok(c) => c,
         Err(e) => {
