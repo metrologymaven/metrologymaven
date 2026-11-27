@@ -22,10 +22,13 @@ use fid_scan_poly::{detect_overlap, MemoryScan, OverlapMap, PointStatus, PolyErr
 
 const FIX: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/scan/poly/");
 
+/// One fixture point: position, normal, valid flag, expected status, expected set.
+type Row = ([f64; 3], [f64; 3], bool, String, String);
+
 struct Case {
     d: f64,
     /// Per scan: (position, normal, valid, expected status, expected set).
-    scans: Vec<Vec<([f64; 3], [f64; 3], bool, String, String)>>,
+    scans: Vec<Vec<Row>>,
 }
 
 fn load(case: &str) -> Case {
@@ -54,7 +57,7 @@ fn frame() -> FrameRef {
     FrameRef::from_bytes([7u8; 16])
 }
 
-fn cloud(pts: &[([f64; 3], [f64; 3], bool, String, String)]) -> (PointCloud, Vec<bool>) {
+fn cloud(pts: &[Row]) -> (PointCloud, Vec<bool>) {
     let col = |k: usize| pts.iter().map(|p| p.0[k]).collect::<Vec<f64>>();
     let ncol = |k: usize| pts.iter().map(|p| p.1[k]).collect::<Vec<f64>>();
     let attrs = AttributeSet { normal: Some([ncol(0), ncol(1), ncol(2)]), ..AttributeSet::default() };
