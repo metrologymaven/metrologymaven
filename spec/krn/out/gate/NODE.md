@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-16
+updated: 2026-11-26
 ---
 
 # KRN.OUT.GATE: Distance-to-nominal and tolerance-band policies
@@ -30,7 +30,7 @@ Geometric policies that decide by position relative to the nominal rather than b
 
 ## Scope
 
-**In:** `filter.outlier.nominal_gate@1.0.0` and `filter.select.tolerance_band@1.0.0` implementing `PolicyMethod` over caller-supplied signed nominal distances.
+**In:** `filter.outlier.nominal_gate@1.0.0` and `filter.outlier.tolerance_band@1.0.0` implementing `PolicyMethod` over caller-supplied signed nominal distances.
 **Out:** computing point-to-nominal distances (`GEO.DIST`, `SCAN`); residual-based policies (`KRN.OUT.STAT`).
 
 ## Requirements
@@ -62,11 +62,11 @@ Geometric policies that decide by position relative to the nominal rather than b
 
 ## Build prompt
 
-> In crate `fid-filter`, create module `gate` implementing `PolicyMethod` for `NominalGate{max_distance_m}` (`filter.outlier.nominal_gate@1.0.0`) and `ToleranceBand{lower_m, upper_m}` (`filter.select.tolerance_band@1.0.0`), using caller-supplied signed nominal distances (one per point). Inclusive limits; typed errors for missing or mismatched distances and lower > upper; apply `policy` guards. Tests: `fixtures/out/gate-band-v1` (on-limit kept, one-ulp-outside excluded), gate mask, error paths, cross-target identity on x86-64/ARM64/wasm32. KNP-1: no FMA, no `f64::min`/`max`, no HashMap/HashSet, no `unsafe`, no I/O; deny `unwrap`/`expect`/`panic`. Acceptance: AC-1..AC-4 of spec node KRN.OUT.GATE.
+> In crate `fid-filter`, create module `gate` implementing `PolicyMethod` for `NominalGate{max_distance_m}` (`filter.outlier.nominal_gate@1.0.0`) and `ToleranceBand{lower_m, upper_m}` (`filter.outlier.tolerance_band@1.0.0`), using caller-supplied signed nominal distances (one per point). Inclusive limits; typed errors for missing or mismatched distances and lower > upper; apply `policy` guards. Tests: `fixtures/out/gate-band-v1` (on-limit kept, one-ulp-outside excluded), gate mask, error paths, cross-target identity on x86-64/ARM64/wasm32. KNP-1: no FMA, no `f64::min`/`max`, no HashMap/HashSet, no `unsafe`, no I/O; deny `unwrap`/`expect`/`panic`. Acceptance: AC-1..AC-4 of spec node KRN.OUT.GATE.
 
 ## Open questions
 
-- The tolerance band runs under `fid_filter::policy::apply` as `filter.outlier.tolerance_band@1.0.0`, not the `filter.select.tolerance_band@1.0.0` named in Scope and Build prompt: `apply` (KRN.OUT.POL) accepts only `filter.outlier.*` IDs for a `PolicyMethod`. A `filter.select.*` form of band selection belongs to the point-selection command (`KRN.OUT.SEL`), which can reuse `ToleranceBand::mask`.
+- The tolerance band runs under `fid_filter::policy::apply` as `filter.outlier.tolerance_band@1.0.0` (Scope and Build prompt first named `filter.select.tolerance_band@1.0.0`; corrected with the build): `apply` (KRN.OUT.POL) accepts only `filter.outlier.*` IDs for a `PolicyMethod`. A `filter.select.*` form of band selection belongs to the point-selection command (`KRN.OUT.SEL`), which can reuse `ToleranceBand::mask`.
 - The Design's `MissingNominal` error is KRN.OUT.POL's existing `PolicyError::NominalDistances { required: true }`; no second variant was added.
 
 ## Children
