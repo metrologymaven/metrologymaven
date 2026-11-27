@@ -39,6 +39,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # B-rep model (GEO.CAD.TOPO.MODEL, ADJ, PCURVE) and assembly instances (GEO.CAD.ASSY.MODEL): L0
 # library code, KNP-1; only fid-geo-frame, fid-geo-nurbs, fid-num, fid-kci, fid-types.
 "fid-geo-cad" = "kernel"
+# Section definitions (SCAN.SECT.DEF): KNP-1, only fid-construct, fid-fit, fid-geo-cad, fid-kci, fid-num
+# and fid-types (plane of a CAD face or constructed plane for FromElement).
+"fid-scan-sect" = "kernel"
 # Alignment kernel (ALN.QA.REPORT first): residual report, fixed-order statistics, digest;
 # ALN.BFIT.CONSTR locks and weights (adds fid-geo-frame, kernel).
 "fid-align-solve" = "kernel"

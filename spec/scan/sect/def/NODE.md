@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-scan-sect]
 satisfies: [REQ-SCAN.SECT-001, REQ-SCAN.SECT-002]
 covers: [PW.CMP.02]
 depends_on: [GEO.FRAME, KRN.CONS]
@@ -75,6 +76,10 @@ The `SectionDef` type and the pure function that expands it into an ordered list
 ## Open questions
 
 - Non-planar section surfaces (cylindrical, curve-normal) are deferred beyond P1b, as proposed by SCAN.SECT; adding them is a new variant here plus support in `SCAN.SECT.CUT`.
+- Build choices in `fid_scan_sect::def`, for review: a `FromElement` CAD face resolves through GEO.CAD.NOMINAL.DIRECT `map_face` to the placement origin and the out-of-material normal (the axis for sense `Same`, its exact negation for `Reversed`); a NURBS face, even a flat one, is not planar here (recognition is GEO.CAD.NOMINAL.RECOG's). GEO.CAD gives a face no digest of its own, so the recorded digest of a CAD face is the body digest: an edit to any face of the body makes the definition stale (a needless recompute is possible, a missed one is not). A constructed plane records the KRN.CONS output digest. `validate` and `expand` refuse a definition whose recorded digest differs from the element's current one (`element_stale`), so a section is recomputed from a re-recorded definition rather than silently following the edited element.
+- Span rules not fixed by this node: a parallel `extent` is the closed range `[0, e]` (offsets `i s <= e + e 1e-12`); a radial `sweep` is the half-open range `[0, w)` (angles `i theta < w - 1e-12`), because a radial series is periodic and a sweep of 2 pi must not repeat its first plane; a radial series whose last angle reaches a full turn (`(k - 1) theta >= 2 pi - 1e-12`) is refused (`radial_full_turn`); the reference direction must be perpendicular to the axis within 1e-12 (`not_perpendicular`). Parallel normals are kept as given (unit within 1e-12, not re-normalised), radial normals are normalised.
+- The canonical JSON (`fid.scan.sect.def/1`) is a digest preimage with no decoder: a stored definition is rebuilt through the constructors, and `FromElement::recorded` carries the stored digest as a claim that is checked on every `validate` and `expand`. `-0.0` is stored as `+0.0`, so a definition has one encoding.
+- `fixtures/scan/cpt_box_offset` holds only the CAD box (`cad_box.txt`, written by `fixtures/scan/sect/def/make_def_cases.py`); SCAN.CMP.CPT adds its scan data there.
 
 ## Children
 
