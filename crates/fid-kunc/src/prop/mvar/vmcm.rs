@@ -41,13 +41,14 @@
 //!    `n_min` is the smallest `M` with `ceil(p M) < M` (so at least one trial lies outside the
 //!    region), computed exactly in integers from the binary64 value of `p`; else
 //!    [`VmcmError::TooFewTrials`] with that minimum.
-//! 5a. Constant outputs: a group column whose values are all bitwise equal to its first value
-//!    (the lowest group index first) is `invalid_covariance` with
+//!    Rule 5a, constant outputs: a group column whose values are all bitwise equal to its
+//!    first value (the lowest group index first) is `invalid_covariance` with
 //!    [`CovarianceRefusal::RankDeficient`] naming it (`constant_output`, no check), before any
 //!    mean is computed. Its exact variance is zero, but the rounded mean `fl(sum) / M` can
 //!    differ from the constant (three values `0.1` give a mean one ulp above `0.1`), which
-//!    leaves deviations of about `1e-17`; the correlation scaling of rule 8 would then turn that tiny, purely rounding
-//!    variance into a well-conditioned matrix and a confident region.
+//!    leaves deviations of about `1e-17`; the correlation scaling of rule 8 would then turn
+//!    that tiny, purely rounding variance into a well-conditioned matrix and a confident
+//!    region.
 //! 6. Mean of output `i`: `red::mean` of its column (fixed-order sum, one division).
 //!    Deviations `x_ir - mean_i`, one rounded subtraction each, in trial order.
 //! 7. Covariance: `s_ij = red::dot(dev_i, dev_j) / (M - 1)` for `i <= j`, mirrored, so the
