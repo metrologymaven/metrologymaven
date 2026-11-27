@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-construct]
+built_pr: 669
 satisfies: [REQ-KRN.CONS.AUTO-002, REQ-KRN.CONS.AUTO-003]
 covers: [GOM.CON.22]
 depends_on: [KRN.CONS.DECL, KRN.LSQ.TRAIT, KRN.NUM.RED, KRN.NUM.FN]
