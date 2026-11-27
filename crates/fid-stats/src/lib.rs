@@ -7,8 +7,11 @@
 //! - [`cap`]: the capability index function `stats.cap.index@1.0.0` (`RPT.STATS.CAP.INDEX`).
 //! - [`spc`]: the control-chart constants table `spc.constants.normal@1.0.0`
 //!   (`RPT.STATS.SPC.CONST`).
+//! - [`hist`]: the histogram binning kernel with rules `sturges@1`, `fixed_count@1` and
+//!   `fixed_width@1` (`RPT.STATS.TREND.HIST`).
 
 pub mod cap;
+pub mod hist;
 pub mod spc;
 mod spc_table;
 
@@ -16,6 +19,7 @@ pub use cap::{
     capability, BadInput, EstimatorId, Family, IndexPair, IndexValue, Side, StatsError, CAP_INDEX_ALGORITHM_ID,
     DEFAULT_MIN_N, MAX_ESTIMATOR_ID_BYTES,
 };
+pub use hist::{histogram, BinRule, BinningReason, Bins, RuleId, HISTOGRAM_MAX_BINS};
 pub use spc::{
     constants, spc_table, Citation, ReviewStatus, SpcConstants, SpcRow, StoredValue, SPC_MAX_N, SPC_MIN_N,
     SPC_TABLE_ID, SPC_TABLE_JSON, SPC_TABLE_VERSION,
