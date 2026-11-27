@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-qual, fid-xtask]
+built_pr: 654
 satisfies: [REQ-QUAL.VAP-001, REQ-QUAL.VAP-008]
 covers: []
 depends_on: []
