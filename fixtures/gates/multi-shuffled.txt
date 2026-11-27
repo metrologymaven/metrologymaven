@@ -1,0 +1,8 @@
+house-rules/core.md
+crates/fid-num/src/lib.rs
+Cargo.toml
+
+AGENTS.md
+spec/eco/ci/gates/NODE.md
+Cargo.lock
+AGENTS.md

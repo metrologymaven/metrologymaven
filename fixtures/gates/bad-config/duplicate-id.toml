@@ -1,0 +1,9 @@
+[[gate]]
+id = "spec"
+run = "x"
+globs = ["spec/**"]
+
+[[gate]]
+id = "spec"
+run = "y"
+globs = ["seeds/**"]

@@ -52,12 +52,16 @@
 //! `qual vap check-protocols`: the IQ and OQ protocol templates checked against the Registry
 //! Manifest and the `qual-record/1` schema (spec node `QUAL.VAP.PROTO`), in [`qual::vap::proto`].
 //!
+//! `ci-plan`: the path-scoped gate planner and CI-change isolation rule (spec node
+//! `ECO.CI.GATES`), in [`ci_plan`].
+//!
 //! `fmt`: cross-platform batched workspace formatting (`cargo fmt` / `rustfmt`) staying within
 //! Windows' 32 KiB `CreateProcess` command-line limit, in [`fmt`].
 
 pub mod apps_policy;
 pub mod bench;
 pub mod bots;
+pub mod ci_plan;
 pub mod conic_audit;
 pub mod convergence;
 pub mod crate_graph;

@@ -9,6 +9,8 @@ phase: P0
 size: S
 owners: []
 claimed_by:
+built_in: [fid-xtask]
+built_pr: 674
 satisfies: [REQ-ECO.CI-004, REQ-ECO.CI-006]
 covers: []
 depends_on: [ECO.REPO, ECO.RULES, ECO.COMM]
@@ -75,6 +77,9 @@ Hand-written config and changed-file lists under `fixtures/gates/` (MIT OR Apach
 
 - Gates for parity drift (ECO.PARITY.DRIFT) and later checks are added to `ci-gates.toml` by their own leaves.
 - Follow-up from ECO.APPS.POLICY (PR #116): add an `apps-policy` gate running `cargo xtask apps-policy --workspace . --registry-manifests <dir> --apps-status <json>` once app crates, per-app registry manifests (`fid --app <id> registry show-manifest --full`) and `apps-status.json` (ECO.APPS.MANIFEST.EXPORT) exist; globs `layers.toml`, `apps.toml`, `apps-policy.toml`, `crates/**`. Until then the check is not run on main.
+
+- Build notes (fid-xtask `ci_plan`, 2026-11-27): (1) a changed file named `ci-gates.toml` anywhere selects every gate, since the planner cannot know which copy CI reads; extra selection only runs more checks. (2) The shared check tools of REQ-002 are configurable as `[shared] tool_globs` (default `xtask/**`); this repository lists `crates/fid-xtask/**` and `.cargo/config.toml`. (3) A changed-path line that is not a clean repo-relative path (absolute, `..`, git-quoted, padded, control characters) and an empty list are refused as `GATES-INPUT`, an error code the Design does not list, so a path the globs never see cannot skip every gate. (4) This repository's `ci-gates.toml` leaves `ci/**` out of `ci_globs`, because leaf PRs edit `ci/fixture-checks.txt` and `ci/wasm32-crates.txt` with their code; the planner default keeps `ci/**`.
+- For ECO.CI.WF when it wires the planner in: produce the changed list with `git diff --name-only --no-renames <base> <head>` (with rename detection a renamed file is listed only under its new path, so a gate governing the old path would be missed) and `-c core.quotePath=false` (quoted paths are refused as `GATES-INPUT`). Also: the `apps` gate's command (`cargo xtask apps-check`, ECO.APPS.LIST) does not exist yet, so the gate fails closed, and every `fid-xtask` change selects it; and when this leaf was built, the `rules` gate's command reported `RULES-CLAUDE-MD` and `RULES-MISSING` on this repository (AGENTS.md carries no synced house-rules blocks).
 
 ## Children
 

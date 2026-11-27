@@ -1,0 +1,4 @@
+[[gate]]
+id = "Spec"
+run = "x"
+globs = ["spec/**"]

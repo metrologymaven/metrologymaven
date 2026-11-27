@@ -1,0 +1,7 @@
+[isolation]
+ci_globs = []
+
+[[gate]]
+id = "spec"
+run = "x"
+globs = ["spec/**"]

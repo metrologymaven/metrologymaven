@@ -1,0 +1,2 @@
+[isolation]
+ci_globs = [".github/**"]

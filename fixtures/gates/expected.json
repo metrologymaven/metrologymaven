@@ -1,0 +1,613 @@
+{
+ "bad_globs": [
+  "",
+  "/spec/**",
+  "spec/",
+  "spec//x",
+  "spec/../x",
+  "./spec",
+  "[ab]",
+  "{a,b}",
+  "!spec/**",
+  "a**",
+  "**a",
+  "a/b**/c",
+  "spec\\x",
+  "tab\there",
+  "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+ ],
+ "cases": [
+  {
+   "changed": "kernel-change.txt",
+   "config": "ci-gates.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[\"layers\"]}\n",
+   "name": "ac1_kernel_change",
+   "text": "ci-plan: 1 gate(s)\nlayers: crates/fid-krn/Cargo.toml matches **/Cargo.toml\n"
+  },
+  {
+   "changed": "spec-change.txt",
+   "config": "ci-gates.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[\"spec\"]}\n",
+   "name": "ac2_spec_change",
+   "text": "ci-plan: 1 gate(s)\nspec: decisions/D-010-x.md matches decisions/**\n"
+  },
+  {
+   "changed": "mixed.txt",
+   "config": "ci-gates.toml",
+   "error": null,
+   "exit": "1",
+   "json": "CI-MIXED src/lib.rs\n",
+   "name": "ac3_mixed",
+   "text": "CI-MIXED src/lib.rs\n"
+  },
+  {
+   "changed": "config-change.txt",
+   "config": "ci-gates.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[\"apps\",\"layers\",\"rules\",\"spec\"]}\n",
+   "name": "ac4_config_change",
+   "text": "ci-plan: 4 gate(s)\napps: every gate selected: ci-gates.toml is a ci-gates.toml or a shared tool\nlayers: every gate selected: ci-gates.toml is a ci-gates.toml or a shared tool\nrules: every gate selected: ci-gates.toml is a ci-gates.toml or a shared tool\nspec: every gate selected: ci-gates.toml is a ci-gates.toml or a shared tool\n"
+  },
+  {
+   "changed": "ci-only.txt",
+   "config": "ci-gates.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[\"apps\",\"layers\",\"rules\",\"spec\"]}\n",
+   "name": "ac5_ci_only",
+   "text": "ci-plan: 4 gate(s)\napps: every gate selected: .github/actions/setup/action.yml is a ci-gates.toml or a shared tool\nlayers: every gate selected: .github/actions/setup/action.yml is a ci-gates.toml or a shared tool\nrules: every gate selected: .github/actions/setup/action.yml is a ci-gates.toml or a shared tool\nspec: every gate selected: .github/actions/setup/action.yml is a ci-gates.toml or a shared tool\n"
+  },
+  {
+   "changed": "multi.txt",
+   "config": "ci-gates.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[\"apps\",\"layers\",\"rules\",\"spec\"]}\n",
+   "name": "ac6_multi",
+   "text": "ci-plan: 4 gate(s)\napps: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\nlayers: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\nrules: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\nspec: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\n"
+  },
+  {
+   "changed": "multi-shuffled.txt",
+   "config": "ci-gates.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[\"apps\",\"layers\",\"rules\",\"spec\"]}\n",
+   "name": "ac6_multi_shuffled",
+   "text": "ci-plan: 4 gate(s)\napps: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\nlayers: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\nrules: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\nspec: every gate selected: Cargo.lock is a ci-gates.toml or a shared tool\n"
+  },
+  {
+   "changed": "config-copy-change.txt",
+   "config": "ci-gates.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[\"apps\",\"layers\",\"rules\",\"spec\"]}\n",
+   "name": "config_copy_change",
+   "text": "ci-plan: 4 gate(s)\napps: every gate selected: fixtures/reqset/ci-gates.toml is a ci-gates.toml or a shared tool\nlayers: every gate selected: fixtures/reqset/ci-gates.toml is a ci-gates.toml or a shared tool\nrules: every gate selected: fixtures/reqset/ci-gates.toml is a ci-gates.toml or a shared tool\nspec: every gate selected: fixtures/reqset/ci-gates.toml is a ci-gates.toml or a shared tool\n"
+  },
+  {
+   "changed": "tool-change.txt",
+   "config": "ci-gates.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[\"apps\",\"layers\",\"rules\",\"spec\"]}\n",
+   "name": "tool_change",
+   "text": "ci-plan: 4 gate(s)\napps: every gate selected: xtask/src/main.rs is a ci-gates.toml or a shared tool\nlayers: every gate selected: xtask/src/main.rs is a ci-gates.toml or a shared tool\nrules: every gate selected: xtask/src/main.rs is a ci-gates.toml or a shared tool\nspec: every gate selected: xtask/src/main.rs is a ci-gates.toml or a shared tool\n"
+  },
+  {
+   "changed": "no-match.txt",
+   "config": "ci-gates.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[]}\n",
+   "name": "no_match",
+   "text": "ci-plan: 0 gates: no changed path matches a gate glob and no gate is always\n"
+  },
+  {
+   "changed": "near-miss.txt",
+   "config": "ci-gates.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[]}\n",
+   "name": "near_miss",
+   "text": "ci-plan: 0 gates: no changed path matches a gate glob and no gate is always\n"
+  },
+  {
+   "changed": "mixed-many.txt",
+   "config": "ci-gates.toml",
+   "error": null,
+   "exit": "1",
+   "json": "CI-MIXED docs/a b.txt\nCI-MIXED spec/x.md\nCI-MIXED z.md\n",
+   "name": "mixed_many",
+   "text": "CI-MIXED docs/a b.txt\nCI-MIXED spec/x.md\nCI-MIXED z.md\n"
+  },
+  {
+   "changed": "normalise.txt",
+   "config": "ci-gates.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[\"layers\",\"spec\"]}\n",
+   "name": "normalise",
+   "text": "ci-plan: 2 gate(s)\nlayers: crates/fid-x/Cargo.toml matches **/Cargo.toml\nspec: spec/a.md matches spec/**\n"
+  },
+  {
+   "changed": "kernel-change.txt",
+   "config": "ci-gates-always.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[\"bot-blocking\",\"layers\"]}\n",
+   "name": "always_kernel",
+   "text": "ci-plan: 2 gate(s)\nbot-blocking: always\nlayers: crates/fid-krn/Cargo.toml matches **/Cargo.toml\n"
+  },
+  {
+   "changed": "no-match.txt",
+   "config": "ci-gates-always.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[\"bot-blocking\",\"docs\"]}\n",
+   "name": "always_no_match",
+   "text": "ci-plan: 2 gate(s)\nbot-blocking: always\ndocs: README.md matches README.?d\n"
+  },
+  {
+   "changed": "ci-only.txt",
+   "config": "ci-gates-always.toml",
+   "error": null,
+   "exit": "1",
+   "json": "CI-MIXED ci/fixture-checks.txt\n",
+   "name": "always_ci_only",
+   "text": "CI-MIXED ci/fixture-checks.txt\n"
+  },
+  {
+   "changed": "mixed.txt",
+   "config": "ci-gates-always.toml",
+   "error": null,
+   "exit": "1",
+   "json": "CI-MIXED src/lib.rs\n",
+   "name": "always_mixed",
+   "text": "CI-MIXED src/lib.rs\n"
+  },
+  {
+   "changed": "tool-change.txt",
+   "config": "ci-gates-always.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[\"bot-blocking\"]}\n",
+   "name": "always_tool",
+   "text": "ci-plan: 1 gate(s)\nbot-blocking: always\n"
+  },
+  {
+   "changed": "check-tool-change.txt",
+   "config": "ci-gates-always.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[\"bot-blocking\",\"docs\",\"layers\"]}\n",
+   "name": "always_check_tool",
+   "text": "ci-plan: 3 gate(s)\nbot-blocking: always\ndocs: every gate selected: tools/check-docs.py is a ci-gates.toml or a shared tool\nlayers: every gate selected: tools/check-docs.py is a ci-gates.toml or a shared tool\n"
+  },
+  {
+   "changed": "multi.txt",
+   "config": "ci-gates-always.toml",
+   "error": null,
+   "exit": "0",
+   "json": "{\"gates\":[\"bot-blocking\",\"layers\"]}\n",
+   "name": "always_multi",
+   "text": "ci-plan: 2 gate(s)\nbot-blocking: always\nlayers: Cargo.toml matches **/Cargo.toml\n"
+  },
+  {
+   "changed": "bad-dotdot.txt",
+   "config": "ci-gates.toml",
+   "error": "GATES-INPUT",
+   "exit": "2",
+   "json": "",
+   "name": "bad_input_dotdot",
+   "text": ""
+  },
+  {
+   "changed": "bad-absolute.txt",
+   "config": "ci-gates.toml",
+   "error": "GATES-INPUT",
+   "exit": "2",
+   "json": "",
+   "name": "bad_input_absolute",
+   "text": ""
+  },
+  {
+   "changed": "bad-space.txt",
+   "config": "ci-gates.toml",
+   "error": "GATES-INPUT",
+   "exit": "2",
+   "json": "",
+   "name": "bad_input_space",
+   "text": ""
+  },
+  {
+   "changed": "bad-quoted.txt",
+   "config": "ci-gates.toml",
+   "error": "GATES-INPUT",
+   "exit": "2",
+   "json": "",
+   "name": "bad_input_quoted",
+   "text": ""
+  },
+  {
+   "changed": "bad-empty.txt",
+   "config": "ci-gates.toml",
+   "error": "GATES-INPUT",
+   "exit": "2",
+   "json": "",
+   "name": "bad_input_empty",
+   "text": ""
+  },
+  {
+   "changed": "bad-bom.txt",
+   "config": "ci-gates.toml",
+   "error": "GATES-INPUT",
+   "exit": "2",
+   "json": "",
+   "name": "bad_input_bom",
+   "text": ""
+  },
+  {
+   "changed": "kernel-change.txt",
+   "config": "bad-config/bad-id.toml",
+   "error": "GATES-CONFIG",
+   "exit": "2",
+   "json": "",
+   "name": "bad_config_bad_id",
+   "text": ""
+  },
+  {
+   "changed": "kernel-change.txt",
+   "config": "bad-config/bracket-glob.toml",
+   "error": "GATES-CONFIG",
+   "exit": "2",
+   "json": "",
+   "name": "bad_config_bracket_glob",
+   "text": ""
+  },
+  {
+   "changed": "kernel-change.txt",
+   "config": "bad-config/duplicate-id.toml",
+   "error": "GATES-CONFIG",
+   "exit": "2",
+   "json": "",
+   "name": "bad_config_duplicate_id",
+   "text": ""
+  },
+  {
+   "changed": "kernel-change.txt",
+   "config": "bad-config/duplicate-key.toml",
+   "error": "GATES-CONFIG",
+   "exit": "2",
+   "json": "",
+   "name": "bad_config_duplicate_key",
+   "text": ""
+  },
+  {
+   "changed": "kernel-change.txt",
+   "config": "bad-config/empty-ci-globs.toml",
+   "error": "GATES-CONFIG",
+   "exit": "2",
+   "json": "",
+   "name": "bad_config_empty_ci_globs",
+   "text": ""
+  },
+  {
+   "changed": "kernel-change.txt",
+   "config": "bad-config/no-gates.toml",
+   "error": "GATES-CONFIG",
+   "exit": "2",
+   "json": "",
+   "name": "bad_config_no_gates",
+   "text": ""
+  },
+  {
+   "changed": "kernel-change.txt",
+   "config": "bad-config/no-globs.toml",
+   "error": "GATES-CONFIG",
+   "exit": "2",
+   "json": "",
+   "name": "bad_config_no_globs",
+   "text": ""
+  },
+  {
+   "changed": "kernel-change.txt",
+   "config": "bad-config/partial-doublestar.toml",
+   "error": "GATES-CONFIG",
+   "exit": "2",
+   "json": "",
+   "name": "bad_config_partial_doublestar",
+   "text": ""
+  },
+  {
+   "changed": "kernel-change.txt",
+   "config": "bad-config/unknown-key.toml",
+   "error": "GATES-CONFIG",
+   "exit": "2",
+   "json": "",
+   "name": "bad_config_unknown_key",
+   "text": ""
+  }
+ ],
+ "glob_cases": [
+  {
+   "glob": "**/Cargo.toml",
+   "match": true,
+   "path": "Cargo.toml"
+  },
+  {
+   "glob": "**/Cargo.toml",
+   "match": true,
+   "path": "crates/a/Cargo.toml"
+  },
+  {
+   "glob": "**/Cargo.toml",
+   "match": false,
+   "path": "crates/a/Cargo.toml.orig"
+  },
+  {
+   "glob": "**/Cargo.toml",
+   "match": false,
+   "path": "xCargo.toml"
+  },
+  {
+   "glob": "spec/**",
+   "match": false,
+   "path": "spec"
+  },
+  {
+   "glob": "spec/**",
+   "match": true,
+   "path": "spec/a"
+  },
+  {
+   "glob": "spec/**",
+   "match": true,
+   "path": "spec/a/b/c"
+  },
+  {
+   "glob": "spec/**",
+   "match": false,
+   "path": "specs/a"
+  },
+  {
+   "glob": "*.md",
+   "match": true,
+   "path": "README.md"
+  },
+  {
+   "glob": "*.md",
+   "match": false,
+   "path": "docs/a.md"
+  },
+  {
+   "glob": "*.md",
+   "match": true,
+   "path": ".md"
+  },
+  {
+   "glob": "docs/*.md",
+   "match": true,
+   "path": "docs/a.md"
+  },
+  {
+   "glob": "docs/*.md",
+   "match": false,
+   "path": "docs/x/a.md"
+  },
+  {
+   "glob": "README.?d",
+   "match": true,
+   "path": "README.md"
+  },
+  {
+   "glob": "README.?d",
+   "match": false,
+   "path": "README.d"
+  },
+  {
+   "glob": "README.?d",
+   "match": false,
+   "path": "README./d"
+  },
+  {
+   "glob": "a/**/b",
+   "match": true,
+   "path": "a/b"
+  },
+  {
+   "glob": "a/**/b",
+   "match": true,
+   "path": "a/x/y/b"
+  },
+  {
+   "glob": "a/**/b",
+   "match": false,
+   "path": "a/xb"
+  },
+  {
+   "glob": "a/**/b",
+   "match": false,
+   "path": "ab"
+  },
+  {
+   "glob": "a/**/b",
+   "match": false,
+   "path": "a/b/c"
+  },
+  {
+   "glob": "**",
+   "match": true,
+   "path": "anything/at/all"
+  },
+  {
+   "glob": "**",
+   "match": true,
+   "path": "x"
+  },
+  {
+   "glob": "**/x/**",
+   "match": true,
+   "path": "x/y"
+  },
+  {
+   "glob": "**/x/**",
+   "match": false,
+   "path": "a/x"
+  },
+  {
+   "glob": "**/x/**",
+   "match": true,
+   "path": "a/x/b"
+  },
+  {
+   "glob": "**/x/**",
+   "match": false,
+   "path": "ax/b"
+  },
+  {
+   "glob": "*",
+   "match": true,
+   "path": "a"
+  },
+  {
+   "glob": "*",
+   "match": false,
+   "path": "a/b"
+  },
+  {
+   "glob": "?",
+   "match": false,
+   "path": "/"
+  },
+  {
+   "glob": "?",
+   "match": true,
+   "path": "a"
+  },
+  {
+   "glob": "?",
+   "match": false,
+   "path": "ab"
+  },
+  {
+   "glob": "a*b*c",
+   "match": true,
+   "path": "abc"
+  },
+  {
+   "glob": "a*b*c",
+   "match": true,
+   "path": "aXbYc"
+  },
+  {
+   "glob": "a*b*c",
+   "match": false,
+   "path": "aXbY"
+  },
+  {
+   "glob": "a*b*c",
+   "match": false,
+   "path": "a/b/c"
+  },
+  {
+   "glob": "a*b*c",
+   "match": true,
+   "path": "abcbc"
+  },
+  {
+   "glob": "*/*",
+   "match": true,
+   "path": "a/b"
+  },
+  {
+   "glob": "*/*",
+   "match": false,
+   "path": "a"
+  },
+  {
+   "glob": "*/*",
+   "match": false,
+   "path": "a/b/c"
+  },
+  {
+   "glob": ".github/workflows/**",
+   "match": true,
+   "path": ".github/workflows/ci.yml"
+  },
+  {
+   "glob": ".github/workflows/**",
+   "match": false,
+   "path": ".github/workflowsx/ci.yml"
+  },
+  {
+   "glob": "ci/**",
+   "match": false,
+   "path": "ci-gates.toml"
+  },
+  {
+   "glob": "ci/**",
+   "match": true,
+   "path": "ci/fixture-checks.txt"
+  },
+  {
+   "glob": "caf\u00e9/*",
+   "match": true,
+   "path": "caf\u00e9/x"
+  },
+  {
+   "glob": "caf?/x",
+   "match": true,
+   "path": "caf\u00e9/x"
+  },
+  {
+   "glob": "caf?/x",
+   "match": true,
+   "path": "cafe/x"
+  },
+  {
+   "glob": "**/**/z",
+   "match": true,
+   "path": "z"
+  },
+  {
+   "glob": "**/**/z",
+   "match": true,
+   "path": "a/b/z"
+  },
+  {
+   "glob": "**/**/z",
+   "match": false,
+   "path": "a/bz"
+  },
+  {
+   "glob": "tools/check-*.py",
+   "match": true,
+   "path": "tools/check-docs.py"
+  },
+  {
+   "glob": "tools/check-*.py",
+   "match": false,
+   "path": "tools/x/check-a.py"
+  },
+  {
+   "glob": "*a*a*a*a*a*a*a*a*b",
+   "match": false,
+   "path": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+   "glob": "**/a/**/a/**/b",
+   "match": false,
+   "path": "a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/c"
+  },
+  {
+   "glob": "**/a/**/a/**/b",
+   "match": true,
+   "path": "a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/b"
+  }
+ ]
+}
