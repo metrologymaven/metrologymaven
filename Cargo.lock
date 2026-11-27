@@ -2388,6 +2388,7 @@ dependencies = [
  "fid-construct",
  "fid-fit",
  "fid-geo-cad",
+ "fid-geo-frame",
  "fid-kci",
  "fid-num",
  "fid-testkit",

@@ -8,16 +8,18 @@
 //!   values and only equal values have equal text; the constructors store `-0.0` as `+0.0`,
 //!   so each definition has exactly one encoding;
 //! - a count is its decimal digits;
+//! - the frame (required in every definition) is its 32 lowercase hex digits (`FrameId`
+//!   text form);
 //! - a 16-byte ID (CAD body, derived topology ID, constructed element) is the lowercase
 //!   hyphenated UUID text; an imported topology label is the label text, escaped.
 //!
-//! Format `fid.scan.sect.def/1`, units metres and radians:
+//! Format `fid.scan.sect.def/1`, which fixes SI units (metres and radians) for every value:
 //!
 //! ```text
-//! {"format":F,"plane":P,"type":"single"}
-//! {"base":P,"format":F,"spacing":X,"span":{"count":N}|{"extent":X},"type":"parallel"}
-//! {"axis_dir":V,"axis_point":V,"format":F,"ref_dir":V,"span":{"count":N}|{"sweep":X},"step":X,"type":"radial"}
-//! {"digest":"sha256:..","element":E,"format":F,"type":"from_element"}
+//! {"format":F,"frame":R,"plane":P,"type":"single"}
+//! {"base":P,"format":F,"frame":R,"spacing":X,"span":{"count":N}|{"extent":X},"type":"parallel"}
+//! {"axis_dir":V,"axis_point":V,"format":F,"frame":R,"ref_dir":V,"span":{"count":N}|{"sweep":X},"step":X,"type":"radial"}
+//! {"digest":"sha256:..","element":E,"format":F,"frame":R,"type":"from_element"}
 //! P = {"normal":V,"point":V}   V = [X,X,X]
 //! E = {"body":U,"face":{"derived":U}|{"imported":L},"type":"cad_face"} | {"id":U,"type":"constructed"}
 //! ```
@@ -25,7 +27,7 @@
 use fid_geo_cad::TopologyId;
 
 use super::resolve::ElementRef;
-use super::{ParallelSpan, Plane, RadialSpan, SectionDef};
+use super::{ParallelSpan, Plane, RadialSpan, SectionDef, SectionKind};
 
 /// The format tag of the canonical JSON.
 pub const FORMAT: &str = "fid.scan.sect.def/1";
@@ -80,9 +82,12 @@ fn element(e: &ElementRef) -> V {
 }
 
 fn document(def: &SectionDef) -> V {
-    match def {
-        SectionDef::Single(p) => V::O(vec![("format", s(FORMAT)), ("plane", plane(p)), ("type", s("single"))]),
-        SectionDef::Parallel(p) => {
+    let frame = || V::S(def.frame().to_string());
+    match def.kind() {
+        SectionKind::Single(p) => {
+            V::O(vec![("format", s(FORMAT)), ("frame", frame()), ("plane", plane(p)), ("type", s("single"))])
+        }
+        SectionKind::Parallel(p) => {
             let span = match p.span() {
                 ParallelSpan::Count(k) => V::O(vec![("count", V::S(k.to_string()))]),
                 ParallelSpan::Extent(e) => V::O(vec![("extent", x(e))]),
@@ -90,12 +95,13 @@ fn document(def: &SectionDef) -> V {
             V::O(vec![
                 ("base", plane(p.base())),
                 ("format", s(FORMAT)),
+                ("frame", frame()),
                 ("spacing", x(p.spacing())),
                 ("span", span),
                 ("type", s("parallel")),
             ])
         }
-        SectionDef::Radial(r) => {
+        SectionKind::Radial(r) => {
             let span = match r.span() {
                 RadialSpan::Count(k) => V::O(vec![("count", V::S(k.to_string()))]),
                 RadialSpan::Sweep(w) => V::O(vec![("sweep", x(w))]),
@@ -104,16 +110,18 @@ fn document(def: &SectionDef) -> V {
                 ("axis_dir", v3(r.axis_dir())),
                 ("axis_point", v3(r.axis_point())),
                 ("format", s(FORMAT)),
+                ("frame", frame()),
                 ("ref_dir", v3(r.ref_dir())),
                 ("span", span),
                 ("step", x(r.step())),
                 ("type", s("radial")),
             ])
         }
-        SectionDef::FromElement(f) => V::O(vec![
+        SectionKind::FromElement(f) => V::O(vec![
             ("digest", s(f.digest().as_str())),
             ("element", element(f.element())),
             ("format", s(FORMAT)),
+            ("frame", frame()),
             ("type", s("from_element")),
         ]),
     }
@@ -208,6 +216,7 @@ mod tests {
             ("extent", s("f")),
             ("face", s("g")),
             ("format", s(FORMAT)),
+            ("frame", s("r")),
             ("id", s("h")),
             ("normal", s("i")),
             ("plane", s("j")),

@@ -10,7 +10,7 @@
 pub mod def;
 
 pub use def::{
-    canonical_json, digest, expand, validate, ElementRef, ElementResolver, FromElement, ModelResolver, NoElements,
-    Parallel, ParallelSpan, Plane, Radial, RadialSpan, Reason, ResolveError, Resolved, ResolvedGeometry,
-    ResolverBuildError, SectError, SectionDef,
+    canonical_json, digest, expand, validate, ElementRef, ElementResolver, FrameId, FromElement, ModelResolver,
+    NoElements, Parallel, ParallelSpan, Plane, Radial, RadialSpan, Reason, ResolveError, Resolved, ResolvedGeometry,
+    ResolverBuildError, SectError, SectionDef, SectionKind,
 };

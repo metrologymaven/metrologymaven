@@ -2,8 +2,9 @@
 # Synthetic definitions; see the script for the rules and the file format.
 case ac1_parallel_count
 # AC-1
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 0.0 0.0 0.0 0.0 0.0 1.0 0.01 count 5
-digest sha256:ad41b28e56f174b6bcfe3a4379602b209aa82b0922ea9069b207b94a09f7fe4b
+digest sha256:a24535c7d6e06fed25e42e83c8359cf798fc73ec104a28b020ed334ba76466bb
 count 5 exact
 plane 0 0.0 0.0 0.0 0.0 0.0 1.0
 plane 1 0.0 0.0 0.01 0.0 0.0 1.0
@@ -13,8 +14,9 @@ plane 4 0.0 0.0 0.04 0.0 0.0 1.0
 end
 case parallel_extent_tilted
 # extent with a closed end
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 0.01 0.02 0.005 0.6 0.0 0.8 0.003 extent 0.03
-digest sha256:e631a6026707750b780a8b9704b472223811df3a493b9e0bc17c616eb727b52a
+digest sha256:85a8614134c96e631684fd38534a7c78adf9ef14b04c8b1529f9346d641a061d
 count 11 exact
 plane 0 0.01 0.02 0.005 0.6 0.0 0.8
 plane 1 0.0118 0.02 0.0074 0.6 0.0 0.8
@@ -30,15 +32,17 @@ plane 10 0.027999999999999997 0.02 0.029 0.6 0.0 0.8
 end
 case parallel_extent_zero
 # extent 0: the base plane only
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 1.0 2.0 3.0 0.0 1.0 0.0 0.5 extent 0.0
-digest sha256:d5cbdef4e27697c92a44d746210a01f1ee255a717edacea330c5353482224599
+digest sha256:35961d7e76e964974f2a409cca86530a54fff53b51743e26240f2cf0779413c7
 count 1 exact
 plane 0 1.0 2.0 3.0 0.0 1.0 0.0
 end
 case parallel_extent_inexact_end
 # 3 * 0.1 > 0.3 in binary64, kept by the slack
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 0.0 0.0 0.0 1.0 0.0 0.0 0.1 extent 0.3
-digest sha256:d885105d2af460f72b322d82e65c7644b02c7db1239b9302fc02371859d9dff1
+digest sha256:78c098c4ee4af2b340b872a030777e43a0a27f7759216e96adb008c4b312af42
 count 4 exact
 plane 0 0.0 0.0 0.0 1.0 0.0 0.0
 plane 1 0.1 0.0 0.0 1.0 0.0 0.0
@@ -47,8 +51,9 @@ plane 3 0.30000000000000004 0.0 0.0 1.0 0.0 0.0
 end
 case parallel_near_unit_normal
 # normal 5e-13 off unit: accepted, kept as given
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 0.0 0.0 0.0 0.0 0.0 1.0000000000005 0.25 count 3
-digest sha256:6e99dfcb1e764153b985ff0d44fd244420ecb261c1f4be846bcc4f9740d805d3
+digest sha256:5ed5374da91effce47a72c03b3dbdce2b7517d6e7ded563b88388ef1fc122cd6
 count 3 exact
 plane 0 0.0 0.0 0.0 0.0 0.0 1.0000000000005
 plane 1 0.0 0.0 0.250000000000125 0.0 0.0 1.0000000000005
@@ -56,8 +61,9 @@ plane 2 0.0 0.0 0.50000000000025 0.0 0.0 1.0000000000005
 end
 case parallel_count_max
 # the largest count
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel -0.5 0.0 0.0 1.0 0.0 0.0 0.0001 count 10000
-digest sha256:d021c3af34dd0c6af25cfc9c5e79fd86e65be8b37939360df6ed22688e93fa18
+digest sha256:2e2ddf05c679aacc9a1ba529506405814ba7ec712f0fd1b0d8801ef380f0f1f9
 count 10000 exact
 plane 0 -0.5 0.0 0.0 1.0 0.0 0.0
 plane 1 -0.4999 0.0 0.0 1.0 0.0 0.0
@@ -68,8 +74,9 @@ plane 9999 0.4999 0.0 0.0 1.0 0.0 0.0
 end
 case parallel_extent_max
 # derives exactly 10000
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 0.0 0.0 0.0 0.0 0.0 1.0 0.001 extent 9.999
-digest sha256:05596077ab085c72126b501253845295134dab8eef0702f8ce5bcae5c42946a6
+digest sha256:aeaea5e2a24f2e4afff9289c59d750bca3c83421b488ddca7c62ab6293cf7be5
 count 10000 exact
 plane 0 0.0 0.0 0.0 0.0 0.0 1.0
 plane 1 0.0 0.0 0.001 0.0 0.0 1.0
@@ -80,22 +87,25 @@ plane 9999 0.0 0.0 9.999 0.0 0.0 1.0
 end
 case single
 # one plane
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def single 0.0 0.0 0.5 0.0 0.0 1.0
-digest sha256:3b58c5cef79772feb3260b74693ffaf5d66047001c25e8d1f15459b17bc21dc9
+digest sha256:1532f36b39cca461364ae9ea8577c65cdc548341d76242ddd64b18300ba09cde
 count 1 exact
 plane 0 0.0 0.0 0.5 0.0 0.0 1.0
 end
 case single_negative_zero
 # -0.0 stored as +0.0: same digest as `single`
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def single -0.0 -0.0 0.5 -0.0 0.0 1.0
-digest sha256:3b58c5cef79772feb3260b74693ffaf5d66047001c25e8d1f15459b17bc21dc9
+digest sha256:1532f36b39cca461364ae9ea8577c65cdc548341d76242ddd64b18300ba09cde
 count 1 exact
 plane 0 0.0 0.0 0.5 0.0 0.0 1.0
 end
 case ac2_radial_quarter_turns
 # AC-2
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def radial 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 1.5707963267948966 count 4
-digest sha256:aa7b9b73131df319dcde75bcc5580d2095af49e9656e061fa374e04fc40c7e31
+digest sha256:31357fa3a28a2ff955db32316c6a10d5b9f5e91d45a6b44339b628432b9f1ab1
 count 4 within_1e-15
 plane 0 0.0 0.0 0.0 0.0 1.0 0.0
 plane 1 0.0 0.0 0.0 -1.0 6.123233995736766e-17 0.0
@@ -104,8 +114,9 @@ plane 3 0.0 0.0 0.0 1.0 -1.8369701987210297e-16 0.0
 end
 case radial_sweep_full_circle
 # sweep 2 pi, half-open: 12 planes
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def radial 0.1 0.2 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.5235987755982988 sweep 6.283185307179586
-digest sha256:6493afed2258b02516d767de9caa606c952010b9317c7e57aace954f34e386e7
+digest sha256:5989e0e750abee74399e192c8412c158515a2bf2952204fd51c666c07a3ed600
 count 12 within_1e-15
 plane 0 0.1 0.2 0.0 -1.0 0.0 0.0
 plane 1 0.1 0.2 0.0 -0.8660254037844387 -0.49999999999999994 0.0
@@ -122,8 +133,9 @@ plane 11 0.1 0.2 0.0 -0.8660254037844384 0.5000000000000004 0.0
 end
 case radial_sweep_half
 # pi / 3 steps over [0, pi): 3 planes
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def radial 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 1.0471975511965976 sweep 3.141592653589793
-digest sha256:8c2da34f5a74ad607b73cf11cf8090a99069a2ad219333a426c25b491b7f52b7
+digest sha256:bd6f091b2bc880f68fbbc9c1f59bd2f51a33f73f5e67582b308abc1eb4f5545d
 count 3 within_1e-15
 plane 0 0.0 0.0 0.0 0.0 1.0 0.0
 plane 1 0.0 0.0 0.0 -0.8660254037844386 0.5000000000000001 0.0
@@ -131,8 +143,9 @@ plane 2 0.0 0.0 0.0 -0.8660254037844388 -0.49999999999999983 0.0
 end
 case radial_tilted_axis
 # tilted axis
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def radial 0.01 -0.02 0.03 0.0 0.6 0.8 1.0 0.0 0.0 0.25 count 7
-digest sha256:1e9cd4fd768d4abddee947265ebdb2b0feb1eb7e55faae41790ba0dd473a75af
+digest sha256:f3c230f9ac1574ae2be9bac4c684f7bed11bedfd3e44301d7479a296d0d49942
 count 7 within_1e-15
 plane 0 0.01 -0.02 0.03 0.0 0.8 -0.6
 plane 1 0.01 -0.02 0.03 -0.24740395925452296 0.7751299373685159 -0.5813474530263868
@@ -144,103 +157,149 @@ plane 6 0.01 -0.02 0.03 -0.9974949866040546 0.056589761334162325 -0.042442321000
 end
 case from_cad_face_imported
 # label needing every RFC 8785 escape
-def cad_face 00112233445566778899aabbccddeeff imported 7122625c732f0108090a0c0d1f7fc3a9e280a8f09f98802066616365 sha256:1111111111111111111111111111111111111111111111111111111111111111
-digest sha256:ffbebd0a62c6419ae22953f08b8c9d57fd9764c76091e0522aa01fe2e6c1ca1b
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
+def cad_face 00112233445566778899aabbccddeeff imported 7122625c732f0108090a0c0d1f7fc3a9e280a8f09f98802066616365 sha256:1111111111111111111111111111111111111111111111111111111111111111 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
+digest sha256:f057108c5f7521dd1385dfd7f8d7bcba481ed4e5bfbef1677d25a679cfc0435e
 end
 case from_cad_face_derived
 # derived face ID
-def cad_face 0f0e0d0c0b0a09080706050403020100 derived a1b2c3d4e5f60718293a4b5c6d7e8f90 sha256:f34500292fc3106eaa702b086bfa735747381e48f4e58545e2edccecf26e6235
-digest sha256:e4996bd0287e45ae3c2a31cedad85305f6b888a8f54911e410f1d4508fa66ad0
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
+def cad_face 0f0e0d0c0b0a09080706050403020100 derived a1b2c3d4e5f60718293a4b5c6d7e8f90 sha256:f34500292fc3106eaa702b086bfa735747381e48f4e58545e2edccecf26e6235 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
+digest sha256:90c3eb4e38fab2a4cbafe818b40174492f16cdb68703448e8408e8fd6fcb32b1
 end
 case from_constructed
 # constructed plane
-def constructed 5e0c3a1f2b4d4e6f8a9b0c1d2e3f4051 sha256:f34500292fc3106eaa702b086bfa735747381e48f4e58545e2edccecf26e6235
-digest sha256:90380bb349d207ac5cbf1c1e2146d2932e5b9ea3a8d9f10926415484ace4b312
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
+def constructed 5e0c3a1f2b4d4e6f8a9b0c1d2e3f4051 sha256:f34500292fc3106eaa702b086bfa735747381e48f4e58545e2edccecf26e6235 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
+digest sha256:28251fa22c951a61f4f71db5089cca6e0a607ff6e1dbe9ec2c4f510329bcf924
 end
 case ac4_spacing_zero
 # AC-4
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 0.0 0.0 0.0 0.0 0.0 1.0 0.0 count 5
 error spacing_not_positive
 end
 case ac4_count_20000
 # AC-4
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 0.0 0.0 0.0 0.0 0.0 1.0 0.01 count 20000
 error count_too_large
 end
 case spacing_negative
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 0.0 0.0 0.0 0.0 0.0 1.0 -0.01 count 5
 error spacing_not_positive
 end
 case count_zero
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 0.0 0.0 0.0 0.0 0.0 1.0 0.01 count 0
 error count_zero
 end
 case count_10001
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 0.0 0.0 0.0 0.0 0.0 1.0 0.01 count 10001
 error count_too_large
 end
 case extent_too_many
 # derives 10001
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 0.0 0.0 0.0 0.0 0.0 1.0 0.0001 extent 1.0
 error count_too_large
 end
 case extent_negative
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 0.0 0.0 0.0 0.0 0.0 1.0 0.01 extent -0.01
 error extent_negative
 end
 case extent_nan
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 0.0 0.0 0.0 0.0 0.0 1.0 0.01 extent nan
 error non_finite
 end
 case normal_not_unit
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 0.0 0.0 0.0 0.0 0.0 2.0 0.01 count 2
 error not_unit
 end
 case normal_just_off_unit
 # 2e-12 off unit
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def single 0.0 0.0 0.0 0.0 0.0 1.000000000002
 error not_unit
 end
 case normal_zero
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def single 0.0 0.0 0.0 0.0 0.0 0.0
 error not_unit
 end
 case point_infinite
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def single inf 0.0 0.0 0.0 0.0 1.0
 error non_finite
 end
 case plane_overflow
 # the second plane's x overflows
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def parallel 1e+308 0.0 0.0 1.0 0.0 0.0 1e+308 count 3
 error plane_not_finite
 end
 case radial_step_zero
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def radial 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 0.0 count 4
 error step_not_positive
 end
 case radial_not_perpendicular
 # d . r = 1e-9
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def radial 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 1e-09 0.5 count 4
 error not_perpendicular
 end
 case radial_axis_not_unit
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def radial 0.0 0.0 0.0 0.0 0.0 0.5 1.0 0.0 0.0 0.5 count 4
 error not_unit
 end
 case radial_full_turn
 # 5th plane repeats
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def radial 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 1.5707963267948966 count 5
 error radial_full_turn
 end
 case radial_sweep_past_turn
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def radial 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 1.5707963267948966 sweep 7.0
 error radial_full_turn
 end
 case radial_sweep_zero
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def radial 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 1.5707963267948966 sweep 0.0
 error sweep_not_positive
 end
 case radial_count_zero
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
 def radial 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 1.5707963267948966 count 0
 error count_zero
+end
+case parallel_coincident
+# 1.0 + 1e-17 rounds to 1.0: plane 1 repeats plane 0
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
+def parallel 1.0 0.0 0.0 1.0 0.0 0.0 1e-17 count 3
+error coincident_planes
+end
+case radial_step_at_floor
+# step = 1e-12
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
+def radial 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 1e-12 count 3
+error step_too_small
+end
+case radial_step_below_floor
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
+def radial 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 5e-13 sweep 1.0
+error step_too_small
+end
+case from_element_frame_mismatch
+# element recorded in another frame
+frame 7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d
+def constructed 5e0c3a1f2b4d4e6f8a9b0c1d2e3f4051 sha256:f34500292fc3106eaa702b086bfa735747381e48f4e58545e2edccecf26e6235 00000000000000000000000000000000
+error frame_mismatch
 end

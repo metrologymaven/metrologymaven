@@ -8,8 +8,9 @@ crate):
 * `fixtures/scan/sect/def/cases.txt`: definitions with their expected canonical digest
   (AC-5), expected planes (AC-1 exact, AC-2 and other radial series within 1e-15) or
   expected refusal reason (AC-4 and REQ-004);
-* `fixtures/scan/cpt_box_offset/cad_box.txt`: the CAD box of the shared SCAN fixture
-  `cpt_box_offset` (synthetic, invented): an axis-aligned 100 x 60 x 40 mm box whose corner
+* `fixtures/scan/sect/def/brep_box.txt`: a synthetic (invented) B-rep box for AC-3, this
+  leaf's own fixture (the `cpt_box_offset` STEP fixture belongs to SCAN.CMP.CPT and is not
+  used): an axis-aligned 100 x 60 x 40 mm box whose corner
   is offset to (10, 20, 5) mm, as a B-rep builder script (8 vertices, 12 line edges, 24
   coedges, 6 loops counter-clockwise about the outward normal, 6 plane faces, one closed
   shell). Two faces (x0 and y1) carry their placement axis pointing into the material with
@@ -26,7 +27,11 @@ Rules reproduced (binary64; Python floats are IEEE binary64 and never fused):
 
 * `-0.0` is stored as `+0.0` (`v + 0.0`) for every input coordinate and scalar;
 * finite inputs; unit normals and directions: `abs(sqrt(x*x + y*y + z*z) - 1) <= 1e-12`;
-  radial `abs(d . r) <= 1e-12`; spacing and step `> 0`; count in 1..10000;
+  radial `abs(d . r) <= 1e-12`; spacing `> 0`; step `> 0` (else `step_not_positive`) and
+  `> 1e-12` (else `step_too_small`); count in 1..10000;
+* every definition has a frame (32 lowercase hex digits, a required `frame` key); a
+  `FromElement` whose recorded element frame differs is refused (`frame_mismatch`);
+* a plane equal (point and normal) to the plane before it is refused (`coincident_planes`);
 * parallel plane i: point `p0[c] + t * n[c]` with `t = float(i) * s`, normal `n` as given;
   with an extent e >= 0 the count is the first k with `float(k) * s > e + e * 1e-12`
   (closed range), refused above 10000;
@@ -45,12 +50,13 @@ tolerance); parallel planes and every digest are exact.
 File format of `cases.txt` ('#' lines are comments), one block per case:
 
     case <name>
+    frame <32 hex>                   (the definition's frame)
     def single <px py pz> <nx ny nz>
     def parallel <px py pz> <nx ny nz> <spacing> count <k> | extent <e>
     def radial <ax ay az> <dx dy dz> <rx ry rz> <step> count <k> | sweep <w>
-    def cad_face <body 32 hex> imported <label UTF-8 as hex> <sha256:digest>
-    def cad_face <body 32 hex> derived <face 32 hex> <sha256:digest>
-    def constructed <element 32 hex> <sha256:digest>
+    def cad_face <body 32 hex> imported <label UTF-8 as hex> <sha256:digest> <element frame>
+    def cad_face <body 32 hex> derived <face 32 hex> <sha256:digest> <element frame>
+    def constructed <element 32 hex> <sha256:digest> <element frame>
     digest <sha256:...>              (valid definitions)
     count <n> exact|within_1e-15     (number of planes and how to compare them)
     plane <i> <px py pz> <nx ny nz>  (selected planes; all of them when n <= 40)
@@ -72,7 +78,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", "..", "..", ".."))
 CASES = os.path.join(HERE, "cases.txt")
-BOX = os.path.join(ROOT, "fixtures", "scan", "cpt_box_offset", "cad_box.txt")
+BOX = os.path.join(HERE, "brep_box.txt")
 FACES = os.path.join(HERE, "box_faces.txt")
 
 FORMAT = "fid.scan.sect.def/1"
@@ -155,7 +161,7 @@ def parallel(p, n, s, mode, value):
         q = [p0[0] + t * n0[0], p0[1] + t * n0[1], p0[2] + t * n0[2]]
         if not all(math.isfinite(c) for c in q):
             raise Refused("plane_not_finite")
-        planes.append(([canon(c) for c in q], n0))
+        distinct(planes, ([canon(c) for c in q], n0))
     doc = {
         "base": {"normal": hx3(n0), "point": hx3(p0)},
         "format": FORMAT,
@@ -175,6 +181,8 @@ def radial(a, d, r, step, mode, value):
     step = finite(step)
     if step <= 0.0:
         raise Refused("step_not_positive")
+    if step <= 1e-12:
+        raise Refused("step_too_small")
     if mode == "count":
         k = count(value)
         span = {"count": str(value)}
@@ -202,7 +210,7 @@ def radial(a, d, r, step, mode, value):
         rot = [r[j] * c + dxr[j] * s + d[j] * ddr * (1.0 - c) for j in range(3)]
         m = cross(d, rot)
         ln = math.sqrt(m[0] * m[0] + m[1] * m[1] + m[2] * m[2])
-        planes.append((a, [canon(x / ln) for x in m]))
+        distinct(planes, (a, [canon(x / ln) for x in m]))
     doc = {
         "axis_dir": hx3(d),
         "axis_point": hx3(a),
@@ -225,7 +233,14 @@ def uuid_text(h):
     return "%s-%s-%s-%s-%s" % (h[0:8], h[8:12], h[12:16], h[16:20], h[20:32])
 
 
-def cad_face(body, kind, face, dig):
+def distinct(planes, plane):
+    # Floats are canonical (no -0.0) and finite here, so == is bit equality.
+    if planes and planes[-1] == plane:
+        raise Refused("coincident_planes")
+    planes.append(plane)
+
+
+def cad_face(body, kind, face, dig, elem_frame):
     if kind == "imported":
         f = {"imported": bytes.fromhex(face).decode("utf-8")}
     else:
@@ -235,13 +250,14 @@ def cad_face(body, kind, face, dig):
         "element": {"body": uuid_text(body), "face": f, "type": "cad_face"},
         "format": FORMAT,
         "type": "from_element",
+        "_element_frame": elem_frame,
     }
     return doc, None, None
 
 
-def constructed(eid, dig):
+def constructed(eid, dig, elem_frame):
     doc = {"digest": dig, "element": {"id": uuid_text(eid), "type": "constructed"}, "format": FORMAT,
-           "type": "from_element"}
+           "type": "from_element", "_element_frame": elem_frame}
     return doc, None, None
 
 
@@ -261,6 +277,8 @@ def digest(doc):
 # ------------------------------------------------------------------ cases
 
 HALF_PI = math.pi / 2.0
+FRAME = "7a3f00c1d2e3f4a5b6c7d8e9fa0b1c2d"
+OTHER_FRAME = "00000000000000000000000000000000"
 Z = [0.0, 0.0, 1.0]
 O = [0.0, 0.0, 0.0]
 D1 = "sha256:" + "11" * 32
@@ -294,11 +312,13 @@ def cases():
         ("radial_tilted_axis", "radial", radial, ([0.01, -0.02, 0.03], [0.0, 0.6, 0.8], [1.0, 0.0, 0.0], 0.25, "count",
                                                   7), "tilted axis"),
         ("from_cad_face_imported", "cad_face", cad_face,
-         ("00112233445566778899aabbccddeeff", "imported", TRICKY.encode("utf-8").hex(), D1),
+         ("00112233445566778899aabbccddeeff", "imported", TRICKY.encode("utf-8").hex(), D1, FRAME),
          "label needing every RFC 8785 escape"),
         ("from_cad_face_derived", "cad_face", cad_face,
-         ("0f0e0d0c0b0a09080706050403020100", "derived", "a1b2c3d4e5f60718293a4b5c6d7e8f90", D2), "derived face ID"),
-        ("from_constructed", "constructed", constructed, ("5e0c3a1f2b4d4e6f8a9b0c1d2e3f4051", D2), "constructed plane"),
+         ("0f0e0d0c0b0a09080706050403020100", "derived", "a1b2c3d4e5f60718293a4b5c6d7e8f90", D2, FRAME),
+         "derived face ID"),
+        ("from_constructed", "constructed", constructed, ("5e0c3a1f2b4d4e6f8a9b0c1d2e3f4051", D2, FRAME),
+         "constructed plane"),
         # ---- refusals (AC-4 and REQ-004)
         ("ac4_spacing_zero", "parallel", parallel, (O, Z, 0.0, "count", 5), "AC-4"),
         ("ac4_count_20000", "parallel", parallel, (O, Z, 0.01, "count", 20000), "AC-4"),
@@ -321,6 +341,12 @@ def cases():
         ("radial_sweep_past_turn", "radial", radial, (O, Z, [1.0, 0.0, 0.0], HALF_PI, "sweep", 7.0), ""),
         ("radial_sweep_zero", "radial", radial, (O, Z, [1.0, 0.0, 0.0], HALF_PI, "sweep", 0.0), ""),
         ("radial_count_zero", "radial", radial, (O, Z, [1.0, 0.0, 0.0], HALF_PI, "count", 0), ""),
+        ("parallel_coincident", "parallel", parallel, ([1.0, 0.0, 0.0], [1.0, 0.0, 0.0], 1e-17, "count", 3),
+         "1.0 + 1e-17 rounds to 1.0: plane 1 repeats plane 0"),
+        ("radial_step_at_floor", "radial", radial, (O, Z, [1.0, 0.0, 0.0], 1e-12, "count", 3), "step = 1e-12"),
+        ("radial_step_below_floor", "radial", radial, (O, Z, [1.0, 0.0, 0.0], 5e-13, "sweep", 1.0), ""),
+        ("from_element_frame_mismatch", "constructed", constructed,
+         ("5e0c3a1f2b4d4e6f8a9b0c1d2e3f4051", D2, OTHER_FRAME), "element recorded in another frame"),
     ]
 
 
@@ -349,9 +375,9 @@ def def_line(kind, args):
         p, n = args
         return "def single %s %s" % (v3tok(p), v3tok(n))
     if kind == "cad_face":
-        return "def cad_face %s %s %s %s" % args
+        return "def cad_face %s %s %s %s %s" % args
     if kind == "constructed":
-        return "def constructed %s %s" % args
+        return "def constructed %s %s %s" % args
     raise SystemExit("unknown kind " + kind)
 
 
@@ -370,7 +396,9 @@ def hand_checks(results):
     assert len(results["radial_sweep_full_circle"][1]) == 12
     assert len(results["radial_sweep_half"][1]) == 3
     assert digest(results["single"][0]) == digest(results["single_negative_zero"][0])
-    for name, reason in [("ac4_spacing_zero", "spacing_not_positive"), ("ac4_count_20000", "count_too_large")]:
+    for name, reason in [("ac4_spacing_zero", "spacing_not_positive"), ("ac4_count_20000", "count_too_large"),
+                         ("parallel_coincident", "coincident_planes"), ("radial_step_at_floor", "step_too_small"),
+                         ("from_element_frame_mismatch", "frame_mismatch")]:
         assert results[name] == reason, (name, results[name])
 
 
@@ -382,9 +410,14 @@ def render_cases():
         out.append("case " + name)
         if note:
             out.append("# " + note)
+        out.append("frame " + FRAME)
         out.append(def_line(kind, args))
         try:
             doc, planes, how = maker(*args)
+            doc["frame"] = FRAME
+            elem_frame = doc.pop("_element_frame", FRAME)
+            if elem_frame != FRAME:
+                raise Refused("frame_mismatch")
         except Refused as e:
             results[name] = e.reason
             out.append("error " + e.reason)
@@ -423,7 +456,7 @@ def box():
     """Builder script lines and the expected plane per face."""
     corner = [[C0[0] + SIZE[0] * (i & 1), C0[1] + SIZE[1] * ((i >> 1) & 1), C0[2] + SIZE[2] * ((i >> 2) & 1)]
               for i in range(8)]
-    lines = ["# CAD box of fixture cpt_box_offset (SCAN.SECT.DEF AC-3; shared with SCAN.CMP.CPT).",
+    lines = ["# Synthetic B-rep box of SCAN.SECT.DEF AC-3 (not the SCAN.CMP.CPT cpt_box_offset STEP fixture).",
              "# Generated by fixtures/scan/sect/def/make_def_cases.py. Synthetic, CC0-1.0. Metres.",
              "body " + BODY_ID]
     for i, p in enumerate(corner):
@@ -465,7 +498,7 @@ def box():
             origin = corner[ring[0]]
             faces.append((name, origin, axis, unit(b), sense, len(loops) - 1, outward))
     lines.extend(loops)
-    expected = ["# SCAN.SECT.DEF AC-3: plane of each cpt_box_offset CAD face (origin, outward unit normal).",
+    expected = ["# SCAN.SECT.DEF AC-3: plane of each face of brep_box.txt (origin, outward unit normal).",
                 "# Generated by make_def_cases.py from the box geometry. CC0-1.0."]
     for name, origin, axis, ref, sense, li, outward in faces:
         lines.append("face f.%s plane %s %s %s %s %d" % (name, v3tok(origin), v3tok(axis), v3tok(ref), sense, li))

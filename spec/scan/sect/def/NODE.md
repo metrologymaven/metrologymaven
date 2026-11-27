@@ -52,7 +52,7 @@ The `SectionDef` type and the pure function that expands it into an ordered list
 
 - **AC-1** Given a parallel definition with base plane z = 0, spacing 0.01 m and count 5, when expanded, then planes are at z = 0, 0.01, 0.02, 0.03, 0.04 m exactly as f64 products i·s, with normal (0,0,1).
 - **AC-2** Given a radial definition about the z axis with r = (1,0,0), step π/2 and count 4, then the normals are (0,1,0), (−1,0,0), (0,−1,0), (1,0,0) within 1e-15.
-- **AC-3** Given `FromElement` referencing a planar face of fixture `fixtures/scan/cpt_box_offset`'s CAD box, the plane equals the face plane and the definition records the face's digest.
+- **AC-3** Given `FromElement` referencing a planar face of the synthetic B-rep box `fixtures/scan/sect/def/brep_box.txt`, the plane equals the face plane and the definition records the face's digest.
 - **AC-4** (error path) Given spacing 0, count 20 000 or a cylindrical face, validation fails with `scan.sect.bad_definition`.
 - **AC-5** Given the same definition, the canonical digest is identical across runs and platforms.
 
@@ -66,7 +66,7 @@ The `SectionDef` type and the pure function that expands it into an ordered list
 
 ## Test fixtures
 
-- Inline definitions in unit tests; `fixtures/scan/cpt_box_offset` (shared with SCAN.CMP.CPT) for `FromElement`.
+- Inline definitions in unit tests; `fixtures/scan/sect/def/` (`cases.txt`, the B-rep box `brep_box.txt` and its face planes `box_faces.txt`, all from `make_def_cases.py`) for `FromElement` and the digests. The `fixtures/scan/cpt_box_offset` STEP fixture belongs to SCAN.CMP.CPT and is not used here.
 
 ## Build prompt
 
@@ -80,7 +80,10 @@ The `SectionDef` type and the pure function that expands it into an ordered list
 - Build choices in `fid_scan_sect::def`, for review: a `FromElement` CAD face resolves through GEO.CAD.NOMINAL.DIRECT `map_face` to the placement origin and the out-of-material normal (the axis for sense `Same`, its exact negation for `Reversed`); a NURBS face, even a flat one, is not planar here (recognition is GEO.CAD.NOMINAL.RECOG's). GEO.CAD gives a face no digest of its own, so the recorded digest of a CAD face is the body digest: an edit to any face of the body makes the definition stale (a needless recompute is possible, a missed one is not). A constructed plane records the KRN.CONS output digest. `validate` and `expand` refuse a definition whose recorded digest differs from the element's current one (`element_stale`), so a section is recomputed from a re-recorded definition rather than silently following the edited element.
 - Span rules not fixed by this node: a parallel `extent` is the closed range `[0, e]` (offsets `i s <= e + e 1e-12`); a radial `sweep` is the half-open range `[0, w)` (angles `i theta < w - 1e-12`), because a radial series is periodic and a sweep of 2 pi must not repeat its first plane; a radial series whose last angle reaches a full turn (`(k - 1) theta >= 2 pi - 1e-12`) is refused (`radial_full_turn`); the reference direction must be perpendicular to the axis within 1e-12 (`not_perpendicular`). Parallel normals are kept as given (unit within 1e-12, not re-normalised), radial normals are normalised.
 - The canonical JSON (`fid.scan.sect.def/1`) is a digest preimage with no decoder: a stored definition is rebuilt through the constructors, and `FromElement::recorded` carries the stored digest as a claim that is checked on every `validate` and `expand`. `-0.0` is stored as `+0.0`, so a definition has one encoding.
-- `fixtures/scan/cpt_box_offset` holds only the CAD box (`cad_box.txt`, written by `fixtures/scan/sect/def/make_def_cases.py`); SCAN.CMP.CPT adds its scan data there.
+- AC-3 and Test fixtures were changed in the build PR (maintainer decision on #672): the box is this leaf's own B-rep builder script `fixtures/scan/sect/def/brep_box.txt`, because `cpt_box_offset` is SCAN.CMP.CPT's STEP fixture (CC-BY-4.0) and stays untouched.
+- Frame (REQ-001, REQ-002; needed by SCAN.SECT.CUT REQ-006): every `SectionDef` carries a required `fid-geo-frame` `FrameId`, written as the required `frame` key of the canonical JSON. A `FromElement` records the element's frame as its resolver reports it (`ModelResolver::add_body` and `add_constructed` take the frame, since neither a B-rep body nor a constructed element names one); `SectionDef::from_element` takes it, `SectionDef::new` refuses another (`frame_mismatch`), and expansion refuses an element whose frame changed.
+- Format `fid.scan.sect.def/1` fixes SI units: every coordinate, spacing and extent in metres, every step and sweep in radians.
+- Coincident planes: an expanded plane bit-identical (point and normal) to the one before it is refused (`coincident_planes`), and a radial step at or below `ANGLE_SLACK` (1e-12 rad) is refused (`step_too_small`).
 
 ## Children
 

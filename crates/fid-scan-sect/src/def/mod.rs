@@ -1,11 +1,14 @@
 //! Section plane definitions and series. Spec node `SCAN.SECT.DEF`.
 //!
-//! A [`SectionDef`] says which cutting planes a section uses; [`expand`] turns it into an
-//! ordered list of [`Plane`]s (point and unit normal, metres, in the section's frame),
+//! A [`SectionDef`] says which cutting planes a section uses and in which coordinate frame
+//! (a required `fid-geo-frame` [`FrameId`]; every value is in SI units, metres and radians, in
+//! that frame); [`expand`] turns it into an ordered list of [`Plane`]s (point and unit normal),
 //! [`validate`] refuses a bad definition with `scan.sect.bad_definition` and a [`Reason`], and
 //! [`digest`] is the SHA-256 of its [canonical JSON](canonical_json).
 //!
 //! # Variants and rules
+//!
+//! The variant is a [`SectionKind`]; [`SectionDef::new`] pairs it with the frame.
 //!
 //! - **Single**: one [`Plane`].
 //! - **Parallel** (REQ-001): base plane `(p0, n)`, spacing `s > 0`, and either a count `k` or
@@ -14,9 +17,12 @@
 //!   normal `n` as given (unit within `1e-12`, not re-normalised). With an extent, the planes
 //!   are those whose offset `t` is at most `e + e * 1e-12` (the **closed** range `[0, e]`, with
 //!   a relative slack far above the rounding of `i * s`, so an extent of `0.04` with spacing
-//!   `0.01` gives 5 planes).
+//!   `0.01` gives 5 planes). A spacing so small against `p0` that plane `i` rounds to plane
+//!   `i - 1` is refused ([`Reason::CoincidentPlanes`]); no plane is silently repeated.
 //! - **Radial** (REQ-002): axis point `a`, unit axis direction `d`, unit reference direction
-//!   `r` with `|d . r| <= 1e-12`, step `theta > 0`, and either a count `k` or a sweep `w > 0`.
+//!   `r` with `|d . r| <= 1e-12`, step `theta > 1e-12` (a step at or below [`ANGLE_SLACK`], the
+//!   resolution of the sweep and full-turn checks, is refused with [`Reason::StepTooSmall`]),
+//!   and either a count `k` or a sweep `w > 0`.
 //!   Plane `i` contains the axis (its point is `a`); with `phi = (i as f64) * theta` and
 //!   `c = cos phi`, `s = sin phi` from `fid-num`, the reference direction is rotated by
 //!   Rodrigues' formula `rot = (r c + (d x r) s) + (d (d . r)) (1 - c)` (each component in that
@@ -26,13 +32,17 @@
 //!   `i theta < w - 1e-12` (the **half-open** range `[0, w)`: a radial series is periodic, so a
 //!   sweep of `2 pi` with step `pi / 2` gives 4 planes, not a fifth repeating the first). A
 //!   series whose last angle reaches a full turn, `(k - 1) theta >= 2 pi - 1e-12`, would repeat
-//!   its first plane and is refused ([`Reason::RadialFullTurn`]).
+//!   its first plane and is refused ([`Reason::RadialFullTurn`]); a normal that rounds to the
+//!   previous plane's is refused ([`Reason::CoincidentPlanes`]).
 //! - **FromElement** (REQ-003): the plane of a planar CAD face or a constructed plane, named by
 //!   an [`ElementRef`] and resolved through an [`ElementResolver`] (see [`ModelResolver`] for
 //!   which plane and which digest). [`FromElement::record`] resolves the element once and
 //!   records its ID and digest; [`validate`] and [`expand`] resolve it again and refuse with
 //!   [`Reason::ElementStale`] when the digest changed, so a section never silently follows an
-//!   edited element: it is recomputed from a re-recorded definition.
+//!   edited element: it is recomputed from a re-recorded definition. The element's frame (as
+//!   its resolver reports it) is recorded too: [`SectionDef::from_element`] takes it as the
+//!   definition's frame, [`SectionDef::new`] refuses a different one, and an element whose
+//!   frame changed is refused on expansion ([`Reason::FrameMismatch`]).
 //!
 //! # Validation (REQ-004)
 //!
@@ -42,8 +52,9 @@
 //! sweep); and every expanded plane finite ([`Reason::PlaneNotFinite`]). The constructors
 //! ([`Plane::new`], [`Parallel::new`], [`Radial::new`], [`FromElement::record`]) apply these
 //! checks and expand the series once, so a definition that exists is valid on its own;
-//! [`validate`] expands it again and resolves a `FromElement`, which can go stale. All tolerances are fixed absolute or relative values (`1e-12`),
-//! far above binary64 rounding of the quantities they bound.
+//! [`validate`] expands it again and resolves a `FromElement`, which can go stale. All
+//! tolerances are fixed absolute or relative values (`1e-12`), far above binary64 rounding of
+//! the quantities they bound, and an expanded plane identical to its predecessor is refused.
 //!
 //! # Determinism (REQ-005)
 //!
@@ -65,6 +76,7 @@ pub use resolve::{
 
 use core::f64::consts::TAU;
 
+pub use fid_geo_frame::FrameId;
 use fid_kci::kci::sha256_digest;
 use fid_num::{f, red};
 use fid_types::Digest;
@@ -235,10 +247,23 @@ impl Parallel {
             if !(p[0].is_finite() && p[1].is_finite() && p[2].is_finite()) {
                 return Err(Reason::PlaneNotFinite { index: i }.into());
             }
-            out.push(Plane { point: canon3(p), normal: n });
+            push_distinct(&mut out, Plane { point: canon3(p), normal: n }, i)?;
         }
         Ok(out)
     }
+}
+
+/// Appends plane `index`, refusing it when it is bit-identical (point and normal) to the
+/// previous plane ([`Reason::CoincidentPlanes`]).
+fn push_distinct(out: &mut Vec<Plane>, plane: Plane, index: u32) -> Result<(), SectError> {
+    if let Some(prev) = out.last() {
+        let same = |a: [f64; 3], b: [f64; 3]| a.iter().zip(b.iter()).all(|(x, y)| x.to_bits() == y.to_bits());
+        if same(prev.point, plane.point) && same(prev.normal, plane.normal) {
+            return Err(Reason::CoincidentPlanes { index }.into());
+        }
+    }
+    out.push(plane);
+    Ok(())
 }
 
 /// The number of planes with offset `i * s <= e + e * EXTENT_SLACK`; at most `MAX_PLANES`.
@@ -267,7 +292,7 @@ pub struct Radial {
 
 impl Radial {
     /// A checked series: finite axis point, unit axis and reference directions (within
-    /// `1e-12`), `|d . r| <= 1e-12`, step finite and positive, count in `1 ..= MAX_PLANES`
+    /// `1e-12`), `|d . r| <= 1e-12`, step finite and above `ANGLE_SLACK`, count in `1 ..= MAX_PLANES`
     /// (given, or derived from a finite positive sweep), and no full turn.
     pub fn new(
         axis_point: [f64; 3],
@@ -285,6 +310,9 @@ impl Radial {
         let step = finite("radial.step", step)?;
         if step <= 0.0 {
             return Err(Reason::StepNotPositive.into());
+        }
+        if step <= ANGLE_SLACK {
+            return Err(Reason::StepTooSmall.into());
         }
         let (span, k) = match span {
             RadialSpan::Count(k) => (RadialSpan::Count(k), count(k)?),
@@ -352,7 +380,7 @@ impl Radial {
                 return Err(Reason::DegenerateNormal { index: i }.into());
             }
             let n = [m[0] / len, m[1] / len, m[2] / len];
-            out.push(Plane { point: self.axis_point, normal: canon3(n) });
+            push_distinct(&mut out, Plane { point: self.axis_point, normal: canon3(n) }, i)?;
         }
         Ok(out)
     }
@@ -372,32 +400,38 @@ fn sweep_count(step: f64, sweep: f64) -> Result<u32, SectError> {
     Err(Reason::CountTooLarge.into())
 }
 
-/// A plane taken from a planar CAD face or a constructed plane (REQ-003): the element's ID and
-/// the digest it had when the definition was recorded.
+/// A plane taken from a planar CAD face or a constructed plane (REQ-003): the element's ID, its
+/// frame and the digest it had when the definition was recorded.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FromElement {
     element: ElementRef,
+    frame: FrameId,
     digest: Digest,
 }
 
 impl FromElement {
-    /// Resolves `element` and records its ID and current digest. Refused when it cannot be
+    /// Resolves `element` and records its ID, frame and current digest. Refused when it cannot be
     /// resolved, is not planar, or its plane is not finite with a unit normal.
     pub fn record<R: ElementResolver + ?Sized>(element: ElementRef, resolver: &R) -> Result<FromElement, SectError> {
         let resolved = resolve(&element, resolver)?;
         plane_of(&resolved)?;
-        Ok(FromElement { element, digest: resolved.digest })
+        Ok(FromElement { element, frame: resolved.frame, digest: resolved.digest })
     }
 
-    /// A definition read back from storage: the digest is what the stored definition
-    /// **claims**; it is checked against the element whenever the definition is validated
-    /// or expanded ([`Reason::ElementStale`] on mismatch).
-    pub fn recorded(element: ElementRef, digest: Digest) -> FromElement {
-        FromElement { element, digest }
+    /// A definition read back from storage: the frame and digest are what the stored
+    /// definition **claims**; both are checked against the element whenever the definition is
+    /// validated or expanded ([`Reason::ElementStale`], [`Reason::FrameMismatch`]).
+    pub fn recorded(element: ElementRef, frame: FrameId, digest: Digest) -> FromElement {
+        FromElement { element, frame, digest }
     }
 
     pub fn element(&self) -> &ElementRef {
         &self.element
+    }
+
+    /// The element frame recorded with the definition.
+    pub fn frame(&self) -> FrameId {
+        self.frame
     }
 
     /// The element digest recorded with the definition.
@@ -409,6 +443,9 @@ impl FromElement {
         let resolved = resolve(&self.element, resolver)?;
         if resolved.digest != self.digest {
             return Err(Reason::ElementStale { recorded: self.digest, current: resolved.digest }.into());
+        }
+        if resolved.frame != self.frame {
+            return Err(Reason::FrameMismatch { definition: self.frame, element: resolved.frame }.into());
         }
         plane_of(&resolved)
     }
@@ -431,13 +468,47 @@ fn plane_of(resolved: &Resolved) -> Result<Plane, SectError> {
     }
 }
 
-/// A section definition.
+/// The planes of a section definition.
 #[derive(Debug, Clone, PartialEq)]
-pub enum SectionDef {
+pub enum SectionKind {
     Single(Plane),
     Parallel(Parallel),
     Radial(Radial),
     FromElement(FromElement),
+}
+
+/// A section definition: its planes and the frame they are in (required; REQ-001, REQ-002).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SectionDef {
+    frame: FrameId,
+    kind: SectionKind,
+}
+
+impl SectionDef {
+    /// A definition in `frame`. A `FromElement` whose recorded element frame differs is
+    /// refused ([`Reason::FrameMismatch`]).
+    pub fn new(frame: FrameId, kind: SectionKind) -> Result<SectionDef, SectError> {
+        if let SectionKind::FromElement(f) = &kind {
+            if f.frame != frame {
+                return Err(Reason::FrameMismatch { definition: frame, element: f.frame }.into());
+            }
+        }
+        Ok(SectionDef { frame, kind })
+    }
+
+    /// A `FromElement` definition in the element's own frame.
+    pub fn from_element(f: FromElement) -> SectionDef {
+        SectionDef { frame: f.frame, kind: SectionKind::FromElement(f) }
+    }
+
+    /// The frame every plane of the definition is in.
+    pub fn frame(&self) -> FrameId {
+        self.frame
+    }
+
+    pub fn kind(&self) -> &SectionKind {
+        &self.kind
+    }
 }
 
 /// Checks `def` (module documentation); `resolver` is used only by `FromElement`.
@@ -447,11 +518,11 @@ pub fn validate<R: ElementResolver + ?Sized>(def: &SectionDef, resolver: &R) -> 
 
 /// The ordered cutting planes of `def` (module documentation).
 pub fn expand<R: ElementResolver + ?Sized>(def: &SectionDef, resolver: &R) -> Result<Vec<Plane>, SectError> {
-    match def {
-        SectionDef::Single(p) => Ok(vec![Plane::checked("plane.point", p.point, "plane.normal", p.normal)?]),
-        SectionDef::Parallel(p) => p.planes(),
-        SectionDef::Radial(r) => r.planes(),
-        SectionDef::FromElement(f) => Ok(vec![f.plane(resolver)?]),
+    match &def.kind {
+        SectionKind::Single(p) => Ok(vec![Plane::checked("plane.point", p.point, "plane.normal", p.normal)?]),
+        SectionKind::Parallel(p) => p.planes(),
+        SectionKind::Radial(r) => r.planes(),
+        SectionKind::FromElement(f) => Ok(vec![f.plane(resolver)?]),
     }
 }
 

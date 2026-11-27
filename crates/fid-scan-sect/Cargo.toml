@@ -12,12 +12,13 @@ repository.workspace = true
 # fid-kci (the portable SHA-256 of the canonical definition), fid-types (the `sha256:` Digest),
 # fid-geo-cad (the B-rep body, its digest and GEO.CAD.NOMINAL.DIRECT `map_face`, so a
 # `FromElement` definition resolves the plane of a planar CAD face), fid-construct (the
-# constructed-element ID and output digest, KRN.CONS.DECL) and fid-fit (the `FittedFeature`
-# plane a constructed element carries).
+# constructed-element ID and output digest, KRN.CONS.DECL), fid-fit (the `FittedFeature`
+# plane a constructed element carries) and fid-geo-frame (the `FrameId` every definition is in).
 [dependencies]
 fid-construct = { path = "../fid-construct" }
 fid-fit = { path = "../fid-fit" }
 fid-geo-cad = { path = "../fid-geo-cad" }
+fid-geo-frame = { path = "../fid-geo-frame" }
 fid-kci = { path = "../fid-kci" }
 fid-num = { path = "../fid-num" }
 fid-types = { path = "../fid-types" }

@@ -3,6 +3,7 @@
 
 use core::fmt;
 
+use fid_geo_frame::FrameId;
 use fid_num::err::NumError;
 use fid_types::Digest;
 
@@ -22,6 +23,9 @@ pub enum Reason {
     SpacingNotPositive,
     /// The radial angular step is zero or negative.
     StepNotPositive,
+    /// The radial angular step is positive but at most [`super::ANGLE_SLACK`] (`1e-12` rad),
+    /// the resolution of the sweep and full-turn checks.
+    StepTooSmall,
     /// A count of zero.
     CountZero,
     /// A count above [`super::MAX_PLANES`], given or derived from an extent or a sweep.
@@ -35,6 +39,11 @@ pub enum Reason {
     RadialFullTurn,
     /// The expanded plane `index` has a non-finite point (the offset overflowed).
     PlaneNotFinite { index: u32 },
+    /// The expanded plane `index` is bit-identical (point and normal) to plane `index - 1`: the
+    /// offset or rotation step is below the resolution of the coordinates.
+    CoincidentPlanes { index: u32 },
+    /// The definition's frame and the frame of its referenced element differ.
+    FrameMismatch { definition: FrameId, element: FrameId },
     /// The expanded radial normal `index` has zero length (cannot happen for a validated unit
     /// axis and perpendicular unit reference direction; refused rather than divided by zero).
     DegenerateNormal { index: u32 },
@@ -64,12 +73,15 @@ impl Reason {
             Reason::NotPerpendicular => "not_perpendicular",
             Reason::SpacingNotPositive => "spacing_not_positive",
             Reason::StepNotPositive => "step_not_positive",
+            Reason::StepTooSmall => "step_too_small",
             Reason::CountZero => "count_zero",
             Reason::CountTooLarge => "count_too_large",
             Reason::ExtentNegative => "extent_negative",
             Reason::SweepNotPositive => "sweep_not_positive",
             Reason::RadialFullTurn => "radial_full_turn",
             Reason::PlaneNotFinite { .. } => "plane_not_finite",
+            Reason::CoincidentPlanes { .. } => "coincident_planes",
+            Reason::FrameMismatch { .. } => "frame_mismatch",
             Reason::DegenerateNormal { .. } => "degenerate_normal",
             Reason::Numeric(_) => "numeric",
             Reason::ElementNotFound => "element_not_found",
@@ -91,12 +103,17 @@ impl fmt::Display for Reason {
             }
             Reason::SpacingNotPositive => f.write_str("parallel spacing is not positive"),
             Reason::StepNotPositive => f.write_str("radial step is not positive"),
+            Reason::StepTooSmall => f.write_str("radial step is at most 1e-12 rad"),
             Reason::CountZero => f.write_str("count is zero"),
             Reason::CountTooLarge => write!(f, "more than {} planes", super::MAX_PLANES),
             Reason::ExtentNegative => f.write_str("parallel extent is negative"),
             Reason::SweepNotPositive => f.write_str("radial sweep is not positive"),
             Reason::RadialFullTurn => f.write_str("radial series reaches a full turn and would repeat its first plane"),
             Reason::PlaneNotFinite { index } => write!(f, "plane {index} is not finite"),
+            Reason::CoincidentPlanes { index } => write!(f, "plane {index} coincides with the plane before it"),
+            Reason::FrameMismatch { definition, element } => {
+                write!(f, "definition frame {definition} differs from element frame {element}")
+            }
             Reason::DegenerateNormal { index } => write!(f, "radial normal {index} has zero length"),
             Reason::Numeric(e) => write!(f, "numeric: {e}"),
             Reason::ElementNotFound => f.write_str("referenced element not found"),
