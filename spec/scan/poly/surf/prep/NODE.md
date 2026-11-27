@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-scan-poly]
+built_pr: 653
 satisfies: [REQ-SCAN.POLY.SURF-002, REQ-SCAN.POLY.SURF-003, REQ-SCAN.POLY.SURF-005]
 covers: []
 depends_on: [GEO.INDEX.KDTREE, GEO.TYPES.POINTS, KRN.NUM.LA.EIG]
