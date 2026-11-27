@@ -12,7 +12,7 @@
 use fid_fit::contract::{FittedFeature, Primitive, V3};
 use fid_kunc::prop::mvar::param::{
     check_covariance, from_param, tangent_basis, to_param, CovarianceDefect, FeatureCovariance, FeatureType,
-    ParamError, ASYM_REL_TOL, PSD_REL_TOL, VERSION,
+    ParamError, ASYM_REL_TOL, MAX_DIM, PSD_REL_TOL, VERSION,
 };
 use fid_num::la::Mat;
 
@@ -24,7 +24,7 @@ const U: f64 = 1.0 / 9_007_199_254_740_992.0;
 #[derive(Debug, Clone)]
 enum Json {
     Null,
-    Bool,
+    Bool(bool),
     Num(String),
     Str(String),
     Arr(Vec<Json>),
@@ -111,11 +111,11 @@ impl Parser<'_> {
             }
             b't' => {
                 self.i += 4;
-                Json::Bool
+                Json::Bool(true)
             }
             b'f' => {
                 self.i += 5;
-                Json::Bool
+                Json::Bool(false)
             }
             _ => {
                 let start = self.i;
@@ -429,12 +429,17 @@ fn from_param_tilted_directions() {
 
 // ----------------------------------------------------------------------------------- AC-2
 
+/// AC-2 and REQ-003: the pinned check on `not_psd.json`. Symmetry and PSD are judged on the
+/// correlation-scaled matrix, so the mixed-unit cases (an `m^2` block next to `rad^2`
+/// entries) fail although the unscaled matrix would pass; a negative variance is refused
+/// first; singular and zero matrices are accepted and flagged rank deficient.
 #[test]
 fn ac2_covariance_validation() {
     let doc = load("not_psd.json");
     assert_eq!(doc.get("tolerances").get("asym_rel").str(), "1e-12");
     assert_eq!(doc.get("tolerances").get("psd_rel").str(), "1e-12");
     assert_eq!((ASYM_REL_TOL, PSD_REL_TOL), (1e-12, 1e-12));
+    let rel = |g: f64, w: f64| (g - w).abs() <= 1e-12 * w.abs();
     let mut verdicts = Vec::new();
     for c in doc.get("cases").arr() {
         let name = c.get("name").str();
@@ -447,58 +452,117 @@ fn ac2_covariance_validation() {
             &cov,
             Some(c.get("ref_dir").v3()),
         );
-        let (lo, hi) = (e.get("min_eig").f(), e.get("max_eig").f());
         let verdict = e.get("verdict").str();
         verdicts.push(verdict.to_string());
+        if verdict == "correlated_zero_variance" {
+            let want = (e.get("zero_index").int(), e.get("zero_other").int());
+            match got {
+                Err(ParamError::InvalidCovariance(CovarianceDefect::CorrelatedZeroVariance { index, other })) => {
+                    assert_eq!((index as i64, other as i64), want, "{name}");
+                }
+                other => panic!("{name}: expected correlated_zero_variance, got {other:?}"),
+            }
+            continue;
+        }
+        if verdict == "negative_variance" {
+            match got {
+                Err(err @ ParamError::InvalidCovariance(CovarianceDefect::NegativeVariance { index, value })) => {
+                    assert_eq!(err.code(), "invalid_covariance");
+                    assert_eq!(index as i64, e.get("neg_index").int(), "{name}");
+                    assert_eq!(value.to_bits(), e.get("neg_value").f().to_bits(), "{name}");
+                }
+                other => panic!("{name}: expected negative_variance, got {other:?}"),
+            }
+            continue;
+        }
+        let (lo, hi) = (e.get("min_eig").f(), e.get("max_eig").f());
+        let (clo, chi) = (e.get("corr_min_eig").f(), e.get("corr_max_eig").f());
+        let eig_ok = |a: f64, b: f64, ca: f64, cb: f64| {
+            (a - lo).abs() <= 1e-12 * hi.abs()
+                && (b - hi).abs() <= 1e-12 * hi.abs()
+                && (ca - clo).abs() <= 1e-13 * chi.abs()
+                && (cb - chi).abs() <= 1e-13 * chi.abs()
+        };
         match (verdict, got) {
             (
                 "not_psd",
                 Err(
-                    err @ ParamError::InvalidCovariance(CovarianceDefect::NotPositiveSemidefinite { min_eig, max_eig }),
+                    err @ ParamError::InvalidCovariance(CovarianceDefect::NotPositiveSemidefinite {
+                        min_eig,
+                        max_eig,
+                        corr_min_eig,
+                        corr_max_eig,
+                    }),
                 ),
             ) => {
                 assert_eq!(err.code(), "invalid_covariance");
-                assert!((min_eig - lo).abs() <= 1e-12 * hi, "{name}: smallest eigenvalue {min_eig:e} vs {lo:e}");
-                assert!((max_eig - hi).abs() <= 1e-12 * hi, "{name}: largest eigenvalue {max_eig:e} vs {hi:e}");
-                assert!(min_eig < 0.0);
+                assert!(eig_ok(min_eig, max_eig, corr_min_eig, corr_max_eig), "{name}: {err}");
+                assert!(corr_min_eig < 0.0);
             }
             ("asymmetric", Err(err @ ParamError::InvalidCovariance(CovarianceDefect::Asymmetric { asym, i, j }))) => {
                 assert_eq!(err.code(), "invalid_covariance");
-                assert!(ulps(asym, e.get("asym").f()) <= 2, "{name}: asymmetry {asym:e}");
+                assert!(rel(asym, e.get("asym").f()), "{name}: asymmetry {asym:e}");
                 let pair: Vec<i64> = e.get("asym_pair").arr().iter().map(Json::int).collect();
                 assert_eq!(vec![i as i64, j as i64], pair, "{name}: reported pair");
             }
             ("ok", Ok(fc)) => {
                 let ck = fc.check();
-                assert!(ulps(ck.asym, e.get("asym").f()) <= 2, "{name}: asymmetry {:e}", ck.asym);
-                assert!((ck.min_eig - lo).abs() <= 1e-12 * hi, "{name}: smallest eigenvalue");
-                // The stored matrix is the symmetrised one.
+                assert!(ck.asym <= ASYM_REL_TOL && rel(ck.asym, e.get("asym").f()), "{name}: asymmetry {:e}", ck.asym);
+                assert!(eig_ok(ck.min_eig, ck.max_eig, ck.corr_min_eig, ck.corr_max_eig), "{name}: {ck:?}");
+                let flagged = matches!(e.get("rank_deficient"), Json::Bool(true));
+                assert_eq!(ck.rank_deficient, flagged, "{name}: rank flag");
+                if flagged {
+                    assert!(ck.cond.is_infinite() || ck.cond >= 1.0 / PSD_REL_TOL, "{name}: cond {}", ck.cond);
+                } else {
+                    let want = e.get("cond").f();
+                    assert!((ck.cond - want).abs() <= 1e-9 * want, "{name}: cond {} vs {want}", ck.cond);
+                }
+                // The stored matrix is the symmetrised (unscaled) one.
                 let d = fc.cov().data();
                 for i in 0..6 {
                     for j in 0..6 {
                         assert_eq!(d[i * 6 + j].to_bits(), d[j * 6 + i].to_bits(), "{name}: symmetric");
                     }
+                    assert_eq!(d[i * 6 + i].to_bits(), c.get("cov").fs()[i * 6 + i].to_bits(), "{name}: unscaled");
                 }
             }
             (v, other) => panic!("{name}: expected {v}, got {other:?}"),
         }
     }
     verdicts.sort();
-    assert_eq!(verdicts, ["asymmetric", "not_psd", "ok", "ok"]);
+    verdicts.dedup();
+    assert_eq!(verdicts, ["asymmetric", "correlated_zero_variance", "negative_variance", "not_psd", "ok"]);
 }
 
 #[test]
-fn ac2_negative_definite_and_zero_matrices() {
+fn ac2_negative_variance_zero_matrix_and_dimension_bound() {
     let neg = square(3, vec![-1e-12, 0.0, 0.0, 0.0, -2e-12, 0.0, 0.0, 0.0, -3e-12]);
-    match check_covariance(&neg, 3) {
-        Err(ParamError::InvalidCovariance(CovarianceDefect::NotPositiveSemidefinite { min_eig, max_eig })) => {
-            assert_eq!((min_eig, max_eig), (-3e-12, -1e-12));
-        }
-        other => panic!("{other:?}"),
-    }
+    assert_eq!(
+        check_covariance(&neg, 3).unwrap_err(),
+        ParamError::InvalidCovariance(CovarianceDefect::NegativeVariance { index: 0, value: -1e-12 })
+    );
+    // The zero matrix is accepted and flagged: it states no uncertainty at all.
     let zero = square(3, vec![0.0; 9]);
     let (_, ck) = check_covariance(&zero, 3).unwrap();
-    assert_eq!((ck.asym, ck.min_eig, ck.max_eig), (0.0, 0.0, 0.0));
+    assert_eq!((ck.asym, ck.min_eig, ck.max_eig, ck.corr_min_eig, ck.corr_max_eig), (0.0, 0.0, 0.0, 0.0, 0.0));
+    assert!(ck.rank_deficient);
+    assert!(ck.cond.is_infinite());
+    // A zero variance with a non-zero covariance in its row is refused (scaling cannot show
+    // it: the scaled eigenvalue is only about -1e-16).
+    let bad = square(2, vec![0.0, 1e-12, 1e-12, 1e-8]);
+    assert_eq!(
+        check_covariance(&bad, 2).unwrap_err(),
+        ParamError::InvalidCovariance(CovarianceDefect::CorrelatedZeroVariance { index: 0, other: 1 })
+    );
+    // A well-conditioned diagonal matrix is not flagged.
+    let (_, ck) = check_covariance(&square(2, vec![1e-12, 0.0, 0.0, 1e-8]), 2).unwrap();
+    assert!(!ck.rank_deficient && (ck.cond - 1.0).abs() <= 4.0 * U, "{ck:?}");
+    // 1 <= n <= MAX_DIM (7, the largest fcov-param@1 dimension).
+    assert_eq!(MAX_DIM, 7);
+    assert_eq!(FeatureType::ALL.iter().map(|t| t.dim().max(t.kernel_dim())).max(), Some(MAX_DIM));
+    let big = square(8, vec![0.0; 64]);
+    assert_eq!(check_covariance(&big, 8).unwrap_err(), ParamError::DimensionMismatch { expected: 8, rows: 8, cols: 8 });
+    assert_eq!(check_covariance(&square(1, vec![1.0]), 0).unwrap_err().code(), "dimension_mismatch");
 }
 
 // ----------------------------------------------------------------------------------- AC-3
@@ -551,6 +615,7 @@ fn ac4_cylinder_along_z_axis_block_is_2x2_full_rank() {
     }
     let (_, ck3) = check_covariance(&square(3, dir3), 3).unwrap();
     assert_eq!(ck3.min_eig, 0.0, "kernel direction block is rank 2");
+    assert!(ck3.rank_deficient, "and flagged");
     // ... the tangent-plane block is 2 x 2 and full rank.
     let fc = FeatureCovariance::from_kernel(&input, None, &square(7, kcov_data)).unwrap();
     let blk = fc.direction_block().unwrap().unwrap();
@@ -558,6 +623,7 @@ fn ac4_cylinder_along_z_axis_block_is_2x2_full_rank() {
     assert_close("dir_block", &flat, &e.get("dir_block").fs(), 1e-24);
     let (_, ck2) = check_covariance(&square(2, flat.to_vec()), 2).unwrap();
     assert!(ck2.min_eig > 0.0 && ck2.min_eig >= 1e-3 * ck2.max_eig, "full rank: {ck2:?}");
+    assert!(!ck2.rank_deficient, "full rank: {ck2:?}");
     assert!((ck2.min_eig - e.get("dir_block_min_eig").f()).abs() <= 1e-12 * ck2.max_eig);
     let b = fc.tangent_basis().unwrap().unwrap();
     assert_eq!((b.axis, b.e1, b.e2), (0, [0.0, -1.0, 0.0], [1.0, 0.0, 0.0]));

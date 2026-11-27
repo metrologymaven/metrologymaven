@@ -73,18 +73,43 @@
 //!
 //! # Covariance check (REQ-003; pinned order, first failure wins)
 //!
-//! 1. Shape: `n x n` with `n` the parameter count, else [`ParamError::DimensionMismatch`]
-//!    (entries are finite by construction of `fid_num::la::Mat`).
-//! 2. Symmetry: `mx` is the total-order maximum of `|c_ij|`; the asymmetry is the largest
-//!    `|c_ij - c_ji|` over `i < j` (row-major; the first maximum wins a tie, and its pair is
-//!    reported) divided by `mx` (`0` for the zero matrix). Above [`ASYM_REL_TOL`]:
-//!    `invalid_covariance` with [`CovarianceDefect::Asymmetric`].
-//! 3. The stored matrix is the symmetrised `(c_ij + c_ji) * 0.5` (exactly symmetric).
-//! 4. Positive semi-definiteness: eigenvalues of the symmetrised matrix by `fid-num` cyclic
-//!    Jacobi (`sym_eig`); with `lo` the smallest and `hi` the largest,
+//! A covariance here is always the `k = 1` (standard-uncertainty) covariance of the
+//! parameter vector: entry `(i, j)` is in `units[i] * units[j]` (m^2, m rad or rad^2), never
+//! an expanded one. Because the units are mixed, both tests run on the correlation-scaled
+//! matrix `R = D^-1/2 C D^-1/2`, so a defect in a small-variance block (a negative or
+//! over-correlated `m^2` block next to `rad^2` entries) is never hidden by the scale of the
+//! largest entry.
+//!
+//! 1. Shape: `n x n` with `n` the parameter count, `1 <= n <=`[`MAX_DIM`] (7, the largest
+//!    `fcov-param@1` dimension), else [`ParamError::DimensionMismatch`] (entries are finite
+//!    by construction of `fid_num::la::Mat`).
+//! 2. Variances: the first (lowest-index) `c_ii < 0` is `invalid_covariance` with
+//!    [`CovarianceDefect::NegativeVariance`] (`-0.0` is a zero variance).
+//! 3. Zero variances: a `c_ii == 0` whose row or column holds any non-zero entry `(i, j)`
+//!    (the first in row-major order of `j`, row before column) is `invalid_covariance` with
+//!    [`CovarianceDefect::CorrelatedZeroVariance`] (no correlation can have a zero variance;
+//!    scaling cannot show it). Scaling: `d_i = f::sqrt(c_ii)` for `c_ii > 0` and `d_i = 1`
+//!    for a zero variance (whose row is then all zero). A scaled entry is `(x / d_i) / d_j`,
+//!    computed for `i <= j` and mirrored.
+//! 4. Symmetry: `mr` is the total-order maximum of `|(c_ij / d_i) / d_j|`; the asymmetry is
+//!    the largest `(|c_ij - c_ji| / d_i) / d_j` over `i < j` (row-major; the first maximum
+//!    wins a tie, and its pair is reported) divided by `mr` (`0` for the zero matrix). Above
+//!    [`ASYM_REL_TOL`]: `invalid_covariance` with [`CovarianceDefect::Asymmetric`].
+//! 5. The stored matrix is the symmetrised `(c_ij + c_ji) * 0.5` (exactly symmetric).
+//! 6. Positive semi-definiteness: eigenvalues of the scaled symmetrised matrix by `fid-num`
+//!    cyclic Jacobi (`sym_eig`); with `lo` the smallest and `hi` the largest,
 //!    `lo >= -(tol * hi)` where `tol` is the total-order maximum of [`PSD_REL_TOL`] and the
 //!    rounding floor `16 n 2^-53`; else `invalid_covariance` with
-//!    [`CovarianceDefect::NotPositiveSemidefinite`] giving `lo` and `hi`.
+//!    [`CovarianceDefect::NotPositiveSemidefinite`] giving `lo` and `hi` and the extreme
+//!    eigenvalues of the unscaled symmetrised covariance.
+//! 7. Rank: an accepted matrix with `lo <= tol * hi` (the zero matrix included) is
+//!    accepted but flagged [`CovarianceCheck::rank_deficient`], with the condition estimate
+//!    `hi / lo` of the scaled matrix (`+inf` when `lo <= 0`). A flagged covariance has at
+//!    least one parameter combination with no stated uncertainty (a zero or numerically zero
+//!    variance); downstream code must not treat it as a confident uncertainty for that
+//!    combination. Some parameterisations are rank deficient by construction: the line,
+//!    plane and cylinder points and the cone reference point carry a component along a
+//!    direction the feature does not determine.
 //!
 //! The tolerances are the spec's placeholders and are `[unverified]`. They are far above the
 //! rounding resolution of the check (`n 2^-53` relative for the eigenvalues of an `n x n`
@@ -107,6 +132,9 @@ pub const ASYM_REL_TOL: f64 = 1e-12;
 pub const PSD_REL_TOL: f64 = 1e-12;
 /// Largest `|norm2(r) - 1|` accepted for a stored reference direction (`[unverified]`).
 pub const UNIT_TOL: f64 = 1e-12;
+/// The largest covariance dimension [`check_covariance`] accepts: the largest
+/// `fcov-param@1` dimension (the cone's 7), which is also the largest kernel-form dimension.
+pub const MAX_DIM: usize = 7;
 /// Unit roundoff `2^-53`, the floor of every relative tolerance here.
 const U: f64 = 1.0 / 9_007_199_254_740_992.0;
 
@@ -229,11 +257,18 @@ impl FeatureType {
 /// What is wrong with a covariance matrix (`invalid_covariance`, REQ-003).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CovarianceDefect {
-    /// The relative asymmetry exceeds [`ASYM_REL_TOL`]; `(i, j)` (`i < j`) is the pair that
-    /// gives it.
+    /// A negative variance `c_ii = value` (the lowest such `index`).
+    NegativeVariance { index: usize, value: f64 },
+    /// A zero variance `c_ii` with a non-zero covariance `c_ij` or `c_ji` (`index` = `i`,
+    /// `other` = `j`).
+    CorrelatedZeroVariance { index: usize, other: usize },
+    /// The relative asymmetry of the correlation-scaled matrix exceeds [`ASYM_REL_TOL`];
+    /// `(i, j)` (`i < j`) is the pair that gives it.
     Asymmetric { asym: f64, i: usize, j: usize },
-    /// The smallest eigenvalue is below `-tol` times the largest.
-    NotPositiveSemidefinite { min_eig: f64, max_eig: f64 },
+    /// The smallest eigenvalue of the correlation-scaled matrix (`corr_min_eig`) is below
+    /// `-tol` times its largest (`corr_max_eig`); `min_eig` and `max_eig` are the extreme
+    /// eigenvalues of the unscaled symmetrised covariance.
+    NotPositiveSemidefinite { min_eig: f64, max_eig: f64, corr_min_eig: f64, corr_max_eig: f64 },
 }
 
 /// Errors of this module.
@@ -283,9 +318,22 @@ impl fmt::Display for ParamError {
             ParamError::InvalidCovariance(CovarianceDefect::Asymmetric { asym, i, j }) => {
                 write!(out, "invalid_covariance: relative asymmetry {asym:e} at ({i}, {j})")
             }
-            ParamError::InvalidCovariance(CovarianceDefect::NotPositiveSemidefinite { min_eig, max_eig }) => {
-                write!(out, "invalid_covariance: smallest eigenvalue {min_eig:e} (largest {max_eig:e})")
+            ParamError::InvalidCovariance(CovarianceDefect::NegativeVariance { index, value }) => {
+                write!(out, "invalid_covariance: negative variance {value:e} at ({index}, {index})")
             }
+            ParamError::InvalidCovariance(CovarianceDefect::CorrelatedZeroVariance { index, other }) => {
+                write!(out, "invalid_covariance: zero variance at {index} with a non-zero covariance with {other}")
+            }
+            ParamError::InvalidCovariance(CovarianceDefect::NotPositiveSemidefinite {
+                min_eig,
+                max_eig,
+                corr_min_eig,
+                corr_max_eig,
+            }) => write!(
+                out,
+                "invalid_covariance: smallest eigenvalue {min_eig:e} (largest {max_eig:e}); \
+                 correlation-scaled {corr_min_eig:e} (largest {corr_max_eig:e})"
+            ),
             ParamError::DimensionMismatch { expected, rows, cols } => {
                 write!(out, "dimension_mismatch: expected {expected} x {expected}, got {rows} x {cols}")
             }
@@ -700,55 +748,116 @@ fn dir_cols(du: &V3, dv: &V3, e: &mut Vec<(usize, usize, f64)>) {
 /// What the covariance check measured on an accepted matrix.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CovarianceCheck {
-    /// The relative asymmetry (step 2 of the check).
+    /// The relative asymmetry of the correlation-scaled matrix (step 4 of the check).
     pub asym: f64,
-    /// The smallest eigenvalue of the symmetrised matrix.
+    /// The smallest eigenvalue of the (unscaled) symmetrised covariance.
     pub min_eig: f64,
-    /// The largest eigenvalue of the symmetrised matrix.
+    /// The largest eigenvalue of the (unscaled) symmetrised covariance.
     pub max_eig: f64,
+    /// The smallest eigenvalue of the correlation-scaled matrix.
+    pub corr_min_eig: f64,
+    /// The largest eigenvalue of the correlation-scaled matrix.
+    pub corr_max_eig: f64,
+    /// `corr_max_eig / corr_min_eig`, `+inf` when `corr_min_eig <= 0` (condition estimate of
+    /// the correlation-scaled matrix).
+    pub cond: f64,
+    /// `corr_min_eig <= tol * corr_max_eig` (step 7): accepted, but some parameter
+    /// combination has no stated uncertainty, so downstream code must not treat this
+    /// covariance as a confident uncertainty for it.
+    pub rank_deficient: bool,
 }
 
-/// Checks an `n x n` covariance (module docs, steps 1-4) and returns the symmetrised matrix.
+/// The extreme eigenvalues (smallest, largest) of a symmetric matrix.
+fn extremes(m: &Mat) -> Result<(f64, f64), ParamError> {
+    let eig = sym_eig(m, 0.0)?;
+    let values = eig.values();
+    match (values.first(), values.last()) {
+        (Some(&lo), Some(&hi)) => Ok((lo, hi)),
+        _ => Err(bad("cov", None)),
+    }
+}
+
+/// Checks an `n x n` covariance (module docs, steps 1-7) and returns the symmetrised matrix.
 pub fn check_covariance(cov: &Mat, n: usize) -> Result<(Mat, CovarianceCheck), ParamError> {
-    if cov.rows() != n || cov.cols() != n {
+    if n == 0 || n > MAX_DIM || cov.rows() != n || cov.cols() != n {
         return Err(ParamError::DimensionMismatch { expected: n, rows: cov.rows(), cols: cov.cols() });
     }
     let data = cov.data();
-    let mut mx = 0.0_f64;
-    for x in data {
-        mx = f::total_max(mx, x.abs())?;
-    }
     let get = |i: usize, j: usize| data.get(i * n + j).copied().ok_or_else(|| bad("cov", Some(i * n + j)));
-    let mut worst = (0.0_f64, 0_usize, 1_usize);
+    // Step 2: variances; step 3: scale factors.
+    let mut scale = vec![1.0; n];
+    for (i, slot) in scale.iter_mut().enumerate() {
+        let v = get(i, i)?;
+        if v < 0.0 {
+            return Err(ParamError::InvalidCovariance(CovarianceDefect::NegativeVariance { index: i, value: v }));
+        }
+        if v > 0.0 {
+            *slot = f::sqrt(v)?;
+        }
+    }
     for i in 0..n {
-        for j in i + 1..n {
-            let diff = (get(i, j)? - get(j, i)?).abs();
-            if diff > worst.0 {
-                worst = (diff, i, j);
+        if get(i, i)? == 0.0 {
+            for j in 0..n {
+                if j != i && (get(i, j)? != 0.0 || get(j, i)? != 0.0) {
+                    let defect = CovarianceDefect::CorrelatedZeroVariance { index: i, other: j };
+                    return Err(ParamError::InvalidCovariance(defect));
+                }
             }
         }
     }
-    let asym = if mx == 0.0 { 0.0 } else { worst.0 / mx };
+    let d = |i: usize| scale.get(i).copied().ok_or_else(|| bad("cov", Some(i)));
+    // Step 4: symmetry of the scaled matrix.
+    let mut mr = 0.0_f64;
+    let mut worst = (0.0_f64, 0_usize, 1_usize);
+    for i in 0..n {
+        for j in 0..n {
+            mr = f::total_max(mr, ((get(i, j)? / d(i)?) / d(j)?).abs())?;
+            if j > i {
+                let diff = ((get(i, j)? - get(j, i)?).abs() / d(i)?) / d(j)?;
+                if diff > worst.0 {
+                    worst = (diff, i, j);
+                }
+            }
+        }
+    }
+    let asym = if mr == 0.0 { 0.0 } else { worst.0 / mr };
     if asym.is_nan() || asym > ASYM_REL_TOL {
         return Err(ParamError::InvalidCovariance(CovarianceDefect::Asymmetric { asym, i: worst.1, j: worst.2 }));
     }
+    // Step 5: the stored symmetrised covariance, and its scaled form (i <= j, mirrored).
     let mut sym = vec![0.0; n * n];
-    for (at, slot) in sym.iter_mut().enumerate() {
-        let (i, j) = (at / n, at % n);
-        *slot = (get(i, j)? + get(j, i)?) * 0.5;
+    let mut scaled = vec![0.0; n * n];
+    for i in 0..n {
+        for j in i..n {
+            let x = (get(i, j)? + get(j, i)?) * 0.5;
+            let r = (x / d(i)?) / d(j)?;
+            for at in [i * n + j, j * n + i] {
+                if let (Some(a), Some(b)) = (sym.get_mut(at), scaled.get_mut(at)) {
+                    *a = x;
+                    *b = r;
+                }
+            }
+        }
     }
     let sym = Mat::new(n, n, sym)?;
-    let eig = sym_eig(&sym, 0.0)?;
-    let values = eig.values();
-    let (Some(&min_eig), Some(&max_eig)) = (values.first(), values.last()) else {
-        return Err(bad("cov", None));
-    };
+    let scaled = Mat::new(n, n, scaled)?;
+    // Step 6: PSD on the scaled matrix; the unscaled extremes are reported alongside.
+    let (corr_min_eig, corr_max_eig) = extremes(&scaled)?;
+    let (min_eig, max_eig) = extremes(&sym)?;
     let floor = 16.0 * (n as f64) * U;
     let tol = f::total_max(PSD_REL_TOL, floor)?;
-    if min_eig < -(tol * max_eig) {
-        return Err(ParamError::InvalidCovariance(CovarianceDefect::NotPositiveSemidefinite { min_eig, max_eig }));
+    if corr_min_eig < -(tol * corr_max_eig) {
+        return Err(ParamError::InvalidCovariance(CovarianceDefect::NotPositiveSemidefinite {
+            min_eig,
+            max_eig,
+            corr_min_eig,
+            corr_max_eig,
+        }));
     }
-    Ok((sym, CovarianceCheck { asym, min_eig, max_eig }))
+    // Step 7: rank flag and condition estimate.
+    let rank_deficient = corr_min_eig <= tol * corr_max_eig;
+    let cond = if corr_min_eig > 0.0 { corr_max_eig / corr_min_eig } else { f64::INFINITY };
+    Ok((sym, CovarianceCheck { asym, min_eig, max_eig, corr_min_eig, corr_max_eig, cond, rank_deficient }))
 }
 
 /// `J C J^T`, computed for `i <= j` and mirrored (exactly symmetric).
@@ -773,6 +882,11 @@ fn sandwich(j: &Mat, c: &Mat) -> Result<Mat, ParamError> {
 
 /// A fitted feature's `fcov-param@1` parameter vector, its validated covariance and units
 /// (REQ-001). Fields are private so they always agree.
+///
+/// The covariance is the `k = 1` (standard-uncertainty) covariance of the parameters; entry
+/// `(i, j)` is in `units[i] * units[j]`. A covariance whose [`CovarianceCheck::rank_deficient`]
+/// flag is set is accepted but must not be treated downstream as a confident uncertainty for
+/// the parameter combinations it leaves without variance.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FeatureCovariance {
     ftype: FeatureType,
@@ -828,7 +942,8 @@ impl FeatureCovariance {
         &self.params
     }
 
-    /// The symmetrised covariance, `dim x dim`.
+    /// The symmetrised `k = 1` covariance, `dim x dim`; entry `(i, j)` in
+    /// `units[i] * units[j]`.
     pub fn cov(&self) -> &Mat {
         &self.cov
     }

@@ -30,8 +30,10 @@ Files written next to this script:
                   covariance and its extreme eigenvalues; plus `from_cases` (parameters with
                   non-zero tangent coordinates and the expected feature and Jacobian)
 - not_psd.json    covariance validation cases (AC-2): an indefinite matrix with its smallest
-                  eigenvalue, a matrix just inside the PSD tolerance, an asymmetric matrix
-                  with its relative asymmetry and one just inside the symmetry tolerance
+                  eigenvalue, a matrix near the PSD tolerance, an asymmetric matrix with its
+                  relative asymmetry and one inside the symmetry tolerance, a singular and the
+                  zero matrix (accepted, flagged rank deficient), a negative variance, and
+                  mixed-unit matrices whose defect shows only after correlation scaling
 
 Every f64 is written as its IEEE-754 bit pattern in 16 lowercase hex digits.
 
@@ -514,23 +516,52 @@ CYL_PARAMS = [0.03, -0.04, 0.0, 0.0, 0.0, 0.01]
 
 
 def psd_case(name, mat, note):
-    md = [[D(x) for x in row] for row in mat]
+    """The pinned check (spec/unc/prop/mvar/param/NODE.md and the module docs): negative
+    variances first, then zero variances with a non-zero covariance, then symmetry and PSD on the correlation-scaled matrix
+    R = D^-1/2 C D^-1/2 (d_i = sqrt(c_ii), or 1 for a zero variance), then the rank flag."""
     n = len(mat)
-    mx = max(abs(Fraction(x)) for row in mat for x in row)
-    asym_f = max(abs(Fraction(mat[i][j]) - Fraction(mat[j][i])) for i in range(n) for j in range(i + 1, n)) / mx
-    asym = f64(D(asym_f.numerator) / D(asym_f.denominator))
-    sym = [[(md[i][j] + md[j][i]) / 2 for j in range(n)] for i in range(n)]
-    eig = jacobi_eigs(sym)
-    tol_sym = Fraction(1, 10**12)
-    tol_psd = D("1e-12")
-    if asym_f > tol_sym:
-        verdict = "asymmetric"
-    elif eig[0] < -tol_psd * eig[-1]:
-        verdict = "not_psd"
+    md = [[D(x) for x in row] for row in mat]
+    exp = {"verdict": None}
+    neg = [i for i in range(n) if mat[i][i] < 0]
+    zero_corr = [
+        (i, j) for i in range(n) if mat[i][i] == 0 for j in range(n) if j != i and (mat[i][j] != 0 or mat[j][i] != 0)
+    ]
+    if neg:
+        exp.update(verdict="negative_variance", neg_index=neg[0], neg_value=hex64(mat[neg[0]][neg[0]]))
+    elif zero_corr:
+        exp.update(verdict="correlated_zero_variance", zero_index=zero_corr[0][0], zero_other=zero_corr[0][1])
     else:
-        verdict = "ok"
-    pairs = [(i, j) for i in range(n) for j in range(i + 1, n)]
-    worst = max(pairs, key=lambda p: (abs(Fraction(mat[p[0]][p[1]]) - Fraction(mat[p[1]][p[0]])), -p[0], -p[1]))
+        dd = [md[i][i].sqrt() if md[i][i] > 0 else D(1) for i in range(n)]
+        r = [[md[i][j] / (dd[i] * dd[j]) for j in range(n)] for i in range(n)]
+        mr = max(abs(x) for row in r for x in row)
+        pairs = [(i, j) for i in range(n) for j in range(i + 1, n)]
+        diff = {p: abs(md[p[0]][p[1]] - md[p[1]][p[0]]) / (dd[p[0]] * dd[p[1]]) for p in pairs}
+        worst = max(pairs, key=lambda p: (diff[p], -p[0], -p[1]))
+        asym = diff[worst] / mr if mr != 0 else D(0)
+        if diff[worst] == 0:
+            worst = (0, 1)
+        sym = [[(md[i][j] + md[j][i]) / 2 for j in range(n)] for i in range(n)]
+        rsym = [[sym[i][j] / (dd[i] * dd[j]) for j in range(n)] for i in range(n)]
+        eig = jacobi_eigs(sym)
+        reig = jacobi_eigs(rsym)
+        tol = D("1e-12")
+        if asym > tol:
+            verdict = "asymmetric"
+        elif reig[0] < -tol * reig[-1]:
+            verdict = "not_psd"
+        else:
+            verdict = "ok"
+        exp.update(
+            verdict=verdict,
+            asym=hexd(asym),
+            asym_pair=list(worst),
+            min_eig=hexd(eig[0]),
+            max_eig=hexd(eig[-1]),
+            corr_min_eig=hexd(reig[0]),
+            corr_max_eig=hexd(reig[-1]),
+            rank_deficient=bool(reig[0] <= tol * reig[-1]),
+            cond=hexd(reig[-1] / reig[0]) if reig[0] > 0 else None,
+        )
     return {
         "name": name,
         "note": note,
@@ -538,14 +569,15 @@ def psd_case(name, mat, note):
         "params": [hex64(c) for c in CYL_PARAMS],
         "ref_dir": [hex64(c) for c in [0.0, 0.0, 1.0]],
         "cov": [hex64(c) for row in mat for c in row],
-        "expected": {
-            "verdict": verdict,
-            "asym": hex64(asym),
-            "asym_pair": list(worst),
-            "min_eig": hexd(eig[0]),
-            "max_eig": hexd(eig[-1]),
-        },
+        "expected": exp,
     }
+
+
+def diag6(values, extra=()):
+    m = [[values[i] if i == j else 0.0 for j in range(6)] for i in range(6)]
+    for i, j, x in extra:
+        m[i][j] = x
+    return m
 
 
 def not_psd_cases():
@@ -555,12 +587,36 @@ def not_psd_cases():
     asym = [list(r) for r in spectral([Fraction(x) for x in base[:5]] + [Fraction(1, 10**12)])]
     asym[1][4] = asym[1][4] * (1 + 1e-9)
     near = [list(r) for r in spectral([Fraction(x) for x in base[:5]] + [Fraction(1, 10**12)])]
-    near[0][2] = near[0][2] + 1e-21
+    near[0][2] = near[0][2] + 1e-27
+    singular = spectral([Fraction(x) for x in base[:5]] + [Fraction(0)])
+    mixed = [1e-24, 1e-24, 1e-8, 1e-8, 1e-8, 1e-10]
     return [
         psd_case("indefinite", indefinite, "eigenvalues 4e-8, 1e-8, 2.5e-9, 1e-10, 4e-12, -2e-11 (AC-2)"),
-        psd_case("barely_psd", barely, "smallest eigenvalue -2e-21, inside -1e-12 times the largest"),
+        psd_case("barely_psd", barely, "smallest eigenvalue -2e-21 of the unscaled matrix"),
         psd_case("asymmetric", asym, "entry (1, 4) scaled by 1 + 1e-9, entry (4, 1) unchanged"),
-        psd_case("near_symmetric", near, "entry (0, 2) raised by 1e-21, below 1e-12 of the largest entry"),
+        psd_case("near_symmetric", near, "entry (0, 2) raised by 1e-27, below 1e-12 after scaling"),
+        psd_case("singular", singular, "eigenvalues 4e-8, 1e-8, 2.5e-9, 1e-10, 4e-12, 0: rank deficient"),
+        psd_case("zero", diag6([0.0] * 6), "the zero matrix: accepted and flagged rank deficient"),
+        psd_case(
+            "negative_variance",
+            diag6([1e-8, 1e-8, 1e-8, -1e-21, 1e-12, 1e-10]),
+            "variance -1e-21 at index 3, invisible next to 1e-8 without scaling (review of #673)",
+        ),
+        psd_case(
+            "correlated_zero_variance",
+            diag6([1e-8, 1e-8, 0.0, 1e-8, 1e-12, 1e-10], [(4, 2, 1e-15), (2, 4, 1e-15)]),
+            "variance 0 at index 2 with covariance 1e-15 to index 4 (refused before scaling)",
+        ),
+        psd_case(
+            "mixed_units_indefinite",
+            diag6(mixed, [(0, 1, 2e-24), (1, 0, 2e-24)]),
+            "an m^2 block with correlation 2 next to 1e-8 entries: indefinite only after scaling",
+        ),
+        psd_case(
+            "mixed_units_asymmetric",
+            diag6(mixed, [(0, 1, 5e-25), (1, 0, 6e-25)]),
+            "an m^2 block with correlations 0.5 and 0.6: asymmetric only after scaling",
+        ),
     ]
 
 

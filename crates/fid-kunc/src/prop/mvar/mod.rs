@@ -7,6 +7,6 @@ pub mod param;
 
 pub use param::{
     check_covariance, from_param, tangent_basis, to_param, ConeReference, CovarianceCheck, CovarianceDefect,
-    FeatureCovariance, FeatureType, FromParam, ParamError, TangentBasis, ToParam, ASYM_REL_TOL, PSD_REL_TOL, UNIT_TOL,
-    VERSION as FCOV_PARAM_VERSION,
+    FeatureCovariance, FeatureType, FromParam, ParamError, TangentBasis, ToParam, ASYM_REL_TOL, MAX_DIM, PSD_REL_TOL,
+    UNIT_TOL, VERSION as FCOV_PARAM_VERSION,
 };
