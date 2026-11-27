@@ -192,6 +192,14 @@ fn assert_partition(pr: &Pairing) {
     }
     mark(pr.ambiguous());
     mark(pr.normal_undefined());
+    // contested and tie_broken annotate assigned or released points (not the partition).
+    let placed: Vec<u32> =
+        pr.per_element().iter().flat_map(|e| e.indices().iter().chain(e.released())).copied().collect();
+    for (xs, name) in [(pr.contested(), "contested"), (pr.tie_broken(), "tie_broken")] {
+        assert!(xs.windows(2).all(|w| w[0] < w[1]), "{name} not ascending");
+        assert!(xs.iter().all(|i| placed.contains(i)), "{name} holds an unplaced point");
+    }
+    assert!(pr.tie_broken().iter().all(|i| pr.contested().contains(i)));
     let claimed = seen.iter().filter(|&&s| s == 1).count();
     assert!(seen.iter().all(|&s| s <= 1));
     assert_eq!(claimed + pr.ungated() as usize, pr.points() as usize);
@@ -218,6 +226,8 @@ fn ac1_block_every_point_to_its_generating_element() {
     }
     assert!(pr.ambiguous().is_empty() && pr.normal_undefined().is_empty());
     assert_eq!(pr.ungated(), 0);
+    assert_eq!(pr.contested().len().to_string(), expected("ac1.contested"));
+    assert!(pr.tie_broken().is_empty());
     assert_eq!(pr.digest().as_str(), expected("ac1.digest"));
 
     let ex = pair(&view, true, &elements(), None, &params(100, ConflictRule::ExcludeAmbiguous)).unwrap();
@@ -266,6 +276,8 @@ fn ac2_edge_band_nearest_and_exclude_ambiguous() {
             .unwrap();
         assert_eq!(got, want, "edge point {j}");
     }
+    assert_eq!(near.contested().len().to_string(), expected("edge.nearest.contested"));
+    assert_eq!(near.tie_broken().len().to_string(), expected("edge.nearest.tie_broken"));
     assert_eq!(near.digest().as_str(), expected("edge.nearest.digest"));
 
     let excl = pair(&view, false, &elements(), None, &params(1, ConflictRule::ExcludeAmbiguous)).unwrap();
@@ -574,16 +586,62 @@ fn ties_resolve_by_angle_then_element_index() {
     let pr = run(&pts, Some(&normals), &[b, a], 2e-3, 60f64.to_radians(), ConflictRule::Nearest);
     assert_eq!(owner(&pr, 0), Some(1));
     assert_eq!(owner(&pr, 1), Some(0));
-    // Without normals the angle is 0 for both: point 0 then goes to the lower index (B).
+    // Both are contested; only point 1 was decided by the element index, and says so.
+    assert_eq!(pr.contested(), &[0, 1]);
+    assert_eq!(pr.tie_broken(), &[1]);
+    // Without normals the angle is 0 for both: point 0 then goes to the lower index (B),
+    // and both points are reported as tie-broken.
     let pr = run(&pts, None, &[b, a], 2e-3, 60f64.to_radians(), ConflictRule::Nearest);
     assert_eq!(owner(&pr, 0), Some(0));
-    // Smaller distance beats a smaller angle.
+    assert_eq!(pr.tie_broken(), &[0, 1]);
+    // Smaller distance beats a smaller angle: contested, not a tie.
     let pts = [0.5e-3, 0.0, 1e-3];
     let pr = run(&pts, Some(&[0.6, 0.0, 0.8]), &[b, a], 2e-3, 60f64.to_radians(), ConflictRule::Nearest);
     assert_eq!(owner(&pr, 0), Some(0));
-    // exclude_ambiguous assigns none of them.
+    assert_eq!(pr.contested(), &[0]);
+    assert!(pr.tie_broken().is_empty());
+    // A tie first, then a strictly nearer third element: the tie no longer decides.
+    let c = NominalPrimitive::Plane { origin: [0.0, 0.0, 0.25e-3], normal: [0.0, 0.0, 1.0] };
+    let tie = [1e-3, 0.0, 1e-3];
+    let pr = run(&tie, None, &[b, a, c], 2e-3, 60f64.to_radians(), ConflictRule::Nearest);
+    assert_eq!(owner(&pr, 0), Some(2));
+    assert_eq!(pr.contested(), &[0]);
+    assert!(pr.tie_broken().is_empty());
+    // exclude_ambiguous assigns none of them and resolves nothing.
     let pr = run(&pts, None, &[b, a], 2e-3, 60f64.to_radians(), ConflictRule::ExcludeAmbiguous);
     assert_eq!(pr.ambiguous(), &[0]);
+    assert!(pr.contested().is_empty() && pr.tie_broken().is_empty());
+}
+
+#[test]
+fn candidate_list_must_cover_the_distance_gate() {
+    // A point on the axis of a thin cylinder (radius 0.5 mm, gate 1 mm) with a normal: it is
+    // within the cylinder's distance gate but its nominal normal is undefined. A plane that
+    // would otherwise take it is listed first.
+    let plane = NominalPrimitive::Plane { origin: [0.0; 3], normal: [0.0, 0.0, 1.0] };
+    let cyl = NominalPrimitive::Cylinder {
+        axis_point: [0.0; 3],
+        axis: [0.0, 0.0, 1.0],
+        radius: 0.5e-3,
+        sense: NormalSense::Outward,
+    };
+    let pts = [0.0, 0.0, 0.0, 0.2, 0.0, 0.0];
+    let normals = [0.0, 0.0, 1.0, 0.0, 0.0, 1.0];
+    let view = PointsView::new(&pts, Some(&normals)).unwrap();
+    let p = PairParams::new(1e-3, 0.1, 1, ConflictRule::Nearest).unwrap();
+    let full = pair(&view, true, &[plane, cyl], None, &p).unwrap();
+    assert_eq!(full.normal_undefined(), &[0]);
+    // A list holding every point within the distance gate gives the same bytes, even though
+    // the cylinder claims none of them.
+    let covering = vec![vec![0, 1], vec![0]];
+    let bounded = pair(&view, true, &[plane, cyl], Some(&covering), &p).unwrap();
+    assert_eq!(full.canonical_bytes(), bounded.canonical_bytes());
+    // Omitting it (a list of only the points the cylinder claims, here none) breaks the
+    // contract: the point then goes to the plane.
+    let claims_only = vec![vec![0, 1], vec![]];
+    let short = pair(&view, true, &[plane, cyl], Some(&claims_only), &p).unwrap();
+    assert!(short.normal_undefined().is_empty());
+    assert_ne!(full.canonical_bytes(), short.canonical_bytes());
 }
 
 #[test]
@@ -792,9 +850,9 @@ fn encoding_shape() {
     let p = PairParams::new(1.0, 0.5, 2, ConflictRule::Nearest).unwrap();
     let pr = pair_buffers(&pts, None, false, &[plane], None, &p).unwrap();
     let want = format!(
-        "{{\"ambiguous\":[],\"elements\":[{{\"count\":\"1\",\"indices\":[],\"released\":[\"0\"],\"status\":\"unpaired\"}}],\
+        "{{\"ambiguous\":[],\"contested\":[],\"elements\":[{{\"count\":\"1\",\"indices\":[],\"released\":[\"0\"],\"status\":\"unpaired\"}}],\
          \"format\":\"construct.auto_pair.pairing@1\",\"normal_undefined\":[],\"params_digest\":\"{}\",\"points\":\"2\",\
-         \"ungated\":\"1\"}}",
+         \"tie_broken\":[],\"ungated\":\"1\"}}",
         p.digest().as_str()
     );
     assert_eq!(String::from_utf8(pr.canonical_bytes()).unwrap(), want);

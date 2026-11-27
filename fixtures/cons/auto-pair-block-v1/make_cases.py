@@ -209,7 +209,7 @@ def claims(pts, nms):
 def resolve(table, rule, min_points):
     """The pairing as a dict mirroring the spec's Pairing."""
     won = [[] for _ in ELEMENTS]
-    ambiguous, undefined, ungated = [], [], 0
+    ambiguous, contested, tie_broken, undefined, ungated = [], [], [], [], 0
     for i, (cl, und) in enumerate(table):
         if und:
             undefined.append(i)
@@ -220,14 +220,18 @@ def resolve(table, rule, min_points):
         else:
             best = min(cl)  # (dist, angle, elem): the spec's lexicographic order
             won[best[2]].append(i)
+            if len(cl) >= 2:
+                contested.append(i)
+                if sum(1 for c in cl if (c[0], c[1]) == (best[0], best[1])) >= 2:
+                    tie_broken.append(i)
     elements = []
     for lst in won:
         if len(lst) < min_points:
             elements.append({"count": len(lst), "indices": [], "released": lst, "status": "unpaired"})
         else:
             elements.append({"count": len(lst), "indices": lst, "released": [], "status": "paired"})
-    return {"points": len(table), "elements": elements, "ambiguous": ambiguous,
-            "normal_undefined": undefined, "ungated": ungated}
+    return {"points": len(table), "elements": elements, "ambiguous": ambiguous, "contested": contested,
+            "tie_broken": tie_broken, "normal_undefined": undefined, "ungated": ungated}
 
 
 def hexf(x):
@@ -251,10 +255,10 @@ def pairing_digest(pr, rule, min_points):
     els = ",".join('{"count":"%d","indices":%s,"released":%s,"status":"%s"}'
                    % (e["count"], ints(e["indices"]), ints(e["released"]), e["status"])
                    for e in pr["elements"])
-    s = ('{"ambiguous":%s,"elements":[%s],"format":"construct.auto_pair.pairing@1",'
-         '"normal_undefined":%s,"params_digest":"%s","points":"%d","ungated":"%d"}'
-         % (ints(pr["ambiguous"]), els, ints(pr["normal_undefined"]), params_digest(rule, min_points),
-            pr["points"], pr["ungated"]))
+    s = ('{"ambiguous":%s,"contested":%s,"elements":[%s],"format":"construct.auto_pair.pairing@1",'
+         '"normal_undefined":%s,"params_digest":"%s","points":"%d","tie_broken":%s,"ungated":"%d"}'
+         % (ints(pr["ambiguous"]), ints(pr["contested"]), els, ints(pr["normal_undefined"]),
+            params_digest(rule, min_points), pr["points"], ints(pr["tie_broken"]), pr["ungated"]))
     return "sha256:" + hashlib.sha256(s.encode("ascii")).hexdigest()
 
 
@@ -304,12 +308,15 @@ def build():
         lines.append("ac1.count.%d\t%d" % (e, el["count"]))
     lines += [
         "ac1.params_digest\t%s" % params_digest("nearest", MIN_AC1),
+        "ac1.contested\t%d" % len(ac1["contested"]),
         "ac1.digest\t%s" % pairing_digest(ac1, "nearest", MIN_AC1),
         "ac1_exclude.ambiguous\t%d" % len(ac1_excl["ambiguous"]),
         "ac1_exclude.digest\t%s" % pairing_digest(ac1_excl, "exclude_ambiguous", MIN_AC1),
         "ac3.unpaired.7\t%d" % ac3["elements"][7]["count"],
         "ac3.digest\t%s" % pairing_digest(ac3, "nearest", MIN_AC3),
         "edge.points\t%d" % len(band),
+        "edge.nearest.contested\t%d" % len(edge_near["contested"]),
+        "edge.nearest.tie_broken\t%d" % len(edge_near["tie_broken"]),
         "edge.nearest.digest\t%s" % pairing_digest(edge_near, "nearest", 1),
         "edge.exclude.digest\t%s" % pairing_digest(edge_excl, "exclude_ambiguous", 1),
     ]

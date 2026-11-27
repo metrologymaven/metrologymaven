@@ -29,13 +29,17 @@
 //! - **Conflicts.** [`ConflictRule::Nearest`]: smallest distance, then smallest angle (`0`
 //!   for a point without normal), then lowest element index, by total order.
 //!   [`ConflictRule::ExcludeAmbiguous`]: a point with two or more claims goes to no element
-//!   and is listed in [`Pairing::ambiguous`].
+//!   and is listed in [`Pairing::ambiguous`]. Under `Nearest` no conflict is resolved
+//!   silently: every point with two or more claims is listed in [`Pairing::contested`], and
+//!   those whose winning claim had exactly the same distance and angle as another claim (so
+//!   the element index decided) also in [`Pairing::tie_broken`].
 //! - **Minimum points.** After conflict resolution an element with fewer than `min_points`
 //!   points is `Unpaired { count }`; its points are listed in its
 //!   [`ElementPairing::released`] and assigned to no element.
 //! - **Accounting.** Every point is in exactly one of: an element's `indices`, an element's
 //!   `released`, `ambiguous`, `normal_undefined`, or the `ungated` count (no claim at all).
-//!   All index lists are ascending.
+//!   `contested` and `tie_broken` annotate assigned or released points and are not part of
+//!   this partition (`tie_broken` is a subset of `contested`). All index lists are ascending.
 //! - **Gate floors.** `distance_gate_m` must be at least [`GATE_FLOOR_ULPS`] times
 //!   `f64::EPSILON` times the largest coordinate magnitude of the points and elements (the
 //!   rounding resolution of the distances), and `normal_angle_gate_rad` at least
@@ -46,9 +50,12 @@
 //! D0: fixed iteration order, no threads, no hash maps, total-order comparisons, all math
 //! through `fid_num` (no FMA, no `f64::min`/`max`). The result holds only integers, so its
 //! canonical bytes ([`Pairing::canonical_bytes`]) are identical on x86-64, ARM64 and wasm32,
-//! and do not depend on whether candidate lists are given, provided each list holds every
-//! point that passes that element's gates (REQ-KRN.CONS.AUTO.PAIR-005; the caller's
-//! contract, which this function cannot check without visiting every point).
+//! and do not depend on whether candidate lists are given, provided each element's list
+//! contains every point within the element's distance gate (and out-of-plane gate). That
+//! is more than the points the element claims: a point inside the distance gate whose angle
+//! fails is harmless to omit, but one at an undefined nominal normal is recorded in
+//! `normal_undefined` only if visited (REQ-KRN.CONS.AUTO.PAIR-005; the caller's contract,
+//! which this function cannot check without visiting every point).
 //!
 //! Every field of [`PairParams`] is required and part of the parameter digest
 //! (REQ-KRN.CONS.AUTO.PAIR-004), carried as a [`ConstructParams`]: the distance gate is its
@@ -325,6 +332,8 @@ pub struct Pairing {
     params_digest: Digest,
     per_element: Vec<ElementPairing>,
     ambiguous: Vec<u32>,
+    contested: Vec<u32>,
+    tie_broken: Vec<u32>,
     normal_undefined: Vec<u32>,
     ungated: u32,
 }
@@ -350,6 +359,18 @@ impl Pairing {
         &self.ambiguous
     }
 
+    /// Points with two or more claims resolved by the `nearest` rule, ascending (empty under
+    /// `exclude_ambiguous`). Each is also in an element's `indices` or `released`.
+    pub fn contested(&self) -> &[u32] {
+        &self.contested
+    }
+
+    /// The contested points whose winning claim tied exactly (same distance and angle) with
+    /// another claim, so the lower element index decided, ascending.
+    pub fn tie_broken(&self) -> &[u32] {
+        &self.tie_broken
+    }
+
     /// Points that passed an element's distance gate where its nominal normal is undefined,
     /// ascending; assigned to no element.
     pub fn normal_undefined(&self) -> &[u32] {
@@ -364,10 +385,10 @@ impl Pairing {
     /// The canonical bytes: RFC 8785 JSON, integers as decimal strings, keys sorted:
     ///
     /// ```text
-    /// {"ambiguous":[..],"elements":[{"count":"<n>","indices":[..],"released":[..],
-    ///  "status":"paired"|"unpaired"},..],"format":"construct.auto_pair.pairing@1",
-    ///  "normal_undefined":[..],"params_digest":"sha256:<hex>","points":"<n>",
-    ///  "ungated":"<n>"}
+    /// {"ambiguous":[..],"contested":[..],"elements":[{"count":"<n>","indices":[..],
+    ///  "released":[..],"status":"paired"|"unpaired"},..],
+    ///  "format":"construct.auto_pair.pairing@1","normal_undefined":[..],
+    ///  "params_digest":"sha256:<hex>","points":"<n>","tie_broken":[..],"ungated":"<n>"}
     /// ```
     ///
     /// (shown wrapped; the bytes have no whitespace). `count` is the number of points the
@@ -391,11 +412,13 @@ impl Pairing {
             .collect();
         json::write(&J::O(vec![
             ("ambiguous", ints(&self.ambiguous)),
+            ("contested", ints(&self.contested)),
             ("elements", J::A(elements)),
             ("format", json::s(PAIRING_FORMAT)),
             ("normal_undefined", ints(&self.normal_undefined)),
             ("params_digest", json::s(self.params_digest.as_str())),
             ("points", int(self.points)),
+            ("tie_broken", ints(&self.tie_broken)),
             ("ungated", int(self.ungated)),
         ]))
     }
@@ -713,16 +736,17 @@ struct Best {
 struct PointClaims {
     best: Option<Best>,
     claims: u32,
+    /// Another claim has exactly the best claim's distance and angle.
+    tied: bool,
     undefined: bool,
 }
 
-/// Whether `b` beats `a` under the `nearest` order (distance, angle; a tie keeps `a`, which
-/// came from a lower element index).
-fn beats(b: &Best, a: &Best) -> Result<bool, ConstructError> {
+/// `b` against `a` in the `nearest` order (distance, then angle, total order). `Equal` is
+/// an exact tie; the earlier claim (lower element index) is kept and the tie recorded.
+fn nearest_order(b: &Best, a: &Best) -> Result<Ordering, ConstructError> {
     Ok(match numf::total_cmp(b.dist, a.dist)? {
-        Ordering::Less => true,
-        Ordering::Greater => false,
-        Ordering::Equal => numf::total_cmp(b.angle, a.angle)? == Ordering::Less,
+        Ordering::Equal => numf::total_cmp(b.angle, a.angle)?,
+        other => other,
     })
 }
 
@@ -748,7 +772,9 @@ fn candidates_ok(candidates: &[Vec<u32>], n_elems: usize, n: usize) -> Result<()
 /// `normals_required`: refuse a view without normals ([`ConstructError::InvalidParams`]
 /// `normals`); with normals present the angle gate applies whatever this flag says.
 /// `candidates`: one strictly ascending list of point indices per element, each index in
-/// range, bounding which points each element visits.
+/// range, bounding which points each element visits. Each list must contain every point
+/// within the element's distance gate (and out-of-plane gate), or the result may differ
+/// from the unbounded run (module documentation, "Determinism").
 ///
 /// Errors (check order): `InvalidParams` `normals`; `InvalidParams` `elems` (none, or more
 /// than [`MAX_ELEMENTS`]); per element in order, `Num` (`NotANumber`/`Infinite`, index =
@@ -825,12 +851,16 @@ pub fn pair(
             };
             let claim = Best { dist, angle, elem };
             slot.claims = slot.claims.saturating_add(1);
-            let better = match &slot.best {
-                None => true,
-                Some(cur) => beats(&claim, cur)?,
-            };
-            if better {
-                slot.best = Some(claim);
+            match &slot.best {
+                None => slot.best = Some(claim),
+                Some(cur) => match nearest_order(&claim, cur)? {
+                    Ordering::Less => {
+                        slot.best = Some(claim);
+                        slot.tied = false;
+                    }
+                    Ordering::Equal => slot.tied = true,
+                    Ordering::Greater => {}
+                },
             }
             Ok(())
         };
@@ -852,6 +882,8 @@ pub fn pair(
     // Conflict resolution in point order.
     let mut won: Vec<Vec<u32>> = vec![Vec::new(); elems.len()];
     let mut ambiguous = Vec::new();
+    let mut contested = Vec::new();
+    let mut tie_broken = Vec::new();
     let mut normal_undefined = Vec::new();
     let mut ungated = 0_u32;
     for (i, slot) in table.iter().enumerate() {
@@ -864,9 +896,15 @@ pub fn pair(
             ungated = ungated.checked_add(1).ok_or(ConstructError::InvalidParams { field: "points" })?;
             continue;
         };
-        if slot.claims >= 2 && p.conflict_rule() == ConflictRule::ExcludeAmbiguous {
-            ambiguous.push(idx);
-            continue;
+        if slot.claims >= 2 {
+            if p.conflict_rule() == ConflictRule::ExcludeAmbiguous {
+                ambiguous.push(idx);
+                continue;
+            }
+            contested.push(idx);
+            if slot.tied {
+                tie_broken.push(idx);
+            }
         }
         let Some(list) = usize::try_from(best.elem).ok().and_then(|e| won.get_mut(e)) else {
             return Err(ConstructError::InvalidParams { field: "elems" });
@@ -885,7 +923,16 @@ pub fn pair(
         });
     }
 
-    Ok(Pairing { points: n32, params_digest: p.digest(), per_element, ambiguous, normal_undefined, ungated })
+    Ok(Pairing {
+        points: n32,
+        params_digest: p.digest(),
+        per_element,
+        ambiguous,
+        contested,
+        tie_broken,
+        normal_undefined,
+        ungated,
+    })
 }
 
 /// [`pair`] on raw buffers (`xyz` triples and optional unit normals, SI metres). A NaN or
