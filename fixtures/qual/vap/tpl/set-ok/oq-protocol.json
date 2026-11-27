@@ -1,0 +1,25 @@
+{
+  "format": "vap-template/1",
+  "id": "oq-protocol",
+  "title": "Operational qualification protocol",
+  "version": "0.1.0",
+  "interpretation": "provisional",
+  "licence": {
+    "spdx": "CC-BY-4.0",
+    "notice": "This template is part of the Metrology Maven Validation Accelerator Pack and is licensed under the Creative Commons Attribution 4.0 International licence (CC-BY-4.0). You may copy, modify and reuse it, including for your own validation documents and commercially, provided you give attribution."
+  },
+  "refs": [],
+  "sections": [
+    {
+      "id": "main",
+      "heading": "Fixture section",
+      "fields": [
+        {
+          "id": "note",
+          "label": "Note",
+          "kind": "text"
+        }
+      ]
+    }
+  ]
+}

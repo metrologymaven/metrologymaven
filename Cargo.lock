@@ -2148,6 +2148,7 @@ dependencies = [
  "fid-surface",
  "fid-types",
  "fid-uuid",
+ "toml",
 ]
 
 [[package]]
@@ -2637,6 +2638,7 @@ dependencies = [
  "fid-accept",
  "fid-canon",
  "fid-mig",
+ "fid-qual",
  "fid-registry",
  "fid-registry-build",
  "fid-types",

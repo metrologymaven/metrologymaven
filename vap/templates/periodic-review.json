@@ -1,0 +1,83 @@
+{
+  "format": "vap-template/1",
+  "id": "periodic-review",
+  "title": "Periodic review report",
+  "version": "0.1.0",
+  "interpretation": "provisional",
+  "licence": {
+    "spdx": "CC-BY-4.0",
+    "notice": "This template is part of the Metrology Maven Validation Accelerator Pack and is licensed under the Creative Commons Attribution 4.0 International licence (CC-BY-4.0). You may copy, modify and reuse it, including for your own validation documents and commercially, provided you give attribution."
+  },
+  "refs": [
+    { "designator": "EU GMP Annex 11", "edition": "2011", "clause": "11" }
+  ],
+  "sections": [
+    {
+      "id": "period",
+      "heading": "Review period",
+      "text": "A periodic review checks that the system remains in the validated state your organisation established. When produced by `fid validate make-review-report`, these tables are filled from the journal; otherwise complete them. Review each row and record your conclusion.",
+      "fields": [
+        { "id": "from", "label": "From (date)", "kind": "text" },
+        { "id": "to", "label": "To (date)", "kind": "text" },
+        { "id": "installed-version", "label": "Installed version at the end of the period", "kind": "text" }
+      ]
+    },
+    {
+      "id": "records",
+      "heading": "Qualification records, changes and advisories",
+      "fields": [
+        {
+          "id": "qualification-records",
+          "label": "Qualification records in the period",
+          "kind": "table",
+          "columns": [
+            { "id": "record", "heading": "Record", "fill": "customer" },
+            { "id": "kind", "heading": "Kind (IQ or OQ)", "fill": "customer" },
+            { "id": "product-version", "heading": "Product version", "fill": "customer" },
+            { "id": "date", "heading": "Date", "fill": "customer" },
+            { "id": "verdict", "heading": "Verdict", "fill": "customer" }
+          ],
+          "rows": []
+        },
+        {
+          "id": "changes",
+          "label": "Version changes in the period",
+          "kind": "table",
+          "columns": [
+            { "id": "from-version", "heading": "From version", "fill": "customer" },
+            { "id": "to-version", "heading": "To version", "fill": "customer" },
+            { "id": "date", "heading": "Date", "fill": "customer" },
+            { "id": "assessment", "heading": "Impact assessment", "fill": "customer" }
+          ],
+          "rows": []
+        },
+        {
+          "id": "advisories",
+          "label": "Security advisories affecting the installed version",
+          "kind": "table",
+          "columns": [
+            { "id": "advisory", "heading": "Advisory", "fill": "customer" },
+            { "id": "severity", "heading": "Severity", "fill": "customer" },
+            { "id": "action", "heading": "Action taken", "fill": "customer" }
+          ],
+          "rows": []
+        }
+      ]
+    },
+    {
+      "id": "conclusion",
+      "heading": "Conclusion",
+      "fields": [
+        {
+          "id": "outcome",
+          "label": "Conclusion",
+          "kind": "choice",
+          "options": ["remains in a validated state", "remains in a validated state with actions", "not in a validated state"]
+        },
+        { "id": "actions", "label": "Actions, owners and due dates", "kind": "text" },
+        { "id": "reviewer", "label": "Reviewer", "kind": "signature" },
+        { "id": "approver", "label": "Approver (quality)", "kind": "signature" }
+      ]
+    }
+  ]
+}

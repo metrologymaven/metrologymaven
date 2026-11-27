@@ -18,6 +18,7 @@
 # cargo xtask personas-check [--personas <json>] [--apps <toml>]  (FLOW.PERSONA.PERS)
 # cargo xtask study-tasks-check [--tasks <json>] [--maps <dir>] [--personas <json>] [--protocol <md>]  (FLOW.STUDY.PROTO)
 # cargo xtask mig ladder-check --ladder <json> --manifest <json>  (MIG.LADDER.DEF)
+# cargo xtask qual vap check-templates --dir <dir> [--catalogue <toml>]  (QUAL.VAP.TPL)
 # cargo xtask conic-audit [--dir <dir>] [--audit <toml>] [--report <json>] [--allowlist <toml>] [--previous <toml>]  (KRN.SOLV.CONIC.VEND)
 # cargo xtask registry-gate --current <declarations.json> [--baseline <json>] [--release-date <date>]  (CORE.REG.VER.GATE)
 # cargo xtask gen-surfaces --manifest <json> --out <dir> [--test-emitter echo]  (AUTO.SURF.GEN)

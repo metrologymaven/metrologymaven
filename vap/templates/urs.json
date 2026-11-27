@@ -1,0 +1,166 @@
+{
+  "format": "vap-template/1",
+  "id": "urs",
+  "title": "User requirements specification",
+  "version": "0.1.0",
+  "interpretation": "provisional",
+  "licence": {
+    "spdx": "CC-BY-4.0",
+    "notice": "This template is part of the Metrology Maven Validation Accelerator Pack and is licensed under the Creative Commons Attribution 4.0 International licence (CC-BY-4.0). You may copy, modify and reuse it, including for your own validation documents and commercially, provided you give attribution."
+  },
+  "refs": [
+    { "designator": "EU GMP Annex 11", "edition": "2011", "clause": "4.4" },
+    { "designator": "21 CFR Part 11", "edition": "1997", "clause": "11.10(a)" },
+    { "designator": "ISO/IEC 17025", "edition": "2017", "clause": "7.11.2" },
+    { "designator": "ISPE GAMP 5", "edition": "2nd (2022)", "clause": "Appendix D1 [unverified]" }
+  ],
+  "sections": [
+    {
+      "id": "purpose",
+      "heading": "Purpose and scope",
+      "text": "This specification states what your organisation requires of Metrology Maven for its intended use. You own it and the validation decisions based on it. Rows pre-filled from your intended-use selection are proposals: keep, change or delete each one.",
+      "fields": [
+        { "id": "system-name", "label": "System name and version", "kind": "text" },
+        { "id": "site", "label": "Site and department", "kind": "text" },
+        { "id": "process-owner", "label": "Process owner", "kind": "text" },
+        {
+          "id": "gxp-impact",
+          "label": "Regulatory impact of the process (your assessment)",
+          "kind": "choice",
+          "options": ["direct", "indirect", "none"]
+        }
+      ]
+    },
+    {
+      "id": "intended-use",
+      "heading": "Intended use",
+      "fields": [
+        {
+          "id": "use-statement",
+          "label": "Intended-use statement",
+          "kind": "text",
+          "prefill": ["transcription_reports"],
+          "value": "Results from other measurement systems' reports are transcribed and reported as transcribed; the system does not re-evaluate them."
+        },
+        {
+          "id": "use-statement-gdt",
+          "label": "Intended-use statement (GD&T evaluation)",
+          "kind": "text",
+          "prefill": ["prismatic_gdt"],
+          "value": "Measured points of prismatic features are evaluated against the supported subset of geometric tolerances."
+        },
+        {
+          "id": "use-statement-scan",
+          "label": "Intended-use statement (scan inspection)",
+          "kind": "text",
+          "prefill": ["scan_inspection"],
+          "value": "Point clouds or meshes are aligned to nominal geometry and their deviations are reported."
+        }
+      ]
+    },
+    {
+      "id": "requirements",
+      "heading": "Requirements",
+      "text": "Give each requirement a priority and the way you will accept it. Blank rows at the end are for requirements of your own.",
+      "fields": [
+        {
+          "id": "requirements-table",
+          "label": "Requirements",
+          "kind": "table",
+          "columns": [
+            { "id": "req", "heading": "ID", "fill": "static" },
+            { "id": "area", "heading": "Area", "fill": "static" },
+            { "id": "requirement", "heading": "Requirement", "fill": "prefill" },
+            { "id": "priority", "heading": "Priority", "fill": "customer" },
+            { "id": "acceptance", "heading": "How it is accepted", "fill": "customer" }
+          ],
+          "rows": [
+            {
+              "id": "urs-tr-01",
+              "prefill": ["transcription_reports"],
+              "cells": {
+                "req": "URS-TR-01",
+                "area": "Transcription: source identity",
+                "requirement": "Each transcribed result records the source report, its revision and the person who transcribed it."
+              }
+            },
+            {
+              "id": "urs-tr-02",
+              "prefill": ["transcription_reports"],
+              "cells": {
+                "req": "URS-TR-02",
+                "area": "Transcription: second-person check",
+                "requirement": "Each transcribed value, unit and tolerance is shown beside its source value for a second-person check before release."
+              }
+            },
+            {
+              "id": "urs-tr-03",
+              "prefill": ["transcription_reports"],
+              "cells": {
+                "req": "URS-TR-03",
+                "area": "Transcription: no re-evaluation",
+                "requirement": "Transcribed results are reported as transcribed and are never presented as measured or re-evaluated by the system."
+              }
+            },
+            {
+              "id": "urs-gd-01",
+              "prefill": ["prismatic_gdt"],
+              "cells": {
+                "req": "URS-GD-01",
+                "area": "GD&T: supported subset",
+                "requirement": "The system evaluates only the tolerance types of the published subset and refuses any other with a stated reason."
+              }
+            },
+            {
+              "id": "urs-gd-02",
+              "prefill": ["prismatic_gdt"],
+              "cells": {
+                "req": "URS-GD-02",
+                "area": "GD&T: interpretation status",
+                "requirement": "Every result names the interpretation rules it used and shows whether each rule has been reviewed."
+              }
+            },
+            {
+              "id": "urs-sc-01",
+              "prefill": ["scan_inspection"],
+              "cells": {
+                "req": "URS-SC-01",
+                "area": "Scan: alignment record",
+                "requirement": "Every deviation result records the alignment it was computed in."
+              }
+            },
+            {
+              "id": "urs-sc-02",
+              "prefill": ["scan_inspection"],
+              "cells": {
+                "req": "URS-SC-02",
+                "area": "Scan: modified points",
+                "requirement": "Points removed, filtered or smoothed before comparison are marked as such and counted in the report."
+              }
+            },
+            {
+              "id": "urs-di-01",
+              "prefill": ["transcription_reports", "prismatic_gdt", "scan_inspection"],
+              "cells": {
+                "req": "URS-DI-01",
+                "area": "Data integrity: audit trail",
+                "requirement": "Every change to a result of record is journaled with who, when and why, and no user can remove the entry."
+              }
+            },
+            { "id": "urs-cu-01", "cells": { "req": "URS-CU-01", "area": "Your requirement" } },
+            { "id": "urs-cu-02", "cells": { "req": "URS-CU-02", "area": "Your requirement" } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "approval",
+      "heading": "Approval",
+      "fields": [
+        { "id": "author", "label": "Author", "kind": "signature" },
+        { "id": "reviewer", "label": "Reviewer", "kind": "signature" },
+        { "id": "approver", "label": "Approver (quality)", "kind": "signature" }
+      ]
+    }
+  ]
+}

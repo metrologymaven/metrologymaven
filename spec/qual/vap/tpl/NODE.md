@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-qual, fid-xtask]
+built_pr: 654
 satisfies: [REQ-QUAL.VAP-001, REQ-QUAL.VAP-008]
 covers: []
 depends_on: []
@@ -78,6 +80,7 @@ Owns the format every VAP template is written in and the three templates that fr
 
 - Template licence: CC-BY-4.0 follows D-001's documentation licence; CC0 was also proposed and remains a maintainer choice.
 - DOCX output may be wanted by customers; ODF is the open format chosen here.
+- **Build notes (fid-qual `vap::tpl`, `cargo xtask qual vap check-templates`):** the eight required document IDs are `urs`, `risk`, `iq-protocol`, `oq-protocol`, `pq-guidance` (the PQ document), `checklist-17025`, `checklist-part11-annex11` and `supplier-questionnaire`, taken from PROTO, CHECK and SUPQ. `vap/templates/` holds only this leaf's four templates, so a set check of that folder reports the other four missing until those leaves land. `interpretation` accepts only `provisional` until a template sign-off record exists (D-045), and every render says so. The catalogue uses `[[intended_use]]` tables. Errors beyond the three named here: `TPL-CATALOGUE` (bad catalogue), `TPL-SELECTION` (unknown or repeated selected use) and `TPL-LIMIT` (an `.odt` that would need ZIP64). Table columns are `static`, `prefill` or `customer`; a row's pre-fill cells show only when its rule names a selected use. Golden renders come from the stdlib reference `fixtures/qual/vap/tpl/make_cases.py`.
 
 ## Children
 

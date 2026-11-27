@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metrologymaven.io/schemas/qual/vap-template-1.schema.json",
+  "title": "vap-template/1",
+  "description": "A Validation Accelerator Pack template (spec node QUAL.VAP.TPL). fid-qual vap::tpl is the normative check; it also enforces what JSON Schema cannot: field IDs unique across the template, section, column, row and option uniqueness, pre-fill IDs present in vap/intended-uses.toml, row cells matching the column fill rules, no control or bidirectional formatting characters, no doubled spaces, and the id equal to the file stem.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "id", "title", "version", "interpretation", "licence", "refs", "sections"],
+  "properties": {
+    "format": { "const": "vap-template/1" },
+    "id": { "$ref": "#/$defs/id" },
+    "title": { "$ref": "#/$defs/label" },
+    "version": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})$" },
+    "interpretation": { "const": "provisional" },
+    "licence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spdx", "notice"],
+      "properties": {
+        "spdx": { "const": "CC-BY-4.0" },
+        "notice": {
+          "const": "This template is part of the Metrology Maven Validation Accelerator Pack and is licensed under the Creative Commons Attribution 4.0 International licence (CC-BY-4.0). You may copy, modify and reuse it, including for your own validation documents and commercially, provided you give attribution."
+        }
+      }
+    },
+    "refs": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["designator", "edition", "clause"],
+        "properties": {
+          "designator": { "$ref": "#/$defs/ref" },
+          "edition": { "$ref": "#/$defs/ref" },
+          "clause": { "$ref": "#/$defs/ref" }
+        }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "heading", "fields"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "heading": { "$ref": "#/$defs/label" },
+          "text": { "$ref": "#/$defs/text" },
+          "fields": { "type": "array", "maxItems": 128, "items": { "$ref": "#/$defs/field" } }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$" },
+    "use": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" },
+    "label": { "type": "string", "minLength": 1, "maxLength": 200, "pattern": "^\\S(.*\\S)?$" },
+    "text": { "type": "string", "minLength": 1, "maxLength": 4000, "pattern": "^\\S(.*\\S)?$" },
+    "ref": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^\\S(.*\\S)?$" },
+    "rule": { "type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": { "$ref": "#/$defs/use" } },
+    "field": {
+      "type": "object",
+      "required": ["id", "label", "kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "label": { "$ref": "#/$defs/label" },
+        "kind": { "enum": ["text", "choice", "table", "signature"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "text" } } },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true,
+              "label": true,
+              "kind": true,
+              "prefill": { "$ref": "#/$defs/rule" },
+              "value": { "$ref": "#/$defs/text" }
+            },
+            "dependentRequired": { "prefill": ["value"], "value": ["prefill"] }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "choice" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["options"],
+            "properties": {
+              "id": true,
+              "label": true,
+              "kind": true,
+              "options": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 32,
+                "uniqueItems": true,
+                "items": { "$ref": "#/$defs/label" }
+              },
+              "prefill": { "$ref": "#/$defs/rule" },
+              "value": { "$ref": "#/$defs/label" }
+            },
+            "dependentRequired": { "prefill": ["value"], "value": ["prefill"] }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "table" } } },
+          "then": {
+            "additionalProperties": false,
+            "required": ["columns", "rows"],
+            "properties": {
+              "id": true,
+              "label": true,
+              "kind": true,
+              "columns": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 12,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id", "heading", "fill"],
+                  "properties": {
+                    "id": { "$ref": "#/$defs/id" },
+                    "heading": { "$ref": "#/$defs/label" },
+                    "fill": { "enum": ["static", "prefill", "customer"] }
+                  }
+                }
+              },
+              "rows": {
+                "type": "array",
+                "maxItems": 1000,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id", "cells"],
+                  "properties": {
+                    "id": { "$ref": "#/$defs/id" },
+                    "prefill": { "$ref": "#/$defs/rule" },
+                    "cells": { "type": "object", "additionalProperties": { "$ref": "#/$defs/text" } }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "signature" } } },
+          "then": { "additionalProperties": false, "properties": { "id": true, "label": true, "kind": true } }
+        }
+      ]
+    }
+  }
+}
