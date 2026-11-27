@@ -1,6 +1,6 @@
 [package]
 name = "fid-filter"
-description = "Metrology Maven kernel point selection and outlier policies (KNP-1): outlier policy types, parameter validation, canonical parameter encoding, exclusion masks with their digest, the minimum-points and maximum-fraction guards, and the single entry point that reduces a fit's input set (spec node KRN.OUT.POL)"
+description = "Metrology Maven kernel point selection and outlier policies (KNP-1): the policy model (spec node KRN.OUT.POL: outlier policy types, parameter validation, canonical parameter encoding, exclusion masks with their digest, the minimum-points and maximum-fraction guards, and the single entry point that reduces a fit's input set), the distance-to-nominal and tolerance-band policies (KRN.OUT.GATE), the n-sigma and robust-scale policies (KRN.OUT.STAT), and the excluded-set record with its impact disclosure and canonical encoding (KRN.OUT.DISC)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

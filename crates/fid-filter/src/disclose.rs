@@ -36,8 +36,11 @@
 //! `fid_fit`'s [`FittedFeature::canonical`] validation ([`DiscloseError::Fit`]); every
 //! direction that `canonical` sign-normalises satisfies the sign rule (first component that is
 //! not `±0.0` positive, no `-0.0` component) and every orientation axis (cone, paraboloid) has
-//! no `-0.0` component ([`DiscloseError::NotCanonical`]), so the differences compare features
-//! in one convention; the statistics are finite, `rms >= 0`, `std_dev >= 0`, `min <= max`,
+//! no `-0.0` component, every direction and axis has unit length
+//! (`|red::sum_sq(u) - 1| <= UNIT_LENGTH_TOL`, a few ulp), and a slot's `length` and `width`
+//! are not `-0.0` ([`DiscloseError::NotCanonical`]): the record stores the values it is given,
+//! so they must already be what `canonical` would produce, and the same geometry has one
+//! encoding and the differences compare features in one convention; the statistics are finite, `rms >= 0`, `std_dev >= 0`, `min <= max`,
 //! `n >= 1` ([`DiscloseError::StatsInvalid`]). Then `after` must be the same primitive as
 //! `before` ([`DiscloseError::PrimitiveMismatch`]) with the same parameter layout (polyline
 //! vertex count; spline degree, knot and control counts: [`DiscloseError::ShapeMismatch`]).
@@ -295,6 +298,50 @@ impl ImpactDisclosure {
     pub fn opposed_directions(&self) -> &[&'static str] {
         &self.opposed
     }
+
+    /// The canonical bytes of the disclosure: the `<impact>` object of the record encoding
+    /// (pinned in the [module documentation](self)), on its own.
+    pub fn encode(&self) -> Result<Vec<u8>, DiscloseError> {
+        let mut o = Out { buf: Vec::new() };
+        self.write(&mut o)?;
+        Ok(o.buf)
+    }
+
+    fn write(&self, o: &mut Out) -> Result<(), DiscloseError> {
+        o.put(b"{\"before\":")?;
+        o.snapshot(&self.before)?;
+        o.put(b",\"after\":")?;
+        o.snapshot(&self.after)?;
+        o.put(b",\"delta\":[")?;
+        for (k, &x) in self.delta.iter().enumerate() {
+            if k > 0 {
+                o.put(b",")?;
+            }
+            o.float(x)?;
+        }
+        let s = &self.stats_delta;
+        o.put(b"],\"stats_delta\":{\"rms\":")?;
+        o.float(s.rms)?;
+        o.put(b",\"max\":")?;
+        o.float(s.max)?;
+        o.put(b",\"min\":")?;
+        o.float(s.min)?;
+        o.put(b",\"mean\":")?;
+        o.float(s.mean)?;
+        o.put(b",\"std_dev\":")?;
+        o.float(s.std_dev)?;
+        o.put(b"},\"opposed_directions\":[")?;
+        for (k, name) in self.opposed.iter().enumerate() {
+            if k > 0 {
+                o.put(b",")?;
+            }
+            o.put(b"\"")?;
+            o.put(name.as_bytes())?;
+            o.put(b"\"")?;
+        }
+        o.put(b"]}")?;
+        Ok(())
+    }
 }
 
 /// The audit record of one point removal (REQ-KRN.OUT.DISC-001). Fields are private: every
@@ -453,40 +500,7 @@ impl ExclusionRecord {
         o.put(b"\",\"impact\":")?;
         match &self.impact {
             None => o.put(b"null")?,
-            Some(d) => {
-                o.put(b"{\"before\":")?;
-                o.snapshot(&d.before)?;
-                o.put(b",\"after\":")?;
-                o.snapshot(&d.after)?;
-                o.put(b",\"delta\":[")?;
-                for (k, &x) in d.delta.iter().enumerate() {
-                    if k > 0 {
-                        o.put(b",")?;
-                    }
-                    o.float(x)?;
-                }
-                let s = &d.stats_delta;
-                o.put(b"],\"stats_delta\":{\"rms\":")?;
-                o.float(s.rms)?;
-                o.put(b",\"max\":")?;
-                o.float(s.max)?;
-                o.put(b",\"min\":")?;
-                o.float(s.min)?;
-                o.put(b",\"mean\":")?;
-                o.float(s.mean)?;
-                o.put(b",\"std_dev\":")?;
-                o.float(s.std_dev)?;
-                o.put(b"},\"opposed_directions\":[")?;
-                for (k, name) in d.opposed.iter().enumerate() {
-                    if k > 0 {
-                        o.put(b",")?;
-                    }
-                    o.put(b"\"")?;
-                    o.put(name.as_bytes())?;
-                    o.put(b"\"")?;
-                }
-                o.put(b"]}")?;
-            }
+            Some(d) => d.write(&mut o)?,
         }
         o.put(b"}")?;
         Ok(o.buf)
@@ -575,13 +589,35 @@ fn sign_normalised(u: &[f64]) -> bool {
     !u.iter().any(|&x| is_negative_zero(x)) && matches!(u.iter().find(|&&x| x != 0.0), Some(&x) if x > 0.0)
 }
 
+/// Largest accepted `|‖u‖² - 1|` of a direction: a few units in the last place of 1, the
+/// rounding of a division by its norm and of the sum of squares. A fixed floor, so it can
+/// never be zero.
+pub const UNIT_LENGTH_TOL: f64 = 8.0 * f64::EPSILON;
+
+/// Whether `u` has unit length: `|red::sum_sq(u) - 1| <= UNIT_LENGTH_TOL`.
+fn unit_length(u: &[f64]) -> Result<bool, DiscloseError> {
+    let sq = red::sum_sq(u)?;
+    Ok((sq - 1.0).abs() <= UNIT_LENGTH_TOL)
+}
+
 fn check_snapshot(which: &'static str, s: &FitSnapshot) -> Result<(), DiscloseError> {
     let (feat, st) = s;
+    // fid-fit's validation (finite values, ranges, spline counts). Its normalised copy is not
+    // used: the record stores the values it was given, so they must already be in canonical
+    // form, which the checks below enforce instead of silently rewriting them.
     feat.canonical()?;
     for &(field, u, signed) in directions(feat).iter().flatten() {
         let ok = if signed { sign_normalised(u) } else { !u.iter().any(|&x| is_negative_zero(x)) };
-        if !ok {
+        if !ok || !unit_length(u)? {
             return Err(DiscloseError::NotCanonical { which, field });
+        }
+    }
+    if let FittedFeature::Slot { length, width, .. } = feat {
+        // fid-fit's canonical form turns -0.0 into +0.0 here; both zeros must not encode twice.
+        for (field, x) in [("length", *length), ("width", *width)] {
+            if is_negative_zero(x) {
+                return Err(DiscloseError::NotCanonical { which, field });
+            }
         }
     }
     let bad = |field, reason| Err(DiscloseError::StatsInvalid { which, field, reason });

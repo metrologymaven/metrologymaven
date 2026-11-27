@@ -16,8 +16,9 @@ use fid_filter::disclose::{
 };
 use fid_filter::gate::{NominalGate, VERSION};
 use fid_filter::policy::{
-    apply, outlier_algorithm_id, MethodStatus, OutlierPolicy, PolicyError, PolicyKind, PolicySpec,
+    apply, outlier_algorithm_id, MethodStatus, OutlierPolicy, PolicyError, PolicyKind, PolicyMethod, PolicySpec, Side,
 };
+use fid_filter::stat::NSigma;
 use fid_fit::contract::{Fit, FitParams, FittedFeature, Method, PointsView, Primitive, ResidualStats};
 use fid_fit::ls_lin::PlaneLs;
 use fid_kci::kci::sha256::sha256_digest;
@@ -283,7 +284,7 @@ fn ac3_zero_scale_status_is_recorded() {
     // Hand-labelled: a residual-statistics method that had no scale reports zero_scale with
     // an empty set; the record keeps the reason.
     let spec = PolicySpec {
-        policy: OutlierPolicy::NSigma { k: 3.0, side: fid_filter::policy::Side::Both },
+        policy: OutlierPolicy::NSigma { k: 3.0, side: Side::Both },
         max_excluded_fraction: 0.25,
         target: Primitive::Plane,
     };
@@ -292,6 +293,26 @@ fn ac3_zero_scale_status_is_recorded() {
     assert_eq!(r.status(), MethodStatus::ZeroScale);
     let text = String::from_utf8(r.encode().unwrap()).unwrap();
     assert!(text.contains("\"status\":\"zero_scale\",\"impact\":null}"), "{text}");
+}
+
+#[test]
+fn ac3_zero_scale_end_to_end() {
+    // STAT n-sigma on equal residuals has no scale: apply excludes nothing with zero_scale,
+    // and the record of that exclusion carries the reason into its bytes.
+    let f = fixture();
+    let pts = PointsView::new(&f.xyz, None).unwrap();
+    let method = NSigma::new(3.0, Side::Both).unwrap();
+    let spec = PolicySpec { policy: method.policy(), max_excluded_fraction: 0.25, target: Primitive::Plane };
+    let residuals = vec![2.0e-6; f.count];
+    let reduced = apply(&spec, &method, &pts, &f.before.0, &residuals, None).unwrap();
+    assert_eq!(reduced.exclusion().status(), MethodStatus::ZeroScale);
+    let r = ExclusionRecord::from_exclusion(reduced.exclusion(), None).unwrap();
+    assert_eq!(r.status(), MethodStatus::ZeroScale);
+    assert_eq!(r.excluded_count(), 0);
+    assert!(r.impact().is_none());
+    let text = String::from_utf8(r.encode().unwrap()).unwrap();
+    assert!(text.contains("\"algorithm\":\"filter.outlier.nsigma@"), "{text}");
+    assert!(text.ends_with("\"status\":\"zero_scale\",\"impact\":null}"), "{text}");
 }
 
 // ----- AC-4: each difference is after minus before, bit-equal to a test-side computation.
@@ -356,21 +377,37 @@ fn ac4_parameter_order_follows_the_encoding() {
 #[test]
 fn opposed_directions_are_named() {
     // Hand-labelled: a plane normal that crosses the sign-rule boundary flips in canonical
-    // form; its components' deltas are near 2, and the record says why.
-    let s = 1.0e-3;
-    let before = FittedFeature::Plane { p: [0.0; 3], n: [s, 0.0, 1.0] };
-    let after = FittedFeature::Plane { p: [0.0; 3], n: [s, 0.0, -1.0] };
-    let d = ImpactDisclosure::new((before, stats(10)), (after, stats(9))).unwrap();
+    // form; its components' deltas are large, and the record says why.
+    let before = || FittedFeature::Plane { p: [0.0; 3], n: [0.6, 0.0, 0.8] };
+    let after = || FittedFeature::Plane { p: [0.0; 3], n: [0.6, 0.0, -0.8] };
+    let d = ImpactDisclosure::new((before(), stats(10)), (after(), stats(9))).unwrap();
     assert_eq!(d.opposed_directions(), &["n"]);
-    let text = {
-        let f = fixture();
-        let params = gate_spec(f.gate, f.fraction).encode().unwrap();
-        let b = (FittedFeature::Plane { p: [0.0; 3], n: [s, 0.0, 1.0] }, stats(20));
-        let a = (FittedFeature::Plane { p: [0.0; 3], n: [s, 0.0, -1.0] }, stats(19));
-        let r = ExclusionRecord::new(gate_id(), params, 20, vec![3], MethodStatus::Decided, Some((b, a))).unwrap();
-        String::from_utf8(r.encode().unwrap()).unwrap()
-    };
+    let f = fixture();
+    let params = gate_spec(f.gate, f.fraction).encode().unwrap();
+    let r = ExclusionRecord::new(
+        gate_id(),
+        params,
+        20,
+        vec![3],
+        MethodStatus::Decided,
+        Some(((before(), stats(20)), (after(), stats(19)))),
+    )
+    .unwrap();
+    let text = String::from_utf8(r.encode().unwrap()).unwrap();
     assert!(text.ends_with("\"opposed_directions\":[\"n\"]}}"), "{text}");
+}
+
+#[test]
+fn impact_encoding_is_the_record_impact_object() {
+    let f = fixture();
+    let r = record(&f, f.gate, both(&f)).unwrap();
+    let impact = r.impact().unwrap().encode().unwrap();
+    let whole = golden("record.bin");
+    let mut expected = b"\"impact\":".to_vec();
+    expected.extend_from_slice(&impact);
+    expected.push(b'}');
+    assert!(whole.ends_with(&expected));
+    assert!(impact.starts_with(b"{\"before\":{\"feature\":{\"kind\":\"plane\""));
 }
 
 // ----- Refusals (fail closed, each with its reason).
@@ -509,6 +546,44 @@ fn refuses_non_canonical_directions() {
         ImpactDisclosure::new(good, (FittedFeature::Plane { p: [f64::NAN, 0.0, 0.0], n: [0.0, 0.0, 1.0] }, stats(9)))
             .unwrap_err();
     assert_eq!(e.code(), "fit");
+}
+
+#[test]
+fn refuses_non_unit_directions_and_negative_zero_slot_sizes() {
+    let good = (plane([0.0, 0.0, 1.0]), stats(10));
+    // Hand-labelled: canonical() would renormalise these; the record refuses them instead.
+    for n in [[1.0e-3, 0.0, 1.0], [0.0, 0.0, 2.0], [0.0, 0.0, 1.0 - 1.0e-9]] {
+        assert_eq!(
+            ImpactDisclosure::new(good.clone(), (plane(n), stats(9))).unwrap_err(),
+            DiscloseError::NotCanonical { which: AFTER, field: "n" },
+            "{n:?}"
+        );
+    }
+    let cone = |d: [f64; 3]| FittedFeature::Cone { apex: [0.0; 3], d, half_angle: 0.5 };
+    assert_eq!(
+        ImpactDisclosure::new((cone([0.0, 0.0, 0.5]), stats(10)), (cone([0.0, 0.0, 1.0]), stats(9))).unwrap_err(),
+        DiscloseError::NotCanonical { which: BEFORE, field: "d" }
+    );
+    // Within a few ulp of unit length is accepted: 1 - 2 eps is the largest double below 1
+    // squared to about 1 - 4 eps.
+    let near = 1.0 - 2.0 * f64::EPSILON;
+    assert!(ImpactDisclosure::new(good.clone(), (plane([0.0, 0.0, near]), stats(9))).is_ok());
+    let slot = |length: f64, width: f64| FittedFeature::Slot {
+        c: [0.0; 3],
+        n: [0.0, 0.0, 1.0],
+        d: [1.0, 0.0, 0.0],
+        length,
+        width,
+    };
+    assert!(ImpactDisclosure::new((slot(0.0, 1.0), stats(10)), (slot(0.5, 1.0), stats(9))).is_ok());
+    assert_eq!(
+        ImpactDisclosure::new((slot(-0.0, 1.0), stats(10)), (slot(0.5, 1.0), stats(9))).unwrap_err(),
+        DiscloseError::NotCanonical { which: BEFORE, field: "length" }
+    );
+    assert_eq!(
+        ImpactDisclosure::new((slot(0.5, 1.0), stats(10)), (slot(0.5, -0.0), stats(9))).unwrap_err(),
+        DiscloseError::NotCanonical { which: AFTER, field: "width" }
+    );
 }
 
 #[test]
