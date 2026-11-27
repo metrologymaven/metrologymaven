@@ -261,7 +261,7 @@ fn band_heights(body: &Body, f: &Face, pl: &Placement) -> Result<usize, DirectEr
         };
         match wrapping {
             Some(h) => {
-                if !heights.iter().any(|&x| x == h) {
+                if !heights.contains(&h) {
                     heights.push(h);
                 }
             }
