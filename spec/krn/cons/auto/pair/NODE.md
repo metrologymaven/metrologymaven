@@ -9,6 +9,8 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-construct]
+built_pr: 669
 satisfies: [REQ-KRN.CONS.AUTO-002, REQ-KRN.CONS.AUTO-003]
 covers: [GOM.CON.22]
 depends_on: [KRN.CONS.DECL, KRN.LSQ.TRAIT, KRN.NUM.RED, KRN.NUM.FN]
@@ -68,6 +70,12 @@ The pure function that decides which actual points belong to which nominal eleme
 ## Open questions
 
 - Whether `SCAN` per-face extraction should reuse this function or own its own gating (it should reuse it, so scan and kernel agree); confirm when `SCAN` is expanded.
+- Build choices in `fid_construct::auto_pair`, for review: the angle gate is oriented (`atan2(|n_p x n_nom|, n_p . n_nom)` in `[0, pi]`), and every curved primitive carries a `NormalSense` (`Outward` away from the axis, centre, circle of centres or centre segment; `Inward` for holes and pockets). The circle and slot out-of-plane gate reuses `distance_gate_m`; a separate parameter would need a spec change.
+- Where the nominal normal is undefined (a point on a cylinder or cone axis, at a sphere centre, on a torus circle of centres, on a slot centre segment, or whose closest cone point is the apex), a point with a normal that passes the distance gate goes to no element and is listed in `Pairing.normal_undefined` (fail closed). Points of unpaired elements are listed in that element's `released` list, so every point is accounted for once.
+- Under `nearest`, no conflict is resolved silently: `Pairing.contested` lists every point with two or more claims, and `Pairing.tie_broken` lists those whose winning claim had exactly the same distance and angle as another claim (so the element index decided).
+- REQ-005 contract: candidate lists must contain every point within the element's distance gate (and out-of-plane gate), not only the points it claims; a point at an undefined nominal normal is recorded in `normal_undefined` only if visited. The function cannot check this without visiting every point.
+- Gate floors: `distance_gate_m` must be at least `16 * f64::EPSILON` times the largest coordinate magnitude, and `normal_angle_gate_rad` at least `16 * f64::EPSILON`; `min_points` must be at least 1. `WrongInputKind` is not used: `NominalPrimitive` is a closed enum, so an unsupported kind cannot be passed.
+- The performance budget is not yet measured.
 
 ## Children
 

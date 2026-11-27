@@ -5,6 +5,7 @@
 //! construction contract ([`contract`], spec node `KRN.CONS.DECL`) that every construction
 //! (operations, element builders, derived elements, relationships) implements.
 
+pub mod auto_pair;
 pub mod contract;
 pub mod elem_prim;
 pub mod elem_shape;
