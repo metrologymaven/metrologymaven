@@ -7,6 +7,7 @@ use crate::{
     MAX_LABEL_KEY_BYTES, MAX_MARKERS, MAX_POINTS, MAX_REF_LINES, MAX_SET_VERSION, MAX_UNVERIFIED, MAX_VERSION_PART,
 };
 use std::cmp::Ordering;
+use std::collections::BTreeMap;
 
 type Res = Result<(), ChartSeriesError>;
 
@@ -325,19 +326,18 @@ fn reviews_against_unverified(series: &ChartSeries) -> Res {
                 |u| matches!(u, UnverifiedRef::RuleSet { set_id, set_version } if set_id == id && *set_version == v),
             )
         };
-    // (set ID, version, review) of the first marker of each set, in first-seen order; a
-    // series has few sets, so a linear scan is enough.
-    let mut seen: Vec<(&str, u32, ReviewStatus)> = Vec::new();
+    // The review of the first marker of each (set ID, version): a map, so hostile input with
+    // many distinct sets stays O(n log n).
+    let mut seen: BTreeMap<(&str, u32), ReviewStatus> = BTreeMap::new();
     for (i, p) in series.points.iter().enumerate() {
         for (j, m) in p.markers.iter().enumerate() {
             let Marker::RuleViolation { set_id, set_version, review, .. } = m else {
                 continue;
             };
             let at = format!("points[{i}].markers[{j}].review");
-            match seen.iter().find(|(id, v, _)| *id == set_id.as_str() && *v == *set_version) {
-                Some((_, _, first)) if first != review => return bad(at, R::ConflictingReview),
-                Some(_) => {}
-                None => seen.push((set_id, *set_version, *review)),
+            let first = *seen.entry((set_id.as_str(), *set_version)).or_insert(*review);
+            if first != *review {
+                return bad(at, R::ConflictingReview);
             }
             let is_listed = listed(set_id, *set_version);
             if *review == ReviewStatus::ExpertReviewed && is_listed {
