@@ -31,7 +31,14 @@ struct Check {
     x: [f64; 3],
     tol: f64,
     slack: f64,
-    unbounded: bool,
+    verdict: Verdict,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Verdict {
+    Ok,
+    Unbounded,
+    Refused,
 }
 
 struct Case {
@@ -42,6 +49,7 @@ struct Case {
     axis: Option<[f64; 3]>,
     radius: f64,
     inradius: f64,
+    floor: f64,
     rows: Vec<([f64; 3], f64)>,
     checks: Vec<Check>,
 }
@@ -67,6 +75,7 @@ fn cases() -> Vec<Case> {
                     axis: None,
                     radius: f64::NAN,
                     inradius: f64::NAN,
+                    floor: f64::NAN,
                     rows: Vec::new(),
                     checks: Vec::new(),
                 })
@@ -85,6 +94,7 @@ fn cases() -> Vec<Case> {
             "axis" => c.unwrap().axis = if t[1] == "none" { None } else { Some(v3(&hexes(&t[1..]))) },
             "radius" => c.unwrap().radius = hex(t[1]),
             "inradius" => c.unwrap().inradius = hex(t[1]),
+            "floor" => c.unwrap().floor = hex(t[1]),
             "row" => {
                 let x = hexes(&t[1..]);
                 assert_eq!(x.len(), 4, "{line}");
@@ -98,9 +108,10 @@ fn cases() -> Vec<Case> {
                     x: v3(&x),
                     tol: x[3],
                     slack: x[4],
-                    unbounded: match t[7] {
-                        "unbounded" => true,
-                        "ok" => false,
+                    verdict: match t[7] {
+                        "unbounded" => Verdict::Unbounded,
+                        "ok" => Verdict::Ok,
+                        "refused" => Verdict::Refused,
                         v => panic!("unknown verdict {v}"),
                     },
                 });
@@ -128,6 +139,7 @@ fn ac1_regions_and_rows_bit_exact() {
         assert_eq!(tr.radius_m().to_bits(), c.radius.to_bits(), "{} radius", c.name);
         assert_eq!(tr.inradius_m().to_bits(), c.inradius.to_bits(), "{} inradius", c.name);
         assert_eq!(tr.fraction().to_bits(), c.fraction.to_bits(), "{} fraction", c.name);
+        assert_eq!(tr.boundary_tol_floor().unwrap().to_bits(), c.floor.to_bits(), "{} floor", c.name);
         let rows = tr.rows().unwrap();
         let want = if c.feature.primitive() == Primitive::Sphere { FACETS_3D } else { FACETS_2D };
         assert_eq!(rows.a.len(), want, "{}", c.name);
@@ -191,7 +203,7 @@ fn from_ls_refuses_other_methods() {
 /// boundary distance; 1 percent inside, the check passes.
 #[test]
 fn ac2_boundary_checks() {
-    let mut seen = (0, 0);
+    let mut seen = (0, 0, 0);
     for c in cases() {
         let tr = TrustRegion::from_feature(&c.feature, c.fraction).unwrap();
         for k in &c.checks {
@@ -199,14 +211,18 @@ fn ac2_boundary_checks() {
             assert_eq!(d.to_bits(), k.slack.to_bits(), "{} {}", c.name, k.label);
             match tr.check_boundary(k.x, k.tol) {
                 Err(FitError::UnboundedEnvelope { boundary_distance_m }) => {
-                    assert!(k.unbounded, "{} {}", c.name, k.label);
+                    assert_eq!(k.verdict, Verdict::Unbounded, "{} {}", c.name, k.label);
                     assert_eq!(boundary_distance_m.to_bits(), k.slack.to_bits(), "{} {}", c.name, k.label);
                     seen.0 += 1;
                 }
                 Ok(dist) => {
-                    assert!(!k.unbounded, "{} {}", c.name, k.label);
+                    assert_eq!(k.verdict, Verdict::Ok, "{} {}", c.name, k.label);
                     assert_eq!(dist.to_bits(), k.slack.to_bits(), "{} {}", c.name, k.label);
                     seen.1 += 1;
+                }
+                Err(FitError::InvalidParams { field: "boundary_tol" }) => {
+                    assert_eq!(k.verdict, Verdict::Refused, "{} {}", c.name, k.label);
+                    seen.2 += 1;
                 }
                 Err(e) => panic!("{} {}: {e:?}", c.name, k.label),
             }
@@ -215,11 +231,12 @@ fn ac2_boundary_checks() {
             let h = tr.inradius_m();
             let m = c.centre.iter().fold(0.0_f64, |a, x| if x.abs() > a { x.abs() } else { a });
             let tol = 1e-15 * (1.0 + m);
-            let geometric = if k.label.starts_with("inside_1pct") {
+            let base = k.label.trim_end_matches("_at_floor").trim_end_matches("_below_floor");
+            let geometric = if base.starts_with("inside_1pct") {
                 Some(0.01 * h)
-            } else if k.label.starts_with("on_facet") || k.label == "vertex" {
+            } else if base.starts_with("on_facet") || base == "vertex" {
                 Some(0.0)
-            } else if k.label == "centre" {
+            } else if base == "centre" {
                 Some(h)
             } else {
                 None
@@ -230,10 +247,11 @@ fn ac2_boundary_checks() {
             }
         }
     }
-    assert!(seen.0 >= 30 && seen.1 >= 20, "{seen:?}");
+    assert!(seen.0 >= 50 && seen.1 >= 30 && seen.2 == 10, "{seen:?}");
 }
 
-/// Exactly at the tolerance is still the boundary; a zero tolerance (`-0.0` too) is accepted.
+/// Exactly at the tolerance is still the boundary; a tolerance below the rounding floor (`0`
+/// and `-0.0` included) is refused, while the floor itself is accepted.
 #[test]
 fn ac2_tolerance_edge() {
     let tr = TrustRegion::from_feature(&FittedFeature::Circle2 { c: [0.0, 0.0], r: 0.01 }, 0.2).unwrap();
@@ -242,11 +260,35 @@ fn ac2_tolerance_edge() {
         tr.check_boundary([0.0, 0.0, 0.0], centre_dist),
         Err(FitError::UnboundedEnvelope { boundary_distance_m: centre_dist })
     );
-    assert_eq!(tr.check_boundary([0.0, 0.0, 0.0], 0.0), Ok(centre_dist));
-    assert_eq!(tr.check_boundary([0.0, 0.0, 0.0], -0.0), Ok(centre_dist));
+    for tol in [0.0, -0.0] {
+        assert_eq!(
+            tr.check_boundary([0.0, 0.0, 0.0], tol),
+            Err(FitError::InvalidParams { field: "boundary_tol" }),
+            "{tol:e}"
+        );
+    }
+    let floor = tr.boundary_tol_floor().unwrap();
+    assert_eq!(floor, 16.0 * f64::EPSILON * 0.002);
+    assert_eq!(tr.check_boundary([0.0, 0.0, 0.0], floor), Ok(centre_dist));
     let e = FitError::UnboundedEnvelope { boundary_distance_m: 0.0 };
     assert_eq!(e.code(), "unbounded_envelope");
     assert!(e.to_string().contains("unbounded envelope"), "{e}");
+}
+
+/// The far-from-origin case that a zero tolerance let through: on facet 5 of a circle 1.5 km
+/// from the origin the computed slack is +1.1e-13 m (the exact one is about -1e-15 m), so a
+/// tolerance of 0 would pass it; at the floor it is `unbounded_envelope`, below it refused.
+#[test]
+fn ac2_far_centre_on_facet_at_floor() {
+    let c = cases().into_iter().find(|c| c.name == "circle_far").unwrap();
+    let tr = TrustRegion::from_feature(&c.feature, c.fraction).unwrap();
+    let k = c.checks.iter().find(|k| k.label == "on_facet_5_at_floor").unwrap();
+    assert!(k.slack > 0.0, "{:e}", k.slack);
+    assert_eq!(k.tol.to_bits(), tr.boundary_tol_floor().unwrap().to_bits());
+    assert!(matches!(tr.check_boundary(k.x, k.tol), Err(FitError::UnboundedEnvelope { .. })));
+    let below = c.checks.iter().find(|k| k.label == "on_facet_5_below_floor").unwrap();
+    assert_eq!(tr.check_boundary(below.x, below.tol), Err(FitError::InvalidParams { field: "boundary_tol" }));
+    assert_eq!(tr.check_boundary(k.x, 0.0), Err(FitError::InvalidParams { field: "boundary_tol" }));
 }
 
 /// The tolerance must be finite and not negative; the position must be finite.
@@ -311,10 +353,11 @@ fn ac4_defined_primitives() {
         let want = matches!(p, Primitive::Circle2 | Primitive::Sphere | Primitive::Cylinder);
         assert_eq!(is_defined(p), want, "{p:?}");
         assert_eq!(check_defined(p).is_ok(), want, "{p:?}");
-        if want {
-            // The contract's coarser table agrees (it also admits circle3).
-            assert!(Method::MaximumInscribed.defined_for(p), "{p:?}");
-        } else {
+        // The contract's table is the same one (REQ-004): circle3 is not defined for MI, but
+        // stays defined for minimum circumscribed.
+        assert_eq!(Method::MaximumInscribed.defined_for(p), want, "{p:?}");
+        assert_eq!(algorithm_id(p, Method::MaximumInscribed, (1, 0, 0)).is_ok(), want, "{p:?}");
+        if !want {
             assert_eq!(
                 check_defined(p),
                 Err(FitError::MethodUndefined { primitive: p, method: Method::MaximumInscribed })
@@ -326,6 +369,7 @@ fn ac4_defined_primitives() {
         TrustRegion::from_feature(&slot, 0.2),
         Err(FitError::MethodUndefined { primitive: Primitive::Slot, method: Method::MaximumInscribed })
     );
+    assert!(Method::MinimumCircumscribed.defined_for(Primitive::Circle3));
     let c3 = FittedFeature::Circle3 { c: [0.0; 3], n: [0.0, 0.0, 1.0], r: 0.01 };
     assert_eq!(
         TrustRegion::from_feature(&c3, 0.2),

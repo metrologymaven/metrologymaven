@@ -409,7 +409,8 @@ fn ac6_command_rows_declare_quantity_and_unit() {
             }
         }
     }
-    assert_eq!(count, 16 + 15 + 4 + 4 + 3);
+    // ls 16, mz 15, mi 3 (circle2, sphere, cylinder: KRN.ENV.MIC.TR), mc 4, tan 3.
+    assert_eq!(count, 16 + 15 + 3 + 4 + 3);
 }
 
 fn tamper(f: impl Fn(&mut CommandRow)) -> Result<(), RowError> {

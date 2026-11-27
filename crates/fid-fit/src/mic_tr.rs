@@ -54,9 +54,14 @@
 //!
 //!    The tables hold correctly rounded binary64 values, so the normals are unit length to
 //!    within rounding and the rows are the same bits on every target.
-//! 4. **Boundary check** (REQ-003). `boundary_tol` must be finite and `>= 0`
-//!    (`InvalidParams{field: "boundary_tol"}`; `-0.0` is accepted as `+0.0`); a non-finite
-//!    position is `Num`. The slack of facet `k` is `b_k - red::dot(a_k, x)`, and the boundary
+//! 4. **Boundary check** (REQ-003). `boundary_tol` must be finite and at least the region's
+//!    rounding floor `16 * EPSILON * (m + radius_m)`, with `m` the total-order maximum of
+//!    `|centre_i|` (evaluated as `(16 * EPSILON) * (m + radius_m)`, one sum and one product;
+//!    [`TrustRegion::boundary_tol_floor`]); otherwise `InvalidParams{field: "boundary_tol"}`.
+//!    Below the floor the computed slack's rounding error (a few ulps of the coordinates) can
+//!    exceed the tolerance, so a point on the boundary could pass: such a tolerance, `0` and
+//!    `-0.0` included, is refused rather than allowed to fail open. A non-finite position is
+//!    `Num`. The slack of facet `k` is `b_k - red::dot(a_k, x)`, and the boundary
 //!    distance is the total-order minimum of the slacks (the distance to the nearest facet
 //!    plane, negative outside the region). A distance `<= boundary_tol` is
 //!    `UnboundedEnvelope{boundary_distance_m}`; otherwise the check passes and returns the
@@ -337,11 +342,26 @@ impl TrustRegion {
         Ok(min)
     }
 
+    /// The smallest `boundary_tol` the check accepts (rule 4): `(16 * EPSILON) * (m +
+    /// radius_m)`, `m` the total-order maximum of `|centre_i|`.
+    pub fn boundary_tol_floor(&self) -> Result<f64, FitError> {
+        let mut m = 0.0_f64;
+        for c in self.centre {
+            m = f::total_max(m, c.abs())?;
+        }
+        let floor = (16.0 * f64::EPSILON) * (m + self.radius_m);
+        if !floor.is_finite() {
+            return Err(FitError::Num(fid_num::NumError::Infinite { op: "mic_tr.tol_floor", index: None }));
+        }
+        Ok(floor)
+    }
+
     /// The boundary check of a final centre or axis point (REQ-KRN.ENV.MIC.TR-003, rule 4):
     /// `UnboundedEnvelope{boundary_distance_m}` when [`TrustRegion::boundary_distance`] is
-    /// `<= boundary_tol`, otherwise that distance.
+    /// `<= boundary_tol`, otherwise that distance. A `boundary_tol` that is not finite or is
+    /// below [`TrustRegion::boundary_tol_floor`] is `InvalidParams{field: "boundary_tol"}`.
     pub fn check_boundary(&self, x: V3, boundary_tol: f64) -> Result<f64, FitError> {
-        if !(boundary_tol.is_finite() && boundary_tol >= 0.0) {
+        if !(boundary_tol.is_finite() && boundary_tol >= self.boundary_tol_floor()?) {
             return Err(FitError::InvalidParams { field: "boundary_tol" });
         }
         let dist = self.boundary_distance(x)?;
