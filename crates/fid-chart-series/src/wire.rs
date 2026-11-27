@@ -1,10 +1,10 @@
 //! Canonical JSON decoding and encoding (REQ-005 to REQ-007).
 
 use crate::{
-    check, echo_kind, Axis, AxisKind, ChartSeries, ChartSeriesError, ContractVersion, Digest, InvalidReason as R,
-    Marker, Point, Provenance, Quantity, RefKind, RefLine, SeriesKind, Unit, UnsupportedCause, CONTRACT_MAJOR,
-    CONTRACT_MINOR, MAX_DEPTH, MAX_ELEMENTS, MAX_MARKERS, MAX_POINTS, MAX_REF_LINES, MAX_SERIES_BYTES,
-    MAX_VERSION_PART,
+    check, echo_kind, Axis, AxisKind, ChartSeries, ChartSeriesError, ContractVersion, Digest, Exclusion,
+    InvalidReason as R, Marker, Point, Provenance, Quantity, RefKind, RefLine, ReviewStatus, SeriesKind, SeriesStatus,
+    Unit, UnsupportedCause, UnverifiedRef, CONTRACT_MAJOR, CONTRACT_MINOR, MAX_CONSTANTS, MAX_DEPTH, MAX_ELEMENTS,
+    MAX_EXCLUDED, MAX_MARKERS, MAX_POINTS, MAX_REF_LINES, MAX_SERIES_BYTES, MAX_UNVERIFIED, MAX_VERSION_PART,
 };
 use fid_canon::{CValue, CanonError};
 use std::collections::BTreeMap;
@@ -167,8 +167,9 @@ pub fn parse(input: &[u8]) -> Res<Parsed> {
     }
     let mut cx = Cx { lenient: minor > CONTRACT_MINOR, ignored: Vec::new() };
     cx.object(contract_v, "contract", &["major", "minor"], &[])?;
-    cx.object(&root, "$", &["contract", "kind", "points", "provenance", "ref_lines", "x", "y"], &[])?;
+    cx.object(&root, "$", &["contract", "kind", "points", "provenance", "ref_lines", "status", "x", "y"], &[])?;
     let kind = named(field(top, "$", "kind")?, "kind", SeriesKind::from_wire)?;
+    let status = named(field(top, "$", "status")?, "status", SeriesStatus::from_wire)?;
     let x = axis(&mut cx, field(top, "$", "x")?, "x")?;
     let y = axis(&mut cx, field(top, "$", "y")?, "y")?;
     let mut points = Vec::new();
@@ -186,7 +187,8 @@ pub fn parse(input: &[u8]) -> Res<Parsed> {
         });
     }
     let provenance = provenance(&mut cx, field(top, "$", "provenance")?)?;
-    let series = ChartSeries { contract: ContractVersion { major, minor }, kind, x, y, points, ref_lines, provenance };
+    let series =
+        ChartSeries { contract: ContractVersion { major, minor }, kind, status, x, y, points, ref_lines, provenance };
     check::validate(&series)?;
     let mut ignored_fields = cx.ignored;
     ignored_fields.sort_unstable_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
@@ -241,11 +243,12 @@ fn marker(cx: &mut Cx, v: &CValue, at: &str) -> Res<Marker> {
             Ok(if kind == "INDETERMINATE" { Marker::Indeterminate } else { Marker::OutOfTolerance })
         }
         "RULE_VIOLATION" => {
-            cx.object(v, at, &["kind", "rule_id", "set_id", "set_version"], &[])?;
+            cx.object(v, at, &["kind", "review", "rule_id", "set_id", "set_version"], &[])?;
             Ok(Marker::RuleViolation {
                 set_id: string(field(o, at, "set_id")?, &sub(at, "set_id"))?.to_owned(),
                 set_version: integer(field(o, at, "set_version")?, &sub(at, "set_version"), u32::MAX)?,
                 rule_id: string(field(o, at, "rule_id")?, &sub(at, "rule_id"))?.to_owned(),
+                review: named(field(o, at, "review")?, &sub(at, "review"), ReviewStatus::from_wire)?,
             })
         }
         _ => bad(sub(at, "kind"), R::UnknownValue),
@@ -254,7 +257,12 @@ fn marker(cx: &mut Cx, v: &CValue, at: &str) -> Res<Marker> {
 
 fn provenance(cx: &mut Cx, v: &CValue) -> Res<Provenance> {
     let at = "provenance";
-    let o = cx.object(v, at, &["algorithm", "dataset_digest", "kernel_version"], &["binning_rule", "frozen_limits"])?;
+    let o = cx.object(
+        v,
+        at,
+        &["algorithm", "constants", "dataset_digest", "excluded", "kernel_version", "unverified"],
+        &["binning_rule", "frozen_limits"],
+    )?;
     let d = string(field(o, at, "dataset_digest")?, "provenance.dataset_digest")?;
     let Ok(dataset_digest) = Digest::parse(d) else {
         return bad("provenance.dataset_digest", R::BadFormat);
@@ -265,6 +273,49 @@ fn provenance(cx: &mut Cx, v: &CValue) -> Res<Provenance> {
         kernel_version: string(field(o, at, "kernel_version")?, "provenance.kernel_version")?.to_owned(),
         frozen_limits: opt_string(o, at, "frozen_limits")?,
         binning_rule: opt_string(o, at, "binning_rule")?,
+        constants: array(field(o, at, "constants")?, "provenance.constants", MAX_CONSTANTS)?
+            .iter()
+            .enumerate()
+            .map(|(k, c)| string(c, &format!("provenance.constants[{k}]")).map(str::to_owned))
+            .collect::<Res<_>>()?,
+        unverified: array(field(o, at, "unverified")?, "provenance.unverified", MAX_UNVERIFIED)?
+            .iter()
+            .enumerate()
+            .map(|(k, u)| unverified_ref(cx, u, &format!("provenance.unverified[{k}]")))
+            .collect::<Res<_>>()?,
+        excluded: array(field(o, at, "excluded")?, "provenance.excluded", MAX_EXCLUDED)?
+            .iter()
+            .enumerate()
+            .map(|(k, e)| exclusion(cx, e, &format!("provenance.excluded[{k}]")))
+            .collect::<Res<_>>()?,
+    })
+}
+
+fn unverified_ref(cx: &mut Cx, v: &CValue, at: &str) -> Res<UnverifiedRef> {
+    let CValue::Obj(o) = v else {
+        return bad(at, R::WrongType);
+    };
+    match string(field(o, at, "kind")?, &sub(at, "kind"))? {
+        "CONSTANTS" => {
+            cx.object(v, at, &["kind", "ref"], &[])?;
+            Ok(UnverifiedRef::Constants(string(field(o, at, "ref")?, &sub(at, "ref"))?.to_owned()))
+        }
+        "RULE_SET" => {
+            cx.object(v, at, &["kind", "set_id", "set_version"], &[])?;
+            Ok(UnverifiedRef::RuleSet {
+                set_id: string(field(o, at, "set_id")?, &sub(at, "set_id"))?.to_owned(),
+                set_version: integer(field(o, at, "set_version")?, &sub(at, "set_version"), u32::MAX)?,
+            })
+        }
+        _ => bad(sub(at, "kind"), R::UnknownValue),
+    }
+}
+
+fn exclusion(cx: &mut Cx, v: &CValue, at: &str) -> Res<Exclusion> {
+    let o = cx.object(v, at, &["reason", "source_index"], &[])?;
+    Ok(Exclusion {
+        source_index: integer(field(o, at, "source_index")?, &sub(at, "source_index"), u32::MAX)?,
+        reason: string(field(o, at, "reason")?, &sub(at, "reason"))?.to_owned(),
     })
 }
 
@@ -292,8 +343,9 @@ fn axis_value(a: &Axis) -> CValue {
 
 fn marker_value(m: &Marker) -> CValue {
     match m {
-        Marker::RuleViolation { set_id, set_version, rule_id } => obj([
+        Marker::RuleViolation { set_id, set_version, rule_id, review } => obj([
             ("kind", s(m.kind_str())),
+            ("review", s(review.as_str())),
             ("rule_id", s(rule_id)),
             ("set_id", s(set_id)),
             ("set_version", CValue::Num(f64::from(*set_version))),
@@ -330,6 +382,26 @@ fn series_value(series: &ChartSeries) -> CValue {
     if let Some(b) = &p.binning_rule {
         prov.insert("binning_rule".to_owned(), s(b));
     }
+    prov.insert("constants".to_owned(), CValue::Arr(p.constants.iter().map(|c| s(c)).collect()));
+    let unverified = p
+        .unverified
+        .iter()
+        .map(|u| match u {
+            UnverifiedRef::Constants(r) => obj([("kind", s("CONSTANTS")), ("ref", s(r))]),
+            UnverifiedRef::RuleSet { set_id, set_version } => obj([
+                ("kind", s("RULE_SET")),
+                ("set_id", s(set_id)),
+                ("set_version", CValue::Num(f64::from(*set_version))),
+            ]),
+        })
+        .collect();
+    prov.insert("unverified".to_owned(), CValue::Arr(unverified));
+    let excluded = p
+        .excluded
+        .iter()
+        .map(|e| obj([("reason", s(&e.reason)), ("source_index", CValue::Num(f64::from(e.source_index)))]))
+        .collect();
+    prov.insert("excluded".to_owned(), CValue::Arr(excluded));
     let refs = series
         .ref_lines
         .iter()
@@ -347,6 +419,7 @@ fn series_value(series: &ChartSeries) -> CValue {
         ("points", CValue::Arr(series.points.iter().map(point_value).collect())),
         ("provenance", CValue::Obj(prov)),
         ("ref_lines", CValue::Arr(refs)),
+        ("status", s(series.status.as_str())),
         ("x", axis_value(&series.x)),
         ("y", axis_value(&series.y)),
     ])

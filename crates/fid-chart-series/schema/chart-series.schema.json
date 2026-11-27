@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:metrologymaven:schema:chart-series:1",
   "title": "ChartSeries contract, major 1 (RPT.STATS.TREND.CONTRACT)",
-  "description": "One chart data series handed to report chart blocks and viewers. Contract minor 0 is closed; a series of a later minor (1 and up) of major 1 may carry optional fields a 1.0 consumer ignores (REQ-006). The crate fid-chart-series is stricter than this schema: markers and reference lines in canonical order, reference-line units equal to the value axis, histogram counts, kind-specific provenance fields and forbidden display characters. Written by fixtures/rpt/stats/chart_series/make_fixtures.py.",
+  "description": "One chart data series handed to report chart blocks and viewers. Contract minor 0 is closed; a series of a later minor (1 and up) of major 1 may carry optional fields a 1.0 consumer ignores (REQ-006). The crate fid-chart-series is stricter than this schema: markers and reference lines in canonical order, reference-line units equal to the value axis, histogram counts, kind-specific markers, lines and provenance fields, the status rules, the review cross-checks between markers and provenance.unverified, -0.0 reference lines and forbidden display characters. Written by fixtures/rpt/stats/chart_series/make_fixtures.py.",
   "type": "object",
   "required": [
     "contract"
@@ -95,6 +95,23 @@
         "arcsec",
         "gon"
       ]
+    },
+    "review": {
+      "enum": [
+        "UNVERIFIED",
+        "CLAIMED_BY_FILE",
+        "EXPERT_REVIEWED"
+      ]
+    },
+    "constants": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*@(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})$",
+      "maxLength": 128
+    },
+    "set_version": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 999999
     },
     "contract_strict": {
       "type": "object",
@@ -228,6 +245,7 @@
           "type": "object",
           "required": [
             "kind",
+            "review",
             "rule_id",
             "set_id",
             "set_version"
@@ -240,17 +258,77 @@
               "$ref": "#/$defs/set_id"
             },
             "set_version": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 999999
+              "$ref": "#/$defs/set_version"
             },
             "rule_id": {
               "$ref": "#/$defs/rule_id"
+            },
+            "review": {
+              "$ref": "#/$defs/review"
             }
           },
           "additionalProperties": false
         }
       ]
+    },
+    "unverified_strict": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "ref"
+          ],
+          "properties": {
+            "kind": {
+              "const": "CONSTANTS"
+            },
+            "ref": {
+              "$ref": "#/$defs/constants"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "set_id",
+            "set_version"
+          ],
+          "properties": {
+            "kind": {
+              "const": "RULE_SET"
+            },
+            "set_id": {
+              "$ref": "#/$defs/set_id"
+            },
+            "set_version": {
+              "$ref": "#/$defs/set_version"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "exclusion_strict": {
+      "type": "object",
+      "required": [
+        "reason",
+        "source_index"
+      ],
+      "properties": {
+        "source_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "reason": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+        }
+      },
+      "additionalProperties": false
     },
     "point_strict": {
       "type": "object",
@@ -319,8 +397,11 @@
       "type": "object",
       "required": [
         "algorithm",
+        "constants",
         "dataset_digest",
-        "kernel_version"
+        "excluded",
+        "kernel_version",
+        "unverified"
       ],
       "properties": {
         "dataset_digest": {
@@ -337,6 +418,27 @@
         },
         "binning_rule": {
           "$ref": "#/$defs/binning_rule"
+        },
+        "constants": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/constants"
+          }
+        },
+        "unverified": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/unverified_strict"
+          }
+        },
+        "excluded": {
+          "type": "array",
+          "maxItems": 1000000,
+          "items": {
+            "$ref": "#/$defs/exclusion_strict"
+          }
         }
       },
       "additionalProperties": false
@@ -349,6 +451,7 @@
         "points",
         "provenance",
         "ref_lines",
+        "status",
         "x",
         "y"
       ],
@@ -366,6 +469,12 @@
             "CONTROL_I",
             "CONTROL_MR",
             "VECTOR_GROUP"
+          ]
+        },
+        "status": {
+          "enum": [
+            "OK",
+            "INSUFFICIENT_DATA"
           ]
         },
         "x": {
@@ -520,6 +629,7 @@
           "type": "object",
           "required": [
             "kind",
+            "review",
             "rule_id",
             "set_id",
             "set_version"
@@ -532,16 +642,73 @@
               "$ref": "#/$defs/set_id"
             },
             "set_version": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 999999
+              "$ref": "#/$defs/set_version"
             },
             "rule_id": {
               "$ref": "#/$defs/rule_id"
+            },
+            "review": {
+              "$ref": "#/$defs/review"
             }
           }
         }
       ]
+    },
+    "unverified_open": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "ref"
+          ],
+          "properties": {
+            "kind": {
+              "const": "CONSTANTS"
+            },
+            "ref": {
+              "$ref": "#/$defs/constants"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "set_id",
+            "set_version"
+          ],
+          "properties": {
+            "kind": {
+              "const": "RULE_SET"
+            },
+            "set_id": {
+              "$ref": "#/$defs/set_id"
+            },
+            "set_version": {
+              "$ref": "#/$defs/set_version"
+            }
+          }
+        }
+      ]
+    },
+    "exclusion_open": {
+      "type": "object",
+      "required": [
+        "reason",
+        "source_index"
+      ],
+      "properties": {
+        "source_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "reason": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+        }
+      }
     },
     "point_open": {
       "type": "object",
@@ -608,8 +775,11 @@
       "type": "object",
       "required": [
         "algorithm",
+        "constants",
         "dataset_digest",
-        "kernel_version"
+        "excluded",
+        "kernel_version",
+        "unverified"
       ],
       "properties": {
         "dataset_digest": {
@@ -626,6 +796,27 @@
         },
         "binning_rule": {
           "$ref": "#/$defs/binning_rule"
+        },
+        "constants": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/constants"
+          }
+        },
+        "unverified": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/unverified_open"
+          }
+        },
+        "excluded": {
+          "type": "array",
+          "maxItems": 1000000,
+          "items": {
+            "$ref": "#/$defs/exclusion_open"
+          }
         }
       }
     },
@@ -637,6 +828,7 @@
         "points",
         "provenance",
         "ref_lines",
+        "status",
         "x",
         "y"
       ],
@@ -654,6 +846,12 @@
             "CONTROL_I",
             "CONTROL_MR",
             "VECTOR_GROUP"
+          ]
+        },
+        "status": {
+          "enum": [
+            "OK",
+            "INSUFFICIENT_DATA"
           ]
         },
         "x": {

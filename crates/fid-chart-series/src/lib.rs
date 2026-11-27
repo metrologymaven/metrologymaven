@@ -15,6 +15,7 @@
 //! { "contract":   { "major": 1, "minor": 0 },
 //!   "kind":       "TREND" | "HISTOGRAM" | "CONTROL_XBAR" | "CONTROL_R" | "CONTROL_S"
 //!                 | "CONTROL_I" | "CONTROL_MR" | "VECTOR_GROUP",
+//!   "status":     "OK" | "INSUFFICIENT_DATA",
 //!   "x", "y":     { "kind": "ORDINAL", "label_key": K }
 //!               | { "kind": "QUANTITY", "quantity": "LENGTH" | "ANGLE", "unit": U, "label_key": K },
 //!   "points":     [ { "x": F, "y": F, "x_upper"?: F, "x_label"?: text, "record"?: ID,
@@ -22,9 +23,12 @@
 //!   "ref_lines":  [ { "kind": "NOMINAL" | "LSL" | "USL" | "CENTRE" | "LCL" | "UCL",
 //!                     "value": F, "unit": U } ],
 //!   "provenance": { "dataset_digest": "sha256:...", "algorithm": A, "kernel_version": V,
+//!                   "constants": [ C, ... ], "unverified": [ UV, ... ],
+//!                   "excluded": [ { "source_index": I, "reason": E }, ... ],
 //!                   "frozen_limits"?: ID, "binning_rule"?: R } }
-//! M = { "kind": "OUT_OF_TOLERANCE" } | { "kind": "INDETERMINATE" }
-//!   | { "kind": "RULE_VIOLATION", "set_id": S, "set_version": N, "rule_id": RI }
+//! M  = { "kind": "OUT_OF_TOLERANCE" } | { "kind": "INDETERMINATE" }
+//!    | { "kind": "RULE_VIOLATION", "set_id": S, "set_version": N, "rule_id": RI, "review": RV }
+//! UV = { "kind": "CONSTANTS", "ref": C } | { "kind": "RULE_SET", "set_id": S, "set_version": N }
 //! ```
 //!
 //! - `F`: an f64 as `"0x"` and 16 lowercase hex digits of its IEEE 754 bits, so every value,
@@ -42,6 +46,13 @@
 //! - `R` (binning rule): `[a-z][a-z0-9_]*@<major>`, at most 56 + 7 bytes (`sturges@1`).
 //! - `S`, `RI`, `N`: the run-rule set ID (`[a-z][a-z0-9_]*`, at most 64 bytes), rule ID
 //!   (`[a-z0-9][a-z0-9_]*`, at most 32 bytes) and set version (1 to 999 999) of `RPT.STATS.SPC.RULES`.
+//! - `RV`: the run-rule set's review status as `fid_stats::RuleViolation::review` gives it,
+//!   `UNVERIFIED`, `CLAIMED_BY_FILE` or `EXPERT_REVIEWED`, the three kept distinct (D-045).
+//! - `C` (constants-table reference): `<table_id>@<semver>`, the table ID `[a-z][a-z0-9_]*`
+//!   segments joined by `.` (`spc.constants.normal@1.0.0`), at most 128 bytes.
+//! - `I`, `E` (an entry the producer left out upstream): its index in the producer's source
+//!   order (0 to 2^32 - 1) and an upper-case reason code `[A-Z][A-Z0-9_]*` of at most 64 bytes
+//!   (`NOT_DECIDABLE`, `USER`).
 //! - `x_label`: display text, 1 to 256 characters, none of the `fid-types` forbidden code
 //!   points (controls, bidi overrides, invisible format characters).
 //!
@@ -60,11 +71,33 @@
 //!   degenerate bin of `RPT.STATS.TREND.HIST`). `provenance.binning_rule` is required
 //!   (REQ-RPT.STATS.TREND-003; `required_for_kind`). Only histograms may carry `x_upper` or a
 //!   binning rule, and only control charts a frozen-limits record (`not_applicable`).
-//! - **One spelling per value**: markers in a point and the reference lines are each strictly
-//!   ascending (markers by kind in the order above, then set ID, set version, rule ID;
-//!   reference lines by kind in the order above, then value in totalOrder), so a duplicate or
-//!   a reordering is refused (`not_canonical_order`) instead of giving a second encoding of
-//!   the same series. Points keep their order: it is the series order.
+//! - **Control charts only**: `RULE_VIOLATION` markers and `CENTRE`, `LCL` and `UCL` lines
+//!   are refused on `TREND`, `HISTOGRAM` and `VECTOR_GROUP` (`not_applicable`). A control chart
+//!   names at least one constants table (`required_for_kind`); other kinds name none and list
+//!   no rule set as unverified (`not_applicable`).
+//! - **Status** (RPT.STATS.TREND.BUILD-008, RPT.STATS.SPC.CHART-004): `OK` needs at least
+//!   one point; `INSUFFICIENT_DATA` on a trend, histogram or vector group has no points, and on
+//!   a control chart has no `CENTRE`, `LCL` or `UCL` line and no `RULE_VIOLATION` marker
+//!   (`status_conflict`).
+//! - **What a series rests on** (RPT.STATS.SPC.CHART-006): `provenance.unverified` names every
+//!   constants table and run-rule set the series rests on whose review is not
+//!   `EXPERT_REVIEWED`. A listed table must be one of `provenance.constants`
+//!   (`not_referenced`). Every `RULE_VIOLATION` marker of a set that is not `EXPERT_REVIEWED`
+//!   needs its set listed (`not_in_unverified`); an `EXPERT_REVIEWED` marker's set must not be
+//!   listed, and all markers of one set must state the same review (`conflicting_review`).
+//!   A rule set evaluated without any violation leaves no marker, so only the producer can
+//!   list it: validation cannot see that omission.
+//! - **Exclusions**: `provenance.excluded` lists every entry the producer left out upstream,
+//!   possibly none, so a dropped entry leaves a trace.
+//! - **One spelling per value**: markers in a point, reference lines, constants, unverified
+//!   entries and exclusions are each strictly ascending (markers by kind in the order above,
+//!   then set ID, set version, rule ID; reference lines by kind in the order above, then value
+//!   in totalOrder; constants by bytes; unverified entries `CONSTANTS` first, then by reference
+//!   or set ID and version; exclusions by source index), so a reordering or a repeat is refused
+//!   (`not_canonical_order`; two equal reference lines of one kind are `duplicate`) instead of
+//!   giving a second encoding of the same series. A reference line at `-0.0` is refused
+//!   (`negative_zero`): it would draw where `+0.0` does. Points keep their order: it is the
+//!   series order.
 //! - **No contradictory markers**: `OUT_OF_TOLERANCE` and `INDETERMINATE` on one point are
 //!   refused (`conflicting_markers`); a decision is one or the other.
 //! - **No tombstone data set**: the all-zero digest is refused (`tombstone`).
@@ -86,8 +119,10 @@
 //! 0 would change what it claims.
 //!
 //! The provenance block and the markers are the producer's statements. Validation checks
-//! their form only; it does not verify the data-set digest, the algorithm, the frozen-limits
-//! record or a run-rule set's review status (look the set up by ID and version for that).
+//! their form and their consistency with each other only. It does not verify the data-set
+//! digest, the algorithm, the frozen-limits record, a constants table or any review status. In
+//! a series read by [`parse`], `EXPERT_REVIEWED` is what the document claims, not a review
+//! this crate has seen; look the rule set up by ID and version before relying on it.
 //!
 //! # Errors
 //!
@@ -131,6 +166,14 @@ pub const MAX_ID_BYTES: usize = 128;
 pub const MAX_ALGORITHM_BYTES: usize = 128;
 /// Largest histogram count, 2^53 (every integer up to it is exact in f64).
 pub const MAX_COUNT: f64 = 9_007_199_254_740_992.0;
+/// Most constants-table references in one series.
+pub const MAX_CONSTANTS: usize = 16;
+/// Most entries of `provenance.unverified`.
+pub const MAX_UNVERIFIED: usize = 64;
+/// Most entries of `provenance.excluded`.
+pub const MAX_EXCLUDED: usize = MAX_POINTS;
+/// Most bytes of a constants-table reference.
+pub const MAX_CONSTANTS_REF_BYTES: usize = 128;
 /// Largest accepted document, in bytes (the `fid-canon` limit).
 pub const MAX_SERIES_BYTES: usize = fid_canon::MAX_INPUT_BYTES;
 /// Deepest accepted nesting (the format itself needs 5).
@@ -227,6 +270,30 @@ impl SeriesKind {
 }
 
 wire_enum! {
+    /// Whether the series could be built from its data (RPT.STATS.TREND.BUILD-008,
+    /// RPT.STATS.SPC.CHART-004).
+    SeriesStatus {
+        /// Built from enough data.
+        Ok = "OK",
+        /// Too little data: a trend, histogram or vector group without points, or a control
+        /// chart without limit lines or rule markers.
+        InsufficientData = "INSUFFICIENT_DATA",
+    }
+}
+
+wire_enum! {
+    /// A run-rule set's review status, as `fid_stats::ReviewStatus` names it (D-045).
+    ReviewStatus {
+        /// No expert has checked the set.
+        Unverified = "UNVERIFIED",
+        /// A loaded rule-set file claims a review that is not verified.
+        ClaimedByFile = "CLAIMED_BY_FILE",
+        /// The producer states the set was expert-reviewed.
+        ExpertReviewed = "EXPERT_REVIEWED",
+    }
+}
+
+wire_enum! {
     /// Reference-line kinds (REQ-003), in canonical order.
     RefKind {
         /// Nominal value.
@@ -251,6 +318,13 @@ wire_enum! {
         Length = "LENGTH",
         /// Angles.
         Angle = "ANGLE",
+    }
+}
+
+impl RefKind {
+    /// Whether this is a control-chart limit line (`CENTRE`, `LCL`, `UCL`).
+    pub const fn is_limit(self) -> bool {
+        matches!(self, RefKind::Centre | RefKind::Lcl | RefKind::Ucl)
     }
 }
 
@@ -302,6 +376,9 @@ pub enum Marker {
         set_version: u32,
         /// The rule ID within the set.
         rule_id: String,
+        /// The set's review status, repeated so no flag from a set that is not reviewed can be
+        /// read as settled.
+        review: ReviewStatus,
     },
 }
 
@@ -328,8 +405,8 @@ impl Marker {
     pub fn canonical_cmp(&self, other: &Marker) -> std::cmp::Ordering {
         match (self, other) {
             (
-                Marker::RuleViolation { set_id: a, set_version: av, rule_id: ar },
-                Marker::RuleViolation { set_id: b, set_version: bv, rule_id: br },
+                Marker::RuleViolation { set_id: a, set_version: av, rule_id: ar, .. },
+                Marker::RuleViolation { set_id: b, set_version: bv, rule_id: br, .. },
             ) => (a.as_bytes(), av, ar.as_bytes()).cmp(&(b.as_bytes(), bv, br.as_bytes())),
             _ => self.rank().cmp(&other.rank()),
         }
@@ -366,7 +443,47 @@ pub struct RefLine {
     pub unit: Unit,
 }
 
-/// Where a series came from (REQ-002). The producer's statements, checked for form only.
+/// A constants table or run-rule set a series rests on whose review is not `EXPERT_REVIEWED`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum UnverifiedRef {
+    /// A constants table, by reference (`spc.constants.normal@1.0.0`).
+    Constants(String),
+    /// A run-rule set.
+    RuleSet {
+        /// The set ID.
+        set_id: String,
+        /// The set version.
+        set_version: u32,
+    },
+}
+
+impl UnverifiedRef {
+    /// The canonical order: constants tables (by bytes), then rule sets (by ID bytes, version).
+    pub fn canonical_cmp(&self, other: &UnverifiedRef) -> std::cmp::Ordering {
+        use std::cmp::Ordering;
+        match (self, other) {
+            (UnverifiedRef::Constants(a), UnverifiedRef::Constants(b)) => a.as_bytes().cmp(b.as_bytes()),
+            (UnverifiedRef::Constants(_), UnverifiedRef::RuleSet { .. }) => Ordering::Less,
+            (UnverifiedRef::RuleSet { .. }, UnverifiedRef::Constants(_)) => Ordering::Greater,
+            (
+                UnverifiedRef::RuleSet { set_id: a, set_version: av },
+                UnverifiedRef::RuleSet { set_id: b, set_version: bv },
+            ) => (a.as_bytes(), av).cmp(&(b.as_bytes(), bv)),
+        }
+    }
+}
+
+/// An entry the producer left out upstream, so the omission leaves a trace.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Exclusion {
+    /// Its index in the producer's source order.
+    pub source_index: u32,
+    /// Why, as an upper-case reason code (`NOT_DECIDABLE`, `USER`).
+    pub reason: String,
+}
+
+/// Where a series came from (REQ-002). The producer's statements, checked for form and
+/// consistency only.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Provenance {
     /// Digest of the data set the series was built from (required).
@@ -379,6 +496,14 @@ pub struct Provenance {
     pub frozen_limits: Option<String>,
     /// Histograms only (and required there): the binning rule ID.
     pub binning_rule: Option<String>,
+    /// The constants tables the series rests on, ascending; at least one on a control chart,
+    /// none elsewhere (RPT.STATS.SPC.CHART-006).
+    pub constants: Vec<String>,
+    /// Every constants table and rule set the series rests on that is not `EXPERT_REVIEWED`,
+    /// in canonical order.
+    pub unverified: Vec<UnverifiedRef>,
+    /// Entries left out upstream, ascending by source index; possibly empty.
+    pub excluded: Vec<Exclusion>,
 }
 
 /// A chart data series (REQ-001). `PartialEq` is IEEE equality (so `-0.0 == 0.0`); compare
@@ -389,6 +514,8 @@ pub struct ChartSeries {
     pub contract: ContractVersion,
     /// What it shows.
     pub kind: SeriesKind,
+    /// Whether it could be built from its data.
+    pub status: SeriesStatus,
     /// The x axis.
     pub x: Axis,
     /// The y axis.
@@ -465,6 +592,19 @@ pub enum InvalidReason {
     Tombstone,
     /// A later minor than this crate writes.
     NotEncodable,
+    /// A reference line at `-0.0`.
+    NegativeZero,
+    /// Two equal reference lines of one kind.
+    Duplicate,
+    /// A field that contradicts the series status.
+    StatusConflict,
+    /// An unverified constants table the series does not name in `provenance.constants`.
+    NotReferenced,
+    /// A rule-violation marker of a set that is not reviewed, missing from
+    /// `provenance.unverified`.
+    NotInUnverified,
+    /// Review statuses that contradict each other or `provenance.unverified`.
+    ConflictingReview,
 }
 
 impl InvalidReason {
@@ -497,6 +637,12 @@ impl InvalidReason {
             InvalidReason::UpperBelowLower => "upper_below_lower",
             InvalidReason::Tombstone => "tombstone",
             InvalidReason::NotEncodable => "not_encodable",
+            InvalidReason::NegativeZero => "negative_zero",
+            InvalidReason::Duplicate => "duplicate",
+            InvalidReason::StatusConflict => "status_conflict",
+            InvalidReason::NotReferenced => "not_referenced",
+            InvalidReason::NotInUnverified => "not_in_unverified",
+            InvalidReason::ConflictingReview => "conflicting_review",
         }
     }
 }

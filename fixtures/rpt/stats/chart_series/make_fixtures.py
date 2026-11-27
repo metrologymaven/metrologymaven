@@ -54,12 +54,21 @@ MAX_MARKERS = 64
 MAX_SET_VERSION = 999_999
 MAX_LABEL_CHARS = 256
 MAX_COUNT = 2 ** 53
+MAX_CONSTANTS = 16
+MAX_UNVERIFIED = 64
+MAX_EXCLUDED = MAX_POINTS
+MAX_SOURCE_INDEX = 2 ** 32 - 1
 
 KINDS = ["TREND", "HISTOGRAM", "CONTROL_XBAR", "CONTROL_R", "CONTROL_S", "CONTROL_I", "CONTROL_MR",
          "VECTOR_GROUP"]
 CONTROL_KINDS = [k for k in KINDS if k.startswith("CONTROL_")]
 REF_KINDS = ["NOMINAL", "LSL", "USL", "CENTRE", "LCL", "UCL"]
+LIMIT_REF_KINDS = ["CENTRE", "LCL", "UCL"]
 MARKER_KINDS = ["OUT_OF_TOLERANCE", "INDETERMINATE", "RULE_VIOLATION"]
+# fid_stats::ReviewStatus wire names, kept distinct (D-045).
+REVIEWS = ["UNVERIFIED", "CLAIMED_BY_FILE", "EXPERT_REVIEWED"]
+STATUSES = ["OK", "INSUFFICIENT_DATA"]
+UNVERIFIED_KINDS = ["CONSTANTS", "RULE_SET"]
 # The GEO.FRAME.UNITS catalogue, symbols as written there (case-sensitive ASCII).
 LENGTH_UNITS = ["m", "cm", "mm", "um", "nm", "in", "ft", "thou"]
 ANGLE_UNITS = ["rad", "deg", "arcmin", "arcsec", "gon"]
@@ -77,7 +86,11 @@ PAT = {
     "set_id": r"^[a-z][a-z0-9_]{0,63}$",
     "rule_id": r"^[a-z0-9][a-z0-9_]{0,31}$",
     "label_key": r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$",
+    "constants": r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*@" + SEMVER_PART + r"\." + SEMVER_PART + r"\."
+                 + SEMVER_PART + r"$",
+    "exclusion_reason": r"^[A-Z][A-Z0-9_]{0,63}$",
 }
+MAX_CONSTANTS_REF_BYTES = 128
 MAX_ALGORITHM_BYTES = 128
 MAX_LABEL_KEY_BYTES = 128
 
@@ -179,6 +192,9 @@ def schema():
                         "also refuses the fid-types forbidden code points, which this schema does "
                         "not express."),
         "unit": {"enum": LENGTH_UNITS + ANGLE_UNITS},
+        "review": {"enum": REVIEWS},
+        "constants": s_str(PAT["constants"], MAX_CONSTANTS_REF_BYTES),
+        "set_version": {"type": "integer", "minimum": 1, "maximum": MAX_SET_VERSION},
     }
     for strict, tag in ((True, "strict"), (False, "open")):
         defs["contract_" + tag] = s_obj(["major", "minor"], {
@@ -198,11 +214,20 @@ def schema():
         defs["marker_" + tag] = {"oneOf": [
             s_obj(["kind"], {"kind": {"const": "OUT_OF_TOLERANCE"}}, strict),
             s_obj(["kind"], {"kind": {"const": "INDETERMINATE"}}, strict),
-            s_obj(["kind", "rule_id", "set_id", "set_version"], {
+            s_obj(["kind", "review", "rule_id", "set_id", "set_version"], {
                 "kind": {"const": "RULE_VIOLATION"}, "set_id": s_ref("set_id"),
-                "set_version": {"type": "integer", "minimum": 1, "maximum": MAX_SET_VERSION},
-                "rule_id": s_ref("rule_id")}, strict),
+                "set_version": s_ref("set_version"), "rule_id": s_ref("rule_id"),
+                "review": s_ref("review")}, strict),
         ]}
+        defs["unverified_" + tag] = {"oneOf": [
+            s_obj(["kind", "ref"], {"kind": {"const": "CONSTANTS"}, "ref": s_ref("constants")}, strict),
+            s_obj(["kind", "set_id", "set_version"], {
+                "kind": {"const": "RULE_SET"}, "set_id": s_ref("set_id"),
+                "set_version": s_ref("set_version")}, strict),
+        ]}
+        defs["exclusion_" + tag] = s_obj(["reason", "source_index"], {
+            "source_index": {"type": "integer", "minimum": 0, "maximum": MAX_SOURCE_INDEX},
+            "reason": s_str(PAT["exclusion_reason"])}, strict)
         defs["point_" + tag] = s_obj(["markers", "x", "y"], {
             "x": s_ref("f64"), "y": s_ref("f64"), "x_upper": s_ref("f64"), "x_label": s_ref("x_label"),
             "record": s_ref("id"), "piece": s_ref("id"),
@@ -210,12 +235,18 @@ def schema():
         }, strict)
         defs["ref_line_" + tag] = s_obj(["kind", "unit", "value"], {
             "kind": {"enum": REF_KINDS}, "value": s_ref("f64"), "unit": s_ref("unit")}, strict)
-        defs["provenance_" + tag] = s_obj(["algorithm", "dataset_digest", "kernel_version"], {
-            "dataset_digest": s_ref("digest"), "algorithm": s_ref("algorithm"),
-            "kernel_version": s_ref("kernel_version"), "frozen_limits": s_ref("id"),
-            "binning_rule": s_ref("binning_rule")}, strict)
-        defs["series_" + tag] = s_obj(["contract", "kind", "points", "provenance", "ref_lines", "x", "y"], {
-            "contract": s_ref("contract_" + tag), "kind": {"enum": KINDS},
+        defs["provenance_" + tag] = s_obj(
+            ["algorithm", "constants", "dataset_digest", "excluded", "kernel_version", "unverified"], {
+                "dataset_digest": s_ref("digest"), "algorithm": s_ref("algorithm"),
+                "kernel_version": s_ref("kernel_version"), "frozen_limits": s_ref("id"),
+                "binning_rule": s_ref("binning_rule"),
+                "constants": {"type": "array", "maxItems": MAX_CONSTANTS, "items": s_ref("constants")},
+                "unverified": {"type": "array", "maxItems": MAX_UNVERIFIED, "items": s_ref("unverified_" + tag)},
+                "excluded": {"type": "array", "maxItems": MAX_EXCLUDED, "items": s_ref("exclusion_" + tag)},
+            }, strict)
+        defs["series_" + tag] = s_obj(
+            ["contract", "kind", "points", "provenance", "ref_lines", "status", "x", "y"], {
+            "contract": s_ref("contract_" + tag), "kind": {"enum": KINDS}, "status": {"enum": STATUSES},
             "x": s_ref("axis_" + tag), "y": s_ref("axis_" + tag),
             "points": {"type": "array", "maxItems": MAX_POINTS, "items": s_ref("point_" + tag)},
             "ref_lines": {"type": "array", "maxItems": MAX_REF_LINES, "items": s_ref("ref_line_" + tag)},
@@ -229,7 +260,9 @@ def schema():
                        "optional fields a 1.0 consumer ignores (REQ-006). The crate fid-chart-series "
                        "is stricter than this schema: markers and reference lines in canonical order, "
                        "reference-line units equal to the value axis, histogram counts, "
-                       "kind-specific provenance fields and forbidden display characters. "
+                       "kind-specific markers, lines and provenance fields, the status rules, the "
+                       "review cross-checks between markers and provenance.unverified, -0.0 "
+                       "reference lines and forbidden display characters. "
                        "Written by fixtures/rpt/stats/chart_series/make_fixtures.py.",
         "type": "object",
         "required": ["contract"],
@@ -474,7 +507,7 @@ def marker_key(m):
     return (rank, m["set_id"].encode(), m["set_version"], m["rule_id"].encode())
 
 
-def point(ctx, x, at, kind):
+def point(ctx, x, at, kind, status):
     obj(ctx, x, at, ["markers", "x", "y"], ["piece", "record", "x_label", "x_upper"])
     px = f64(x["x"], at + ".x")
     py = f64(x["y"], at + ".y")
@@ -500,10 +533,11 @@ def point(ctx, x, at, kind):
             raise Refuse(mat + ".kind", "missing")
         mk = enum(m["kind"], mat + ".kind", MARKER_KINDS)
         if mk == "RULE_VIOLATION":
-            obj(ctx, m, mat, ["kind", "rule_id", "set_id", "set_version"], [])
+            obj(ctx, m, mat, ["kind", "review", "rule_id", "set_id", "set_version"], [])
             pattern(m["set_id"], mat + ".set_id", "set_id")
             integer(m["set_version"], mat + ".set_version", 1, MAX_SET_VERSION)
             pattern(m["rule_id"], mat + ".rule_id", "rule_id")
+            enum(m["review"], mat + ".review", REVIEWS)
         else:
             obj(ctx, m, mat, ["kind"], [])
     for j in range(1, len(ms)):
@@ -512,6 +546,12 @@ def point(ctx, x, at, kind):
     kinds = [m["kind"] for m in ms]
     if "OUT_OF_TOLERANCE" in kinds and "INDETERMINATE" in kinds:
         raise Refuse(at + ".markers", "conflicting_markers")
+    for j, m in enumerate(ms):
+        if m["kind"] == "RULE_VIOLATION":
+            if kind not in CONTROL_KINDS:
+                raise Refuse("%s.markers[%d]" % (at, j), "not_applicable")
+            if status == "INSUFFICIENT_DATA":
+                raise Refuse("%s.markers[%d]" % (at, j), "status_conflict")
     if "x_upper" in x and kind != "HISTOGRAM":
         raise Refuse(at + ".x_upper", "not_applicable")
     if kind == "HISTOGRAM":
@@ -544,8 +584,9 @@ def check(text):
         raise Unsupported(major, minor, doc.get("kind") if isinstance(doc.get("kind"), str) else None)
     ctx = Ctx(minor > MINOR)
     obj(ctx, c, "contract", ["major", "minor"], [])
-    obj(ctx, doc, "$", ["contract", "kind", "points", "provenance", "ref_lines", "x", "y"], [])
+    obj(ctx, doc, "$", ["contract", "kind", "points", "provenance", "ref_lines", "status", "x", "y"], [])
     kind = enum(doc["kind"], "kind", KINDS)
+    status = enum(doc["status"], "status", STATUSES)
     xa = axis(ctx, doc["x"], "x")
     ya = axis(ctx, doc["y"], "y")
     if kind == "HISTOGRAM":
@@ -559,7 +600,11 @@ def check(text):
     if len(pts) > MAX_POINTS:
         raise Refuse("points", "too_many")
     for i, p in enumerate(pts):
-        point(ctx, p, "points[%d]" % i, kind)
+        point(ctx, p, "points[%d]" % i, kind, status)
+    if status == "INSUFFICIENT_DATA" and kind not in CONTROL_KINDS and pts:
+        raise Refuse("points", "status_conflict")
+    if status == "OK" and not pts:
+        raise Refuse("status", "status_conflict")
     rls = doc["ref_lines"]
     if not isinstance(rls, list):
         raise Refuse("ref_lines", "wrong_type")
@@ -572,16 +617,26 @@ def check(text):
         enum(r["kind"], at + ".kind", REF_KINDS)
         f64(r["value"], at + ".value")
         u = enum(r["unit"], at + ".unit", LENGTH_UNITS + ANGLE_UNITS)
+        if r["value"] == "0x8000000000000000":
+            raise Refuse(at + ".value", "negative_zero")
         if value_axis[0] != "QUANTITY":
             raise Refuse(at + ".unit", "no_value_unit")
         if u != value_axis[1]:
             raise Refuse(at + ".unit", "unit_mismatch")
+        if r["kind"] in LIMIT_REF_KINDS:
+            if kind not in CONTROL_KINDS:
+                raise Refuse(at + ".kind", "not_applicable")
+            if status == "INSUFFICIENT_DATA":
+                raise Refuse(at + ".kind", "status_conflict")
     for i in range(1, len(rls)):
+        if rls[i - 1]["kind"] == rls[i]["kind"] and value(rls[i - 1]["value"]) == value(rls[i]["value"]):
+            raise Refuse("ref_lines[%d]" % i, "duplicate")
         a = (REF_KINDS.index(rls[i - 1]["kind"]), total_key(rls[i - 1]["value"]))
         b = (REF_KINDS.index(rls[i]["kind"]), total_key(rls[i]["value"]))
         if not a < b:
             raise Refuse("ref_lines[%d]" % i, "not_canonical_order")
-    pv = obj(ctx, doc["provenance"], "provenance", ["algorithm", "dataset_digest", "kernel_version"],
+    pv = obj(ctx, doc["provenance"], "provenance",
+             ["algorithm", "constants", "dataset_digest", "excluded", "kernel_version", "unverified"],
              ["binning_rule", "frozen_limits"])
     d = string(pv["dataset_digest"], "provenance.dataset_digest")
     if not re.fullmatch(r"sha256:[0-9a-f]{64}", d):
@@ -600,7 +655,96 @@ def check(text):
             raise Refuse("provenance.binning_rule", "not_applicable")
     elif kind == "HISTOGRAM":
         raise Refuse("provenance.binning_rule", "required_for_kind")
+    constants = provenance_constants(pv, kind)
+    unverified = provenance_unverified(ctx, pv, kind, constants)
+    provenance_excluded(ctx, pv)
+    reviews_against_unverified(pts, unverified)
     return ("ok", sorted(ctx.ignored), doc)
+
+
+def plist(pv, key, max_items):
+    v = pv[key]
+    if not isinstance(v, list):
+        raise Refuse("provenance." + key, "wrong_type")
+    if len(v) > max_items:
+        raise Refuse("provenance." + key, "too_many")
+    return v
+
+
+def provenance_constants(pv, kind):
+    cs = plist(pv, "constants", MAX_CONSTANTS)
+    for k, c in enumerate(cs):
+        pattern(c, "provenance.constants[%d]" % k, "constants", MAX_CONSTANTS_REF_BYTES)
+    for k in range(1, len(cs)):
+        if not cs[k - 1].encode() < cs[k].encode():
+            raise Refuse("provenance.constants[%d]" % k, "not_canonical_order")
+    if kind in CONTROL_KINDS and not cs:
+        raise Refuse("provenance.constants", "required_for_kind")
+    if kind not in CONTROL_KINDS and cs:
+        raise Refuse("provenance.constants", "not_applicable")
+    return cs
+
+
+def unverified_key(u):
+    if u["kind"] == "CONSTANTS":
+        return (0, u["ref"].encode(), 0)
+    return (1, u["set_id"].encode(), u["set_version"])
+
+
+def provenance_unverified(ctx, pv, kind, constants):
+    us = plist(pv, "unverified", MAX_UNVERIFIED)
+    for k, u in enumerate(us):
+        at = "provenance.unverified[%d]" % k
+        if not isinstance(u, dict):
+            raise Refuse(at, "wrong_type")
+        if "kind" not in u:
+            raise Refuse(at + ".kind", "missing")
+        uk = enum(u["kind"], at + ".kind", UNVERIFIED_KINDS)
+        if uk == "CONSTANTS":
+            obj(ctx, u, at, ["kind", "ref"], [])
+            pattern(u["ref"], at + ".ref", "constants", MAX_CONSTANTS_REF_BYTES)
+        else:
+            obj(ctx, u, at, ["kind", "set_id", "set_version"], [])
+            pattern(u["set_id"], at + ".set_id", "set_id")
+            integer(u["set_version"], at + ".set_version", 1, MAX_SET_VERSION)
+    for k in range(1, len(us)):
+        if not unverified_key(us[k - 1]) < unverified_key(us[k]):
+            raise Refuse("provenance.unverified[%d]" % k, "not_canonical_order")
+    for k, u in enumerate(us):
+        if u["kind"] == "CONSTANTS" and u["ref"] not in constants:
+            raise Refuse("provenance.unverified[%d]" % k, "not_referenced")
+        if u["kind"] == "RULE_SET" and kind not in CONTROL_KINDS:
+            raise Refuse("provenance.unverified[%d]" % k, "not_applicable")
+    return us
+
+
+def provenance_excluded(ctx, pv):
+    es = plist(pv, "excluded", MAX_EXCLUDED)
+    for k, e in enumerate(es):
+        at = "provenance.excluded[%d]" % k
+        obj(ctx, e, at, ["reason", "source_index"], [])
+        integer(e["source_index"], at + ".source_index", 0, MAX_SOURCE_INDEX)
+        pattern(e["reason"], at + ".reason", "exclusion_reason")
+    for k in range(1, len(es)):
+        if not es[k - 1]["source_index"] < es[k]["source_index"]:
+            raise Refuse("provenance.excluded[%d]" % k, "not_canonical_order")
+
+
+def reviews_against_unverified(pts, unverified):
+    listed = {(u["set_id"], u["set_version"]) for u in unverified if u["kind"] == "RULE_SET"}
+    seen = {}
+    for i, p in enumerate(pts):
+        for j, m in enumerate(p["markers"]):
+            if m["kind"] != "RULE_VIOLATION":
+                continue
+            at = "points[%d].markers[%d].review" % (i, j)
+            key = (m["set_id"], m["set_version"])
+            if seen.setdefault(key, m["review"]) != m["review"]:
+                raise Refuse(at, "conflicting_review")
+            if m["review"] == "EXPERT_REVIEWED" and key in listed:
+                raise Refuse(at, "conflicting_review")
+            if m["review"] != "EXPERT_REVIEWED" and key not in listed:
+                raise Refuse(at, "not_in_unverified")
 
 
 # ---------------------------------------------------------------- the examples (hand-written)
@@ -628,23 +772,46 @@ def ref(kind, v, unit):
     return {"kind": kind, "value": hexf(v), "unit": unit}
 
 
-def prov(alg, digest=D1, **extra):
-    p = {"dataset_digest": digest, "algorithm": alg, "kernel_version": "0.1.0"}
+CONSTANTS = "spc.constants.normal@1.0.0"
+
+
+def prov(alg, digest=D1, constants=(), unverified=(), excluded=(), **extra):
+    p = {"dataset_digest": digest, "algorithm": alg, "kernel_version": "0.1.0",
+         "constants": list(constants), "unverified": list(unverified), "excluded": list(excluded)}
     p.update(extra)
     return p
+
+
+def uc(ref_):
+    return {"kind": "CONSTANTS", "ref": ref_}
+
+
+def us(set_id, version):
+    return {"kind": "RULE_SET", "set_id": set_id, "set_version": version}
+
+
+def ex_(index, reason):
+    return {"source_index": index, "reason": reason}
+
+
+def spc_prov(digest, sets, **extra):
+    """A control chart on the shipped UNVERIFIED constants table and UNVERIFIED rule sets."""
+    return prov("stats.spc.chart@1.0.0", digest, [CONSTANTS], [uc(CONSTANTS)] + [us(a, v) for a, v in sets],
+                **extra)
 
 
 OOT = {"kind": "OUT_OF_TOLERANCE"}
 IND = {"kind": "INDETERMINATE"}
 
 
-def rv(set_id, version, rule):
-    return {"kind": "RULE_VIOLATION", "set_id": set_id, "set_version": version, "rule_id": rule}
+def rv(set_id, version, rule, review="UNVERIFIED"):
+    return {"kind": "RULE_VIOLATION", "set_id": set_id, "set_version": version, "rule_id": rule,
+            "review": review}
 
 
-def series(kind, x, y, points, ref_lines, provenance):
-    return {"contract": {"major": 1, "minor": 0}, "kind": kind, "x": x, "y": y, "points": points,
-            "ref_lines": ref_lines, "provenance": provenance}
+def series(kind, x, y, points, ref_lines, provenance, status="OK"):
+    return {"contract": {"major": 1, "minor": 0}, "kind": kind, "status": status, "x": x, "y": y,
+            "points": points, "ref_lines": ref_lines, "provenance": provenance}
 
 
 def examples():
@@ -657,7 +824,7 @@ def examples():
          pt(3.0, 5e-324),
          pt(4.0, 9.95, record="rec-0005")],
         [ref("NOMINAL", 10.0, "mm"), ref("LSL", 9.9, "mm"), ref("USL", 10.1, "mm")],
-        prov("stats.trend.build@1.0.0"))
+        prov("stats.trend.build@1.0.0", excluded=[ex_(5, "NOT_DECIDABLE"), ex_(7, "USER")]))
     ex["histogram"] = series(
         "HISTOGRAM", qty("LENGTH", "um", "stats.axis.value"), ordinal("stats.axis.count"),
         [pt(-12.5, 2.0, x_upper=-7.5), pt(-7.5, 0.0, x_upper=-2.5), pt(-2.5, 5.0, x_upper=2.5),
@@ -669,29 +836,29 @@ def examples():
         [pt(0.0, 25.001), pt(1.0, 25.004, [rv("nelson", 1, "1"), rv("nelson", 1, "5")]),
          pt(2.0, 24.999, [rv("nelson", 1, "2"), rv("western_electric", 1, "4")])],
         [ref("CENTRE", 25.0, "mm"), ref("LCL", 24.997, "mm"), ref("UCL", 25.003, "mm")],
-        prov("stats.spc.chart@1.0.0", D2, frozen_limits="lim-2026-0001"))
+        spc_prov(D2, [("nelson", 1), ("western_electric", 1)], frozen_limits="lim-2026-0001"))
     ex["control_r"] = series(
         "CONTROL_R", ordinal("stats.axis.subgroup"), qty("LENGTH", "mm", "stats.axis.subgroup_range"),
         [pt(0.0, 0.004), pt(1.0, 0.0), pt(2.0, 0.011, [rv("beyond_limits", 1, "1")])],
         [ref("CENTRE", 0.005, "mm"), ref("LCL", 0.0, "mm"), ref("UCL", 0.0106, "mm")],
-        prov("stats.spc.chart@1.0.0", D2))
+        spc_prov(D2, [("beyond_limits", 1)]))
     ex["control_s"] = series(
         "CONTROL_S", ordinal("stats.axis.subgroup"), qty("LENGTH", "in", "stats.axis.subgroup_sd"),
-        [pt(0.0, 0.0002), pt(1.0, 0.00031)],
+        [pt(0.0, 0.0002), pt(1.0, 0.00031, [rv("site_rules", 2, "3", "CLAIMED_BY_FILE")])],
         [ref("CENTRE", 0.00025, "in"), ref("LCL", 0.0, "in"), ref("UCL", 0.00052, "in")],
-        prov("stats.spc.chart@1.0.0", D2))
+        spc_prov(D2, [("site_rules", 2)], excluded=[ex_(0, "UNIT_MISMATCH")]))
     ex["control_i"] = series(
         "CONTROL_I", ordinal("stats.axis.part_sequence"), qty("ANGLE", "deg", "stats.axis.value"),
         [pt(0.0, 45.01, record="rec-a1"), pt(1.0, 44.98, record="rec-a2"),
          pt(2.0, 45.09, [OOT, rv("western_electric", 1, "1")], record="rec-a3")],
         [ref("NOMINAL", 45.0, "deg"), ref("USL", 45.05, "deg"), ref("CENTRE", 45.0, "deg"),
          ref("LCL", 44.91, "deg"), ref("UCL", 45.08, "deg")],
-        prov("stats.spc.chart@1.0.0", D2, frozen_limits="lim-2026-0002"))
+        spc_prov(D2, [("western_electric", 1)], frozen_limits="lim-2026-0002"))
     ex["control_mr"] = series(
         "CONTROL_MR", ordinal("stats.axis.part_sequence"), qty("ANGLE", "arcsec", "stats.axis.moving_range"),
         [pt(1.0, 108.0), pt(2.0, 396.0)],
         [ref("CENTRE", 120.0, "arcsec"), ref("LCL", 0.0, "arcsec"), ref("UCL", 392.04, "arcsec")],
-        prov("stats.spc.chart@1.0.0", D2))
+        spc_prov(D2, []))
     ex["vector_group"] = series(
         "VECTOR_GROUP", qty("LENGTH", "mm", "lvm.axis.x"), qty("LENGTH", "mm", "lvm.axis.y"),
         [pt(-1.5, 2.25, piece="station:A"), pt(0.0, 0.0), pt(1e308, -1e-308, piece="station:B")],
@@ -846,7 +1013,8 @@ def cases(ex):
     mut("marker_conflict", "trend", put(["points", 1, "markers"], [OOT, IND]),
         ("points[1].markers", "conflicting_markers"), True)
     mut("marker_rule_without_set_version", "control_xbar",
-        put(["points", 1, "markers"], [{"kind": "RULE_VIOLATION", "set_id": "nelson", "rule_id": "1"}]),
+        put(["points", 1, "markers"], [{"kind": "RULE_VIOLATION", "set_id": "nelson", "rule_id": "1",
+                                        "review": "UNVERIFIED"}]),
         ("points[1].markers[0].set_version", "missing"), False)
     mut("marker_set_version_zero", "control_xbar", put(["points", 1, "markers"], [rv("nelson", 0, "1")]),
         ("points[1].markers[0].set_version", "out_of_range"), False)
@@ -859,7 +1027,122 @@ def cases(ex):
     mut("markers_too_many", "control_xbar",
         put(["points", 1, "markers"], [rv("nelson", 1, "r%02d" % i) for i in range(MAX_MARKERS + 1)]),
         ("points[1].markers", "too_many"), False)
+    # Rule-violation review status (mirrors fid_stats::RuleViolation.review, D-045).
+    mut("marker_review_missing", "control_xbar", drop(["points", 1, "markers", 0, "review"]),
+        ("points[1].markers[0].review", "missing"), False)
+    mut("marker_review_unknown", "control_xbar", put(["points", 1, "markers", 0, "review"], "REVIEWED"),
+        ("points[1].markers[0].review", "unknown_value"), False)
+    mut("marker_review_lower_case", "control_xbar", put(["points", 1, "markers", 0, "review"], "unverified"),
+        ("points[1].markers[0].review", "unknown_value"), False)
+    mut("marker_unverified_set_not_listed", "control_xbar",
+        put(["provenance", "unverified"], [uc(CONSTANTS), us("western_electric", 1)]),
+        ("points[1].markers[0].review", "not_in_unverified"), True)
+    mut("marker_claimed_set_not_listed", "control_s", put(["provenance", "unverified"], [uc(CONSTANTS)]),
+        ("points[1].markers[0].review", "not_in_unverified"), True)
+    mut("marker_expert_reviewed_but_listed", "control_s",
+        put(["points", 1, "markers", 0, "review"], "EXPERT_REVIEWED"),
+        ("points[1].markers[0].review", "conflicting_review"), True)
+    mut("marker_reviews_disagree", "control_xbar", put(["points", 2, "markers", 0, "review"], "CLAIMED_BY_FILE"),
+        ("points[2].markers[0].review", "conflicting_review"), True)
+    mut("marker_expert_reviewed_accepted", "control_s",
+        lambda d: (set_at(d, ["points", 1, "markers", 0, "review"], "EXPERT_REVIEWED"),
+                   set_at(d, ["provenance", "unverified"], [uc(CONSTANTS)])),
+        ("ok", []), True)
+    mut("rule_violation_on_trend", "trend", put(["points", 1, "markers"], [OOT, rv("nelson", 1, "1")]),
+        ("points[1].markers[1]", "not_applicable"), True)
+    mut("rule_violation_on_histogram", "histogram", put(["points", 0, "markers"], [rv("nelson", 1, "1")]),
+        ("points[0].markers[0]", "not_applicable"), True)
+    mut("rule_violation_on_vector_group", "vector_group", put(["points", 0, "markers"], [rv("nelson", 1, "1")]),
+        ("points[0].markers[0]", "not_applicable"), True)
+    # Status (TREND.BUILD-008, SPC.CHART-004).
+    mut("status_missing", "trend", drop(["status"]), ("status", "missing"), False)
+    mut("status_unknown", "trend", put(["status"], "EMPTY"), ("status", "unknown_value"), False)
+    mut("status_ok_without_points", "trend", put(["points"], []), ("status", "status_conflict"), True)
+    mut("status_insufficient_trend_with_points", "trend", put(["status"], "INSUFFICIENT_DATA"),
+        ("points", "status_conflict"), True)
+    mut("status_insufficient_trend_accepted", "trend",
+        lambda d: (set_at(d, ["status"], "INSUFFICIENT_DATA"), set_at(d, ["points"], [])),
+        ("ok", []), True)
+    mut("status_insufficient_histogram_accepted", "histogram",
+        lambda d: (set_at(d, ["status"], "INSUFFICIENT_DATA"), set_at(d, ["points"], [])),
+        ("ok", []), True)
+    mut("status_insufficient_control_with_limits", "control_r",
+        lambda d: (set_at(d, ["status"], "INSUFFICIENT_DATA"), set_at(d, ["points", 2, "markers"], [])),
+        ("ref_lines[0].kind", "status_conflict"), True)
+    mut("status_insufficient_control_with_rule_marker", "control_r",
+        lambda d: (set_at(d, ["status"], "INSUFFICIENT_DATA"), set_at(d, ["ref_lines"], [])),
+        ("points[2].markers[0]", "status_conflict"), True)
+    mut("status_insufficient_control_accepted", "control_xbar",
+        lambda d: (set_at(d, ["status"], "INSUFFICIENT_DATA"), set_at(d, ["ref_lines"], []),
+                   [set_at(d, ["points", i, "markers"], []) for i in range(3)],
+                   del_at(d, ["provenance", "frozen_limits"])),
+        ("ok", []), True)
+    # Provenance: constants, unverified and excluded (SPC.CHART-006).
+    mut("constants_missing", "control_xbar", drop(["provenance", "constants"]),
+        ("provenance.constants", "missing"), False)
+    mut("constants_empty_on_control", "control_xbar",
+        lambda d: (set_at(d, ["provenance", "constants"], []),
+                   set_at(d, ["provenance", "unverified"], [us("nelson", 1), us("western_electric", 1)])),
+        ("provenance.constants", "required_for_kind"), True)
+    mut("constants_on_trend", "trend", put(["provenance", "constants"], [CONSTANTS]),
+        ("provenance.constants", "not_applicable"), True)
+    mut("constants_bad_ref", "control_xbar", put(["provenance", "constants"], ["spc.constants.normal"]),
+        ("provenance.constants[0]", "bad_format"), False)
+    mut("constants_order", "control_xbar",
+        put(["provenance", "constants"], ["spc.constants.normal@1.0.0", "spc.constants.normal@0.9.0"]),
+        ("provenance.constants[1]", "not_canonical_order"), True)
+    mut("constants_duplicate", "control_xbar", put(["provenance", "constants"], [CONSTANTS, CONSTANTS]),
+        ("provenance.constants[1]", "not_canonical_order"), True)
+    mut("unverified_missing", "trend", drop(["provenance", "unverified"]),
+        ("provenance.unverified", "missing"), False)
+    mut("unverified_constants_not_referenced", "control_xbar",
+        put(["provenance", "unverified"], [uc(CONSTANTS), uc("spc.constants.other@1.0.0"), us("nelson", 1),
+                                           us("western_electric", 1)]),
+        ("provenance.unverified[1]", "not_referenced"), True)
+    mut("unverified_order", "control_xbar",
+        put(["provenance", "unverified"], [uc(CONSTANTS), us("western_electric", 1), us("nelson", 1)]),
+        ("provenance.unverified[2]", "not_canonical_order"), True)
+    mut("unverified_kind_order", "control_xbar",
+        put(["provenance", "unverified"], [us("nelson", 1), uc(CONSTANTS), us("western_electric", 1)]),
+        ("provenance.unverified[1]", "not_canonical_order"), True)
+    mut("unverified_rule_set_on_trend", "trend", put(["provenance", "unverified"], [us("nelson", 1)]),
+        ("provenance.unverified[0]", "not_applicable"), True)
+    mut("unverified_kind_unknown", "control_xbar", put(["provenance", "unverified", 0, "kind"], "TABLE"),
+        ("provenance.unverified[0].kind", "unknown_value"), False)
+    mut("unverified_set_version_zero", "control_xbar", put(["provenance", "unverified", 1, "set_version"], 0),
+        ("provenance.unverified[1].set_version", "out_of_range"), False)
+    mut("unverified_constants_extra_field", "control_xbar", put(["provenance", "unverified", 0, "set_id"], "x"),
+        ("provenance.unverified[0].set_id", "unknown_field"), False)
+    mut("excluded_missing", "trend", drop(["provenance", "excluded"]), ("provenance.excluded", "missing"), False)
+    mut("excluded_order", "trend", put(["provenance", "excluded"], [ex_(7, "USER"), ex_(5, "NOT_DECIDABLE")]),
+        ("provenance.excluded[1]", "not_canonical_order"), True)
+    mut("excluded_duplicate_index", "trend",
+        put(["provenance", "excluded"], [ex_(5, "NOT_DECIDABLE"), ex_(5, "USER")]),
+        ("provenance.excluded[1]", "not_canonical_order"), True)
+    mut("excluded_negative_index", "trend", put(["provenance", "excluded"], [ex_(-1, "USER")]),
+        ("provenance.excluded[0].source_index", "out_of_range"), False)
+    mut("excluded_index_too_large", "trend", put(["provenance", "excluded"], [ex_(2 ** 32, "USER")]),
+        ("provenance.excluded[0].source_index", "out_of_range"), False)
+    mut("excluded_fractional_index", "trend", put(["provenance", "excluded"], [ex_(987654321, "USER")]),
+        ("provenance.excluded[0].source_index", "not_integer"), False)
+    name, text, expect, svl = out.pop()
+    assert text.count('"source_index":987654321') == 1
+    out.append((name, text.replace('"source_index":987654321', '"source_index":1.5'), expect, svl))
+    mut("excluded_reason_lower_case", "trend", put(["provenance", "excluded"], [ex_(1, "user")]),
+        ("provenance.excluded[0].reason", "bad_format"), False)
+    mut("excluded_reason_missing", "trend", put(["provenance", "excluded"], [{"source_index": 1}]),
+        ("provenance.excluded[0].reason", "missing"), False)
+    mut("excluded_largest_index_accepted", "trend", put(["provenance", "excluded"], [ex_(2 ** 32 - 1, "USER")]),
+        ("ok", []), True)
     # Reference lines.
+    mut("ref_negative_zero", "histogram", put(["ref_lines", 0, "value"], hexf(-0.0)),
+        ("ref_lines[0].value", "negative_zero"), True)
+    mut("ref_limit_line_on_trend", "trend", put(["ref_lines"], [ref("NOMINAL", 10.0, "mm"), ref("CENTRE", 10.0, "mm")]),
+        ("ref_lines[1].kind", "not_applicable"), True)
+    mut("ref_limit_line_on_histogram", "histogram", put(["ref_lines"], [ref("UCL", 5.0, "um")]),
+        ("ref_lines[0].kind", "not_applicable"), True)
+    mut("ref_limit_line_on_vector_group", "vector_group", put(["ref_lines"], [ref("LCL", 1.0, "mm")]),
+        ("ref_lines[0].kind", "not_applicable"), True)
     mut("ref_unit_differs_from_axis", "trend", put(["ref_lines", 0, "unit"], "um"),
         ("ref_lines[0].unit", "unit_mismatch"), True)
     mut("histogram_ref_unit_differs_from_x", "histogram", put(["ref_lines", 0, "unit"], "mm"),
@@ -873,7 +1156,8 @@ def cases(ex):
     mut("ref_order", "trend", put(["ref_lines"], [ref("LSL", 9.9, "mm"), ref("NOMINAL", 10.0, "mm")]),
         ("ref_lines[1]", "not_canonical_order"), True)
     mut("ref_duplicate", "trend", put(["ref_lines"], [ref("LSL", 9.9, "mm"), ref("LSL", 9.9, "mm")]),
-        ("ref_lines[1]", "not_canonical_order"), True)
+        ("ref_lines[1]", "duplicate"), True)
+    mut("ref_same_value_other_kind_accepted", "control_i", lambda d: None, ("ok", []), True)
     mut("ref_same_kind_value_order", "trend", put(["ref_lines"], [ref("LSL", 9.9, "mm"), ref("LSL", 9.8, "mm")]),
         ("ref_lines[1]", "not_canonical_order"), True)
     mut("ref_lines_too_many", "trend",

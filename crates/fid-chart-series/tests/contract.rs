@@ -6,7 +6,8 @@
 use fid_canon::CValue;
 use fid_chart_series::{
     check_supported, digest, parse, to_canonical_bytes, validate, AxisKind, ChartSeries, ChartSeriesError,
-    ContractVersion, Digest, InvalidReason, Marker, Quantity, SeriesKind, Unit, UnsupportedCause, SCHEMA_JSON,
+    ContractVersion, Digest, Exclusion, InvalidReason, Marker, Quantity, RefKind, ReviewStatus, SeriesKind,
+    SeriesStatus, Unit, UnsupportedCause, UnverifiedRef, SCHEMA_JSON,
 };
 use fid_geo_frame::units::{AngleUnit, LengthUnit};
 
@@ -110,7 +111,12 @@ fn ac1_f64_bits_survive() {
     let x = parse(EXAMPLES[2].1).unwrap().series;
     assert_eq!(
         x.points[1].markers[1],
-        Marker::RuleViolation { set_id: "nelson".to_owned(), set_version: 1, rule_id: "5".to_owned() }
+        Marker::RuleViolation {
+            set_id: "nelson".to_owned(),
+            set_version: 1,
+            rule_id: "5".to_owned(),
+            review: ReviewStatus::Unverified
+        }
     );
     assert_eq!(x.provenance.frozen_limits.as_deref(), Some("lim-2026-0001"));
     let h = parse(EXAMPLES[1].1).unwrap().series;
@@ -288,7 +294,12 @@ fn typed_series_are_validated_before_writing() {
     // Markers and reference lines at their bounds are accepted.
     let mut s = parse(EXAMPLES[2].1).unwrap().series;
     s.points[0].markers = (0..64)
-        .map(|i| Marker::RuleViolation { set_id: "nelson".to_owned(), set_version: 1, rule_id: format!("r{i:02}") })
+        .map(|i| Marker::RuleViolation {
+            set_id: "nelson".to_owned(),
+            set_version: 1,
+            rule_id: format!("r{i:02}"),
+            review: ReviewStatus::Unverified,
+        })
         .collect();
     assert_eq!(validate(&s), Ok(()));
     let mut s = trend();
@@ -357,9 +368,164 @@ fn reason_names_are_unique() {
         R::UpperBelowLower,
         R::Tombstone,
         R::NotEncodable,
+        R::NegativeZero,
+        R::Duplicate,
+        R::StatusConflict,
+        R::NotReferenced,
+        R::NotInUnverified,
+        R::ConflictingReview,
     ];
     let mut names: Vec<&str> = all.iter().map(|r| r.as_str()).collect();
     names.sort_unstable();
     names.dedup();
     assert_eq!(names.len(), all.len());
+}
+
+// ------------------------------------------------------------------ review, status and provenance
+
+const CONSTANTS: &str = "spc.constants.normal@1.0.0";
+
+fn example(name: &str) -> ChartSeries {
+    let (_, bytes) = EXAMPLES.iter().find(|(n, _)| *n == name).unwrap();
+    parse(bytes).unwrap().series
+}
+
+fn rule_set(id: &str, v: u32) -> UnverifiedRef {
+    UnverifiedRef::RuleSet { set_id: id.to_owned(), set_version: v }
+}
+
+#[test]
+fn review_status_is_carried_and_kept_distinct() {
+    let x = example("control_xbar.json");
+    assert!(x.points[1]
+        .markers
+        .iter()
+        .all(|m| matches!(m, Marker::RuleViolation { review: ReviewStatus::Unverified, .. })));
+    assert_eq!(x.provenance.constants, [CONSTANTS]);
+    assert_eq!(
+        x.provenance.unverified,
+        [UnverifiedRef::Constants(CONSTANTS.to_owned()), rule_set("nelson", 1), rule_set("western_electric", 1)]
+    );
+    let i = example("control_i.json");
+    assert!(matches!(
+        &i.points[2].markers[1],
+        Marker::RuleViolation { set_id, review: ReviewStatus::Unverified, .. } if set_id == "western_electric"
+    ));
+    let s = example("control_s.json");
+    assert!(matches!(&s.points[1].markers[0], Marker::RuleViolation { review: ReviewStatus::ClaimedByFile, .. }));
+
+    // A claimed set must be listed as unverified; a reviewed set must not be.
+    let mut t = s.clone();
+    t.provenance.unverified.pop();
+    assert_eq!(validate(&t), Err(invalid("points[1].markers[0].review", InvalidReason::NotInUnverified)));
+    let mut t = s.clone();
+    if let Marker::RuleViolation { review, .. } = &mut t.points[1].markers[0] {
+        *review = ReviewStatus::ExpertReviewed;
+    }
+    assert_eq!(validate(&t), Err(invalid("points[1].markers[0].review", InvalidReason::ConflictingReview)));
+    t.provenance.unverified.pop();
+    assert_eq!(validate(&t), Ok(()));
+    // The three statuses have three spellings and none upgrades on a round trip.
+    let names: Vec<&str> = ReviewStatus::ALL.iter().map(|r| r.as_str()).collect();
+    assert_eq!(names, ["UNVERIFIED", "CLAIMED_BY_FILE", "EXPERT_REVIEWED"]);
+    let back = parse(&to_canonical_bytes(&t).unwrap()).unwrap().series;
+    assert!(matches!(&back.points[1].markers[0], Marker::RuleViolation { review: ReviewStatus::ExpertReviewed, .. }));
+    assert_eq!(parse(&to_canonical_bytes(&s).unwrap()).unwrap().series, s);
+}
+
+#[test]
+fn control_only_markers_and_lines() {
+    let mut t = trend();
+    t.points[0].markers = vec![Marker::RuleViolation {
+        set_id: "nelson".to_owned(),
+        set_version: 1,
+        rule_id: "1".to_owned(),
+        review: ReviewStatus::Unverified,
+    }];
+    assert_eq!(validate(&t), Err(invalid("points[0].markers[0]", InvalidReason::NotApplicable)));
+    for (name, kind) in
+        [("trend.json", RefKind::Ucl), ("histogram.json", RefKind::Centre), ("vector_group.json", RefKind::Lcl)]
+    {
+        let mut s = example(name);
+        let unit = match if s.kind == SeriesKind::Histogram { s.x.kind } else { s.y.kind } {
+            AxisKind::Quantity { unit, .. } => unit,
+            AxisKind::Ordinal => panic!("{name}"),
+        };
+        s.ref_lines = vec![fid_chart_series::RefLine { kind, value: 1.0, unit }];
+        assert_eq!(validate(&s), Err(invalid("ref_lines[0].kind", InvalidReason::NotApplicable)), "{name}");
+    }
+    let mut t = trend();
+    t.provenance.constants = vec![CONSTANTS.to_owned()];
+    assert_eq!(validate(&t), Err(invalid("provenance.constants", InvalidReason::NotApplicable)));
+    let mut x = example("control_xbar.json");
+    x.provenance.constants.clear();
+    x.provenance.unverified.remove(0);
+    assert_eq!(validate(&x), Err(invalid("provenance.constants", InvalidReason::RequiredForKind)));
+}
+
+#[test]
+fn status_rules() {
+    let mut t = trend();
+    t.status = SeriesStatus::InsufficientData;
+    assert_eq!(validate(&t), Err(invalid("points", InvalidReason::StatusConflict)));
+    t.points.clear();
+    assert_eq!(validate(&t), Ok(()));
+    t.status = SeriesStatus::Ok;
+    assert_eq!(validate(&t), Err(invalid("status", InvalidReason::StatusConflict)));
+
+    // SPC.CHART-004: points without limit lines and without rule markers.
+    let mut x = example("control_xbar.json");
+    x.status = SeriesStatus::InsufficientData;
+    assert_eq!(validate(&x), Err(invalid("points[1].markers[0]", InvalidReason::StatusConflict)));
+    for p in &mut x.points {
+        p.markers.clear();
+    }
+    assert_eq!(validate(&x), Err(invalid("ref_lines[0].kind", InvalidReason::StatusConflict)));
+    x.ref_lines.clear();
+    assert_eq!(validate(&x), Ok(()));
+    let bytes = to_canonical_bytes(&x).unwrap();
+    assert!(std::str::from_utf8(&bytes).unwrap().contains(r#""status":"INSUFFICIENT_DATA""#));
+}
+
+#[test]
+fn provenance_lists_are_canonical() {
+    let mut t = trend();
+    assert_eq!(
+        t.provenance.excluded,
+        [
+            Exclusion { source_index: 5, reason: "NOT_DECIDABLE".to_owned() },
+            Exclusion { source_index: 7, reason: "USER".to_owned() }
+        ]
+    );
+    t.provenance.excluded.swap(0, 1);
+    assert_eq!(validate(&t), Err(invalid("provenance.excluded[1]", InvalidReason::NotCanonicalOrder)));
+    t.provenance.excluded[0] = Exclusion { source_index: 7, reason: "user".to_owned() };
+    assert_eq!(validate(&t), Err(invalid("provenance.excluded[0].reason", InvalidReason::BadFormat)));
+    t.provenance.excluded.clear();
+    assert_eq!(validate(&t), Ok(()), "an empty exclusion list is valid");
+
+    let mut x = example("control_xbar.json");
+    x.provenance.unverified.push(UnverifiedRef::Constants("spc.constants.other@1.0.0".to_owned()));
+    assert_eq!(validate(&x), Err(invalid("provenance.unverified[3]", InvalidReason::NotCanonicalOrder)));
+    x.provenance.unverified.pop();
+    x.provenance.unverified.insert(1, UnverifiedRef::Constants("spc.constants.other@1.0.0".to_owned()));
+    assert_eq!(validate(&x), Err(invalid("provenance.unverified[1]", InvalidReason::NotReferenced)));
+    let mut t = trend();
+    t.provenance.unverified = vec![rule_set("nelson", 1)];
+    assert_eq!(validate(&t), Err(invalid("provenance.unverified[0]", InvalidReason::NotApplicable)));
+}
+
+#[test]
+fn reference_lines_refuse_negative_zero_and_equal_pairs() {
+    let mut h = example("histogram.json");
+    assert_eq!(h.ref_lines[0].value.to_bits(), 0, "the NOMINAL line is +0.0");
+    h.ref_lines[0].value = -0.0;
+    assert_eq!(validate(&h), Err(invalid("ref_lines[0].value", InvalidReason::NegativeZero)));
+    let mut t = trend();
+    t.ref_lines[2] = fid_chart_series::RefLine { kind: RefKind::Lsl, ..t.ref_lines[1] };
+    assert_eq!(validate(&t), Err(invalid("ref_lines[2]", InvalidReason::Duplicate)));
+    // Equal values of different kinds are two lines (control_i: NOMINAL and CENTRE at 45 deg).
+    let i = example("control_i.json");
+    assert_eq!(i.ref_lines[0].value, i.ref_lines[2].value);
+    assert_eq!(validate(&i), Ok(()));
 }

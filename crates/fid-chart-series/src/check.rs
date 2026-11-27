@@ -2,8 +2,9 @@
 
 use crate::{
     echo_kind, AxisKind, ChartSeries, ChartSeriesError, InvalidReason as R, Marker, Point, Quantity, RefLine,
-    SeriesKind, UnsupportedCause, CONTRACT_MAJOR, MAX_ALGORITHM_BYTES, MAX_COUNT, MAX_ID_BYTES, MAX_LABEL_CHARS,
-    MAX_LABEL_KEY_BYTES, MAX_MARKERS, MAX_POINTS, MAX_REF_LINES, MAX_SET_VERSION, MAX_VERSION_PART,
+    ReviewStatus, SeriesKind, SeriesStatus, UnsupportedCause, UnverifiedRef, CONTRACT_MAJOR, MAX_ALGORITHM_BYTES,
+    MAX_CONSTANTS, MAX_CONSTANTS_REF_BYTES, MAX_COUNT, MAX_EXCLUDED, MAX_ID_BYTES, MAX_LABEL_CHARS,
+    MAX_LABEL_KEY_BYTES, MAX_MARKERS, MAX_POINTS, MAX_REF_LINES, MAX_SET_VERSION, MAX_UNVERIFIED, MAX_VERSION_PART,
 };
 use std::cmp::Ordering;
 
@@ -45,11 +46,19 @@ pub fn validate(series: &ChartSeries) -> Res {
         return bad("points", R::TooMany);
     }
     for (i, p) in series.points.iter().enumerate() {
-        point(p, &format!("points[{i}]"), histogram)?;
+        point(p, &format!("points[{i}]"), series)?;
+    }
+    let insufficient = series.status == SeriesStatus::InsufficientData;
+    if insufficient && !series.kind.is_control() && !series.points.is_empty() {
+        return bad("points", R::StatusConflict);
+    }
+    if !insufficient && series.points.is_empty() {
+        return bad("status", R::StatusConflict);
     }
     let value_axis = if histogram { series.x.kind } else { series.y.kind };
-    ref_lines(&series.ref_lines, value_axis)?;
-    provenance(series)
+    ref_lines(&series.ref_lines, value_axis, series)?;
+    provenance(series)?;
+    reviews_against_unverified(series)
 }
 
 /// Whether a consumer that reads contract major `supported_major` and draws the kinds
@@ -86,7 +95,8 @@ fn finite(v: f64, at: impl Into<String>) -> Res {
     }
 }
 
-fn point(p: &Point, at: &str, histogram: bool) -> Res {
+fn point(p: &Point, at: &str, series: &ChartSeries) -> Res {
+    let histogram = series.kind == SeriesKind::Histogram;
     finite(p.x, format!("{at}.x"))?;
     finite(p.y, format!("{at}.y"))?;
     if let Some(u) = p.x_upper {
@@ -104,6 +114,16 @@ fn point(p: &Point, at: &str, histogram: bool) -> Res {
         return bad(format!("{at}.piece"), R::BadFormat);
     }
     markers(&p.markers, at)?;
+    for (j, m) in p.markers.iter().enumerate() {
+        if matches!(m, Marker::RuleViolation { .. }) {
+            if !series.kind.is_control() {
+                return bad(format!("{at}.markers[{j}]"), R::NotApplicable);
+            }
+            if series.status == SeriesStatus::InsufficientData {
+                return bad(format!("{at}.markers[{j}]"), R::StatusConflict);
+            }
+        }
+    }
     if !histogram {
         if p.x_upper.is_some() {
             return bad(format!("{at}.x_upper"), R::NotApplicable);
@@ -126,7 +146,7 @@ fn markers(ms: &[Marker], at: &str) -> Res {
         return bad(format!("{at}.markers"), R::TooMany);
     }
     for (j, m) in ms.iter().enumerate() {
-        if let Marker::RuleViolation { set_id, set_version, rule_id } = m {
+        if let Marker::RuleViolation { set_id, set_version, rule_id, .. } = m {
             let mat = format!("{at}.markers[{j}]");
             if !set_id_ok(set_id) {
                 return bad(format!("{mat}.set_id"), R::BadFormat);
@@ -151,12 +171,15 @@ fn markers(ms: &[Marker], at: &str) -> Res {
     Ok(())
 }
 
-fn ref_lines(rs: &[RefLine], value_axis: AxisKind) -> Res {
+fn ref_lines(rs: &[RefLine], value_axis: AxisKind, series: &ChartSeries) -> Res {
     if rs.len() > MAX_REF_LINES {
         return bad("ref_lines", R::TooMany);
     }
     for (i, r) in rs.iter().enumerate() {
         finite(r.value, format!("ref_lines[{i}].value"))?;
+        if r.value.to_bits() == (-0.0f64).to_bits() {
+            return bad(format!("ref_lines[{i}].value"), R::NegativeZero);
+        }
         match value_axis {
             AxisKind::Ordinal => return bad(format!("ref_lines[{i}].unit"), R::NoValueUnit),
             AxisKind::Quantity { unit, .. } if unit != r.unit => {
@@ -164,8 +187,20 @@ fn ref_lines(rs: &[RefLine], value_axis: AxisKind) -> Res {
             }
             AxisKind::Quantity { .. } => {}
         }
+        if r.kind.is_limit() {
+            if !series.kind.is_control() {
+                return bad(format!("ref_lines[{i}].kind"), R::NotApplicable);
+            }
+            if series.status == SeriesStatus::InsufficientData {
+                return bad(format!("ref_lines[{i}].kind"), R::StatusConflict);
+            }
+        }
     }
     for (i, w) in rs.windows(2).enumerate() {
+        // Finite and never -0.0 here, so IEEE equality and totalOrder agree.
+        if w[0].kind == w[1].kind && w[0].value.total_cmp(&w[1].value) == Ordering::Equal {
+            return bad(format!("ref_lines[{}]", i + 1), R::Duplicate);
+        }
         let order = w[0].kind.cmp(&w[1].kind).then_with(|| w[0].value.total_cmp(&w[1].value));
         if order != Ordering::Less {
             return bad(format!("ref_lines[{}]", i + 1), R::NotCanonicalOrder);
@@ -194,11 +229,126 @@ fn provenance(series: &ChartSeries) -> Res {
         }
     }
     match &p.binning_rule {
-        Some(b) if !binning_rule_ok(b) => bad("provenance.binning_rule", R::BadFormat),
-        Some(_) if series.kind != SeriesKind::Histogram => bad("provenance.binning_rule", R::NotApplicable),
-        None if series.kind == SeriesKind::Histogram => bad("provenance.binning_rule", R::RequiredForKind),
+        Some(b) if !binning_rule_ok(b) => return bad("provenance.binning_rule", R::BadFormat),
+        Some(_) if series.kind != SeriesKind::Histogram => return bad("provenance.binning_rule", R::NotApplicable),
+        None if series.kind == SeriesKind::Histogram => return bad("provenance.binning_rule", R::RequiredForKind),
+        _ => {}
+    }
+    constants(series)?;
+    unverified(series)?;
+    excluded(series)
+}
+
+fn constants(series: &ChartSeries) -> Res {
+    let cs = &series.provenance.constants;
+    if cs.len() > MAX_CONSTANTS {
+        return bad("provenance.constants", R::TooMany);
+    }
+    for (k, c) in cs.iter().enumerate() {
+        if !constants_ref_ok(c) {
+            return bad(format!("provenance.constants[{k}]"), R::BadFormat);
+        }
+    }
+    for (k, w) in cs.windows(2).enumerate() {
+        if w[0].as_bytes() >= w[1].as_bytes() {
+            return bad(format!("provenance.constants[{}]", k + 1), R::NotCanonicalOrder);
+        }
+    }
+    match (series.kind.is_control(), cs.is_empty()) {
+        (true, true) => bad("provenance.constants", R::RequiredForKind),
+        (false, false) => bad("provenance.constants", R::NotApplicable),
         _ => Ok(()),
     }
+}
+
+fn unverified(series: &ChartSeries) -> Res {
+    let us = &series.provenance.unverified;
+    if us.len() > MAX_UNVERIFIED {
+        return bad("provenance.unverified", R::TooMany);
+    }
+    for (k, u) in us.iter().enumerate() {
+        let at = format!("provenance.unverified[{k}]");
+        match u {
+            UnverifiedRef::Constants(r) if !constants_ref_ok(r) => return bad(format!("{at}.ref"), R::BadFormat),
+            UnverifiedRef::RuleSet { set_id, .. } if !set_id_ok(set_id) => {
+                return bad(format!("{at}.set_id"), R::BadFormat)
+            }
+            UnverifiedRef::RuleSet { set_version, .. } if !(1..=MAX_SET_VERSION).contains(set_version) => {
+                return bad(format!("{at}.set_version"), R::OutOfRange)
+            }
+            _ => {}
+        }
+    }
+    for (k, w) in us.windows(2).enumerate() {
+        if w[0].canonical_cmp(&w[1]) != Ordering::Less {
+            return bad(format!("provenance.unverified[{}]", k + 1), R::NotCanonicalOrder);
+        }
+    }
+    for (k, u) in us.iter().enumerate() {
+        match u {
+            UnverifiedRef::Constants(r) if !series.provenance.constants.contains(r) => {
+                return bad(format!("provenance.unverified[{k}]"), R::NotReferenced)
+            }
+            UnverifiedRef::RuleSet { .. } if !series.kind.is_control() => {
+                return bad(format!("provenance.unverified[{k}]"), R::NotApplicable)
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn excluded(series: &ChartSeries) -> Res {
+    let es = &series.provenance.excluded;
+    if es.len() > MAX_EXCLUDED {
+        return bad("provenance.excluded", R::TooMany);
+    }
+    for (k, e) in es.iter().enumerate() {
+        if !exclusion_reason_ok(&e.reason) {
+            return bad(format!("provenance.excluded[{k}].reason"), R::BadFormat);
+        }
+    }
+    for (k, w) in es.windows(2).enumerate() {
+        if w[0].source_index >= w[1].source_index {
+            return bad(format!("provenance.excluded[{}]", k + 1), R::NotCanonicalOrder);
+        }
+    }
+    Ok(())
+}
+
+/// Every rule-violation marker's review agrees with the other markers of its set and with
+/// `provenance.unverified`.
+fn reviews_against_unverified(series: &ChartSeries) -> Res {
+    let listed =
+        |id: &str, v: u32| {
+            series.provenance.unverified.iter().any(
+                |u| matches!(u, UnverifiedRef::RuleSet { set_id, set_version } if set_id == id && *set_version == v),
+            )
+        };
+    // (set ID, version, review) of the first marker of each set, in first-seen order; a
+    // series has few sets, so a linear scan is enough.
+    let mut seen: Vec<(&str, u32, ReviewStatus)> = Vec::new();
+    for (i, p) in series.points.iter().enumerate() {
+        for (j, m) in p.markers.iter().enumerate() {
+            let Marker::RuleViolation { set_id, set_version, review, .. } = m else {
+                continue;
+            };
+            let at = format!("points[{i}].markers[{j}].review");
+            match seen.iter().find(|(id, v, _)| *id == set_id.as_str() && *v == *set_version) {
+                Some((_, _, first)) if first != review => return bad(at, R::ConflictingReview),
+                Some(_) => {}
+                None => seen.push((set_id, *set_version, *review)),
+            }
+            let is_listed = listed(set_id, *set_version);
+            if *review == ReviewStatus::ExpertReviewed && is_listed {
+                return bad(at, R::ConflictingReview);
+            }
+            if *review != ReviewStatus::ExpertReviewed && !is_listed {
+                return bad(at, R::NotInUnverified);
+            }
+        }
+    }
+    Ok(())
 }
 
 // ------------------------------------------------------------------ grammars
@@ -279,6 +429,22 @@ pub(crate) fn binning_rule_ok(s: &str) -> bool {
         && m.iter().all(u8::is_ascii_digit)
 }
 
+/// `[a-z][a-z0-9_]*` segments joined by `.`, `@`, a semver; at most
+/// [`MAX_CONSTANTS_REF_BYTES`] bytes.
+pub(crate) fn constants_ref_ok(s: &str) -> bool {
+    let Some((name, version)) = s.split_once('@') else {
+        return false;
+    };
+    s.len() <= MAX_CONSTANTS_REF_BYTES
+        && name.split('.').all(|seg| word(seg, lower, lower_digit_us, usize::MAX))
+        && semver_ok(version)
+}
+
+/// `[A-Z][A-Z0-9_]*`, at most 64 bytes.
+fn exclusion_reason_ok(s: &str) -> bool {
+    word(s, |c| c.is_ascii_uppercase(), |c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == b'_', 64)
+}
+
 /// 1 to [`MAX_LABEL_CHARS`] characters, none forbidden by `fid-types`.
 fn x_label_ok(s: &str) -> bool {
     let n = s.chars().count();
@@ -304,6 +470,11 @@ mod tests {
         assert!(!binning_rule_ok("sturges@0") && !binning_rule_ok("sturges@1000000") && !binning_rule_ok("sturges"));
         assert!(!binning_rule_ok("sturges@01") && !binning_rule_ok("Sturges@1") && !binning_rule_ok("@1"));
         assert!(set_id_ok("nelson") && !set_id_ok("1nelson") && rule_id_ok("1") && !rule_id_ok("R1"));
+        assert!(constants_ref_ok("spc.constants.normal@1.0.0") && constants_ref_ok("t@0.0.0"));
+        assert!(!constants_ref_ok("spc.constants.normal") && !constants_ref_ok("spc..normal@1.0.0"));
+        assert!(!constants_ref_ok("Spc@1.0.0") && !constants_ref_ok("spc@1.0") && !constants_ref_ok("@1.0.0"));
+        assert!(exclusion_reason_ok("NOT_DECIDABLE") && exclusion_reason_ok("USER") && !exclusion_reason_ok("user"));
+        assert!(!exclusion_reason_ok("_USER") && !exclusion_reason_ok("") && !exclusion_reason_ok(&"A".repeat(65)));
         assert!(x_label_ok("Teil 1 \u{2013} Gr\u{f6}\u{df}e") && !x_label_ok("a\u{202e}b") && !x_label_ok(""));
         assert!(x_label_ok(&"\u{e9}".repeat(256)) && !x_label_ok(&"\u{e9}".repeat(257)));
     }
