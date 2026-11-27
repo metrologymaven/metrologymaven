@@ -14,7 +14,9 @@
 //! least-squares 2D circle, 3D circle and sphere. [`ls_cone`] (spec node `KRN.LSQ.AXIS.CONE`)
 //! is the least-squares cone, run from INIT's cone starts. [`plan2d_assign`] (spec node
 //! `KRN.LSQ.PLAN2D.ASSIGN`) provides deterministic segment assignment and per-segment
-//! residual statistics for compound planar profiles (slots, rounded rectangles).
+//! residual statistics for compound planar profiles (slots, rounded rectangles). [`mic_tr`]
+//! (spec node `KRN.ENV.MIC.TR`) is the trust region, the `unbounded_envelope` check and the
+//! defined-primitives table of the maximum inscribed fits.
 
 // `FitError` wraps `fid_solv::nlls::SolverError` by value (about 150 bytes, see the note in
 // `fid-solv`). It is returned at most once per fit, never in a loop, and boxing it would add an
@@ -28,6 +30,7 @@ pub mod ls_cyl;
 pub mod ls_lin;
 pub mod ls_rnd;
 pub mod mcc_cyl;
+pub mod mic_tr;
 pub mod plan2d_assign;
 pub mod tan_plane;
 pub mod tan_rock;

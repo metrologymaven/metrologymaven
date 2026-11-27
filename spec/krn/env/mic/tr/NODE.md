@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-fit]
 satisfies: [REQ-KRN.ENV.MIC-002, REQ-KRN.ENV.MIC-003]
 covers: []
 depends_on: [KRN.LSQ.TRAIT, KRN.NUM.FN, KRN.NUM.RED]
@@ -66,6 +67,10 @@ The safeguard that makes maximum inscribed fits safe on sparse or partial data. 
 ## Open questions
 
 - The default `fraction` for callers (for example 0.2 [unverified]) must be tuned on the ORS-SIZE partial-arc cases; the kernel never supplies it implicitly.
+- Built in `fid-fit` module `mic_tr`. The method is `Method::MaximumInscribed`, whose slug in the shared fit contract is `mi` (not `mic`), so AC-4's error reads `method_undefined{primitive: slot, method: mi}`. Primitive slugs are the contract's (`circle2`, not `circle2d`).
+- The contract's coarse table `Method::defined_for` also admits `circle3` for maximum inscribed; `mic_tr::MIC_DEFINED` does not (a caller projects to `circle2`). The MIC fits must check `mic_tr::check_defined`; aligning `defined_for` is a `KRN.LSQ.TRAIT` follow-up.
+- The 3D polyhedron is the 26-facet one with the axis, face-diagonal and body-diagonal normals; its inradius is about 0.886 of the region radius (the 2D 32-gon's is about 0.995). A finer polyhedron would change every sphere row, so it would need a new fixture version.
+- The cylinder's rows are the 32-gon in the plane normal to the least-squares axis, a prism along that axis. Whether `KRN.ENV.MIC.CYL` needs rows normal to the current axis at each step (as its Scope says) is for that leaf; it can build a region per step from a feature with that axis.
 
 ## Children
 
