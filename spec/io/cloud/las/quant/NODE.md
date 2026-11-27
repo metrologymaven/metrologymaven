@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-io-las]
+built_pr: 675
 satisfies: [REQ-IO.CLOUD.LAS-001, REQ-IO.CLOUD.LAS-002, REQ-IO.CLOUD.LAS-003]
 covers: []
 depends_on: [IO.CLOUD.LAS.HDR]
