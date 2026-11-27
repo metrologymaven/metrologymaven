@@ -242,11 +242,11 @@ fn bad_configurations_are_refused() {
         "[[gate]]\nid = \"spec\"\nrun = \"x\"\nglobs = [\"spec/**\"]\nalways = \"yes\"\n",
         "[[gate]]\nid = \"-spec\"\nrun = \"x\"\nglobs = [\"spec/**\"]\n",
         "[[gate]]\nid = \"spec\"\nrun = \"x\\ny\"\nglobs = [\"spec/**\"]\n",
-        &format!("{base}[isolation]\nci = [\"x/**\"]\n"),
-        &format!("{base}[shared]\ntool_globs = [\"a\", 1]\n"),
-        &format!("{base}[shared]\ntools = []\n"),
-        &format!("{base}isolation = []\n"),
-        &format!("{base}version = 1\n"),
+        format!("{base}[isolation]\nci = [\"x/**\"]\n").as_str(),
+        format!("{base}[shared]\ntool_globs = [\"a\", 1]\n").as_str(),
+        format!("{base}[shared]\ntools = []\n").as_str(),
+        format!("{base}isolation = []\n").as_str(),
+        format!("{base}version = 1\n").as_str(),
     ] {
         assert_eq!(Config::parse(bad).unwrap_err().code, ErrorCode::Config, "{bad:?}");
     }
