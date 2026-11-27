@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-scan-cloud]
+built_pr: 677
 satisfies: [REQ-SCAN.CLOUD.REG-003, REQ-SCAN.CLOUD.REG-008]
 covers: []
 depends_on: [GEO.DIST.BATCH, GEO.INDEX.KDTREE, GEO.TYPES.POINTS, KRN.NUM]
