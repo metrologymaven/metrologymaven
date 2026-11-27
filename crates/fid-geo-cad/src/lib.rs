@@ -34,15 +34,26 @@
 //! shared mesh vertex per body vertex and interior sample, the samples in every coedge's face
 //! chart, and the per-edge surface gap.
 //!
+//! Implemented leaf: `GEO.CAD.NOMINAL.DIRECT` (see [`nominal`]): [`map_face`], [`map_edge`]
+//! and [`map_vertex`], typed [`NominalElement`]s whose placement and sizes are copied
+//! bit-identically from analytic faces, edges and vertices, with the material side from the
+//! face sense and extents from the boundary in closed form; NURBS gives `NotAnalytic` and an
+//! ellipse `UnsupportedKind`, never an approximation.
+//!
 //! The commands (`GEO.CAD.TOPO.CMD`) are another leaf.
 
 pub mod assy;
+pub mod nominal;
 pub mod tess;
 pub mod topo;
 
 pub use assy::{
     AssyModelError, BodyId, Instance, InstanceEntityId, InstanceId, InstanceIndex, InstanceIx, InstancePath,
     InstanceView, ASSY_NAMESPACE, MAX_INSTANCE_ENTITIES, MAX_PATH_DEPTH,
+};
+pub use nominal::{
+    map_edge, map_face, map_vertex, DirectError, DirectResult, Extent, Material, Method, NominalElement, NominalKind,
+    NominalParams, UnsupportedKind,
 };
 pub use tess::{
     sample_curve, tessellate_edges, CoedgeUv, CurveSamples, EdgeReport, EdgeSamples, EdgeTess, EdgeTessError,

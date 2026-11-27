@@ -9,6 +9,8 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-geo-cad]
+built_pr: 660
 satisfies: [REQ-GEO.CAD.NOMINAL-001, REQ-GEO.CAD.NOMINAL-006]
 covers: []
 depends_on: [GEO.CAD.TOPO.MODEL, GEO.CAD.TOPO.ADJ, GEO.NURBS.ANALYTIC]
@@ -76,6 +78,9 @@ Defines the typed nominal element (plane, cylinder, cone, sphere, torus, line, c
 
 ## Open questions
 
+- Build choices (fid-geo-cad `nominal`), recorded for review: placement and sizes are one `NominalParams` enum per kind (so `kind` is derived, not stored twice); `map_*` return `Result<DirectResult, DirectError>` because an extent can be refused (`EdgeWithoutCurve`, `NurbsBoundary` for a NURBS boundary edge whose extremes have no closed form, `NonFinite`, `UnknownEntity`); `Extent` gains `NotDefined` for sphere and torus faces (their height can peak inside the face, so a boundary-only range would be wrong) and points, and `Unbounded` is a plane, cylinder or cone face without loops. A line edge's extent is its parameter range as `Axial`, a circle edge's as `Angular`. Material is `Outside` exactly when the face sense is `Same`: `Su x Sv` points to the outer side of every analytic kind, on both cone nappes; for a plane `Outside` means `+Z` of the placement points out of the material (the placement itself is never flipped, REQ-001).
+- Extents of faces bounded by NURBS edges (common in STEP intersection curves) need a bounded extreme search; until a leaf owns it they are refused, not estimated.
+- Which side of the boundary a face lies on is not classified point by point (no TRIM use, review of PR 660): a plane face's extent uses its outer loop, and loops with none marked outer are refused (`NoOuterLoop`); a cylinder or cone face must be a band of coaxial full circles plus seams (`NotABand` otherwise, so half-cylinder patches and windows are refused for now). On a cone, one circle height is a tip cap, and its range is widened to the apex height `-r0 / tan(a)`, so a drill point never misses its apex. Extents are computed and rounded; `max_deviation_m = 0` covers the parameters only. Mapping patch faces needs a loop-orientation or TRIM-based side rule, and is left to a follow-up.
 - The nominal element type is defined here in GEO (L0). KRN.CONS.AUTO and ALN.DATUM.ELEM also handle nominal elements; whether they reuse this type or a KRN-owned feature type should be agreed with KRN (inherited from the parent's open question). Both are L0, so either direction is layer-legal.
 
 ## Children
