@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-scan-poly]
+built_pr: 653
 satisfies: [REQ-SCAN.POLY.SURF-002, REQ-SCAN.POLY.SURF-003, REQ-SCAN.POLY.SURF-005]
 covers: []
 depends_on: [GEO.INDEX.KDTREE, GEO.TYPES.POINTS, KRN.NUM.LA.EIG]
@@ -69,7 +71,7 @@ Prepares the vertex set the reconstructor triangulates: one representative input
 
 ## Open questions
 
-- None.
+- **Built in `fid-scan-poly` (2026-11-26); choices made at build time.** The API is `prepare(cloud: &PointCloud, valid: &[bool], params: &PrepParams) -> Result<VertexSet, PolyError>`: GEO.TYPES has no `PointCloudView` or `Bitmask` type, and SCAN.CLOUD.NORM (the producer of the valid mask) is not built yet, so the mask is one `bool` per point. Pinned in the crate's `prep` module docs: the bounding box is over all points; neighbours are the valid points within 2h of the representative (itself included), via the GEO.INDEX.KDTREE radius query; "normal spread exceeds the threshold" means some neighbour normal has a dot product with the representative's normal below cos(threshold), default 30 degrees [unverified]; fewer than 3 neighbours, a plane rank below 2 or a subnormal covariance keeps the point; every vertex carries its source point's normal bit for bit, a smoothed one included, and the set records h and the smoothing flag; the clamp aims at (h/2)(1 - 2^-40) and a rounded displacement above h/2 keeps the point. Besides `scan.poly.invalid_parameter` the crate reports `scan.poly.out_of_range`, `index`, `numeric`, `allocation`, `worker_failed` and `inconsistent`. Threads: contiguous blocks of representatives on scoped threads, joined in order (as in `fid-geo-dist`); wasm32 runs them on the calling thread.
 
 ## Children
 

@@ -38,6 +38,7 @@ fid-replay
 fid-report-pdf
 fid-scan-cmp --lib
 fid-scan-mesh
+fid-scan-poly
 fid-sign-core
 fid-solv
 fid-stats
