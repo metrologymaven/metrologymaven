@@ -10,6 +10,9 @@ use core::f64::consts::FRAC_PI_2;
 
 use super::{EdgeFixtureSpec, EdgeProfile, EfixError};
 
+/// A profile sample: the point `(u, v)` and its unit normal.
+pub(crate) type Sample = ([f64; 2], [f64; 2]);
+
 /// Which way a segment faces, from its normal's `v` component.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Facing {
@@ -89,7 +92,7 @@ impl Segment {
     }
 
     /// The point and unit normal at fraction `f` in `(0, 1)` of the segment.
-    fn interior(&self, f: f64) -> Result<([f64; 2], [f64; 2]), EfixError> {
+    fn interior(&self, f: f64) -> Result<Sample, EfixError> {
         match self.shape {
             Shape::Line { normal } => {
                 let p = [
@@ -188,7 +191,7 @@ fn junction_normal(a: [f64; 2], b: [f64; 2]) -> Result<[f64; 2], EfixError> {
 /// (`m` from [`intervals`]); shared junction points once. A junction point's normal is
 /// [`junction_normal`] of the two segments meeting there, also at the end of a one-sided
 /// prefix (a property of the part, not of the coverage).
-pub(crate) fn samples(segs: &[Segment], covered: usize, spacing: f64) -> Result<Vec<([f64; 2], [f64; 2])>, EfixError> {
+pub(crate) fn samples(segs: &[Segment], covered: usize, spacing: f64) -> Result<Vec<Sample>, EfixError> {
     let mut out = Vec::new();
     for (i, seg) in segs.iter().take(covered).enumerate() {
         if i == 0 {
