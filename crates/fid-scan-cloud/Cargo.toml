@@ -1,6 +1,6 @@
 [package]
 name = "fid-scan-cloud"
-description = "Metrology Maven point-cloud operations: the oriented-cloud projection target (point-to-plane against the nearest point with a valid normal), the overlap fraction and deterministic stride sampling for scan registration (spec node SCAN.CLOUD.REG.CTGT)"
+description = "Metrology Maven point-cloud operations: the oriented-cloud projection target (point-to-plane against the nearest point with a valid normal), the overlap fraction and deterministic stride sampling for scan registration (spec node SCAN.CLOUD.REG.CTGT), and the scan overlap matrix and pair graph (SCAN.CLOUD.REG.GRAPH)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -1,9 +1,12 @@
-//! The errors of the oriented-cloud target, the overlap fraction and stride sampling.
+//! The errors of the oriented-cloud target, the overlap fraction, stride sampling and the
+//! pair graph.
 
 use core::fmt;
 
 use fid_geo_frame::GeoError;
 use fid_geo_index::kdtree::PointIndexError;
+
+use super::graph::PairGraph;
 
 /// Why a cloud cannot be a projection target (`scan.cloud.no_normals`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,6 +55,33 @@ pub enum RegError {
     },
     /// A worker thread or an internal invariant failed (never expected).
     Inconsistent,
+    /// The pair graph has more than one connected component
+    /// (`scan.cloud.reg_disconnected`, REQ-SCAN.CLOUD.REG.GRAPH-003): some scans cannot be
+    /// tied to the rest at this minimum overlap.
+    Disconnected {
+        /// Each component as a sorted list of scan indexes, ordered by smallest index.
+        components: Vec<Vec<u32>>,
+        /// The whole graph (matrix, edges, components), for the report.
+        graph: Box<PairGraph>,
+    },
+    /// Preparing scan `index` of a pair graph failed; `error` is the error as is (its code is
+    /// this error's code).
+    Scan {
+        /// The scan index.
+        index: u32,
+        /// What failed.
+        error: Box<RegError>,
+    },
+    /// The overlap fraction of scan `moving` against scan `target` failed; `error` is the
+    /// error as is (its code is this error's code).
+    Pair {
+        /// The moving scan index (row of the matrix).
+        moving: u32,
+        /// The target scan index (column of the matrix).
+        target: u32,
+        /// What failed.
+        error: Box<RegError>,
+    },
 }
 
 impl RegError {
@@ -64,6 +94,8 @@ impl RegError {
             RegError::Index(_) => "scan.cloud.index_failed",
             RegError::AllocationFailed { .. } => "scan.cloud.allocation_failed",
             RegError::Inconsistent => "scan.cloud.inconsistent",
+            RegError::Disconnected { .. } => "scan.cloud.reg_disconnected",
+            RegError::Scan { error, .. } | RegError::Pair { error, .. } => error.code(),
         }
     }
 
@@ -81,6 +113,9 @@ impl fmt::Display for RegError {
             RegError::Index(e) => write!(f, "{}: {} ({e})", self.code(), e.code()),
             RegError::AllocationFailed { bytes } => write!(f, "{} ({bytes} bytes)", self.code()),
             RegError::Inconsistent => f.write_str(self.code()),
+            RegError::Disconnected { components, .. } => write!(f, "{} (components {components:?})", self.code()),
+            RegError::Scan { index, error } => write!(f, "scan {index}: {error}"),
+            RegError::Pair { moving, target, error } => write!(f, "scan {moving} against scan {target}: {error}"),
         }
     }
 }
