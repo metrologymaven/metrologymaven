@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-io-e57]
+built_pr: 683
 satisfies: [REQ-IO.CLOUD.E57-001]
 covers: []
 depends_on: [IO.CLOUD.E57.PHYS, IO.REG.LIMITS]
