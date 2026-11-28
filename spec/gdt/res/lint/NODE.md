@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-gdt]
+built_pr: 680
 satisfies: [REQ-GDT.RES-005, REQ-GDT.RES-006]
 covers: []
 depends_on: [GDT.RES.SCHEMA]
