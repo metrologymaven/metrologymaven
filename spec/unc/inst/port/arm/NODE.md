@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-kunc]
+built_pr: 690
 satisfies: [REQ-UNC.INST.PORT-001]
 covers: [SA.UNC.01]
 depends_on: [KRN.NUM, UNC.MODEL.DIST]
@@ -65,6 +67,15 @@ Kernel function for articulated-arm probing points when joint angles are not ava
 
 - Arm pose-dependent models need joint-angle data from HAL; whether drivers expose them is unconfirmed. A later sibling or version adds them.
 - Whether a distance-proportional term is a sound default for arms needs an instrument-metrology review [unverified].
+- **Build notes (fid-kunc `inst::arm`, algorithm `unc.inst.arm_cov@1.0.0`, card `crates/fid-kunc/cards/unc.inst.arm_cov@1.0.0.toml`).** Choices made where the Design is silent, for review:
+  - `arm_cov(&ArmParams, p: [f64; 3], u: Option<[f64; 3]>)` returns `ArmCov`, which wraps the shared `Cov3` with the `sigma_lat`, `sigma_ax` and axial factor used, the unit direction used and flags. `ArmParams::axial_factor` is an `Option` so an absent factor (1) stays distinguishable from a declared one. Plain arrays stand in for the Build prompt's `Vec3`, as no shared `Vec3` type exists in the kernel crates.
+  - REQ-002: `u` is always normalised, not only when `||u||` differs from 1 by more than 1e-9; using a near-unit `u` as given would put a relative error of up to 2e-9 into `sigma_ax^2`, above AC-1's 1e-14. A `u` outside the 1e-9 window is flagged `direction_off_unit`. Both norm tests (below 1e-12, outside the 1e-9 window) are decided exactly in fixed-width integer arithmetic, with no rounding (subnormals included).
+  - Without a direction, an `axial_factor` other than 1 is refused as `invalid_direction{u, missing}`: the Scope's isotropic fallback would silently drop the declared axial term. An absent factor, or exactly 1, gives `sigma_lat^2 I`.
+  - Error codes beyond the Design's two: `invalid_observation{p_x|p_y|p_z, not_finite}` for a non-finite point, `invalid_direction{u_x|u_y|u_z, not_finite}` for a non-finite direction, and `numeric` for an overflow (point norm, `sigma_lat`, `sigma_ax` or an entry).
+  - `sigma_ax^2 - sigma_lat^2` is evaluated as `((f - 1) sigma_lat)((f + 1) sigma_lat)`, which is algebraically equal but has no cancellation near f = 1. Norms use an exact power-of-two scaling and the correctly rounded square root, so they neither overflow nor underflow on the way. The stated relative Frobenius bound (37 * 2^-53) holds unless the result is flagged `scale_below_validated` (0 < sigma_lat < 2^-480, or a subnormal point norm) or `zero_covariance`. `axial_factor = 0` with a direction is accepted (the eigenvalues are still non-negative) and flagged `axial_zero`.
+  - AC-2 is tested as: every off-diagonal entry is exactly +0, and each diagonal entry is the correctly rounded square of the returned `sigma_lat`. For points and parameters where `sigma_lat` is exact (dyadic cases), the entry is also within 1 ulp of the exact `sigma_lat^2`. With a general `||p||`, `sigma_lat` itself carries a few ulp of rounding, so 1 ulp against the exact value cannot hold for every input.
+  - The 50-digit reference of AC-1 is computed with the Python standard library `decimal` module rather than mpmath, so the oracle has no third-party dependency (as for SPH). The bit patterns are compared with a Python model of the documented order on every CI target.
+  - The performance budget (<= 100 ns per point) is not measured here and stays [unverified]; the exact norm tests cost a few hundred integer operations per directed point.
 
 ## Children
 

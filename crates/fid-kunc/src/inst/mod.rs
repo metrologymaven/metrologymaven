@@ -3,9 +3,10 @@
 //! Each portable or optical instrument kind has a pure kernel function that turns one
 //! observation and the model's typed parameters into a 3x3 covariance in m² in the
 //! instrument frame. Implemented: `UNC.INST.PORT.SPH` (spherical observations of trackers
-//! and total stations, [`sph::sph_cov`]). Not built here: `UNC.INST.PORT.ARM`,
-//! `UNC.INST.PORT.OPT`, and the entry point with its parameter extraction, range check and
-//! positive semi-definite check (`UNC.INST.PORT.EVAL`, crate `fid-unc-inst`).
+//! and total stations, [`sph::sph_cov`]) and `UNC.INST.PORT.ARM` (articulated-arm probing
+//! points without joint data, [`arm::arm_cov`]). Not built here: `UNC.INST.PORT.OPT`, and
+//! the entry point with its parameter extraction, range check and positive semi-definite
+//! check (`UNC.INST.PORT.EVAL`, crate `fid-unc-inst`).
 //!
 //! The parameters are what an instrument model declares (claimed data). A covariance from
 //! these functions is derived from that declaration; it is never a measured uncertainty, and
@@ -15,6 +16,7 @@ use core::fmt;
 
 use fid_num::NumError;
 
+pub mod arm;
 pub mod sph;
 
 /// A 3x3 covariance in m², exactly symmetric, every entry finite, `-0.0` written as `+0.0`.
@@ -67,6 +69,10 @@ pub enum ValueReason {
     OutOfRange,
     /// `not_positive_semidefinite`: the declared correlations cannot all hold at once.
     NotPositiveSemidefinite,
+    /// `below_minimum_norm`: a direction shorter than the function's minimum norm.
+    BelowMinimumNorm,
+    /// `missing`: a value the declared model needs was not given.
+    Missing,
 }
 
 impl ValueReason {
@@ -77,6 +83,8 @@ impl ValueReason {
             ValueReason::Negative => "negative",
             ValueReason::OutOfRange => "out_of_range",
             ValueReason::NotPositiveSemidefinite => "not_positive_semidefinite",
+            ValueReason::BelowMinimumNorm => "below_minimum_norm",
+            ValueReason::Missing => "missing",
         }
     }
 }
@@ -85,11 +93,14 @@ impl ValueReason {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InstError {
     /// `invalid_parameter`: the model parameter `name` is refused for `reason`
-    /// (REQ-UNC.INST.PORT.SPH-003). `name` is `correlation` for a joint refusal of the three
-    /// correlations.
+    /// (REQ-UNC.INST.PORT.SPH-003, REQ-UNC.INST.PORT.ARM-003). `name` is `correlation` for a
+    /// joint refusal of the three correlations.
     InvalidParameter { name: &'static str, reason: ValueReason },
     /// `invalid_observation`: the observation value `name` is refused for `reason`.
     InvalidObservation { name: &'static str, reason: ValueReason },
+    /// `invalid_direction`: the direction (or its component) `name` is refused for `reason`
+    /// (REQ-UNC.INST.PORT.ARM-002).
+    InvalidDirection { name: &'static str, reason: ValueReason },
     /// `numeric`: a `fid-num` error, for example an overflow to infinity.
     Numeric(NumError),
 }
@@ -100,6 +111,7 @@ impl InstError {
         match self {
             InstError::InvalidParameter { .. } => "invalid_parameter",
             InstError::InvalidObservation { .. } => "invalid_observation",
+            InstError::InvalidDirection { .. } => "invalid_direction",
             InstError::Numeric(_) => "numeric",
         }
     }
@@ -119,6 +131,9 @@ impl fmt::Display for InstError {
             }
             InstError::InvalidObservation { name, reason } => {
                 write!(f, "invalid_observation{{{name}: {}}}", reason.code())
+            }
+            InstError::InvalidDirection { name, reason } => {
+                write!(f, "invalid_direction{{{name}: {}}}", reason.code())
             }
             InstError::Numeric(e) => write!(f, "numeric{{{e:?}}}"),
         }

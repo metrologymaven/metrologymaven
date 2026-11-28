@@ -24,9 +24,10 @@
 //! the `fcov-param@1` parameterisations, see [`prop::mvar::param`]), `UNC.PROP.MVAR.VMCM`
 //! (joint Monte Carlo sample covariance and Mahalanobis coverage region of a characteristic
 //! group, see [`prop::mvar::vmcm`]), `UNC.PROP.RANK` (contributor ranking,
-//! `unc.prop.rank@1.0.0`, see [`prop::rank`]) and `UNC.INST.PORT.SPH` (the Cartesian
+//! `unc.prop.rank@1.0.0`, see [`prop::rank`]), `UNC.INST.PORT.SPH` (the Cartesian
 //! covariance of a spherical tracker or total-station observation, `unc.inst.sph_cov@1.0.0`,
-//! see [`inst::sph`]).
+//! see [`inst::sph`]) and `UNC.INST.PORT.ARM` (the covariance of an articulated-arm probing
+//! point without joint data, `unc.inst.arm_cov@1.0.0`, see [`inst::arm`]).
 //!
 //! The `statement` module never computes an uncertainty. It holds what other nodes computed
 //! or a person declared, and refuses any statement that breaks the invariants.
