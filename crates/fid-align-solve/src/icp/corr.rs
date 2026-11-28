@@ -32,8 +32,10 @@
 //!   seam to its edge rule (two incident normals), the normal is their angle-weighted sum,
 //!   normalised, and the point is listed as [`NoteKind::SeamCombined`].
 //!
-//! Normalising is `n / sqrt(n . n)`, `n . n = (n0 n0 + n1 n1) + n2 n2`, the square root from
-//! `fid_num::f` (correctly rounded), one IEEE division per component.
+//! Normalising first scales `n` by exact powers of two until `1 <= max |n_k| < 2` (so the
+//! squares can neither overflow nor underflow, as GEO.DIST.FACE.BODY's `normalise_pow2`
+//! does), then divides by `sqrt(n . n)`, `n . n = (n0 n0 + n1 n1) + n2 n2`, the square root
+//! from `fid_num::f` (correctly rounded), one IEEE division per component.
 //!
 //! **Never a guessed normal.** Where GEO.DIST.SIGN or GEO.DIST.FACE.INCID give no normal (a
 //! boundary or non-manifold edge, a vertex touching one, a misoriented component, a degenerate
@@ -70,11 +72,21 @@
 //!
 //! 1. The points' frame equals the reference's (`frame_mismatch`), before anything else.
 //! 2. `1 <= threads <= 256` (`invalid_threads`).
-//! 3. `max_distance` finite and `>= 0` (`invalid_max_distance`).
+//! 3. `max_distance` finite and at least [`MAX_DISTANCE_FLOOR_M`] (`invalid_max_distance`).
+//!    The floor is GEO.DIST.FACE's foot accuracy ([`fid_geo_dist::FOOT_ERROR_M`], 1e-9 m): a
+//!    smaller limit could not be told apart from the rounding of the foot, so it is refused,
+//!    never clamped.
 //! 4. Patches: not empty (`empty_patches`), strictly ascending and below the triangle count
 //!    of the mesh or the face count of the body (`invalid_patches` with the position).
-//! 5. A reference with no triangle (`empty_reference`) and an empty point set (`no_points`).
-//! 6. Every point, in index order: finite (`non_finite_query`) and within `2^250` m
+//! 5. The reference after the patches are applied: no triangle or face left to search
+//!    (`empty_reference`; for CAD also a patch list that names no face of the set), or, for a
+//!    mesh, no searchable triangle whose interior has a GEO.DIST.SIGN normal (every one
+//!    degenerate or in a misoriented or non-manifold component: `degenerate_reference`, since
+//!    no point could get a valid correspondence). A sliver among good triangles is not
+//!    refused: a foot on it gets `normal_undefined`.
+//! 6. The coordinate arrays have one entry per point (`inconsistent_points`), and there is
+//!    at least one point (`no_points`).
+//! 7. Every point, in index order: finite (`non_finite_query`) and within `2^250` m
 //!    (`query_out_of_range`).
 //!
 //! Then the points are searched. A search or normal computation that fails is an error of
@@ -105,7 +117,7 @@ use fid_geo_dist::batch::MAX_THREADS;
 use fid_geo_dist::mesh::COORD_LIMIT;
 use fid_geo_dist::{
     BodyError, DistError, FaceFeature, FaceHit, FaceSetTarget, Feature, Incid, IncidError, MeshHit, MeshProjection,
-    MeshQuery, ProjectionOptions, ProjectionTarget, SignTarget, SignUndefined, TriangleSubset, Undefined,
+    MeshQuery, ProjectionOptions, ProjectionTarget, SignTarget, SignUndefined, TriangleSubset, Undefined, FOOT_ERROR_M,
 };
 use fid_geo_frame::{require_same_frame_ref, GeoError};
 use fid_geo_types::PointSet;
@@ -116,6 +128,10 @@ type V3 = [f64; 3];
 
 /// Points per work block of the parallel search.
 pub const BLOCK: usize = 1024;
+
+/// Smallest accepted maximum correspondence distance, metres: GEO.DIST.FACE's foot accuracy
+/// [`fid_geo_dist::FOOT_ERROR_M`] (1e-9 m \[unverified\] upstream).
+pub const MAX_DISTANCE_FLOOR_M: f64 = FOOT_ERROR_M;
 
 // ------------------------------------------------------------------ references
 
@@ -171,11 +187,36 @@ impl Reference<'_, '_, '_> {
         }
     }
 
-    /// Entities the search can return (before patches).
-    fn searchable(&self) -> u64 {
+    /// Entities the search can return after the patches: `(searchable, with a normal)`, where
+    /// the second counts mesh triangles whose interior has a GEO.DIST.SIGN normal (CAD faces
+    /// count as having one; theirs is decided per foot).
+    fn searchable(&self, patches: Option<&[u64]>) -> (u64, u64) {
+        let allowed = |id: u64| patches.map_or(true, |p| p.binary_search(&id).is_ok());
         match self {
-            Reference::Mesh(t) => t.target().mesh().triangle_count(),
-            Reference::Cad(c) => c.set.faces().len() as u64,
+            Reference::Mesh(t) => {
+                let normals = t.normals();
+                let ok = |id: u64| matches!(normals.triangle(id), Some(None));
+                let (mut n, mut good) = (0u64, 0u64);
+                match patches {
+                    Some(p) => {
+                        for &id in p {
+                            n += 1;
+                            good += u64::from(ok(id));
+                        }
+                    }
+                    None => {
+                        for id in 0..t.target().mesh().triangle_count() {
+                            n += 1;
+                            good += u64::from(ok(id));
+                        }
+                    }
+                }
+                (n, good)
+            }
+            Reference::Cad(c) => {
+                let n = c.set.faces().iter().filter(|f| allowed(f.index() as u64)).count() as u64;
+                (n, n)
+            }
         }
     }
 }
@@ -185,8 +226,8 @@ impl Reference<'_, '_, '_> {
 /// Search options.
 #[derive(Debug, Clone, Copy)]
 pub struct CorrOptions<'p> {
-    /// Maximum correspondence distance in metres (finite, `>= 0`); `None` searches without
-    /// limit.
+    /// Maximum correspondence distance in metres (finite, at least [`MAX_DISTANCE_FLOOR_M`]);
+    /// `None` searches without limit.
     pub max_distance: Option<f64>,
     /// Reference patches of a local scope: strictly ascending triangle indexes of the mesh, or
     /// face indexes of the body (`FaceIx::index`). `None` searches the whole reference.
@@ -321,14 +362,18 @@ pub enum CorrError {
     FrameMismatch(GeoError),
     /// The thread count is zero or above 256.
     InvalidThreads { threads: usize },
-    /// `max_distance` is NaN, infinite or negative.
+    /// `max_distance` is NaN, infinite or below [`MAX_DISTANCE_FLOOR_M`].
     InvalidMaxDistance,
     /// The patch list is empty: nothing could correspond.
     EmptyPatches,
     /// The patch list is not strictly ascending or names an entity the reference lacks.
     InvalidPatches { position: u64 },
-    /// The reference has no triangle or face.
+    /// The reference, after the patches, has no triangle or face to search.
     EmptyReference,
+    /// No searchable mesh triangle has a defined normal: no point could correspond.
+    DegenerateReference,
+    /// The point set's coordinate arrays differ in length.
+    InconsistentPoints,
     /// There are no measured points.
     NoPoints,
     /// A point coordinate is NaN or infinite.
@@ -358,6 +403,8 @@ impl CorrError {
             CorrError::EmptyPatches => "empty_patches",
             CorrError::InvalidPatches { .. } => "invalid_patches",
             CorrError::EmptyReference => "empty_reference",
+            CorrError::DegenerateReference => "degenerate_reference",
+            CorrError::InconsistentPoints => "inconsistent_points",
             CorrError::NoPoints => "no_points",
             CorrError::NonFiniteQuery { .. } => "non_finite_query",
             CorrError::QueryOutOfRange { .. } => "query_out_of_range",
@@ -375,12 +422,14 @@ impl fmt::Display for CorrError {
         match self {
             CorrError::FrameMismatch(e) => write!(f, "{e}"),
             CorrError::InvalidThreads { threads } => write!(f, "thread count {threads} is not in 1..=256"),
-            CorrError::InvalidMaxDistance => f.write_str("maximum distance must be finite and >= 0"),
+            CorrError::InvalidMaxDistance => f.write_str("maximum distance must be finite and at least 1e-9 m"),
             CorrError::EmptyPatches => f.write_str("the patch list is empty"),
             CorrError::InvalidPatches { position } => {
                 write!(f, "patch entry {position} is not ascending or names no entity of the reference")
             }
-            CorrError::EmptyReference => f.write_str("the reference has no triangle or face"),
+            CorrError::EmptyReference => f.write_str("the reference has no triangle or face to search"),
+            CorrError::DegenerateReference => f.write_str("no searchable triangle of the reference has a normal"),
+            CorrError::InconsistentPoints => f.write_str("the point coordinate arrays differ in length"),
             CorrError::NoPoints => f.write_str("there are no measured points"),
             CorrError::NonFiniteQuery { index } => write!(f, "measured point {index} is not finite"),
             CorrError::QueryOutOfRange { index } => write!(f, "measured point {index} exceeds 2^250 m"),
@@ -418,8 +467,37 @@ impl Item {
     }
 }
 
-/// `n / |n|`, or `None` when the length is not a positive finite number.
+/// `n` scaled by exact powers of two until `1 <= max |n_k| < 2` (zero stays zero).
+fn normalise_pow2(v: V3) -> V3 {
+    let mut m = 0.0;
+    for x in v {
+        if x.abs() > m {
+            m = x.abs();
+        }
+    }
+    let mut w = v;
+    // Each loop is bounded by the exponent range (at most about 1100 steps in total).
+    let mut steps = 0;
+    while m >= 2.0 && steps < 2200 {
+        w = [w[0] * 0.5, w[1] * 0.5, w[2] * 0.5];
+        m *= 0.5;
+        steps += 1;
+    }
+    while m > 0.0 && m < 1.0 && steps < 2200 {
+        w = [w[0] * 2.0, w[1] * 2.0, w[2] * 2.0];
+        m *= 2.0;
+        steps += 1;
+    }
+    w
+}
+
+/// `n / |n|` after [`normalise_pow2`], or `None` when the length is not a positive finite
+/// number.
 fn unit(n: V3) -> Option<V3> {
+    if !n.iter().all(|x| x.is_finite()) {
+        return None;
+    }
+    let n = normalise_pow2(n);
     let nn = (n[0] * n[0] + n[1] * n[1]) + n[2] * n[2];
     let len = fid_num::f::sqrt(nn).ok()?;
     if !(len > 0.0 && len.is_finite()) {
@@ -578,7 +656,7 @@ pub fn correspond(
         return Err(CorrError::InvalidThreads { threads: opts.threads });
     }
     if let Some(d) = opts.max_distance {
-        if !(d.is_finite() && d >= 0.0) {
+        if !(d.is_finite() && d >= MAX_DISTANCE_FLOOR_M) {
             return Err(CorrError::InvalidMaxDistance);
         }
     }
@@ -590,13 +668,17 @@ pub fn correspond(
             _ => CorrError::InvalidPatches { position: 0 },
         })?),
     };
-    if reference.searchable() == 0 {
+    let (searchable, with_normal) = reference.searchable(subset.as_ref().map(|s| s.ids()));
+    if searchable == 0 {
         return Err(CorrError::EmptyReference);
+    }
+    if with_normal == 0 {
+        return Err(CorrError::DegenerateReference);
     }
     let (xs, ys, zs) = (points.x(), points.y(), points.z());
     let n = xs.len();
     if ys.len() != n || zs.len() != n {
-        return Err(CorrError::WorkerFailed);
+        return Err(CorrError::InconsistentPoints);
     }
     if n == 0 {
         return Err(CorrError::NoPoints);

@@ -16,7 +16,7 @@ pub mod metric;
 
 pub use corr::{
     correspond, CadReference, CorrError, CorrNote, CorrOptions, CorrOutput, CorrSummary, NoteKind, PointError,
-    Reference,
+    Reference, MAX_DISTANCE_FLOOR_M,
 };
 
 pub use metric::{

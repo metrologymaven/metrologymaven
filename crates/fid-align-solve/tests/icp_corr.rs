@@ -17,9 +17,10 @@ use core::sync::atomic::AtomicBool;
 
 use fid_align_solve::{
     correspond, CadReference, CorrError, CorrOptions, CorrOutput, CorrReason, Correspondences, Reference,
+    MAX_DISTANCE_FLOOR_M,
 };
-use fid_geo_cad::{Body, BodyBuilder, CurveDef, CurveParams, Frame, Sense, SurfaceDef, SurfaceParams};
-use fid_geo_dist::{BodyTarget, MeshTarget, SignTarget, SignUndefined};
+use fid_geo_cad::{Body, BodyBuilder, CurveDef, CurveParams, EntityIx, Frame, Sense, SurfaceDef, SurfaceParams};
+use fid_geo_dist::{BodyError, BodyTarget, FaceSetTarget, FaceTarget, MeshTarget, SignTarget, SignUndefined};
 use fid_geo_index::PrimitiveBvh;
 use fid_geo_types::{FrameRef, Mesh, PointSet};
 
@@ -420,6 +421,16 @@ fn ac1_cube_points_cad_surface_normal() {
     let body = cad_cube();
     let bt = BodyTarget::new(&body, frame()).unwrap();
     let cad = CadReference::new(bt.set()).unwrap();
+    // The face index of each plane (axis k, side s), found by geometry: the face a point just
+    // outside the middle of that plane hits.
+    let mut face_of = [[0u64; 2]; 3];
+    for k in 0..3 {
+        for side in 0..2 {
+            let mut p = [0.5; 3];
+            p[k] = if side == 1 { 1.5 } else { -0.5 };
+            face_of[k][side] = run(&[p], Reference::Cad(&cad), &CorrOptions::default()).correspondences().entity[0];
+        }
+    }
     let ps: Vec<V3> = cube.cases.iter().map(|c| c.p).collect();
     let out = run(&ps, Reference::Cad(&cad), &CorrOptions::default());
     check_consistent(&out);
@@ -438,6 +449,16 @@ fn ac1_cube_points_cad_surface_normal() {
                 let axis = [0, 1, 2].map(|m| if m == k { n[k].signum() } else { 0.0 });
                 assert!(close3(n, axis, TOL), "case {i}: {n:?} is not an axis");
                 assert!(e.normal[k] * n[k] > 0.0, "case {i}: {n:?} is not incident at {:?}", e.foot);
+                // GEO.DIST.FACE.BODY's tie rule: the incident face of lowest topology ID.
+                let incident: Vec<u64> = (0..3)
+                    .filter(|&m| e.normal[m] != 0.0)
+                    .map(|m| face_of[m][usize::from(e.normal[m] > 0.0)])
+                    .collect();
+                let lowest = *incident
+                    .iter()
+                    .min_by(|a, b| body.faces()[**a as usize].id().cmp(body.faces()[**b as usize].id()))
+                    .unwrap();
+                assert_eq!(c.entity[i], lowest, "case {i} ({}): lowest-ID incident face", e.group);
             }
         }
         let f = body.faces()[c.entity[i] as usize].surface().as_analytic();
@@ -687,7 +708,93 @@ fn refusals_fail_closed() {
     // Cancelled before the first block: no results.
     let stop = AtomicBool::new(true);
     assert_eq!(correspond(&ok, r, &d, &stop).unwrap_err(), CorrError::Cancelled);
-    // Zero distance is a valid limit.
-    let on = run(&[[0.5, 0.5, 1.0]], r, &CorrOptions { max_distance: Some(0.0), ..d });
+    // Below the foot-accuracy floor (1e-9 m) a limit is refused, never clamped; the floor
+    // itself is accepted.
+    for m in [0.0, -0.0, MAX_DISTANCE_FLOOR_M / 2.0, f64::from_bits(MAX_DISTANCE_FLOOR_M.to_bits() - 1)] {
+        assert_eq!(call(&ok, CorrOptions { max_distance: Some(m), ..d }), CorrError::InvalidMaxDistance, "{m}");
+    }
+    assert_eq!(CorrError::InvalidMaxDistance.code(), "invalid_max_distance");
+    let on = run(&[[0.5, 0.5, 1.0]], r, &CorrOptions { max_distance: Some(MAX_DISTANCE_FLOOR_M), ..d });
     assert_eq!(on.correspondences().reason[0], CorrReason::Hit);
+}
+
+// ------------------------------------------------------------------ degenerate and empty references
+
+/// The open unit sheet z = 0 (two triangles) and, far from it, a sliver: three collinear
+/// points, so its normal is zero.
+fn sheet_and_sliver() -> (Vec<V3>, Vec<[u64; 3]>) {
+    let verts = vec![
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [5.0, 0.0, 0.0],
+        [6.0, 0.0, 0.0],
+        [7.0, 0.0, 0.0],
+    ];
+    (verts, vec![[0, 1, 2], [0, 2, 3], [4, 5, 6]])
+}
+
+#[test]
+fn all_degenerate_reference_is_refused() {
+    let (verts, tris) = sheet_and_sliver();
+    let only = [tris[2]];
+    let (mesh, bvh) = mesh_of(&verts, &only);
+    let st = SignTarget::new(MeshTarget::new(&mesh, &bvh).unwrap()).unwrap();
+    let go = AtomicBool::new(false);
+    let e = correspond(&points(&[[6.0, 1.0, 0.0]]), Reference::Mesh(&st), &CorrOptions::default(), &go).unwrap_err();
+    assert_eq!(e, CorrError::DegenerateReference);
+    assert_eq!(e.code(), "degenerate_reference");
+    // The same through patches: only the sliver is allowed.
+    let (mesh, bvh) = mesh_of(&verts, &tris);
+    let st = SignTarget::new(MeshTarget::new(&mesh, &bvh).unwrap()).unwrap();
+    let o = CorrOptions { patches: Some(&[2]), ..CorrOptions::default() };
+    assert_eq!(
+        correspond(&points(&[[0.5, 0.5, 1.0]]), Reference::Mesh(&st), &o, &go),
+        Err(CorrError::DegenerateReference)
+    );
+}
+
+#[test]
+fn single_sliver_among_good_triangles_is_not_refused() {
+    let (verts, tris) = sheet_and_sliver();
+    let (mesh, bvh) = mesh_of(&verts, &tris);
+    let st = SignTarget::new(MeshTarget::new(&mesh, &bvh).unwrap()).unwrap();
+    let out = run(&[[0.25, 0.75, 0.5], [6.0, 0.5, 0.0]], Reference::Mesh(&st), &CorrOptions::default());
+    check_consistent(&out);
+    let c = out.correspondences();
+    assert_eq!(c.reason[0], CorrReason::Hit);
+    assert!(close3(c.normal[0], [0.0, 0.0, 1.0], TOL));
+    // A foot on the sliver has no normal: reported, not used.
+    assert_eq!(c.reason[1], CorrReason::NormalUndefined(SignUndefined::Degenerate));
+    assert_eq!(c.entity[1], 2);
+    assert!(close3(c.foot[1], [6.0, 0.0, 0.0], TOL));
+    assert!((c.dist[1] - 0.5).abs() <= TOL);
+    let s = out.summary();
+    assert_eq!((s.hits, s.normal_undefined), (1, 1));
+}
+
+#[test]
+fn empty_references_are_refused() {
+    let go = AtomicBool::new(false);
+    let p = points(&[[0.5, 0.5, 1.0]]);
+    // A mesh without triangles never reaches the search: GEO.INDEX refuses to build its
+    // hierarchy (so `empty_reference` is a defensive check for meshes).
+    let mesh = Mesh::from_points(frame(), &[[0.0, 0.0, 0.0]], &[]).unwrap();
+    assert!(PrimitiveBvh::build(&mesh, &[], 1).is_err());
+    // An empty face set cannot be built (GEO.DIST.FACE.BODY refuses it) ...
+    let body = cad_cube();
+    assert_eq!(FaceSetTarget::new(&body, frame(), &[]).err(), Some(BodyError::EmptyTarget));
+    // ... and a patch list that names no face of the set leaves nothing to search: this is
+    // where `empty_reference` fires.
+    let Some(EntityIx::Face(f0)) = body.lookup(body.faces()[0].id()) else { panic!("face 0") };
+    let ft = FaceTarget::new(&body, frame(), f0).unwrap();
+    let cad = CadReference::new(ft.set()).unwrap();
+    let other = [(f0.index() as u64 + 1) % 6];
+    let o = CorrOptions { patches: Some(&other), ..CorrOptions::default() };
+    assert_eq!(correspond(&p, Reference::Cad(&cad), &o, &go), Err(CorrError::EmptyReference));
+    // The face itself is accepted.
+    let own = [ft.set().faces()[0].index() as u64];
+    let o = CorrOptions { patches: Some(&own), ..CorrOptions::default() };
+    assert!(correspond(&p, Reference::Cad(&cad), &o, &go).is_ok());
 }

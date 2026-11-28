@@ -61,8 +61,8 @@ pub use hist::{
 };
 pub use icp::{
     build_rows, correspond, CadReference, CorrError, CorrNote, CorrOptions, CorrOutput, CorrReason, CorrSummary,
-    Correspondences, InputField, Metric, MetricError, NoteKind, PointError, Reference, Rows, NORMAL_TOL,
-    POINT_TO_PLANE_ALGORITHM_ID, POINT_TO_POINT_ALGORITHM_ID,
+    Correspondences, InputField, Metric, MetricError, NoteKind, PointError, Reference, Rows, MAX_DISTANCE_FLOOR_M,
+    NORMAL_TOL, POINT_TO_PLANE_ALGORITHM_ID, POINT_TO_POINT_ALGORITHM_ID,
 };
 pub use matrix::{
     solve_matrix, MatrixError, MatrixInput, MatrixOrder, MatrixSolution, RotationInput, TransformDirection, DET_TOL,
