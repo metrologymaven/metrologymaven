@@ -38,7 +38,10 @@
 //!   and `check.eval_radius@1` over `fid-gps`'s pure evaluation, their ResultRecord, journal
 //!   event and exact replay;
 //! - [`dmt_inventory`] (`GDT.RES.ROWASME.INV`): the `dmt-inventory/v1` key inventory
-//!   loader and deterministic [`dmt_inventory::coverage`] check over a [`fid_gps::dmt::DmtTable`].
+//!   loader and deterministic [`dmt_inventory::coverage`] check over a [`fid_gps::dmt::DmtTable`];
+//! - [`dmt_lint`] (`GDT.RES.LINT`): the DMT copyright and ORS-link lint (rules L1 to L5), the
+//!   `fid.ors-index/1` case index it checks links against and its `fid.dmt-lint-report/1`
+//!   report.
 //!
 //! Nothing here panics on any input: every outcome is a returned `Result`.
 
@@ -47,5 +50,6 @@ pub use chars::interp::{requires_provisional_label, requires_provisional_label_b
 pub mod dim;
 pub mod dmt_flow;
 pub mod dmt_inventory;
+pub mod dmt_lint;
 pub mod drf;
 pub mod resolve;

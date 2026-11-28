@@ -124,6 +124,7 @@ python fixtures/gdt/drf/make_targets_plate.py --check
 python fixtures/gdt/drf/measured/make_cases.py --check
 python fixtures/gdt/ident/make_fixtures.py --check
 python fixtures/gdt/interp/make_cases.py --check
+python fixtures/gdt/lint/make_cases.py --check
 python fixtures/gdt/loc/check_deriv_schema.py
 python fixtures/gdt/loc/make_axis_fixtures.py --check
 python fixtures/gdt/loc/make_deriv_fixtures.py --check

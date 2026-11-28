@@ -1,0 +1,17 @@
+{
+  "schema": "fid.ors-index/1",
+  "cases": [
+    "ors:synthetic/angularity.001",
+    "ors:synthetic/circular_runout.001",
+    "ors:synthetic/circularity.001",
+    "ors:synthetic/cylindricity.001",
+    "ors:synthetic/flatness.001",
+    "ors:synthetic/parallelism.001",
+    "ors:synthetic/perpendicularity.001",
+    "ors:synthetic/position.001",
+    "ors:synthetic/profile_of_a_surface.001",
+    "ors:synthetic/size.001",
+    "ors:synthetic/straightness.001",
+    "ors:synthetic/total_runout.001"
+  ]
+}
