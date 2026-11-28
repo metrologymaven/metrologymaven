@@ -58,10 +58,13 @@ struct Scan {
     pose: Rigid,
 }
 
+/// A scan being read: its points, normals and pose.
+type Partial = (Vec<[f64; 3]>, Vec<[f64; 3]>, Option<Rigid>);
+
 fn parse_scans() -> Vec<Scan> {
     let text = read("three_scans_known.txt");
     let mut scans = Vec::new();
-    let mut cur: Option<(Vec<[f64; 3]>, Vec<[f64; 3]>, Option<Rigid>)> = None;
+    let mut cur: Option<Partial> = None;
     for line in text.lines() {
         if line.starts_with('#') || line.is_empty() {
             continue;
