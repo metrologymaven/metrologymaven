@@ -649,7 +649,7 @@ fn mutate(rng: &mut SplitMix, seed: &[u8]) -> Vec<u8> {
 #[test]
 fn ac5_mutated_sections_never_panic_and_accepted_ones_round_trip() {
     let seeds = [read("two_scans.xml"), read("writer_three_scans.xml"), read("quaternion_unnormalised.xml")];
-    let mut rng = SplitMix(0x5EED_E57);
+    let mut rng = SplitMix(0x05EE_DE57);
     let (mut ok, mut err) = (0u32, 0u32);
     for i in 0..3000 {
         let input = mutate(&mut rng, &seeds[i % seeds.len()]);
