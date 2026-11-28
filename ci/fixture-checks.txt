@@ -325,6 +325,7 @@ python fixtures/scan/poly/make_ovlp_fixtures.py --check
 python fixtures/scan/poly/make_prep_fixtures.py --check
 python fixtures/scan/poly/make_stitch_fixtures.py --check
 python fixtures/scan/reg/make_ctgt_fixtures.py --check
+python fixtures/scan/reg/make_graph_fixtures.py --check
 python fixtures/scan/sect/def/make_def_cases.py --check
 python fixtures/solv/cert/as-ties-v1/make_cases.py --check
 python fixtures/solv/cert/as-v1/make_cases.py --check

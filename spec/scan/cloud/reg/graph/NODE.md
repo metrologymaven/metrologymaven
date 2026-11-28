@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-scan-cloud]
 satisfies: [REQ-SCAN.CLOUD.REG-003, REQ-SCAN.CLOUD.REG-006, REQ-SCAN.CLOUD.REG-008]
 covers: []
 depends_on: [SCAN.CLOUD.REG.CTGT]
@@ -73,7 +74,12 @@ Decides which scan pairs take part in global registration: it computes the overl
 
 ## Open questions
 
-- None.
+- Built in `fid-scan-cloud` `reg::graph` (build notes, 2026-11-27). `ScanInput` is not defined elsewhere, so it is `{ cloud: &PointCloud, valid: &Bitmask }` (the scan in its own scanner coordinates and the valid-normal mask of its target points). Scan j's target is `OrientedCloudTarget::new(transform_element(scan j, pose j), valid j)` (GEO.FRAME.APPLY), and f(i, j) is `overlap_fraction(scan i, pose i, that target)`, so both scans sit at their poses in the one frame of scan 0; a scan in another frame is refused (`geo.frame.mismatch`), never converted.
+- The rounding floor of `d` is checked once over all scans (`64 * 2^-53 * M`, M over every sampled point, image, translation and target coordinate), so a pair skipped by the REQ-004 prefilter cannot hide a `d` below rounding resolution. The prefilter test (gap `g > 0` and `sqrt(g * g) > d` on some axis) is proven value-preserving (module docs) and checked against the full computation in the tests.
+- N is capped at `MAX_SCANS` = 1024 (`scan.cloud.invalid_parameter`), since the matrix has N² cells; the spec budget is 50 scans.
+- `scan.cloud.reg_disconnected` (`RegError::Disconnected`) carries the components and the whole `PairGraph`, so GLOBAL can report the overlap it found. Errors of one scan or pair are wrapped (`RegError::Scan`, `RegError::Pair`) with their indexes and keep the inner code.
+- The shared fixture `three_scans_known` is noise-free (three 17 x 11 lattice patches at 4 mm pitch of one polynomial freeform part, exact integer-quaternion poses); PAIR's REQ-006 noise of 10 µm is for PAIR to add with its own seed. Generator: `fixtures/scan/reg/make_graph_fixtures.py`.
+- The performance budget (50 scans × 200 000 samples under 60 s) stays [unverified]: not measured.
 
 ## Children
 

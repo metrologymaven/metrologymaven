@@ -1,0 +1,369 @@
+#!/usr/bin/env python3
+"""Independent reference for SCAN.CLOUD.REG.GRAPH (scan overlap matrix and pair graph), and
+the generator of the shared scan fixtures `three_scans_known` and `four_scans_two_islands`.
+CC0-1.0 data.
+
+Stdlib only. Nothing here was produced by running the Rust crate. Writes:
+
+* `fixtures/scan/reg/three_scans_known.txt`: three synthetic scans of one freeform part (a
+  polynomial height field), each a square lattice patch at 4 mm pitch expressed in its own
+  scanner frame, with the known pose (scanner -> part) of each scan and the design overlap of
+  every ordered pair. Shared with SCAN.CLOUD.REG.PAIR, .RREP and .GLOBAL (noise-free; a
+  consumer that needs noise adds its own seeded noise);
+* `fixtures/scan/reg/four_scans_two_islands.txt`: four scans of the same part in two groups
+  half a metre apart (scans 0 and 1 overlap, scans 2 and 3 overlap, nothing else does);
+* `fixtures/scan/reg/graph_cases.txt`: pair-graph cases (fixture, overlap distance, minimum
+  overlap, sample cap) with the expected cell of every ordered pair, the edges and the result.
+
+`--check` regenerates the three files in memory and fails on any difference with the
+committed files.
+
+# The scans
+
+The part surface is `z = h(x, y) = (0.5 * x * x - 0.3 * y * y) + 0.2 * x * y` (metres). A
+scan covers the lattice points `(float(i) * P, float(k) * P, h)` for integer `i0 <= i <= i1`,
+`k0 <= k <= k1` (k outer, i inner), `P = 0.004`, with the unit normal `(-hx, -hy, 1) / L`,
+`hx = x + 0.2 * y`, `hy = -0.6 * y + 0.2 * x`, `L = sqrt((hx * hx + hy * hy) + 1)`. The pose of
+a scan is the rotation of an integer quaternion `(a, b, c, e)` (each matrix entry an exact
+integer divided by `a^2 + b^2 + c^2 + e^2`, one correctly rounded division) and a translation.
+The stored scanner coordinates are `R^T (w - t)` and the stored normals `R^T n` (both
+`(r0 * u0 + r1 * u1) + r2 * u2` down the columns of R); they are inputs, so their exact digits
+are not part of any rule. Every normal is valid.
+
+Because all scans sample one lattice of the part, a point of scan i at its true pose lies
+within about 1e-16 m of the same lattice point of scan j when both cover it, and at least 4 mm
+(the pitch, horizontally) from every point of scan j otherwise. With an overlap distance of
+1 mm the overlap fraction f(i, j) is therefore exactly the design overlap
+`|L_i intersect L_j| / |L_i|`, with a margin of about 3 mm on every count; the script checks
+this.
+
+# Rules reproduced (spec SCAN.CLOUD.REG.GRAPH and the pinned rules of the `fid-scan-cloud`
+# `reg::graph` and `reg::target` module documentation)
+
+Python floats are IEEE binary64; `+ - * /` and `math.sqrt` are correctly rounded and never
+fused, so every value is the same on every platform (no libm function is used).
+
+* pose image `y[i] = ((R[i][0] * x0 + R[i][1] * x1) + R[i][2] * x2) + t[i]` (GEO.FRAME.XFORM);
+  the target cloud of scan j is every point of scan j mapped this way by pose j
+  (GEO.FRAME.APPLY);
+* stride sample of n indexes to at most m: `floor(p * n / m)` for p < m when n > m, else all;
+* rounding floor: d must be at least `64 * 2^-53 * M`, M the largest magnitude among every
+  scan's sampled points, their images, every translation and every target coordinate;
+* prefilter (REQ-004): box A = the axis-aligned box of the sampled images of scan i, box B =
+  the box of the target points of scan j; the pair is disjoint when on some axis the gap
+  `g = A.lo - B.hi` or `g = B.lo - A.hi` satisfies `g > 0` and `sqrt(g * g) > d`. A disjoint
+  pair has f = 0 and no neighbour query; the script checks the brute force agrees;
+* otherwise f(i, j) = within / sampled, a sampled image being within when
+  `sqrt(min dist2) <= d`, `dist2 = (dx * dx + dy * dy) + dz * dz` (brute force over every
+  target point);
+* edge (i, j), i < j, when `min(f(i, j), f(j, i)) >= min_overlap`, in ascending (i, j) order;
+* components by union-find with the lowest index as root; each a sorted index list, ordered by
+  smallest index; more than one component is `scan.cloud.reg_disconnected`.
+
+# File formats ('#' lines are comments; floats are Python `repr`, round-trip exact)
+
+Scan fixture:
+
+    pitch <P>
+    scan <index>
+    pose <R row-major 9> <t 3>
+    p <x> <y> <z> <nx> <ny> <nz>        (scanner frame; one line per point, in index order)
+    end
+    design <i> <j> <shared points> <points of i> <fraction>
+
+Graph cases:
+
+    case <name> <fixture file> d <d> min <min_overlap> max_samples <m>
+    cell <i> <j> within <w> sampled <s> fraction <f> | cell <i> <j> disjoint
+    edges <i>-<j> ...                  (or `edges` alone)
+    result ok | result disconnected <i,j,...> <k,...> ...
+    end
+
+Usage: python make_graph_fixtures.py [--check]
+"""
+
+import math
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+EPS = 2.0 ** -53
+FLOOR_FACTOR = 64.0
+PITCH = 0.004
+
+HEADER = (
+    "# SCAN.CLOUD.REG.GRAPH fixtures; generated by make_graph_fixtures.py (independent stdlib Python).\n"
+    "# CC0-1.0. Synthetic data; see the script for the rules and the file format.\n"
+)
+
+
+def r(x):
+    return repr(float(x))
+
+
+def h(x, y):
+    return (0.5 * x * x - 0.3 * y * y) + 0.2 * x * y
+
+
+def normal(x, y):
+    hx = x + 0.2 * y
+    hy = -0.6 * y + 0.2 * x
+    ln = math.sqrt((hx * hx + hy * hy) + 1.0)
+    return (-hx / ln, -hy / ln, 1.0 / ln)
+
+
+def quat_matrix(a, b, c, e):
+    n = a * a + b * b + c * c + e * e
+    m = [
+        [a * a + b * b - c * c - e * e, 2 * (b * c - a * e), 2 * (b * e + a * c)],
+        [2 * (b * c + a * e), a * a - b * b + c * c - e * e, 2 * (c * e - a * b)],
+        [2 * (b * e - a * c), 2 * (c * e + a * b), a * a - b * b - c * c + e * e],
+    ]
+    return [[v / n for v in row] for row in m]
+
+
+def dot3(a, b):
+    return (a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]
+
+
+def rt(rot, u):
+    """R^T u, down the columns."""
+    return tuple(dot3((rot[0][i], rot[1][i], rot[2][i]), u) for i in range(3))
+
+
+def apply(rot, t, x):
+    """The pinned GEO.FRAME.XFORM image R x + t."""
+    return tuple(dot3(rot[i], x) + t[i] for i in range(3))
+
+
+class Scan:
+    def __init__(self, index, quat, t, i0, i1, k0, k1):
+        self.index = index
+        self.rot = quat_matrix(*quat)
+        self.t = tuple(float(c) for c in t)
+        self.lattice = []
+        self.points = []
+        self.normals = []
+        for k in range(k0, k1 + 1):
+            for i in range(i0, i1 + 1):
+                x = float(i) * PITCH
+                y = float(k) * PITCH
+                w = (x, y, h(x, y))
+                u = (w[0] - self.t[0], w[1] - self.t[1], w[2] - self.t[2])
+                self.lattice.append((i, k))
+                self.points.append(rt(self.rot, u))
+                self.normals.append(rt(self.rot, normal(x, y)))
+        for n in self.normals:
+            assert abs(math.sqrt(dot3(n, n)) - 1.0) <= 1e-12
+
+    def text(self):
+        out = ["scan %d" % self.index]
+        out.append("pose " + " ".join(r(v) for row in self.rot for v in row) + " " + " ".join(r(v) for v in self.t))
+        for p, n in zip(self.points, self.normals):
+            out.append("p " + " ".join(r(v) for v in p) + " " + " ".join(r(v) for v in n))
+        out.append("end")
+        return "\n".join(out) + "\n"
+
+    def world(self):
+        return [apply(self.rot, self.t, p) for p in self.points]
+
+
+def three_scans():
+    return [
+        Scan(0, (10, 1, 2, 3), (0.1, -0.05, 0.2), 0, 16, 0, 10),
+        Scan(1, (9, -2, 1, 1), (-0.03, 0.12, 0.05), 6, 22, 0, 10),
+        Scan(2, (8, 1, -3, 2), (0.02, 0.04, -0.15), 8, 24, 6, 16),
+    ]
+
+
+def four_scans():
+    return [
+        Scan(0, (7, 2, -1, 1), (0.05, 0.0, 0.1), 0, 8, 0, 5),
+        Scan(1, (11, -1, 2, -2), (-0.02, 0.07, 0.03), 4, 12, 0, 5),
+        Scan(2, (6, 1, 1, -2), (0.4, -0.1, 0.2), 125, 133, 0, 5),
+        Scan(3, (9, 3, 0, 1), (0.6, 0.05, -0.1), 129, 137, 0, 5),
+    ]
+
+
+def scan_text(name, scans, blurb):
+    out = [HEADER, "# %s: %s\n" % (name, blurb), "pitch %s\n" % r(PITCH)]
+    for s in scans:
+        out.append(s.text())
+    for a in scans:
+        for b in scans:
+            if a.index == b.index:
+                continue
+            shared = len(set(a.lattice) & set(b.lattice))
+            out.append("design %d %d %d %d %s\n" % (a.index, b.index, shared, len(a.lattice), r(shared / len(a.lattice))))
+    return "".join(out)
+
+
+def stride(n, m):
+    if n > m:
+        return [p * n // m for p in range(m)]
+    return list(range(n))
+
+
+def max_abs(v):
+    return max(abs(c) for c in v)
+
+
+def dist2(p, q):
+    dx = p[0] - q[0]
+    dy = p[1] - q[1]
+    dz = p[2] - q[2]
+    return (dx * dx + dy * dy) + dz * dz
+
+
+def box(points):
+    lo = [min(p[k] for p in points) for k in range(3)]
+    hi = [max(p[k] for p in points) for k in range(3)]
+    return lo, hi
+
+
+def disjoint(a, b, d):
+    for k in range(3):
+        for g in (a[0][k] - b[1][k], b[0][k] - a[1][k]):
+            if g > 0.0 and math.sqrt(g * g) > d:
+                return True
+    return False
+
+
+def graph(scans, d, min_overlap, max_samples):
+    n = len(scans)
+    worlds = [s.world() for s in scans]
+    samples = [stride(len(s.points), max_samples) for s in scans]
+    scale = 0.0
+    for s, w, smp in zip(scans, worlds, samples):
+        scale = max(scale, max_abs(s.t))
+        for k in smp:
+            scale = max(scale, max_abs(s.points[k]), max_abs(w[k]))
+        for q in w:
+            scale = max(scale, max_abs(q))
+    if d < FLOOR_FACTOR * EPS * scale:
+        return None
+    sample_boxes = [box([w[k] for k in smp]) for w, smp in zip(worlds, samples)]
+    target_boxes = [box(w) for w in worlds]
+    cells = {}
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                continue
+            within = 0
+            for k in samples[i]:
+                y = worlds[i][k]
+                best = min(dist2(y, q) for q in worlds[j])
+                if math.sqrt(best) <= d:
+                    within += 1
+            if disjoint(sample_boxes[i], target_boxes[j], d):
+                assert within == 0, "prefilter must not change a value"
+                cells[(i, j)] = None
+            else:
+                cells[(i, j)] = (within, len(samples[i]))
+    frac = {}
+    for key, c in cells.items():
+        frac[key] = 0.0 if c is None else c[0] / c[1]
+    edges = [(i, j) for i in range(n) for j in range(i + 1, n) if min(frac[(i, j)], frac[(j, i)]) >= min_overlap]
+    parent = list(range(n))
+
+    def find(x):
+        while parent[x] != x:
+            x = parent[x]
+        return x
+
+    for i, j in edges:
+        a, b = find(i), find(j)
+        if a != b:
+            parent[max(a, b)] = min(a, b)
+    comps = {}
+    for i in range(n):
+        comps.setdefault(find(i), []).append(i)
+    components = [comps[k] for k in sorted(comps)]
+    return cells, frac, edges, components
+
+
+def cases_text(fixtures):
+    out = [HEADER]
+
+    def case(name, fixture, d, min_overlap, max_samples):
+        scans = fixtures[fixture]
+        res = graph(scans, d, min_overlap, max_samples)
+        out.append("case %s %s d %s min %s max_samples %d\n" % (name, fixture, r(d), r(min_overlap), max_samples))
+        assert res is not None
+        cells, frac, edges, components = res
+        n = len(scans)
+        for i in range(n):
+            for j in range(n):
+                if i == j:
+                    continue
+                c = cells[(i, j)]
+                if c is None:
+                    out.append("cell %d %d disjoint\n" % (i, j))
+                else:
+                    out.append("cell %d %d within %d sampled %d fraction %s\n" % (i, j, c[0], c[1], r(c[0] / c[1])))
+        out.append(("edges " + " ".join("%d-%d" % e for e in edges)).rstrip() + "\n")
+        if len(components) == 1:
+            out.append("result ok\n")
+        else:
+            out.append("result disconnected " + " ".join(",".join(str(i) for i in c) for c in components) + "\n")
+        out.append("end\n")
+        return frac
+
+    three = "three_scans_known.txt"
+    four = "four_scans_two_islands.txt"
+    big = 1000000
+    frac = case("ac1_true_poses", three, 0.001, 0.1, big)
+    # AC-1: at the true poses the overlap equals the design overlap exactly (margin ~3 mm).
+    for (i, j), f in frac.items():
+        a, b = fixtures[three][i], fixtures[three][j]
+        assert f == len(set(a.lattice) & set(b.lattice)) / len(a.lattice)
+    case("ac3_min_0_5", three, 0.001, 0.5, big)
+    case("ac3_min_0_3", three, 0.001, 0.3, big)
+    case("min_1", three, 0.001, 1.0, big)
+    case("min_equals_f02", three, 0.001, 45 / 187, big)
+    case("stride_50", three, 0.001, 0.1, 50)
+    case("d_4_5mm", three, 0.0045, 0.1, big)
+    case("ac2_two_islands", four, 0.001, 0.1, big)
+    case("two_islands_wide_d", four, 0.03, 0.1, big)
+    return "".join(out)
+
+
+def main():
+    check = "--check" in sys.argv[1:]
+    fixtures = {"three_scans_known.txt": three_scans(), "four_scans_two_islands.txt": four_scans()}
+    outputs = {
+        "three_scans_known.txt": scan_text(
+            "three_scans_known",
+            fixtures["three_scans_known.txt"],
+            "three overlapping scans of a freeform part at known poses",
+        ),
+        "four_scans_two_islands.txt": scan_text(
+            "four_scans_two_islands",
+            fixtures["four_scans_two_islands.txt"],
+            "two pairs of overlapping scans, the pairs 0.5 m apart",
+        ),
+        "graph_cases.txt": cases_text(fixtures),
+    }
+    bad = 0
+    for name, text in sorted(outputs.items()):
+        target = os.path.join(HERE, name)
+        if check:
+            try:
+                with open(target, "rb") as f:
+                    have = f.read()
+            except OSError:
+                have = None
+            if have != text.encode("utf-8"):
+                print("DIFFERS: %s" % name)
+                bad += 1
+            else:
+                print("ok: %s" % name)
+        else:
+            with open(target, "w", encoding="utf-8", newline="\n") as f:
+                f.write(text)
+            print("wrote %s" % name)
+    return 1 if bad else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
