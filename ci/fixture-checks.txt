@@ -30,6 +30,7 @@ python fixtures/aln/bfit/icp/make_loop_fixtures.py --check
 python fixtures/aln/bfit/icp/make_metric_fixtures.py --check
 python fixtures/aln/bfit/make_constr_fixtures.py --check
 python fixtures/aln/bfit/make_stop_traces.py --check
+python fixtures/aln/datum/make_dof_cases.py --check
 python fixtures/aln/datum/sys/make_gate_fixtures.py --check
 python fixtures/aln/model/hier/make_fixtures.py --check
 python fixtures/aln/qa/cond-cases/make_cond_cases.py --check

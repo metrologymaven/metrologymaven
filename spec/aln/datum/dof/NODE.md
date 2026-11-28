@@ -9,6 +9,8 @@ phase: P1a
 size: M
 owners: []
 claimed_by:
+built_in: [fid-align-solve]
+built_pr: 689
 satisfies: [REQ-ALN.DATUM-001, REQ-ALN.DATUM-002]
 covers: []
 depends_on: [GEO.FRAME, KRN.NUM]
@@ -80,6 +82,9 @@ The bookkeeping that element-based and datum-system alignment share: for each fe
 > Constraints: KNP-1 (no FMA, fid-num for SVD and transcendentals, fixed-order reductions, no std HashMap/HashSet, NaN is an error); no panic, no unwrap/expect, no unsafe; determinism D0.
 
 ## Open questions
+
+- Built in `fid-align-solve` (module `dof`). Implementation choices, recorded here because they go beyond the Design text: (1) the intersection with each pair's invariance subspace is computed as the null space of `(I - U U^T) Q` (`U` an orthonormal basis of the pair's subspace, `Q` of the current free subspace) rather than of `[A, -B]`; the subspace is the same, and the count stays monotone (effective never above nominal); (2) the rank threshold 1e-9 is applied to that operator, whose largest singular value is exactly 1, so it acts as an absolute and relative floor at once; every account records it as `default_unverified` with `interpretation: provisional` (D-045) and reports the kept and dropped singular values and a `near_rank_threshold` warning within a factor 1e3 [unverified]; (3) the bounding radius `R` is the largest distance of a feature location from the alignment origin, or 1 m (`unit_fallback`) when every location is the origin; the counts and the free subspace do not depend on it, but the projectors, the orthonormal free basis and the reported singular-value margins do, because they are taken in the `R`-scaled metric, and `R` in turn depends on which representative point of a plane or axis the caller passes as its location; (4) the free basis is made canonical (translations first, then rotations, by a fixed candidate order) so that names do not depend on the SVD's choice of vectors, and a rotation is named after the first axial pair whose axis it coincides with, else the first pair whose centre (or apex) it passes through (AC-3's name reads `rotation about +z through the axis of pair 1 (cylinder)`); (5) `keep_parent` is reported as the directive `hold_at_parent` for the solver, since this leaf has no parent pose to apply; (6) the Design's per-pair `projector_after` is named `projector_before`, because REQ-004 asks for the projector onto the free subspace left by the higher-priority pairs, which is the one before the pair.
+- The constant 1e-9 (rank) and the naming tolerance 1e-9 are uncalibrated [unverified]; calibrating them on `ALN.BFIT.BENCH` / `ALN.PRE.CORPUS` cases is open. The performance budget (20 pairs in under 100 us) is not measured.
 
 - `GDT.DRF` also keeps DoF bookkeeping by invariance class. One shared table (here, or in GEO or KRN) would avoid two definitions; raise in GDT.DRF's expansion. No edit made there.
 
