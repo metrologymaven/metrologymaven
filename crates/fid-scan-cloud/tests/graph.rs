@@ -65,11 +65,14 @@ fn cloud(frame: FrameRef, points: &[[f64; 3]], normals: Option<&[[f64; 3]]>) -> 
     PointCloud::new(frame, PointBuffer::from_points(points), attrs).unwrap()
 }
 
+/// A scan being read: its points, normals and pose.
+type Partial = (Vec<[f64; 3]>, Vec<[f64; 3]>, Option<Rigid>);
+
 fn parse_scans(name: &str) -> ScanFixture {
     let text = read(name);
     let mut scans = Vec::new();
     let mut design = Vec::new();
-    let mut cur: Option<(Vec<[f64; 3]>, Vec<[f64; 3]>, Option<Rigid>)> = None;
+    let mut cur: Option<Partial> = None;
     for line in text.lines() {
         if line.starts_with('#') || line.is_empty() {
             continue;
