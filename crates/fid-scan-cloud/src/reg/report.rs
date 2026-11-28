@@ -491,7 +491,7 @@ impl RegistrationReport {
                 return Err(RegError::invalid("pairs", format!("pair ({}, {}) names a scan >= {n}", p.a, p.b)));
             }
         }
-        pairs.sort_by(|x, y| (x.a, x.b).cmp(&(y.a, y.b)));
+        pairs.sort_by_key(|x| (x.a, x.b));
         for w in pairs.windows(2) {
             if let [x, y] = w {
                 if (x.a, x.b) == (y.a, y.b) {
@@ -728,7 +728,7 @@ pub fn write_registered(
             input_digest,
             marker: RegisteredMarker {
                 group_id: report.group_id,
-                report_digest: report.digest.clone(),
+                report_digest: report.digest,
                 pose: *pose,
                 reference_frame: reference,
             },
