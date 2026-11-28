@@ -8,7 +8,8 @@ use std::collections::BTreeMap;
 use fid_canon::CValue;
 use fid_geo_frame::{Frame, FrameId, FrameKind, FrameTree, Rigid, Similarity, Transform};
 use fid_geo_nurbs::{
-    Circle, Cone, Cylinder, Ellipse, Line, NurbsCurve, NurbsCurveParts, Placement, Plane, Sphere, Torus,
+    Circle, Cone, Cylinder, Ellipse, Line, NurbsCurve, NurbsCurveParts, NurbsSurface, NurbsSurfaceParts, Placement,
+    Plane, Sphere, Torus,
 };
 use fid_io_cad_export::{
     plan, Bounds, ElementId, ElementInput, Extent, ExtentFault, ExtentSource, Geometry, NameFault, PlanError,
@@ -127,6 +128,21 @@ fn geometry(g: &CValue) -> Geometry {
             })
             .unwrap(),
         ),
+        "nurbs_surface" => Geometry::NurbsSurface(
+            NurbsSurface::new(NurbsSurfaceParts {
+                degree_u: num(get(g, "degree_u")) as usize,
+                degree_v: num(get(g, "degree_v")) as usize,
+                knots_u: arr(get(g, "knots_u")).iter().map(num).collect(),
+                knots_v: arr(get(g, "knots_v")).iter().map(num).collect(),
+                n_u: num(get(g, "n_u")) as usize,
+                n_v: num(get(g, "n_v")) as usize,
+                ctrl: arr(get(g, "ctrl")).iter().map(v3).collect(),
+                weights: None,
+                periodic_u: false,
+                periodic_v: false,
+            })
+            .unwrap(),
+        ),
         other => panic!("unknown kind {other}"),
     }
 }
@@ -229,14 +245,16 @@ fn check_geom(case: &str, got: &Geometry, want: &CValue) {
             same_bits(case, "major_radius", major, w("major_radius"));
             same_bits(case, "minor_radius", minor, w("minor_radius"));
         }
-        Geometry::NurbsCurve(c) => {
-            let want_ctrl = arr(get(want, "ctrl"));
-            assert_eq!(c.ctrl().len(), want_ctrl.len(), "{case}: ctrl count");
-            for (i, (p, q)) in c.ctrl().iter().zip(want_ctrl).enumerate() {
-                same3(case, &format!("ctrl[{i}]"), *p, q);
-            }
-        }
-        Geometry::NurbsSurface(_) => panic!("{case}: no NURBS surface in the fixtures"),
+        Geometry::NurbsCurve(c) => check_ctrl(case, c.ctrl(), want),
+        Geometry::NurbsSurface(c) => check_ctrl(case, c.ctrl(), want),
+    }
+}
+
+fn check_ctrl(case: &str, ctrl: &[[f64; 3]], want: &CValue) {
+    let want_ctrl = arr(get(want, "ctrl"));
+    assert_eq!(ctrl.len(), want_ctrl.len(), "{case}: ctrl count");
+    for (i, (p, q)) in ctrl.iter().zip(want_ctrl).enumerate() {
+        same3(case, &format!("ctrl[{i}]"), *p, q);
     }
 }
 
@@ -268,7 +286,7 @@ fn detail_str(e: &PlanError, key: &str) -> Option<String> {
         (PlanError::DegenerateExtent { axis, .. }, "axis") => (*axis).to_owned(),
         (PlanError::BadExtent { fault: ExtentFault::Empty { axis }, .. }, "axis") => (*axis).to_owned(),
         (PlanError::BadExtent { fault: ExtentFault::Empty { .. }, .. }, "fault") => "empty".to_owned(),
-        (PlanError::FrameNotFound { frame }, "frame") => frame.to_string(),
+        (PlanError::FrameNotFound { frame, .. }, "frame") => frame.to_string(),
         (PlanError::BadName { fault, .. }, "fault") => fault.code().to_owned(),
         (PlanError::ExtentNotApplicable { kind, .. }, "kind") => kind.as_str().to_owned(),
         (PlanError::ExtentKindMismatch { expected, .. }, "expected") => expected.as_str().to_owned(),
@@ -363,8 +381,8 @@ fn ac1_plane_points_fixture() {
 fn oracle_cases() {
     let (cases, items) = run_document("cases.json");
     // Counted so a truncated fixture cannot pass silently.
-    assert_eq!(cases, 28);
-    assert_eq!(items, 14);
+    assert_eq!(cases, 29);
+    assert_eq!(items, 16);
 }
 
 fn frames_doc() -> FrameTree {
@@ -541,7 +559,8 @@ fn error_codes_and_display_are_stable() {
         (PlanError::EmptySelection, "empty_selection"),
         (PlanError::TooManyElements { count: 2 }, "too_many_elements"),
         (PlanError::BadMargin { value: -1.0 }, "bad_margin"),
-        (PlanError::FrameNotFound { frame: FrameId::WORLD }, "frame_not_found"),
+        (PlanError::FrameNotFound { element: None, frame: FrameId::WORLD }, "frame_not_found"),
+        (PlanError::FrameNotFound { element: Some(e), frame: FrameId::WORLD }, "frame_not_found"),
         (PlanError::ExtentRequired { element: e }, "extent_required"),
         (PlanError::EmptyPoints { element: e }, "empty_points"),
         (PlanError::ExtentCrossesApex { element: e }, "extent_crosses_apex"),
@@ -555,6 +574,8 @@ fn error_codes_and_display_are_stable() {
     }
     assert_eq!(PlanError::ExtentRequired { element: e }.element(), Some(e));
     assert_eq!(PlanError::EmptySelection.element(), None);
+    assert_eq!(PlanError::FrameNotFound { element: Some(e), frame: FrameId::WORLD }.element(), Some(e));
+    assert_eq!(PlanError::FrameNotFound { element: None, frame: FrameId::WORLD }.element(), None);
 }
 
 /// Distinct elements sharing a frame resolve it once and plan in selection order; the input
@@ -588,4 +609,67 @@ fn selection_order_is_kept() {
     }
     assert_eq!(counts.get(&rot), Some(&5));
     assert_eq!(geoms[3], Geometry::Point([0.003, 0.0, 0.0]));
+}
+
+/// The margin is added in the target frame: under the scale 1.5 the export is widened by
+/// exactly the reported margin (review of #681).
+#[test]
+fn similarity_margin_is_in_target_units() {
+    let (_, els) = case_inputs("similarity_cylinder_margin");
+    let p = plan(&frames_doc(), FrameId::WORLD, &inputs(&els), 0.001).unwrap();
+    let Some(Extent::Axial(h0, h1)) = p.items()[0].extent() else { panic!() };
+    assert_eq!((h0, h1), (1.5 * -0.003 - 0.001, 1.5 * 0.012 + 0.001));
+    assert_eq!(p.items()[0].extent_source(), Some(ExtentSource::FittedPoints { points: 3, margin_m: 0.001 }));
+}
+
+/// A missing element frame names the element; a missing target frame names none.
+#[test]
+fn frame_not_found_names_the_element() {
+    let g = Geometry::Point([0.0; 3]);
+    let missing = FrameId::parse("20000000000000000000000000000009").unwrap();
+    let mut e = input(&g, None, None);
+    e.frame = missing;
+    let err = plan(&FrameTree::new(), FrameId::WORLD, &[e], 0.0).unwrap_err();
+    assert_eq!(err, PlanError::FrameNotFound { element: Some(uuid(1)), frame: missing });
+    let err = plan(&FrameTree::new(), missing, &[input(&g, None, None)], 0.0).unwrap_err();
+    assert_eq!(err, PlanError::FrameNotFound { element: None, frame: missing });
+}
+
+/// A scale that rounds both ends of a valid caller interval together gives a zero-width
+/// target extent, refused as `degenerate_extent` (review of #681).
+#[test]
+fn zero_width_after_scaling_is_degenerate() {
+    let tiny = FrameId::parse("30000000000000000000000000000001").unwrap();
+    let mut t = FrameTree::new();
+    let s = Similarity::new(Rigid::IDENTITY, 1e-310).unwrap();
+    t.insert(Frame {
+        id: tiny,
+        name: "tiny".to_owned(),
+        kind: FrameKind::User,
+        parent: Some(FrameId::WORLD),
+        to_parent: Transform::Similarity(s),
+    })
+    .unwrap();
+    let g = Geometry::Line(Line::new(Placement::new([0.0; 3], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]).unwrap()));
+    let hi = 1.0 + f64::EPSILON;
+    assert_eq!(1e-310 * 1.0, 1e-310 * hi, "the scale must merge the ends");
+    let mut e = input(&g, None, Some(Extent::Line(1.0, hi)));
+    e.frame = tiny;
+    let err = plan(&t, FrameId::WORLD, &[e], 0.0).unwrap_err();
+    assert_eq!(err, PlanError::DegenerateExtent { element: uuid(1), axis: "t" });
+}
+
+/// An apex exactly at an end of the interval (r0 = 0, extent [0, h]) is accepted; the same
+/// cone over [-h, h] holds it strictly inside and is refused.
+#[test]
+fn apex_at_interval_end_is_accepted() {
+    let pl = Placement::new([0.0; 3], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]).unwrap();
+    let g = Geometry::Cone(Cone::new(pl, 0.0, 0.3).unwrap());
+    let p = plan(&FrameTree::new(), FrameId::WORLD, &[input(&g, None, Some(Extent::Axial(0.0, 0.02)))], 0.0).unwrap();
+    assert_eq!(p.items()[0].extent(), Some(Extent::Axial(0.0, 0.02)));
+    let p = plan(&FrameTree::new(), FrameId::WORLD, &[input(&g, None, Some(Extent::Axial(-0.02, 0.0)))], 0.0).unwrap();
+    assert_eq!(p.items()[0].extent(), Some(Extent::Axial(-0.02, 0.0)));
+    let err =
+        plan(&FrameTree::new(), FrameId::WORLD, &[input(&g, None, Some(Extent::Axial(-0.02, 0.02)))], 0.0).unwrap_err();
+    assert_eq!(err, PlanError::ExtentCrossesApex { element: uuid(1) });
 }

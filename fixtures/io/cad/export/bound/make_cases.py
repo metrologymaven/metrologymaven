@@ -29,12 +29,15 @@ correctly rounded by IEEE 754, so no value depends on a libm):
   (acc = T(g) . acc), then T_a, inverse(T_b) or inverse(T_b) . T_a;
 * Placement: Z = z/|z|; x' = x - (x.Z) Z; X = x'/|x'|; Y = Z x X (per component);
 * to_local: d = q - O per component, (d.X, d.Y, d.Z) by dot3;
-* fitted extent: min and max (total order, first point first), lo = min - m, hi = max + m,
-  refused when lo >= hi, zeros written as +0.0 (v + 0.0); a caller extent as given;
+* fitted projections: min and max (total order, first point first) in the element's frame;
+  a caller extent as given (lo < hi);
 * moved placement: z1 = R Z, x1 = R X, z = z1/|z1|, x' = x1 - (x1.z) z, x = x'/|x'|, then
-  the Placement rule above on (origin', z, x); radii s * r; extents s * v (+0.0 for zeros);
-* cone apex: refused when r0 + h0 tan(a) < 0 < r0 + h1 tan(a). Only this boolean uses tan
-  (math.tan here, `fid-num` in Rust); the fixtures keep it far from the boundary.
+  the Placement rule above on (origin', z, x); radii s * r;
+* target extent: caller s * v; fitted s * min - m and s * max + m (the margin m in target
+  metres); refused (degenerate_extent) when lo >= hi; zeros written as +0.0 (v + 0.0);
+* cone apex, on the moved cone and the target extent: refused when
+  r0 + h0 tan(a) < 0 < r0 + h1 tan(a). Only this boolean uses tan (math.tan here, `fid-num`
+  in Rust); the fixtures keep it far from the boundary.
 """
 
 import json
@@ -244,7 +247,9 @@ def source_placement(g):
     return placement(g["origin"], g["axis"], g["ref_dir"])
 
 
-def bounds(e, margin):
+def raw_bounds(e):
+    """The input extent rules in the element's own frame: None (bounded), or (kind, caller
+    (lo, hi) or fitted (min, max) per axis, source)."""
     g = e["geom"]
     kind = g["kind"]
     ek = UNBOUNDED.get(kind)
@@ -264,39 +269,51 @@ def bounds(e, margin):
         for i, axis in enumerate(AXES[ek]):
             if not vals[2 * i] < vals[2 * i + 1]:
                 raise Refused("bad_extent", e["id"], fault="empty", axis=axis)
-        values = [pz(v) for v in vals]
-        source = {"source": "caller"}
-    else:
-        pts = e["points"]
-        if pts is None:
-            raise Refused("extent_required", e["id"])
-        if not pts:
-            raise Refused("empty_points", e["id"])
-        pl = source_placement(g)
-        values = []
-        locals_ = [to_local(pl, q) for q in pts]
-        for c, axis in zip(COMPS[ek], AXES[ek]):
-            vs = [l[c] for l in locals_]
-            lo, hi = vs[0], vs[0]
-            for v in vs[1:]:
-                if v < lo or (v == lo and math.copysign(1, v) < math.copysign(1, lo)):
-                    lo = v
-                if v > hi or (v == hi and math.copysign(1, v) > math.copysign(1, hi)):
-                    hi = v
-            lo, hi = lo - margin, hi + margin
-            if lo >= hi:
-                raise Refused("degenerate_extent", e["id"], axis=axis)
-            values += [pz(lo), pz(hi)]
-        source = {"source": "fitted_points", "points": len(pts), "margin": margin}
-    if kind == "cone":
-        ta = math.tan(g["half_angle"])
-        r0 = g["radius"]
-        a0, a1 = r0 + values[0] * ta, r0 + values[1] * ta
+        return ek, list(vals), {"source": "caller"}
+    pts = e["points"]
+    if pts is None:
+        raise Refused("extent_required", e["id"])
+    if not pts:
+        raise Refused("empty_points", e["id"])
+    pl = source_placement(g)
+    values = []
+    locals_ = [to_local(pl, q) for q in pts]
+    for c in COMPS[ek]:
+        vs = [l[c] for l in locals_]
+        lo, hi = vs[0], vs[0]
+        for v in vs[1:]:
+            if v < lo or (v == lo and math.copysign(1, v) < math.copysign(1, lo)):
+                lo = v
+            if v > hi or (v == hi and math.copysign(1, v) > math.copysign(1, hi)):
+                hi = v
+        values += [lo, hi]
+    return ek, values, {"source": "fitted_points", "points": len(pts)}
+
+
+def target_bounds(e, raw, s, margin, moved):
+    """Scale into the target frame, add the margin there (fitted only), refuse zero width,
+    then the apex rule on the moved cone."""
+    ek, vals, source = raw
+    out = []
+    fitted = source["source"] == "fitted_points"
+    for i, axis in enumerate(AXES[ek]):
+        a, b = vals[2 * i], vals[2 * i + 1]
+        lo, hi = (s * a - margin, s * b + margin) if fitted else (s * a, s * b)
+        assert math.isfinite(lo) and math.isfinite(hi)
+        if lo >= hi:
+            raise Refused("degenerate_extent", e["id"], axis=axis)
+        out += [pz(lo), pz(hi)]
+    if moved["kind"] == "cone":
+        ta = math.tan(moved["half_angle"])
+        r0 = moved["radius"]
+        a0, a1 = r0 + out[0] * ta, r0 + out[1] * ta
         # Keep the decision far from rounding (math.tan and fid-num may differ by an ulp).
         assert abs(a0) > 1e-9 and abs(a1) > 1e-9
         if a0 < 0.0 < a1:
             raise Refused("extent_crosses_apex", e["id"])
-    return ek, values, source
+    if fitted:
+        source = dict(source, margin=margin)
+    return dict(extent=ek, values=out, **source)
 
 
 def move(g, xf):
@@ -305,7 +322,7 @@ def move(g, xf):
     out = {"kind": kind}
     if kind == "point":
         out["point"] = xf.point(g["point"])
-    elif kind in ("nurbs_curve",):
+    elif kind in ("nurbs_curve", "nurbs_surface"):
         out["ctrl"] = [xf.point(p) for p in g["ctrl"]]
     else:
         pl = move_placement(source_placement(g), xf)
@@ -342,16 +359,12 @@ def run_case(table, case):
             raise Refused("duplicate_element", e["id"], first=seen[e["id"]], index=index)
         seen[e["id"]] = index
         if e["frame"] not in table:
-            raise Refused("frame_not_found", None, frame=e["frame"])
+            raise Refused("frame_not_found", e["id"], frame=e["frame"])
         xf = resolve(table, e["frame"], target)
-        b = bounds(e, margin)
+        raw = raw_bounds(e)
         geom = move(e["geom"], xf)
         item = {"id": e["id"], "geom": geom}
-        if b is None:
-            item["bounds"] = "intrinsic"
-        else:
-            ek, values, source = b
-            item["bounds"] = dict(extent=ek, values=[pz(xf.s * v) for v in values], **source)
+        item["bounds"] = "intrinsic" if raw is None else target_bounds(e, raw, xf.s, margin, geom)
         items.append(item)
     return items
 
@@ -409,6 +422,10 @@ def build_cases():
     cyl_pts = [on_placement(cyl_pl, 0.004, 0.0, h) for h in (-0.003, 0.012, 0.007)]
     nurbs = {"kind": "nurbs_curve", "degree": 1, "knots": [0.0, 0.0, 1.0, 1.0],
              "ctrl": [[0.0, 0.0, 0.0], [0.01, 0.005, -0.002]]}
+    # Bilinear patch, control net row-major (i * n_v + j).
+    nurbs_srf = {"kind": "nurbs_surface", "degree_u": 1, "degree_v": 1, "knots_u": [0.0, 0.0, 1.0, 1.0],
+                 "knots_v": [0.0, 0.0, 1.0, 1.0], "n_u": 2, "n_v": 2,
+                 "ctrl": [[0.0, 0.0, 0.0], [0.0, 0.01, 0.001], [0.02, 0.0, -0.001], [0.02, 0.01, 0.002]]}
     # Two points with the same t on a line whose direction (ref_dir) is +z.
     same = [[0.01, 0.0, 0.002], [0.01, 0.003, 0.002]]
 
@@ -430,6 +447,9 @@ def build_cases():
         {"name": "similarity_cylinder", "ac": "REQ-002, REQ-004", "target": WORLD, "margin": 0.0,
          "elements": [el(8, "CYL-2", F_SCALED, cyl([0.01, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0], 0.004),
                          points=cyl_pts)]},
+        {"name": "similarity_cylinder_margin", "ac": "REQ-002, REQ-004", "target": WORLD, "margin": 0.001,
+         "elements": [el(38, "CYL-3", F_SCALED, cyl([0.01, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0], 0.004),
+                         points=cyl_pts)]},
         {"name": "bounded_kinds_rotated", "ac": "REQ-004", "target": WORLD, "margin": 0.0,
          "elements": [
              el(9, "PT-1", F_ROT3, {"kind": "point", "point": [0.001, -0.002, 0.003]}),
@@ -440,6 +460,7 @@ def build_cases():
              el(12, "ELL-1", F_ROT3, {"kind": "ellipse", "origin": [0.0, 0.0, 0.01], "axis": Z,
                                       "ref_dir": [0.6, 0.8, 0.0], "semi_axis_1": 0.008, "semi_axis_2": 0.005}),
              el(13, "NRB-1", F_ROT3, nurbs),
+             el(37, "NRB-2", F_ROT3, nurbs_srf),
              el(14, "CIR-2", F_SCALED, {"kind": "circle", "origin": [0.0, 0.0, 0.0], "axis": Z, "ref_dir": X,
                                         "radius": 0.002}),
          ]},
@@ -513,6 +534,14 @@ def check_ac1(items):
     assert b["values"] == [0.0, 0.01, 0.0, 0.02], b["values"]
 
 
+def check_similarity_margin(items):
+    """The margin is added in the target frame: the export is widened by exactly the reported
+    margin, after the scale 1.5 (projections -3 mm and 12 mm in the element's frame)."""
+    b = items[0]["bounds"]
+    assert b["margin"] == 0.001, b
+    assert b["values"] == [pz(1.5 * -0.003 - 0.001), pz(1.5 * 0.012 + 0.001)], b["values"]
+
+
 def check_ac2(items):
     """AC-2: the caller's [-5, 15] mm survives a rigid two-level move bit for bit."""
     b = items[0]["bounds"]
@@ -537,6 +566,8 @@ def document(frames, cases):
         c["expect"] = expect(table, case)
         if case["name"] == "ac1_plane_points":
             check_ac1(c["expect"]["items"])
+        if case["name"] == "similarity_cylinder_margin":
+            check_similarity_margin(c["expect"]["items"])
         if case["name"] == "ac2_cylinder_caller":
             check_ac2(c["expect"]["items"])
         if case["name"] == "ac4_circle_shift":

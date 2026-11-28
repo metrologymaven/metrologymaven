@@ -22,10 +22,13 @@
 //!   interval non-empty (`lo < hi`), of the element's [`ExtentKind`].
 //! - Otherwise the element's fitted points give it ([`ExtentSource::FittedPoints`], with the
 //!   point count and the margin): per parameter the minimum and the maximum in IEEE 754
-//!   total order (`f64::total_cmp`, first point first), then `lo = min - margin` and
-//!   `hi = max + margin`. A zero-width result (`lo >= hi`, every point projecting to one value
-//!   with no margin) is refused as [`PlanError::DegenerateExtent`], never exported as a
-//!   sliver.
+//!   total order (`f64::total_cmp`, first point first), in the element's own frame; then, in
+//!   the target frame, `lo = s min - margin` and `hi = s max + margin` (`s` the transform's
+//!   scale). The margin is in metres of the target frame, so the reported margin is exactly
+//!   the widening exported.
+//! - A zero-width target extent (`lo >= hi`: every point projecting to one value with no
+//!   margin, or a scale that rounds both ends of an interval together) is refused as
+//!   [`PlanError::DegenerateExtent`], never exported as a sliver.
 //! - Neither: [`PlanError::ExtentRequired`] (REQ-003).
 //!
 //! Inputs that would not be used are refused, never ignored: a caller extent on a bounded
@@ -33,13 +36,15 @@
 //! ([`PlanError::ExtentKindMismatch`]), and fitted points on a bounded element or next to a
 //! caller extent ([`PlanError::PointsNotApplicable`]). An empty point list is
 //! [`PlanError::EmptyPoints`], a NaN or infinite point [`PlanError::NonFinitePoint`].
-//! A cone extent whose interior holds the apex (the generator radius `r0 + h tan a` changes
-//! sign strictly inside it, `tan` from `fid-num`) would join both nappes and is refused as
-//! [`PlanError::ExtentCrossesApex`]; an apex at an end of the interval is accepted.
+//! A cone extent whose interior holds the apex (the generator radius `r0 + h tan a` of the
+//! moved cone changes sign strictly inside the target extent, `tan` from `fid-num`) would join
+//! both nappes and is refused as [`PlanError::ExtentCrossesApex`]; an apex at an end of the
+//! interval is accepted.
 //!
-//! Extents are computed in the element's own frame, then multiplied by the transform's scale
-//! (exactly 1 for a rigid transform, so a rigid move leaves them bit for bit unchanged).
-//! Every reported zero is `+0.0` (`v + 0.0`), so an extent has one representation.
+//! Caller extents and fitted projections are taken in the element's own frame and multiplied
+//! by the transform's scale (exactly 1 for a rigid transform, so a rigid move leaves a caller
+//! extent bit for bit unchanged); the margin is then added in the target frame. Every
+//! reported zero is `+0.0` (`v + 0.0`), so an extent has one representation.
 //!
 //! # Transform into the target frame (REQ-004)
 //!
@@ -68,8 +73,9 @@
 //! ([`PlanError::FrameNotFound`]), the margin finite and `>= 0` ([`PlanError::BadMargin`]),
 //! the selection non-empty ([`PlanError::EmptySelection`]) and at most [`MAX_ELEMENTS`]
 //! long. Then per element in selection order: name ([`PlanError::BadName`]), duplicate ID
-//! ([`PlanError::DuplicateElement`]), frame resolution, the extent rules above (in the order
-//! listed in [`plan`]), then the transform ([`PlanError::Transform`]).
+//! ([`PlanError::DuplicateElement`]), frame resolution, the input extent rules above, the
+//! transform ([`PlanError::Transform`]), then the target extent (overflow, zero width, apex),
+//! in the order listed in [`plan`].
 //!
 //! # Determinism
 //!
@@ -296,7 +302,8 @@ pub enum ExtentSource {
     FittedPoints {
         /// How many points were projected.
         points: u64,
-        /// The margin added on each side, in metres of the element's own frame.
+        /// The margin added on each side, in metres of the target frame (exactly the
+        /// widening exported).
         margin_m: f64,
     },
 }
@@ -549,6 +556,8 @@ pub enum PlanError {
     },
     /// The target frame or an element's frame is not in the tree.
     FrameNotFound {
+        /// The element whose frame is missing, or `None` for the target frame.
+        element: Option<ElementId>,
         /// The missing frame.
         frame: FrameId,
     },
@@ -685,6 +694,7 @@ impl PlanError {
             | PlanError::DegenerateExtent { element, .. }
             | PlanError::ExtentCrossesApex { element }
             | PlanError::Transform { element, .. } => Some(*element),
+            PlanError::FrameNotFound { element, .. } => *element,
             _ => None,
         }
     }
@@ -696,7 +706,10 @@ impl fmt::Display for PlanError {
             PlanError::EmptySelection => write!(f, "no element selected"),
             PlanError::TooManyElements { count } => write!(f, "{count} elements, more than {MAX_ELEMENTS}"),
             PlanError::BadMargin { value } => write!(f, "margin {value:e} is not finite and >= 0"),
-            PlanError::FrameNotFound { frame } => write!(f, "frame {frame} not found"),
+            PlanError::FrameNotFound { element: None, frame } => write!(f, "target frame {frame} not found"),
+            PlanError::FrameNotFound { element: Some(element), frame } => {
+                write!(f, "element {element}: frame {frame} not found")
+            }
             PlanError::FrameResolution { frame, error } => write!(f, "frame {frame} not resolved: {error}"),
             PlanError::BadName { element, fault } => write!(f, "element {element}: name refused ({})", fault.code()),
             PlanError::DuplicateElement { element, first, index } => {
@@ -743,8 +756,8 @@ impl std::error::Error for PlanError {}
 
 // ---------------------------------------------------------------- planning
 
-/// Builds the export plan into frame `target`. `margin_m` (metres, finite, `>= 0`; `0` by
-/// default) widens fitted-point extents on each side.
+/// Builds the export plan into frame `target`. `margin_m` (metres of the target frame,
+/// finite, `>= 0`; `0` by default) widens fitted-point extents on each side.
 ///
 /// Per element, in selection order, the first failure wins: [`PlanError::BadName`];
 /// [`PlanError::DuplicateElement`]; [`PlanError::FrameNotFound`] or
@@ -753,8 +766,9 @@ impl std::error::Error for PlanError {}
 /// [`PlanError::ExtentKindMismatch`], [`PlanError::PointsNotApplicable`],
 /// [`PlanError::BadExtent`]; without one [`PlanError::ExtentRequired`],
 /// [`PlanError::EmptyPoints`], [`PlanError::NonFinitePoint`] (first index),
-/// [`PlanError::BadExtent`], [`PlanError::DegenerateExtent`] (first axis); then for a cone
-/// [`PlanError::ExtentCrossesApex`]; last [`PlanError::Transform`].
+/// [`PlanError::BadExtent`] (projection overflow); then [`PlanError::Transform`]; then the
+/// target extent: [`PlanError::BadExtent`] (overflow), [`PlanError::DegenerateExtent`]
+/// (first axis), and for a cone [`PlanError::ExtentCrossesApex`].
 pub fn plan(
     tree: &FrameTree,
     target: FrameId,
@@ -762,7 +776,7 @@ pub fn plan(
     margin_m: f64,
 ) -> Result<ExportPlan, PlanError> {
     if tree.get(target).is_none() {
-        return Err(PlanError::FrameNotFound { frame: target });
+        return Err(PlanError::FrameNotFound { element: None, frame: target });
     }
     if !margin_m.is_finite() || margin_m < 0.0 {
         return Err(PlanError::BadMargin { value: margin_m });
@@ -788,23 +802,22 @@ pub fn plan(
         let t = match transforms.get(&e.frame) {
             Some(t) => *t,
             None => {
-                let t = resolve(tree, e.frame, target)?;
+                let t = resolve(tree, element, e.frame, target)?;
                 transforms.insert(e.frame, t);
                 t
             }
         };
-        let bounds = source_bounds(e, margin_m)?;
-        let fault = |fault| PlanError::Transform { element, fault };
-        let geom = map_geometry(e.geom, &t).map_err(fault)?;
-        let bounds = scale_bounds(bounds, t.scale()).map_err(fault)?;
+        let raw = source_bounds(e)?;
+        let geom = map_geometry(e.geom, &t).map_err(|fault| PlanError::Transform { element, fault })?;
+        let bounds = target_bounds(element, raw, t.scale(), margin_m, &geom)?;
         items.push(PlanItem { element, name, source_frame: e.frame, geom, bounds });
     }
     Ok(ExportPlan { frame: target, margin_m, items })
 }
 
-fn resolve(tree: &FrameTree, from: FrameId, target: FrameId) -> Result<Transform, PlanError> {
+fn resolve(tree: &FrameTree, element: ElementId, from: FrameId, target: FrameId) -> Result<Transform, PlanError> {
     tree.resolve(from, target).map_err(|error| match error {
-        FrameError::UnknownFrame { id } => PlanError::FrameNotFound { frame: id },
+        FrameError::UnknownFrame { id } => PlanError::FrameNotFound { element: Some(element), frame: id },
         error => PlanError::FrameResolution { frame: from, error },
     })
 }
@@ -814,8 +827,18 @@ fn pos_zero(v: f64) -> f64 {
     v + 0.0
 }
 
-/// The bounds in the element's own frame.
-fn source_bounds(e: &ElementInput<'_>, margin_m: f64) -> Result<Bounds, PlanError> {
+/// The bounds read in the element's own frame, before the scale and the margin.
+enum Raw {
+    /// A bounded element.
+    Intrinsic,
+    /// A validated caller extent: kind and `(lo, hi)` per axis.
+    Caller(ExtentKind, Vec<(f64, f64)>),
+    /// The total-order `(min, max)` projection per axis and the point count.
+    Fitted(ExtentKind, Vec<(f64, f64)>, u64),
+}
+
+/// The input extent rules, in the element's own frame.
+fn source_bounds(e: &ElementInput<'_>) -> Result<Raw, PlanError> {
     let element = e.element;
     let kind = e.geom.kind();
     let (Some(ek), Some(pl)) = (kind.extent_kind(), e.geom.extent_placement()) else {
@@ -825,10 +848,10 @@ fn source_bounds(e: &ElementInput<'_>, margin_m: f64) -> Result<Bounds, PlanErro
         if e.points.is_some() {
             return Err(PlanError::PointsNotApplicable { element, reason: PointsUnused::Bounded });
         }
-        return Ok(Bounds::Intrinsic);
+        return Ok(Raw::Intrinsic);
     };
     let bad = |fault| PlanError::BadExtent { element, fault };
-    let (extent, source) = if let Some(x) = e.extent {
+    if let Some(x) = e.extent {
         if x.kind() != ek {
             return Err(PlanError::ExtentKindMismatch { element, expected: ek, found: x.kind() });
         }
@@ -842,44 +865,21 @@ fn source_bounds(e: &ElementInput<'_>, margin_m: f64) -> Result<Bounds, PlanErro
         if let Some(axis) = iv.iter().zip(ek.axes()).find(|((a, b), _)| a >= b).map(|(_, axis)| *axis) {
             return Err(bad(ExtentFault::Empty { axis }));
         }
-        let iv: Vec<(f64, f64)> = iv.iter().map(|(a, b)| (pos_zero(*a), pos_zero(*b))).collect();
-        (Extent::from_intervals(ek, &iv).ok_or_else(|| bad(ExtentFault::NonFinite))?, ExtentSource::Caller)
-    } else {
-        let points = e.points.ok_or(PlanError::ExtentRequired { element })?;
-        if points.is_empty() {
-            return Err(PlanError::EmptyPoints { element });
-        }
-        if let Some(index) = points.iter().position(|q| q.iter().any(|c| !c.is_finite())) {
-            return Err(PlanError::NonFinitePoint { element, index });
-        }
-        let iv = fitted_intervals(pl, ek, points, margin_m).map_err(|fault| match fault {
-            Fitted::Overflow => bad(ExtentFault::NonFinite),
-            Fitted::Degenerate(axis) => PlanError::DegenerateExtent { element, axis },
-        })?;
-        let source = ExtentSource::FittedPoints { points: points.len() as u64, margin_m };
-        (Extent::from_intervals(ek, &iv).ok_or_else(|| bad(ExtentFault::NonFinite))?, source)
-    };
-    if let Geometry::Cone(c) = e.geom {
-        check_apex(c, &extent).map_err(|r| match r {
-            Apex::Crosses => PlanError::ExtentCrossesApex { element },
-            Apex::Overflow => bad(ExtentFault::NonFinite),
-        })?;
+        return Ok(Raw::Caller(ek, iv));
     }
-    Ok(Bounds::Extent { extent, source })
+    let points = e.points.ok_or(PlanError::ExtentRequired { element })?;
+    if points.is_empty() {
+        return Err(PlanError::EmptyPoints { element });
+    }
+    if let Some(index) = points.iter().position(|q| q.iter().any(|c| !c.is_finite())) {
+        return Err(PlanError::NonFinitePoint { element, index });
+    }
+    let iv = projections(pl, ek, points).ok_or_else(|| bad(ExtentFault::NonFinite))?;
+    Ok(Raw::Fitted(ek, iv, points.len() as u64))
 }
 
-enum Fitted {
-    Overflow,
-    Degenerate(&'static str),
-}
-
-/// Min/max (total order) of the projections on each axis of `ek`, widened by the margin.
-fn fitted_intervals(
-    pl: &Placement,
-    ek: ExtentKind,
-    points: &[[f64; 3]],
-    margin_m: f64,
-) -> Result<Vec<(f64, f64)>, Fitted> {
+/// Min/max (total order) of the projections on each axis of `ek`; `None` on overflow.
+fn projections(pl: &Placement, ek: ExtentKind, points: &[[f64; 3]]) -> Option<Vec<(f64, f64)>> {
     // Local coordinate index of each axis: t and u are x, v is y, h is z.
     let comps: &[usize] = match ek {
         ExtentKind::Line => &[0],
@@ -888,9 +888,9 @@ fn fitted_intervals(
     };
     let mut acc: Vec<Option<(f64, f64)>> = vec![None; comps.len()];
     for q in points {
-        let l = pl.to_local(*q).map_err(|_| Fitted::Overflow)?;
+        let l = pl.to_local(*q).ok()?;
         for (slot, c) in acc.iter_mut().zip(comps) {
-            let v = l.get(*c).copied().ok_or(Fitted::Overflow)?;
+            let v = l.get(*c).copied()?;
             *slot = Some(match *slot {
                 None => (v, v),
                 Some((lo, hi)) => (
@@ -900,20 +900,42 @@ fn fitted_intervals(
             });
         }
     }
-    let mut out = Vec::with_capacity(comps.len());
-    for (slot, axis) in acc.iter().zip(ek.axes()) {
-        let (min, max) = slot.ok_or(Fitted::Overflow)?;
-        let lo = min - margin_m;
-        let hi = max + margin_m;
+    acc.into_iter().collect()
+}
+
+/// The extent in the target frame: `s v` for a caller extent, `s min - margin` and
+/// `s max + margin` for fitted points; refused when not finite, of zero width, or (for the
+/// moved cone) holding the apex strictly inside.
+fn target_bounds(element: ElementId, raw: Raw, s: f64, margin_m: f64, geom: &Geometry) -> Result<Bounds, PlanError> {
+    let (ek, iv, source, widen) = match raw {
+        Raw::Intrinsic => return Ok(Bounds::Intrinsic),
+        Raw::Caller(ek, iv) => (ek, iv, ExtentSource::Caller, None),
+        Raw::Fitted(ek, iv, points) => (ek, iv, ExtentSource::FittedPoints { points, margin_m }, Some(margin_m)),
+    };
+    let bad = || PlanError::BadExtent { element, fault: ExtentFault::NonFinite };
+    let mut out: Vec<(f64, f64)> = Vec::with_capacity(iv.len());
+    for ((a, b), axis) in iv.iter().zip(ek.axes()) {
+        let (lo, hi) = match widen {
+            None => (s * a, s * b),
+            Some(m) => (s * a - m, s * b + m),
+        };
         if !lo.is_finite() || !hi.is_finite() {
-            return Err(Fitted::Overflow);
+            return Err(bad());
         }
         if lo >= hi {
-            return Err(Fitted::Degenerate(axis));
+            return Err(PlanError::DegenerateExtent { element, axis });
         }
         out.push((pos_zero(lo), pos_zero(hi)));
     }
-    Ok(out)
+    let extent = Extent::from_intervals(ek, &out).ok_or_else(bad)?;
+    if let Geometry::Cone(c) = geom {
+        match check_apex(c, &extent) {
+            Ok(()) => {}
+            Err(Apex::Crosses) => return Err(PlanError::ExtentCrossesApex { element }),
+            Err(Apex::Overflow) => return Err(bad()),
+        }
+    }
+    Ok(Bounds::Extent { extent, source })
 }
 
 enum Apex {
@@ -938,19 +960,6 @@ fn check_apex(c: &Cone, extent: &Extent) -> Result<(), Apex> {
         return Err(Apex::Crosses);
     }
     Ok(())
-}
-
-/// Scales extent values by the transform's scale (1 for a rigid transform).
-fn scale_bounds(bounds: Bounds, s: f64) -> Result<Bounds, TransformFault> {
-    let Bounds::Extent { extent, source } = bounds else {
-        return Ok(bounds);
-    };
-    let iv: Vec<(f64, f64)> = extent.intervals().iter().map(|(a, b)| (pos_zero(s * a), pos_zero(s * b))).collect();
-    if iv.iter().any(|(a, b)| !a.is_finite() || !b.is_finite()) {
-        return Err(TransformFault::NonFinite);
-    }
-    let extent = Extent::from_intervals(extent.kind(), &iv).ok_or(TransformFault::NonFinite)?;
-    Ok(Bounds::Extent { extent, source })
 }
 
 // ---------------------------------------------------------------- transform
