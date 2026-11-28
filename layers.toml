@@ -47,7 +47,8 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # fid-kci, fid-num and fid-types (plane of a CAD face or constructed plane for FromElement).
 "fid-scan-sect" = "kernel"
 # Alignment kernel (ALN.QA.REPORT first): residual report, fixed-order statistics, digest;
-# ALN.BFIT.CONSTR locks and weights (adds fid-geo-frame, kernel).
+# ALN.BFIT.CONSTR locks and weights (adds fid-geo-frame, kernel); ALN.BFIT.ICP.LOOP adds
+# fid-filter and fid-fit (kernel: the KRN.OUT.POL outlier policies and their point view).
 "fid-align-solve" = "kernel"
 "fid-canon" = "model"
 # ChartSeries contract (RPT.STATS.TREND.CONTRACT): types, schema and validation only, no I/O; over

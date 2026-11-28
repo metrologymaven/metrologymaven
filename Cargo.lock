@@ -1142,6 +1142,8 @@ dependencies = [
 name = "fid-align-solve"
 version = "0.0.1"
 dependencies = [
+ "fid-filter",
+ "fid-fit",
  "fid-geo-cad",
  "fid-geo-dist",
  "fid-geo-frame",

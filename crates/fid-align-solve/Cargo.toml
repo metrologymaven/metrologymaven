@@ -1,6 +1,6 @@
 [package]
 name = "fid-align-solve"
-description = "Metrology Maven alignment kernel: the ResidualReport every alignment solver writes, its builder, fixed-order statistics and digest (ALN.QA.REPORT); degree-of-freedom locks, pose parameterisation, reduced Jacobian and weights for best-fit (ALN.BFIT.CONSTR); conditioning and weak-DoF diagnostics (ALN.QA.COND); best-fit stopping criteria and non-convergence handling (ALN.BFIT.STOP); point-to-point and point-to-plane ICP residual rows and Jacobians (ALN.BFIT.ICP.METRIC); ICP correspondence search on meshes and CAD faces (ALN.BFIT.ICP.CORR)"
+description = "Metrology Maven alignment kernel: the ResidualReport every alignment solver writes, its builder, fixed-order statistics and digest (ALN.QA.REPORT); degree-of-freedom locks, pose parameterisation, reduced Jacobian and weights for best-fit (ALN.BFIT.CONSTR); conditioning and weak-DoF diagnostics (ALN.QA.COND); best-fit stopping criteria and non-convergence handling (ALN.BFIT.STOP); point-to-point and point-to-plane ICP residual rows and Jacobians (ALN.BFIT.ICP.METRIC); ICP correspondence search on meshes and CAD faces (ALN.BFIT.ICP.CORR); the surface best-fit loop and its R1 entry point (ALN.BFIT.ICP.LOOP)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -16,7 +16,13 @@ repository.workspace = true
 # (KRN.NUM.LA.QR, KRN.NUM.LA.SVD). ALN.BFIT.ICP.CORR adds the kernel-layer fid-geo-dist (the
 # GEO.DIST mesh and CAD closest-point queries, pseudo-normals and incident normals) and
 # fid-geo-types (the PointSet and FrameRef it reads), both with zero third-party dependencies.
+# ALN.BFIT.ICP.LOOP adds the kernel-layer fid-filter (the KRN.OUT.POL outlier policies, applied
+# through `policy::apply`, the only kernel entry point that reduces a point set) and fid-fit (the
+# PointsView and FittedFeature that `apply` takes); both are first-party KNP-1 crates with no
+# third-party dependencies (fid-fit's closure adds fid-solv and the vendored, audited fid-clarabel).
 [dependencies]
+fid-filter = { path = "../fid-filter" }
+fid-fit = { path = "../fid-fit" }
 fid-geo-dist = { path = "../fid-geo-dist" }
 fid-geo-frame = { path = "../fid-geo-frame" }
 fid-geo-types = { path = "../fid-geo-types" }
