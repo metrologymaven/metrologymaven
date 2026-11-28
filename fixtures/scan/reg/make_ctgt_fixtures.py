@@ -25,7 +25,8 @@ correctly rounded and never fused, so the values are the same on every platform)
 * the nearest valid point q of p minimises `(dist2, original index)`, `dist2 = (dx*dx +
   dy*dy) + dz*dz`, `dx = p.x - q.x` (brute force over every valid point);
 * closest: NoHit `beyond_max_distance` when `sqrt(dist2) > max`; `s = (dx*nx + dy*ny) +
-  dz*nz + 0.0`; `foot[k] = p[k] - s * n[k]`; distance `abs(s)`; signed `s`;
+  dz*nz + 0.0`; `foot[k] = p[k] - s * n[k]`, NoHit `intersection_out_of_range` when beyond
+  2^250; distance `abs(s)`; signed `s`;
 * along: the same q and NoHit; `w` = `v` times 2^600 while `max |w| < 2^-500`, then times 2
   while `max |w| < 1`; `vn = (w0*n0 + w1*n1) + w2*n2`, NoHit `parallel_to_tangent_plane` when
   0; `t = -s / vn`; `|w| = sqrt((w0*w0 + w1*w1) + w2*w2)`; `foot[k] = p[k] + t * w[k]`;
@@ -153,6 +154,8 @@ def closest(cloud, p, m):
     d = (p[0] - q[0], p[1] - q[1], p[2] - q[2])
     s = dot3(d, n) + 0.0
     foot = (p[0] - s * n[0], p[1] - s * n[1], p[2] - s * n[2])
+    if not all(abs(c) <= LIMIT for c in foot):
+        return "nohit intersection_out_of_range"
     return "hit %d %s %s %s" % (k, v3s(foot), r(abs(s)), r(s))
 
 

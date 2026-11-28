@@ -40,9 +40,12 @@
 //!    `m` of `p`;
 //! 3. `s = (dx*nx + dy*ny) + dz*nz` with `d = p - q` and `n` the normal of `q`; a `-0.0` is
 //!    stored as `+0.0` (`s + 0.0`), so a query on the tangent plane has one encoding;
-//! 4. `foot[k] = p[k] - s * n[k]`; the hit is `foot`, `distance = |s|`, `signed_distance = s`
-//!    (positive on the side the normal points to), sign [`HitSign::PointNormal`], `entity_id`
-//!    = the original index of `q`, no surface parameters.
+//! 4. `foot[k] = p[k] - s * n[k]`; `NoHit` ([`NoHitReason::IntersectionOutOfRange`]) when the
+//!    foot is beyond `COORD_LIMIT` on any axis (possible for a far query and a tilted plane;
+//!    every GEO.DIST foot stays within the limit);
+//! 5. otherwise the hit is `foot`, `distance = |s|`, `signed_distance = s` (positive on the
+//!    side the normal points to), sign [`HitSign::PointNormal`], `entity_id` = the original
+//!    index of `q`, no surface parameters.
 //!
 //! # Projection along a direction (pinned)
 //!
@@ -104,7 +107,8 @@ pub enum NoHitReason {
     BeyondMaxDistance,
     /// The direction is parallel to the tangent plane of the nearest valid point.
     ParallelToTangentPlane,
-    /// The intersection with the tangent plane lies beyond `COORD_LIMIT` (or overflows).
+    /// The foot on the tangent plane (closest point or along a direction) lies beyond
+    /// `COORD_LIMIT` (or overflows).
     IntersectionOutOfRange,
     /// The intersection along the direction lies beyond the maximum distance.
     AlongBeyondMaxDistance,
@@ -362,6 +366,9 @@ impl OrientedCloudTarget {
         let d = [p[0] - q[0], p[1] - q[1], p[2] - q[2]];
         let s = dot3(&d, &n) + 0.0;
         let foot = [p[0] - s * n[0], p[1] - s * n[1], p[2] - s * n[2]];
+        if !within_limit(&foot) {
+            return Ok(CloudProjection::NoHit(NoHitReason::IntersectionOutOfRange));
+        }
         Ok(CloudProjection::Hit(ProjectionHit {
             foot,
             distance: s.abs(),

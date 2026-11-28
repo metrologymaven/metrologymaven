@@ -421,6 +421,25 @@ fn far_intersection_is_out_of_range() {
 }
 
 #[test]
+fn far_closest_foot_is_out_of_range() {
+    // Target point at the origin with normal (0.6, 0, 0.8); query (2^250, 0, -2^250), within the
+    // limit. s = 0.6 * 2^250 - 0.8 * 2^250 = -0.2 * 2^250, so foot x = 2^250 + 0.12 * 2^250,
+    // beyond 2^250 m: refused as out of range, never returned as a hit.
+    let attrs = AttributeSet { normal: Some([vec![0.6], vec![0.0], vec![0.8]]), ..AttributeSet::default() };
+    let cloud = PointCloud::new(FRAME, PointBuffer::from_points(&[[0.0; 3]]), attrs).unwrap();
+    let t = OrientedCloudTarget::new(&cloud, &Bitmask::filled(1, true).unwrap()).unwrap();
+    let p = [COORD_LIMIT, 0.0, -COORD_LIMIT];
+    let o = ProjectionOptions::default();
+    assert_eq!(t.closest(p, &o).unwrap(), CloudProjection::NoHit(NoHitReason::IntersectionOutOfRange));
+    assert_eq!(t.project(p, &o).unwrap(), Projection::NoHit);
+    // A nearer query on the same plane still hits, with the foot within the limit.
+    let CloudProjection::Hit(h) = t.closest([0.25 * COORD_LIMIT, 0.0, -0.25 * COORD_LIMIT], &o).unwrap() else {
+        panic!("no hit")
+    };
+    assert!(h.foot.iter().all(|x| x.abs() <= COORD_LIMIT), "{:?}", h.foot);
+}
+
+#[test]
 fn overlap_refusals() {
     let target = OrientedCloudTarget::new(&small_cloud(true), &Bitmask::filled(3, true).unwrap()).unwrap();
     let moving = small_cloud(false);
