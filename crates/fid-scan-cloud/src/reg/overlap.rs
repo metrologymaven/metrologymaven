@@ -52,6 +52,9 @@ pub const FLOOR_FACTOR: f64 = 64.0;
 
 const EPS: f64 = f64::from_bits((1023 - 53) << 52);
 
+/// A worker's count, or its lowest failing sample position and the error.
+type RangeCount = Result<u64, (u64, RegError)>;
+
 /// Deterministic stride sampling of `n` indexes to at most `m` (see [`stride_sample`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StrideSample {
@@ -207,7 +210,7 @@ pub fn overlap_fraction_with(
         ));
     }
 
-    let count_range = |from: u64, to: u64| -> Result<u64, (u64, RegError)> {
+    let count_range = |from: u64, to: u64| -> RangeCount {
         let mut within = 0u64;
         for pos in from..to {
             let i = sample.index(pos).ok_or((pos, RegError::Inconsistent))?;
@@ -223,7 +226,7 @@ pub fn overlap_fraction_with(
 
     let workers = u64::try_from(threads).unwrap_or(1);
     let per = sampled.div_ceil(workers);
-    let results: Mutex<Vec<(u64, Result<u64, (u64, RegError)>)>> = Mutex::new(Vec::new());
+    let results: Mutex<Vec<(u64, RangeCount)>> = Mutex::new(Vec::new());
     let failed = AtomicBool::new(false);
     let run = |w: u64| {
         let from = w.saturating_mul(per).min(sampled);
