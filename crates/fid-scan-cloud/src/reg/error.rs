@@ -39,7 +39,7 @@ pub enum RegError {
     InvalidParameter {
         /// The parameter (`d`, `max_samples`, `m`, `threads`, `valid`, `cloud`, `moving`,
         /// `pose`; for the registration report and writer also `inputs`, `command`, `pairs`,
-        /// `global_rms_m`, `verdict`, `reference` and `report`).
+        /// `global_rms_m`, `verdict`, `graph`, `reference` and `report`).
         name: &'static str,
         /// What is wrong with it, in words.
         reason: String,
@@ -92,6 +92,12 @@ pub enum RegError {
         /// Why it is not rigid, in words.
         reason: String,
     },
+    /// The registration did not converge and the caller did not pass `accept_not_converged`
+    /// (`scan.cloud.not_converged`, SCAN.CLOUD.REG.PAIR-004). Nothing was created.
+    NotConverged {
+        /// The ALN.BFIT.STOP verdict text (for example `stopped(max_iterations)`).
+        stop_reason: &'static str,
+    },
     /// Mapping scan `index` into the reference frame failed (GEO.FRAME.APPLY
     /// `transform_element`; an overflowing coordinate, say); the upstream error is kept as is.
     /// Nothing was created.
@@ -117,6 +123,7 @@ impl RegError {
             RegError::Scan { error, .. } | RegError::Pair { error, .. } => error.code(),
             RegError::NotRigid { .. } => "geo.frame.not_rigid",
             RegError::Transform { .. } => "scan.cloud.transform_failed",
+            RegError::NotConverged { .. } => "scan.cloud.not_converged",
         }
     }
 
@@ -139,6 +146,7 @@ impl fmt::Display for RegError {
             RegError::Pair { moving, target, error } => write!(f, "scan {moving} against scan {target}: {error}"),
             RegError::NotRigid { scan: Some(i), reason } => write!(f, "{} (scan {i}: {reason})", self.code()),
             RegError::NotRigid { scan: None, reason } => write!(f, "{} ({reason})", self.code()),
+            RegError::NotConverged { stop_reason } => write!(f, "{} ({stop_reason})", self.code()),
             RegError::Transform { index, error } => {
                 write!(f, "{}: scan {index}: {} ({error})", self.code(), error.code())
             }

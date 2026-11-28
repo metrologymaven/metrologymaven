@@ -19,7 +19,7 @@ determinism: D0
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-27
 ---
 
 # SCAN.CLOUD.REG.RREP: Registration report and registered cloud versions
@@ -75,14 +75,18 @@ The common output of every registration command: the `RegistrationReport` (per-s
 
 ## Open questions
 
-- **Build notes (fid-scan-cloud `reg::report`, 2026-11-28).** API choices against the Design above, all additive:
-  - `RegistrationReport::new(command, inputs, poses, reference, SolverSummary { algorithm, verdict, pairs, global_rms_m })` builds the report from the inputs and poses, so the per-scan version digest (the GEO.TYPES.DIGEST content digest, computed, never taken from the caller), translation and rotation cannot disagree with them. `write_registered(inputs, poses, report, reference)` re-checks inputs, poses and reference against the report.
-  - Inputs are `GeometryElement`s (point clouds only, in one shared frame) instead of a `CloudVersionRef`, because CORE storage is out of scope here. Poses are `Transform`s, so that AC-4 is reachable: a similarity is `geo.frame.not_rigid`. `rigid_from_matrix4` refuses a 4 x 4 matrix that is not rigid with the same code.
-  - The report JSON (`fid.scan.registration-report/1`, kernel canonical JSON, numbers as hex-bit strings) adds three required members: `command` (the group ID hashes it), `reference_frame` (the transforms are meaningless without it) and `schema`.
-  - `translation_m` is read as the length of the translation vector (the vector is in the 4 x 4 transform). The status is `converged` or `not_converged`, derived from the ALN.BFIT.STOP verdict, whose text is the stop reason.
-  - The report refuses fewer than 2 scans, a pair with no residual samples, a repeated pair, and a scan that appears in no pair. RMS <= maximum is not enforced, because a correctly computed RMS can round a few ulps above the maximum.
-- **Conflict with SCAN.CLOUD.REG.PAIR-003.** PAIR says the command "shall not create a version for the fixed scan". This leaf's AC-3 ("so all members are marked") and SCAN.POLY.MULTI.CMD-002 (every input must carry a marker with one group ID) need the fixed scan marked too. Suggested resolution, for PAIR to adopt: pass both scans to `write_registered`; the fixed scan gets an identity-pose version.
-- The rotation angle uses `fid_num::f::acos`, a faithfully rounded libm port (bit-identical across platforms). The oracle therefore checks it within 1 ulp of the correctly rounded value and compares every other report byte exactly.
+- **Build notes (fid-scan-cloud `reg::report`, 2026-11-27).** These API choices differ from the Design above. All are additive.
+  - **Canonical JSON from `fid-kci` instead of CORE.JRN.CANON (`fid-canon` / `fid-jrn-canon`).** `fid-scan-cloud` is a kernel crate and `fid-canon` is in the model layer, so the kernel cannot reach it. The report uses `fid-kci`'s kernel canonical JSON instead: RFC 8785 restricted to strings, arrays and objects, with every number written as a string (an f64 as hex bits). SHA-256 also comes from `fid-kci`.
+  - **The report is built from the inputs and poses.** The signature is `RegistrationReport::new(command, inputs, poses, reference, graph, SolverSummary { algorithm, verdict, pairs, global_rms_m })`. So the per-scan version digest, translation and rotation cannot disagree with the inputs. The version digest is the GEO.TYPES.DIGEST content digest, computed here and never taken from the caller.
+  - **`write_registered(inputs, poses, report, reference, accept_not_converged)` re-checks inputs, poses and reference against the report.** It refuses a `not_converged` report with `scan.cloud.not_converged` unless `accept_not_converged` is true (maintainer decision, matching SCAN.CLOUD.REG.PAIR-004). `RegisteredMarker` always carries the solve status.
+  - **Input and pose types.** Inputs are `GeometryElement`s (point clouds only, in one shared frame) instead of a `CloudVersionRef`, because CORE storage is out of scope here. Poses are `Transform`s, so that AC-4 is reachable: a similarity is `geo.frame.not_rigid`. `rigid_from_matrix4` refuses a 4 x 4 matrix that is not rigid with the same code.
+  - **Each `PairStat` is built from the CTGT `Overlap` and its overlap distance.** It records `overlap_distance_m`, `within`, `sampled` and the fraction, plus RMS, maximum, `n` and the required `no_residual` counts (`no_hit`, `no_normal`, `rejected`).
+  - **The report takes the `PairGraph`.** It records it as the required `graph` member: overlap distance, minimum overlap, sample cap, components, and every unordered pair with its two fractions and status `edge`, `below_min` or `disjoint`. Every pair statistic must be a graph edge. The graph's link to the inputs is the caller's, because recomputing it here would repeat the GRAPH work; the report checks only its size, its connectivity, and that every pair is an edge.
+  - **The report JSON (`fid.scan.registration-report/1`) adds required members.** `command` (the group ID hashes it), `reference_frame`, `graph`, `schema`, `accuracy_basis: unverified` and `residual_kind: registration_fit` (D-045: these are fit residuals, not a verified measurement uncertainty). Every member is required in 1.0.
+  - **Translation and status.** `translation_m` is read as the length of the translation vector; the vector itself is in the 4 x 4 transform. The status is `converged` or `not_converged`, derived from the ALN.BFIT.STOP verdict, whose text is the stop reason.
+  - **Extra refusals.** The report refuses fewer than 2 scans, a pair with no residual samples, a repeated pair, a pair that is not a graph edge, and a scan that appears in no pair. RMS <= maximum is not enforced, because a correctly computed RMS can round a few ulps above the maximum.
+- **Rotation-angle resolution.** The trace/acos angle pinned above cannot resolve rotations below about 1.5e-8 rad: the largest `c < 1` is `1 - 2^-53`, whose angle is `sqrt(2 * 2^-53)`. The same floor applies near pi. The angle is a summary for people; consumers must use the 4 x 4 transform. The angle comes from `fid_num::f::acos`, a faithfully rounded libm port that is bit-identical across platforms. The oracle therefore checks it within 1 ulp of the correctly rounded value and compares every other report byte exactly.
+- **Conflict with SCAN.CLOUD.REG.PAIR-003.** PAIR says the command "shall not create a version for the fixed scan". This leaf's AC-3 ("so all members are marked") and SCAN.POLY.MULTI.CMD-002 need the fixed scan marked too. Suggested resolution, for PAIR to adopt: pass both scans to `write_registered`; the fixed scan gets an identity-pose version.
 - How CORE stores the `RegisteredMarker` as element metadata (its canonical form) is still to be defined by the consuming command leaves.
 
 ## Children

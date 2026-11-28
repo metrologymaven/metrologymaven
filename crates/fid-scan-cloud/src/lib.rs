@@ -13,8 +13,9 @@ pub mod reg;
 
 pub use reg::graph::{pair_graph, pair_graph_with, PairGraph, PairOverlap, ScanInput, DEFAULT_MIN_OVERLAP, MAX_SCANS};
 pub use reg::report::{
-    rigid_from_matrix4, write_registered, NewCloudVersion, PairStat, RegStatus, RegisteredMarker, RegistrationReport,
-    ScanPose, SolverSummary, GROUP_NAMESPACE, REPORT_SCHEMA,
+    rigid_from_matrix4, write_registered, GraphPair, GraphPairStatus, GraphSummary, NewCloudVersion, PairResiduals,
+    PairStat, RegStatus, RegisteredMarker, RegistrationReport, ScanPose, SolverSummary, ACCURACY_BASIS,
+    GROUP_NAMESPACE, REPORT_SCHEMA, RESIDUAL_KIND,
 };
 pub use reg::target::{
     overlap_fraction, overlap_fraction_with, stride_sample, Bitmask, CloudProjection, NoHitReason, NoNormalsReason,

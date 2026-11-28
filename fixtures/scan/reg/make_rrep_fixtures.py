@@ -37,9 +37,24 @@ value (see the rotation angle below).
 * Report JSON: RFC 8785 over strings, arrays and objects only (keys sorted; ASCII content, so
   `json.dumps(sort_keys=True, separators=(",", ":"))` is the canonical form); f64 values as
   `"0x"` plus 16 hex digits of the bits (-0.0 as +0.0); quantities `{"unit", "value"}`; pairs
-  sorted by (a, b); scans in input order; `schema` fid.scan.registration-report/1.
+  sorted by (a, b); scans in input order; `schema` fid.scan.registration-report/1; the required
+  `graph`, `accuracy_basis: unverified` and `residual_kind: registration_fit` members.
 * Group ID: `uuid.uuid5(NAMESPACE, command | 0x00 | sorted raw input digests)`, NAMESPACE =
   `uuid.uuid5(NAMESPACE_URL, NAMESPACE_URL_NAME)`.
+* Poses: case `three_scans_known` uses the fixture's poses; case `identity_fixed` expresses them
+  relative to scan 0 (`R0^T Ri`, `R0^T (ti - t0)`, dot3 down the columns), so scan 0 is exactly
+  the identity (AC-3) and the scans keep their placement.
+* Overlap (CTGT, every point sampled since `max_samples` exceeds the scan size): a point of
+  scan a at pose a is within when `sqrt(min dist2) <= d` over the points of scan b at pose b,
+  `dist2 = (dx * dx + dy * dy) + dz * dz`; fraction `within / sampled`. The design overlaps keep
+  a margin of about 3 mm against d = 1 mm, so no count sits at a boundary.
+* Pair graph (GRAPH): a cell is disjoint when the boxes of the two posed scans have, on some
+  axis, a gap g > 0 with `sqrt(g * g) > d`; an edge (a, b), a < b, when `min(f(a, b), f(b, a))
+  >= min_overlap`; components by union-find; status `edge`, `disjoint` (both cells disjoint)
+  or `below_min`.
+* The residual statistics and no-residual counts of each pair are invented test inputs
+  (rms = 1e-5 (a + 1) + 2e-6 b, max = 4 rms, n = within, no_hit = 3a + 1, no_normal = b,
+  rejected = 2); the report only records them.
 
 # File format ('#' lines are comments; floats are Python `repr`, round-trip exact)
 
@@ -47,8 +62,11 @@ value (see the rotation angle below).
     input_frame <32 hex>
     reference_frame <32 hex>
     case <name> command <cmd> algorithm <alg> verdict <verdict text> global_rms <float>
-    pose <i> fixture | pose <i> identity
-    pair <a> <b> <overlap> <rms m> <max m> <n>      (in the order given to the report)
+         d <overlap distance m> min_overlap <float> max_samples <int>        (one line)
+    pose <i> <R row-major 9> <t 3>                       (scanner frame to reference frame)
+    graph_pair <a> <b> edge|below_min|disjoint            (every a < b)
+    pair <a> <b> within <w> sampled <s> rms <m> max <m> n <k> no_hit <k> no_normal <k> rejected <k>
+                                                          (in the order given to the report)
     scan <i> input <sha256 hex> output <sha256 hex> translation <hex64> rotation <hex64>
     group <uuid>
     report <canonical JSON with @ROT<i>@ for the rotation value of scan i>
@@ -221,8 +239,46 @@ def quantity(unit, v):
     return {"unit": unit, "value": hex64(v)}
 
 
-def uuid_hex(b):
-    return b.hex()
+def apply(rot, t, x):
+    """The pinned GEO.FRAME.XFORM image R x + t."""
+    return [dot3(rot[k], x) + t[k] for k in range(3)]
+
+
+def relative_to_first(poses):
+    """Every pose expressed relative to pose 0: R' = R0^T Ri, t' = R0^T (ti - t0), so scan 0
+    gets exactly the identity and the scans keep their mutual placement (up to rounding,
+    far inside the 3 mm overlap margin of the fixture)."""
+    r0, t0 = poses[0]
+    out = [IDENTITY]
+    for rot, t in poses[1:]:
+        r = [[dot3((r0[0][i], r0[1][i], r0[2][i]), (rot[0][j], rot[1][j], rot[2][j])) for j in range(3)] for i in range(3)]
+        u = [t[k] - t0[k] for k in range(3)]
+        tt = [dot3((r0[0][i], r0[1][i], r0[2][i]), u) for i in range(3)]
+        out.append((r, tt))
+    return out
+
+
+def overlap(world_a, world_b, d):
+    """CTGT overlap of every (sampled = all) point of A against the points of B: within when
+    sqrt(min dist2) <= d, dist2 = (dx * dx + dy * dy) + dz * dz (brute force)."""
+    within = 0
+    for y in world_a:
+        best = min((y[0] - q[0]) * (y[0] - q[0]) + (y[1] - q[1]) * (y[1] - q[1]) + (y[2] - q[2]) * (y[2] - q[2])
+                   for q in world_b)
+        if math.sqrt(best) <= d:
+            within += 1
+    return within, len(world_a)
+
+
+def disjoint(world_a, world_b, d):
+    """GRAPH prefilter: on some axis the gap g between the boxes has g > 0 and sqrt(g * g) > d."""
+    for k in range(3):
+        a_lo, a_hi = min(p[k] for p in world_a), max(p[k] for p in world_a)
+        b_lo, b_hi = min(p[k] for p in world_b), max(p[k] for p in world_b)
+        for g in (a_lo - b_hi, b_lo - a_hi):
+            if g > 0 and math.sqrt(g * g) > d:
+                return True
+    return False
 
 
 CASES = [
@@ -233,9 +289,13 @@ CASES = [
         "verdict": "converged(increment)",
         "status": "converged",
         "global_rms": 1.5e-05,
-        "poses": ["fixture", "fixture", "fixture"],
-        # every ordered design pair, given in descending order (the report sorts them)
-        "pairs": "design_all_reversed",
+        "poses": "fixture",
+        "d": 0.001,
+        # 0-2 overlaps 0.24 < 0.3: below_min; the graph stays connected through scan 1
+        "min_overlap": 0.3,
+        "max_samples": 1000000,
+        # both directions of every edge, given in descending order (the report sorts them)
+        "pairs": [(2, 1), (1, 2), (1, 0), (0, 1)],
     },
     {
         "name": "identity_fixed",
@@ -244,59 +304,112 @@ CASES = [
         "verdict": "stopped(max_iterations)",
         "status": "not_converged",
         "global_rms": 2.25e-05,
-        "poses": ["identity", "fixture", "fixture"],
+        "poses": "relative_to_first",
+        "d": 0.001,
+        "min_overlap": 0.1,
+        "max_samples": 1000000,
         # the moving-to-earlier pairs only, still covering every scan
-        "pairs": "design_backward",
+        "pairs": [(1, 0), (2, 0), (2, 1)],
     },
 ]
 
 
-def design_pairs(text):
-    out = []
-    for line in text.split("\n"):
-        t = line.split()
-        if t and t[0] == "design":
-            out.append((int(t[1]), int(t[2]), int(t[3]), float(t[5])))
-    return out
-
-
-def pair_stats(kind, design):
-    rows = []
-    for a, b, shared, frac in design:
-        rms = 1e-05 * (a + 1) + 2e-06 * b
-        mx = 4.0 * rms
-        rows.append((a, b, frac, rms, mx, shared))
-    if kind == "design_all_reversed":
-        return list(reversed(rows))
-    if kind == "design_backward":
-        return [r for r in rows if r[0] > r[1]]
-    raise AssertionError(kind)
+def residuals(a, b, shared):
+    rms = 1e-05 * (a + 1) + 2e-06 * b
+    return {"rms": rms, "max": 4.0 * rms, "n": shared, "no_hit": 3 * a + 1, "no_normal": b, "rejected": 2}
 
 
 IDENTITY = ([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], [0.0, 0.0, 0.0])
 
 
+def components(n, edges):
+    parent = list(range(n))
+
+    def find(x):
+        while parent[x] != x:
+            x = parent[x]
+        return x
+
+    for a, b in edges:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[max(ra, rb)] = min(ra, rb)
+    groups = {}
+    for i in range(n):
+        groups.setdefault(find(i), []).append(i)
+    return sorted(groups.values())
+
+
 def build():
     scans = read_scans()
-    with open(os.path.join(HERE, SOURCE), encoding="utf-8", newline="") as f:
-        design = design_pairs(f.read())
     out = [HEADER]
     out.append("# namespace = uuid5(NAMESPACE_URL, %s)\n" % NAMESPACE_URL_NAME)
     out.append("namespace %s\n" % NAMESPACE)
     out.append("input_frame %s\n" % INPUT_FRAME.hex())
     out.append("reference_frame %s\n" % REFERENCE_FRAME.hex())
     for case in CASES:
+        n = len(scans)
+        d, min_ov, max_s = case["d"], case["min_overlap"], case["max_samples"]
         out.append(
-            "case %s command %s algorithm %s verdict %s global_rms %r\n"
-            % (case["name"], case["command"], case["algorithm"], case["verdict"], case["global_rms"])
+            "case %s command %s algorithm %s verdict %s global_rms %r d %r min_overlap %r max_samples %d\n"
+            % (case["name"], case["command"], case["algorithm"], case["verdict"], case["global_rms"], d, min_ov, max_s)
         )
-        poses = []
-        for i, kind in enumerate(case["poses"]):
-            out.append("pose %d %s\n" % (i, kind))
-            poses.append(IDENTITY if kind == "identity" else (scans[i]["rot"], scans[i]["t"]))
-        pairs = pair_stats(case["pairs"], design)
-        for a, b, frac, rms, mx, n in pairs:
-            out.append("pair %d %d %r %r %r %d\n" % (a, b, frac, rms, mx, n))
+        poses = [(s["rot"], s["t"]) for s in scans]
+        if case["poses"] == "relative_to_first":
+            poses = relative_to_first(poses)
+        for i, (rot, t) in enumerate(poses):
+            out.append("pose %d %s\n" % (i, " ".join(repr(v) for row in rot for v in row) + " " + " ".join(repr(v) for v in t)))
+        world = [[apply(rot, t, p) for p in s["points"]] for s, (rot, t) in zip(scans, poses)]
+        cell = {}
+        for a in range(n):
+            for b in range(n):
+                if a == b:
+                    continue
+                if disjoint(world[a], world[b], d):
+                    cell[(a, b)] = ("disjoint", 0, len(world[a]), 0.0)
+                else:
+                    w, sm = overlap(world[a], world[b], d)
+                    cell[(a, b)] = ("measured", w, sm, w / sm)
+        edges = [(a, b) for a in range(n) for b in range(a + 1, n) if min(cell[(a, b)][3], cell[(b, a)][3]) >= min_ov]
+        comps = components(n, edges)
+        assert len(comps) == 1
+        graph_pairs = []
+        for a in range(n):
+            for b in range(a + 1, n):
+                if (a, b) in edges:
+                    st = "edge"
+                elif cell[(a, b)][0] == "disjoint" and cell[(b, a)][0] == "disjoint":
+                    st = "disjoint"
+                else:
+                    st = "below_min"
+                graph_pairs.append({
+                    "a": str(a), "b": str(b),
+                    "overlap_ab": quantity("1", cell[(a, b)][3]),
+                    "overlap_ba": quantity("1", cell[(b, a)][3]),
+                    "status": st,
+                })
+                out.append("graph_pair %d %d %s\n" % (a, b, st))
+        pair_rows = []
+        for a, b in case["pairs"]:
+            kind, w, sm, frac = cell[(a, b)]
+            assert kind == "measured"
+            assert (min(a, b), max(a, b)) in edges
+            r = residuals(a, b, w)
+            out.append(
+                "pair %d %d within %d sampled %d rms %r max %r n %d no_hit %d no_normal %d rejected %d\n"
+                % (a, b, w, sm, r["rms"], r["max"], r["n"], r["no_hit"], r["no_normal"], r["rejected"])
+            )
+            pair_rows.append(((a, b), {
+                "a": str(a), "b": str(b),
+                "max_abs": quantity("m", r["max"]),
+                "n": str(r["n"]),
+                "no_residual": {"no_hit": str(r["no_hit"]), "no_normal": str(r["no_normal"]), "rejected": str(r["rejected"])},
+                "overlap": quantity("1", frac),
+                "overlap_distance_m": quantity("m", d),
+                "rms": quantity("m", r["rms"]),
+                "sampled": str(sm),
+                "within": str(w),
+            }))
         scan_json = []
         digests = []
         for i, (s, (rot, t)) in enumerate(zip(scans, poses)):
@@ -308,7 +421,7 @@ def build():
             c = -1.0 if c < -1.0 else (1.0 if c > 1.0 else c)
             rotation = acos_cr(c)
             assert 0.0 <= rotation <= 3.5
-            if kind_is_identity(case, i):
+            if (rot, t) == IDENTITY:
                 # AC-3: identical coordinates (bits, -0.0 as +0.0)
                 assert all(bits(a) == bits(b) for p, q in zip(pts, s["points"]) for a, b in zip(p, q))
                 assert rotation == 0.0 and trans == 0.0
@@ -332,21 +445,20 @@ def build():
         group = uuid.uuid5(NAMESPACE, name)
         out.append("group %s\n" % group)
         report = {
+            "accuracy_basis": "unverified",
             "algorithm_id": case["algorithm"],
             "command": case["command"],
             "global_rms": quantity("m", case["global_rms"]),
-            "pairs": [
-                {
-                    "a": str(a),
-                    "b": str(b),
-                    "max_abs": quantity("m", mx),
-                    "n": str(n),
-                    "overlap": quantity("1", frac),
-                    "rms": quantity("m", rms),
-                }
-                for a, b, frac, rms, mx, n in sorted(pairs)
-            ],
+            "graph": {
+                "components": [[str(k) for k in c] for c in comps],
+                "max_samples": str(max_s),
+                "min_overlap": quantity("1", min_ov),
+                "overlap_distance_m": quantity("m", d),
+                "pairs": graph_pairs,
+            },
+            "pairs": [row for _, row in sorted(pair_rows)],
             "reference_frame": REFERENCE_FRAME.hex(),
+            "residual_kind": "registration_fit",
             "scans": scan_json,
             "schema": SCHEMA,
             "status": case["status"],
@@ -357,10 +469,6 @@ def build():
         out.append("report %s\n" % text)
         out.append("end\n")
     return "".join(out)
-
-
-def kind_is_identity(case, i):
-    return case["poses"][i] == "identity"
 
 
 def main():
