@@ -6,13 +6,23 @@
 //! - `ALN.BFIT.ICP.CORR`: [`corr`], the correspondence search against a mesh or CAD faces
 //!   (foot, outward unit normal, entity, distance, or why there is none), deterministic for
 //!   any thread count.
+//! - `ALN.BFIT.ICP.LOOP`: [`bestfit`](mod@bestfit), the iteration loop and the R1 entry point
+//!   [`bestfit::bestfit`]: correspondence, outlier policy, rows, the Householder QR step, the
+//!   certified pose update and the stop monitor, with the residual report, history,
+//!   diagnostics and exclusion record.
 //!
-//! The loop (`ALN.BFIT.ICP.LOOP`) is not built yet. [`Correspondences`] is the
-//! structure-of-arrays shape `ALN.BFIT.ICP.CORR`'s Design names as its output; it is defined
-//! here because [`metric::build_rows`] reads it, and [`corr::correspond`] fills it.
+//! [`Correspondences`] is the structure-of-arrays shape `ALN.BFIT.ICP.CORR`'s Design names as
+//! its output; it is defined here because [`metric::build_rows`] reads it, and
+//! [`corr::correspond`] fills it.
 
+pub mod bestfit;
 pub mod corr;
 pub mod metric;
+
+pub use bestfit::{
+    bestfit, BestfitError, BestfitOutput, BestfitParams, ExclusionRecord, IterationStatus, LoopWarning,
+    ProvisionalRule, Scope, BESTFIT_DETERMINISM, BESTFIT_SIDE_EFFECT, MAX_DISTANCE_REL, MIN_ROWS,
+};
 
 pub use corr::{
     correspond, CadReference, CorrError, CorrNote, CorrOptions, CorrOutput, CorrSummary, NoteKind, PointError,

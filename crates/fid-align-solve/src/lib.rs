@@ -35,6 +35,11 @@
 //!   vertices, CAD surface normal), entity and distance, or the reason there is none, filling
 //!   [`Correspondences`]; byte-identical for any thread count. This is the one module that
 //!   uses threads (scoped, through a block queue); everything else is single-threaded.
+//! - `ALN.BFIT.ICP.LOOP`: [`bestfit()`] in [`icp::bestfit`](mod@icp::bestfit), the surface best-fit loop and
+//!   its R1 entry point: correspondences, the `KRN.OUT.POL` outlier policy (`fid-filter`) on
+//!   the correspondence distances, the rows, the reduced step by fixed-block Householder QR,
+//!   the certified pose update and the stop monitor, returning a [`BestfitOutput`] whose pose
+//!   is final only when the run converged.
 
 pub mod cond;
 pub mod constr;
@@ -60,9 +65,11 @@ pub use hist::{
     MAX_ITERATIONS,
 };
 pub use icp::{
-    build_rows, correspond, CadReference, CorrError, CorrNote, CorrOptions, CorrOutput, CorrReason, CorrSummary,
-    Correspondences, InputField, Metric, MetricError, NoteKind, PointError, Reference, Rows, MAX_DISTANCE_FLOOR_M,
-    NORMAL_TOL, POINT_TO_PLANE_ALGORITHM_ID, POINT_TO_POINT_ALGORITHM_ID,
+    bestfit, build_rows, correspond, BestfitError, BestfitOutput, BestfitParams, CadReference, CorrError, CorrNote,
+    CorrOptions, CorrOutput, CorrReason, CorrSummary, Correspondences, ExclusionRecord, InputField, IterationStatus,
+    LoopWarning, Metric, MetricError, NoteKind, PointError, ProvisionalRule, Reference, Rows, Scope,
+    BESTFIT_DETERMINISM, BESTFIT_SIDE_EFFECT, MAX_DISTANCE_FLOOR_M, MAX_DISTANCE_REL, MIN_ROWS, NORMAL_TOL,
+    POINT_TO_PLANE_ALGORITHM_ID, POINT_TO_POINT_ALGORITHM_ID,
 };
 pub use matrix::{
     solve_matrix, MatrixError, MatrixInput, MatrixOrder, MatrixSolution, RotationInput, TransformDirection, DET_TOL,
