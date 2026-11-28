@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-scan-cloud]
+built_pr: 682
 satisfies: [REQ-SCAN.CLOUD.REG-001, REQ-SCAN.CLOUD.REG-005]
 covers: []
 depends_on: [GEO.FRAME.APPLY, GEO.FRAME.XFORM, GEO.TYPES.POINTS, CORE.JRN.CANON]
