@@ -1,0 +1,20 @@
+# Spec card (UNC.INST.PORT.ARM). Cite designators and clause numbers only; never paste standards text.
+id = "unc.inst.arm_cov@1.0.0"
+title = "Articulated-arm point covariance without joint data"
+method = "For a probing point p (arm base at the origin) and an optional probe direction u, returns sigma_lat^2 I + (sigma_ax^2 - sigma_lat^2) u_hat u_hat^T in m^2, with sigma_lat = sigma_p + sigma_d1 ||p||, sigma_ax = axial_factor sigma_lat (axial_factor 1 when absent) and u_hat = u / ||u||; without a direction the result is sigma_lat^2 I. Norms are taken after an exact power-of-two scaling, with the IEEE-754 correctly rounded square root through fid-num f, so they neither overflow nor underflow on the way. sigma_ax^2 - sigma_lat^2 is formed as ((f - 1) sigma_lat)((f + 1) sigma_lat), without cancellation near f = 1. Every product and sum is rounded once in a fixed order (no FMA); only the upper triangle is computed and mirrored, so the result is exactly symmetric; -0 is written as +0. Whether ||u|| is below 1e-12 and whether it differs from 1 by more than 1e-9 are decided exactly in fixed-width integer arithmetic on the significands and exponents (no rounding, subnormals included); u is always normalised."
+applicability = "Articulated-arm probing points when joint angles are not available, under a declared isotropic probing term, a term proportional to the distance from the arm base and an optional axial factor along the probe direction. Pose-dependent (joint-angle) models are not covered. Whether a distance-proportional term is a sound default for arms is unverified. The stated accuracy (relative Frobenius error below 37 * 2^-53, about 4.1e-15) holds while sigma_lat is zero or at least 2^-480 and the point norm is zero or normal; otherwise the result carries a flag. The inputs are declared model values, so the covariance is derived, not measured."
+references = [
+  "JCGM 100:2008, clause 5.1 (combined standard uncertainty, law of propagation) [unverified: clause numbering]",
+  "JCGM 102:2011 (covariance matrices of vector quantities) [unverified: clause numbering]",
+]
+determinism = "D0"
+input_arity = "3"
+failure_modes = [
+  "A NaN or infinite sigma_p, sigma_d1 or axial_factor returns invalid_parameter{name, not_finite}; a negative one returns invalid_parameter{name, negative}.",
+  "A NaN or infinite point component returns invalid_observation{p_x | p_y | p_z, not_finite}.",
+  "A NaN or infinite direction component returns invalid_direction{u_x | u_y | u_z, not_finite}; ||u|| below 1e-12 (the zero vector included) returns invalid_direction{u, below_minimum_norm}.",
+  "No direction with an axial_factor other than 1 returns invalid_direction{u, missing}: the declared axial term cannot be applied, so the isotropic result is not returned in its place.",
+  "A point norm, sigma_lat, sigma_ax or entry that overflows to infinity returns numeric with the fid-num error.",
+  "A direction whose norm differs from 1 by more than 1e-9 is normalised and flagged direction_off_unit; axial_factor 0 with a direction is flagged axial_zero (singular along the probe); every entry zero is flagged zero_covariance; 0 < sigma_lat < 2^-480 or a subnormal point norm is flagged scale_below_validated, and the accuracy bound is not claimed there.",
+]
+validation = "Reproduces the 100 seeded cases of fixtures/unc/inst/port/arm_cases.json (seed 0x41524D) within 1e-14 relative Frobenius norm of the 50-digit decimal reference, the isotropic cases as sigma_lat^2 I with exact +0 off the diagonal, the axial cases (u along z, axial_factor 2) with eigenvalues sigma_lat^2 (1, 1, 4) within 1e-15 relative, the exact labels of 160 directions around the two norm thresholds, and the bit patterns predicted by the independent Python model of the documented order on x86-64, ARM64 and wasm32."
