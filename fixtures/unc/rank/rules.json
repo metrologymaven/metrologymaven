@@ -1,0 +1,603 @@
+{
+ "cases": [
+  {
+   "c": [
+    "0000000000000000",
+    "0000000000000000",
+    "0000000000000000"
+   ],
+   "cov": [
+    "3f847ae147ae147b",
+    "0000000000000000",
+    "0000000000000000",
+    "0000000000000000",
+    "3f647ae147ae147b",
+    "0000000000000000",
+    "0000000000000000",
+    "0000000000000000",
+    "3fa47ae147ae147b"
+   ],
+   "degenerate": "zero_variance",
+   "ids": [
+    "x1",
+    "x2",
+    "x3"
+   ],
+   "name": "all_zero_c",
+   "note": "AC-4: every sensitivity zero: v = 0, shares absent, degenerate zero_variance; all keys tie",
+   "order": [
+    "x1",
+    "x2",
+    "x3"
+   ],
+   "share": [
+    "absent",
+    "absent",
+    "absent"
+   ],
+   "share_sum": "absent",
+   "shares": "degenerate",
+   "tie_broken_by_id": [
+    "false",
+    "true",
+    "true"
+   ],
+   "u_contrib": [
+    "0000000000000000",
+    "0000000000000000",
+    "0000000000000000"
+   ]
+  },
+  {
+   "c": [
+    "3ff0000000000000",
+    "3ff0000000000000"
+   ],
+   "cov": [
+    "3fb999999999999a",
+    "bfb999999999999a",
+    "bfb999999999999a",
+    "3fb999999999999a"
+   ],
+   "degenerate": "zero_variance",
+   "ids": [
+    "x1",
+    "x2"
+   ],
+   "name": "perfect_cancel",
+   "note": "rho = -1, equal u and c: w = 0 exactly, v = 0, degenerate zero_variance",
+   "order": [
+    "x1",
+    "x2"
+   ],
+   "share": [
+    "absent",
+    "absent"
+   ],
+   "share_sum": "absent",
+   "shares": "degenerate",
+   "tie_broken_by_id": [
+    "false",
+    "true"
+   ],
+   "u_contrib": [
+    "3fd43d136248490f",
+    "3fd43d136248490f"
+   ]
+  },
+  {
+   "c": [
+    "3ff0000000000000",
+    "3ff0000000000001"
+   ],
+   "cov": [
+    "3fb999999999999a",
+    "bfb999999999999a",
+    "bfb999999999999a",
+    "3fb999999999999a"
+   ],
+   "degenerate": "variance_at_rounding_resolution",
+   "ids": [
+    "x1",
+    "x2"
+   ],
+   "name": "rounding_resolution",
+   "note": "rho = -1 and c differ by one ulp: v is below the rounding tolerance, degenerate variance_at_rounding_resolution",
+   "order": [
+    "x2",
+    "x1"
+   ],
+   "share": [
+    "absent",
+    "absent"
+   ],
+   "share_sum": "absent",
+   "shares": "degenerate",
+   "tie_broken_by_id": [
+    "false",
+    "false"
+   ],
+   "u_contrib": [
+    "3fd43d1362484910",
+    "3fd43d136248490f"
+   ]
+  },
+  {
+   "c": [
+    "3ff0000000000000",
+    "3ff0000000000000"
+   ],
+   "cov": [
+    "3ff0000000000000",
+    "c000000000000000",
+    "c000000000000000",
+    "3ff0000000000000"
+   ],
+   "error": "not_positive_semidefinite",
+   "ids": [
+    "x1",
+    "x2"
+   ],
+   "name": "not_psd",
+   "note": "|S_12| > sqrt(S_11 S_22): refused not_positive_semidefinite{0, 1} by Cauchy-Schwarz",
+   "pair": [
+    "0",
+    "1"
+   ]
+  },
+  {
+   "c": [
+    "3ff0000000000000",
+    "bff0000000000000"
+   ],
+   "cov": [
+    "4010000000000000",
+    "4008000000000000",
+    "4008000000000000",
+    "3ff0000000000000"
+   ],
+   "error": "not_positive_semidefinite",
+   "ids": [
+    "x1",
+    "x2"
+   ],
+   "name": "rho_1_5",
+   "note": "u = (2, 1), rho = 1.5: refused not_positive_semidefinite{0, 1} by Cauchy-Schwarz",
+   "pair": [
+    "0",
+    "1"
+   ]
+  },
+  {
+   "c": [
+    "3ff0000000000000",
+    "3ff0000000000000",
+    "3ff0000000000000"
+   ],
+   "cov": [
+    "3ff0000000000000",
+    "3feccccccccccccd",
+    "bfeccccccccccccd",
+    "3feccccccccccccd",
+    "3ff0000000000000",
+    "3feccccccccccccd",
+    "bfeccccccccccccd",
+    "3feccccccccccccd",
+    "3ff0000000000000"
+   ],
+   "error": "not_positive_semidefinite",
+   "ids": [
+    "x1",
+    "x2",
+    "x3"
+   ],
+   "name": "indefinite_3x3",
+   "note": "pairwise correlations 0.9, -0.9, 0.9 pass Cauchy-Schwarz, but the matrix is indefinite: the pivoted Cholesky remainder refuses it",
+   "pair": [
+    "2",
+    "2"
+   ]
+  },
+  {
+   "c": [
+    "1fc1297872d9cbb5",
+    "1fc129786d179777"
+   ],
+   "cov": [
+    "3ff0000000000000",
+    "bff0000000000000",
+    "bff0000000000000",
+    "3ff0000000000000"
+   ],
+   "degenerate": "variance_at_rounding_resolution",
+   "ids": [
+    "x1",
+    "x2"
+   ],
+   "name": "subnormal_variance",
+   "note": "review of #685: c^T S c is subnormal (exactly about 4e-326), so the products underflow; the absolute tolerance term makes it variance_at_rounding_resolution instead of shares near +-4e5",
+   "order": [
+    "x1",
+    "x2"
+   ],
+   "share": [
+    "absent",
+    "absent"
+   ],
+   "share_sum": "absent",
+   "shares": "degenerate",
+   "tie_broken_by_id": [
+    "false",
+    "false"
+   ],
+   "u_contrib": [
+    "1fc1297872d9cbb5",
+    "1fc129786d179777"
+   ]
+  },
+  {
+   "c": [
+    "3ff0000000000000",
+    "3ff0000000000000"
+   ],
+   "cov": [
+    "3ff0000000000000",
+    "bffccccccccccccd",
+    "bffccccccccccccd",
+    "4010000000000000"
+   ],
+   "degenerate": "none",
+   "ids": [
+    "x1",
+    "x2"
+   ],
+   "name": "negative_share",
+   "note": "u = (1, 2), rho = -0.9: the Euler share of x1 is negative (-0.8 / 1.4); shares present, statement conversion refused",
+   "order": [
+    "x2",
+    "x1"
+   ],
+   "share": [
+    "3ff9249249249249",
+    "bfe2492492492492"
+   ],
+   "share_ref50": [
+    "1.5714285714285714965442668137850986239372079280013E+0",
+    "-5.7142857142857149654426681378509862393720792800133E-1"
+   ],
+   "share_sum": "3ff0000000000000",
+   "shares": "present",
+   "tie_broken_by_id": [
+    "false",
+    "false"
+   ],
+   "u_contrib": [
+    "4000000000000000",
+    "3ff0000000000000"
+   ]
+  },
+  {
+   "c": [
+    "c008000000000000"
+   ],
+   "cov": [
+    "4010000000000000"
+   ],
+   "degenerate": "none",
+   "ids": [
+    "only"
+   ],
+   "name": "single_input",
+   "note": "one input: u = 6, share 1",
+   "order": [
+    "only"
+   ],
+   "share": [
+    "3ff0000000000000"
+   ],
+   "share_ref50": [
+    "1.0000000000000000000000000000000000000000000000000E+0"
+   ],
+   "share_sum": "3ff0000000000000",
+   "shares": "present",
+   "tie_broken_by_id": [
+    "false"
+   ],
+   "u_contrib": [
+    "4018000000000000"
+   ]
+  },
+  {
+   "c": [
+    "3ff0000000000000",
+    "3ff0000000000000",
+    "3ed4f8b588e368f1"
+   ],
+   "cov": [
+    "3ff0000000000000",
+    "bff0000a7c5ac472",
+    "0000000000000000",
+    "bff0000a7c5ac472",
+    "3ff00014f8bc681c",
+    "0000000000000000",
+    "0000000000000000",
+    "0000000000000000",
+    "3fb70a3d70a3d70a"
+   ],
+   "degenerate": "none",
+   "ids": [
+    "x1",
+    "x2",
+    "x3"
+   ],
+   "name": "share_sum_out_of_tolerance",
+   "note": "rho_12 = -1, u = (1, 1 + 1e-5, 0.3), c = (1, 1, 0.5e-5): shares near -+1e5 whose rounded sum misses 1 by more than 1e-12; shares dropped, share_sum reported",
+   "order": [
+    "x2",
+    "x1",
+    "x3"
+   ],
+   "share": [
+    "absent",
+    "absent",
+    "absent"
+   ],
+   "share_ref50": [
+    "9.7800481084293175247775516808212091214415722335356E+4",
+    "-9.7799503089181370169428078635371500178070078915323E+4",
+    "2.2004888194921652561827159408963654356579966966699E-2"
+   ],
+   "share_sum": "3ff00000000063a3",
+   "shares": "sum_out_of_tolerance",
+   "tie_broken_by_id": [
+    "false",
+    "false",
+    "false"
+   ],
+   "u_contrib": [
+    "3ff0000a7c5ac472",
+    "3ff0000000000000",
+    "3eb92a737110e454"
+   ]
+  }
+ ],
+ "samples": [
+  {
+   "degenerate": "zero_output_variance",
+   "ids": [
+    "x1",
+    "x2"
+   ],
+   "inputs": [
+    [
+     "3ff0000000000000",
+     "4000000000000000",
+     "4008000000000000"
+    ],
+    [
+     "4008000000000000",
+     "3ff0000000000000",
+     "4000000000000000"
+    ]
+   ],
+   "name": "constant_output",
+   "note": "output bitwise constant (0.1, whose rounded mean is not 0.1): degenerate, every r2 absent",
+   "order": [
+    "x1",
+    "x2"
+   ],
+   "output": [
+    "3fb999999999999a",
+    "3fb999999999999a",
+    "3fb999999999999a"
+   ],
+   "r2": [
+    "absent",
+    "absent"
+   ],
+   "r2_absent": [
+    "degenerate_output",
+    "degenerate_output"
+   ],
+   "tie_broken_by_id": [
+    "false",
+    "true"
+   ]
+  },
+  {
+   "degenerate": "none",
+   "ids": [
+    "a",
+    "b",
+    "c"
+   ],
+   "inputs": [
+    [
+     "3fb999999999999a",
+     "3fb999999999999a",
+     "3fb999999999999a",
+     "3fb999999999999a"
+    ],
+    [
+     "3ff0000000000000",
+     "4000000000000000",
+     "4008000000000000",
+     "4010000000000000"
+    ],
+    [
+     "4010000000000000",
+     "4008000000000000",
+     "4000000000000000",
+     "3ff0000000000000"
+    ]
+   ],
+   "name": "constant_input",
+   "note": "input a constant: r2 absent (zero_input_variance), ranked last; b and c tie at r2 = 1 by ID",
+   "order": [
+    "b",
+    "c",
+    "a"
+   ],
+   "output": [
+    "4000000000000000",
+    "4010000000000000",
+    "4018000000000000",
+    "4020000000000000"
+   ],
+   "r2": [
+    "3ff0000000000000",
+    "3ff0000000000000",
+    "absent"
+   ],
+   "r2_absent": [
+    "none",
+    "none",
+    "zero_input_variance"
+   ],
+   "tie_broken_by_id": [
+    "false",
+    "true",
+    "false"
+   ]
+  },
+  {
+   "degenerate": "none",
+   "ids": [
+    "t",
+    "x"
+   ],
+   "inputs": [
+    [
+     "0000000000000000",
+     "1eb67e9c127b6e74",
+     "0000000000000000",
+     "1eb67e9c127b6e74"
+    ],
+    [
+     "3ff0000000000000",
+     "4000000000000000",
+     "4008000000000000",
+     "4014000000000000"
+    ]
+   ],
+   "name": "tiny_input",
+   "note": "input t has s_xx of about 1e-320 (subnormal): r2 absent below_rounding_resolution",
+   "order": [
+    "x",
+    "t"
+   ],
+   "output": [
+    "3ff0000000000000",
+    "4000000000000000",
+    "4010000000000000",
+    "4010000000000000"
+   ],
+   "r2": [
+    "3fe8af8af8af8af7",
+    "absent"
+   ],
+   "r2_absent": [
+    "none",
+    "below_rounding_resolution"
+   ],
+   "tie_broken_by_id": [
+    "false",
+    "false"
+   ]
+  },
+  {
+   "degenerate": "none",
+   "ids": [
+    "a",
+    "b"
+   ],
+   "inputs": [
+    [
+     "3ff0000000000000",
+     "4000000000000000",
+     "4008000000000000"
+    ],
+    [
+     "4008000000000000",
+     "3ff0000000000000",
+     "4000000000000000"
+    ]
+   ],
+   "name": "tiny_output",
+   "note": "output s_yy is about 2e-320 (subnormal): every r2 absent below_rounding_resolution",
+   "order": [
+    "a",
+    "b"
+   ],
+   "output": [
+    "0000000000000000",
+    "1eb67e9c127b6e74",
+    "1ec67e9c127b6e74"
+   ],
+   "r2": [
+    "absent",
+    "absent"
+   ],
+   "r2_absent": [
+    "below_rounding_resolution",
+    "below_rounding_resolution"
+   ],
+   "tie_broken_by_id": [
+    "false",
+    "true"
+   ]
+  },
+  {
+   "degenerate": "none",
+   "ids": [
+    "p",
+    "q"
+   ],
+   "inputs": [
+    [
+     "3ff0000000000000",
+     "4000000000000000",
+     "4008000000000000",
+     "4010000000000000",
+     "4014000000000000"
+    ],
+    [
+     "4000000000000000",
+     "bff0000000000000",
+     "3fe0000000000000",
+     "4008000000000000",
+     "c000000000000000"
+    ]
+   ],
+   "name": "partial",
+   "note": "a hand-built pair with distinct r2 below 1",
+   "order": [
+    "p",
+    "q"
+   ],
+   "output": [
+    "3ff0000000000000",
+    "4008000000000000",
+    "4000000000000000",
+    "4014000000000000",
+    "4010000000000000"
+   ],
+   "r2": [
+    "3fe47ae147ae147a",
+    "3f58181818181817"
+   ],
+   "r2_absent": [
+    "none",
+    "none"
+   ],
+   "r2_ref50": [
+    "6.4000000000000000000000000000000000000000000000000E-1",
+    "1.4705882352941176470588235294117647058823529411765E-3"
+   ],
+   "tie_broken_by_id": [
+    "false",
+    "false"
+   ]
+  }
+ ]
+}
