@@ -1,0 +1,552 @@
+{
+  "schema": "guide-topic/v1",
+  "slug": "fits",
+  "order": 1,
+  "title": "Feature Fitting: Least-Squares, Tangential & Mating Envelopes",
+  "subtitle": "Why the mathematical objective you pick—Gaussian average, one-sided datum contact, or minimum circumscribed shaft—changes both size and axis.",
+  "phase": "P0–P1a",
+  "status": "live-kernel",
+  "provisional": true,
+  "crates": [
+    "fid-fit",
+    "fid-solv",
+    "fid-num"
+  ],
+  "spec_nodes": [
+    "KRN.LSQ.RND",
+    "KRN.LSQ.LIN",
+    "KRN.ENV.TAN.PLANE",
+    "KRN.ENV.MCC.CYL"
+  ],
+  "standards": [
+    {
+      "designator": "ISO 17450-1:2011",
+      "topic": "Feature association objectives (Gaussian, Chebyshev, envelope)"
+    },
+    {
+      "designator": "ISO 5459:2011",
+      "topic": "Tangential external datum feature simulators"
+    },
+    {
+      "designator": "ASME Y14.5-2018 §5.7 / §7",
+      "topic": "Actual mating envelope and datum simulators"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Three distinct questions, three distinct fits",
+      "paragraphs": [
+        "Raw points from a CMM or optical scanner do not have a single diameter or orientation until you choose an association objective. Gaussian least-squares minimizes the sum of squared orthogonal distances from the points to the ideal primitive—it is stable against random sensor noise and serves as the default reference for many dimension checks.",
+        "Physical assembly and datum simulation ask a different question. A part resting on a surface plate cannot penetrate the granite: the datum simulator is a tangential plane touching the highest material peaks from the material-free side (ISO 5459:2011). Similarly, the functional size of an external shaft is governed by its Minimum Circumscribed Cylinder—the smallest ideal sleeve that encloses every measured point (ASME Y14.5-2018 Rule #1)."
+      ]
+    },
+    {
+      "heading": "Outlier leverage and impact disclosure",
+      "paragraphs": [
+        "Because least-squares squares every residual, a single burr, dust speck or bad scan hit pulls both the fitted centre and diameter aggressively. Metrology Maven's specification prohibits silent point deletion: the planned outlier subsystem (`KRN.OUT`, roadmap, not yet built) is to record the excluded index set, its digest, and an explicit before-and-after impact disclosure. This lab shows the before-and-after comparison only."
+      ]
+    },
+    {
+      "heading": "Rocking datums and non-uniqueness",
+      "paragraphs": [
+        "A slightly convex planar face can rest stably on more than one three-point contact triplet—a rocking datum. `fid-fit`'s tangential plane solver (`fit_tan_plane`) searches multiple seeded starts, verifies KKT contact vertices, and emits an explicit `RockReport` whenever competing contact sets lie within `rock_tol`."
+      ]
+    }
+  ],
+  "lab": {
+    "widget_kind": "fit-lab",
+    "op": "fit.circle2d",
+    "secondary_ops": [
+      "fit.plane_datum",
+      "fit.cylinder_mcc"
+    ],
+    "instructions": "Drag any probe point on the 2D bore/shaft canvas, toggle Outlier Exclusion to inspect before-and-after impact disclosure, or switch tabs to compare Gaussian vs. Tangential Datum Plane and Minimum Circumscribed Cylinder—all computed live by fid-fit in WebAssembly.",
+    "presets": [
+      {
+        "id": "circle-outlier",
+        "label": "2D Circle with Single Burr Outlier",
+        "op": "fit.circle2d",
+        "description": "Eight points on a nominal R = 10 mm circle with point #7 shifted outward (+0.75 mm radial burr). Compare Gaussian fit with and without point #7.",
+        "request": {
+          "op": "fit.circle2d",
+          "params": {
+            "unit": "mm",
+            "points": [
+              [
+                10.0,
+                0.0
+              ],
+              [
+                7.071067812,
+                7.071067812
+              ],
+              [
+                0.0,
+                10.0
+              ],
+              [
+                -7.071067812,
+                7.071067812
+              ],
+              [
+                -10.0,
+                0.0
+              ],
+              [
+                -7.071067812,
+                -7.071067812
+              ],
+              [
+                0.0,
+                -10.0
+              ],
+              [
+                7.6,
+                -7.6
+              ]
+            ],
+            "exclude_index": 7
+          }
+        },
+        "expected_digest": "sha256:2e5e72f5e7fd1837ce542b8c8180ee058895621af245a01a93fe48d77a3c0c01",
+        "expected_result": {
+          "algorithm_id": "fit.circle2.ls@1.0.0",
+          "center_x": 0.1334992045568352,
+          "center_y": -0.13349920455683495,
+          "diameter": 20.188788012119943,
+          "max_residual": 0.46483268232525365,
+          "min_residual": -0.22699009296824577,
+          "point_count": 8,
+          "radius": 10.094394006059972,
+          "radius_m": 0.010094394006059972,
+          "residuals": [
+            -0.22699009296824577,
+            -0.09261196089224363,
+            0.039984522807564454,
+            0.09440237978057021,
+            0.039984522807564454,
+            -0.0926119608922419,
+            -0.22699009296824577,
+            0.46483268232525365
+          ],
+          "rms": 0.20868089011883095,
+          "roundness_pv": 0.6918227752934994,
+          "unit": "mm",
+          "without_outlier": {
+            "algorithm_id": "fit.circle2.ls@1.0.0",
+            "center_shift": 0.18879638568834603,
+            "center_x": -2.6905127431531284e-11,
+            "center_y": 2.690534427196578e-11,
+            "diameter": 20.0000000001522,
+            "diameter_delta": 0.188788011967745,
+            "excluded_index": 7,
+            "max_residual": 1.1414653944274988e-10,
+            "min_residual": -1.0300441055655085e-10,
+            "point_count": 7,
+            "radius": 10.0000000000761,
+            "radius_delta": 0.0943940059838725,
+            "radius_m": 0.010000000000076099,
+            "residuals": [
+              -4.919502305522627e-11,
+              1.1414653944274988e-10,
+              -1.0300441055655085e-10,
+              7.60971147206746e-11,
+              -1.0300267583307487e-10,
+              1.1414653944274988e-10,
+              -4.9193288331750296e-11
+            ],
+            "rms": 9.095463982156394e-11,
+            "roundness_pv": 2.1715094999930074e-10,
+            "unit": "mm"
+          }
+        }
+      },
+      {
+        "id": "circle-trilobe",
+        "label": "3-Lobed Shaft Cross-Section",
+        "op": "fit.circle2d",
+        "description": "Twelve points around a nominal R = 10 mm shaft with +/- 0.08 mm three-lobe form error (common in three-jaw chuck turning).",
+        "request": {
+          "op": "fit.circle2d",
+          "params": {
+            "unit": "mm",
+            "points": [
+              [
+                10.08,
+                0.0
+              ],
+              [
+                8.660254038,
+                5.0
+              ],
+              [
+                4.96,
+                8.590972006
+              ],
+              [
+                0.0,
+                10.0
+              ],
+              [
+                -5.04,
+                8.72953607
+              ],
+              [
+                -8.660254038,
+                5.0
+              ],
+              [
+                -9.92,
+                0.0
+              ],
+              [
+                -8.660254038,
+                -5.0
+              ],
+              [
+                -5.04,
+                -8.72953607
+              ],
+              [
+                0.0,
+                -10.0
+              ],
+              [
+                4.96,
+                -8.590972006
+              ],
+              [
+                8.660254038,
+                -5.0
+              ]
+            ]
+          }
+        },
+        "expected_digest": "sha256:c094cd06419775702030a72e7abc892861767cdca074bef3b3489531f67ea95b",
+        "expected_result": {
+          "algorithm_id": "fit.circle2.ls@1.0.0",
+          "center_x": 8.776494843773165e-11,
+          "center_y": 0,
+          "diameter": 20.000000000286214,
+          "max_residual": 0.07999999977334818,
+          "min_residual": -0.08000000005534136,
+          "point_count": 12,
+          "radius": 10.000000000143107,
+          "radius_m": 0.010000000000143106,
+          "residuals": [
+            0.07999999976912933,
+            -8.434745957242029e-11,
+            -0.07999999979002928,
+            -1.431060131507067e-10,
+            0.07999999977334818,
+            6.766635862742731e-11,
+            -0.08000000005534136,
+            6.766635862742731e-11,
+            0.07999999977334818,
+            -1.431060131507067e-10,
+            -0.07999999979002928,
+            -8.434745957242029e-11
+          ],
+          "rms": 0.05656854237132456,
+          "roundness_pv": 0.15999999982868954,
+          "unit": "mm"
+        }
+      },
+      {
+        "id": "plane-datum-bowed",
+        "label": "Concave Datum Face (LSQ vs. Tangential)",
+        "op": "fit.plane_datum",
+        "description": "Nine points on a 40 x 40 mm milled datum face with a concave center depression (-0.04 mm) and uneven corner high spots. Compares Gaussian plane to KKT-verified external minimax tangential datum simulator.",
+        "request": {
+          "op": "fit.plane_datum",
+          "params": {
+            "unit": "mm",
+            "variant": "external_minimax",
+            "points": [
+              [
+                0.0,
+                0.0,
+                0.02
+              ],
+              [
+                40.0,
+                0.0,
+                0.0
+              ],
+              [
+                40.0,
+                40.0,
+                0.03
+              ],
+              [
+                0.0,
+                40.0,
+                0.01
+              ],
+              [
+                20.0,
+                20.0,
+                -0.04
+              ],
+              [
+                20.0,
+                0.0,
+                0.005
+              ],
+              [
+                20.0,
+                40.0,
+                0.015
+              ],
+              [
+                0.0,
+                20.0,
+                0.012
+              ],
+              [
+                40.0,
+                20.0,
+                0.01
+              ]
+            ]
+          }
+        },
+        "expected_digest": "sha256:f6ccbf5a12275dfacf9a75a0e09ca486baed82142ec11f8e57009522a8308e7a",
+        "expected_result": {
+          "interpretation_status": "provisional",
+          "least_squares": {
+            "algorithm_id": "fit.plane.ls@1.0.0",
+            "flatness_span": 0.06533332561214927,
+            "normal": [
+              1.666668639508319e-05,
+              -0.00025000029592624776,
+              0.9999999686110365
+            ],
+            "origin": [
+              20,
+              20,
+              0.006888888888888889
+            ],
+            "rms": 0.018000685292967354
+          },
+          "standards_ref": "ISO 5459:2011; ASME Y14.5-2018 §7",
+          "tangential": {
+            "algorithm_id": "fit.plane.tan_minimax@1.0.0",
+            "contacts": [
+              0,
+              1,
+              2
+            ],
+            "depths": [
+              0,
+              -3.388130969749256e-18,
+              -6.776261939498512e-18,
+              0.0399999837500099,
+              0.06499997359376611,
+              0.004999997968751238,
+              0.024999989843756187,
+              0.022999990656255697,
+              0.004999997968751233
+            ],
+            "max_depth": 0.06499997359376611,
+            "max_violation_m": 6.776261939498513e-21,
+            "normal": [
+              0.0004999997968751238,
+              -0.0007499996953126856,
+              0.9999995937502476
+            ],
+            "objective": 0.06499997359376611,
+            "optimality": "strict_local",
+            "origin": [
+              20.000009055548198,
+              19.999986416677704,
+              0.02499998528473418
+            ],
+            "rock_candidates": 2,
+            "rocking": true
+          },
+          "tilt_mrad": 0.6954210629132468,
+          "unit": "mm"
+        }
+      },
+      {
+        "id": "cylinder-mcc-shaft",
+        "label": "Lobed Shaft (LSQ vs. Minimum Circumscribed Cylinder)",
+        "op": "fit.cylinder_mcc",
+        "description": "Twenty-four points across three axial rings on a nominal D = 20 mm shaft with oval lobing. Shows why the ASME Rule #1 mating envelope diameter exceeds the Gaussian diameter.",
+        "request": {
+          "op": "fit.cylinder_mcc",
+          "params": {
+            "unit": "mm",
+            "points": [
+              [
+                10.02,
+                0.0,
+                0.0
+              ],
+              [
+                7.063996744,
+                7.063996744,
+                0.0
+              ],
+              [
+                0.0,
+                10.02,
+                0.0
+              ],
+              [
+                -7.063996744,
+                7.063996744,
+                0.0
+              ],
+              [
+                -10.02,
+                0.0,
+                0.0
+              ],
+              [
+                -7.063996744,
+                -7.063996744,
+                0.0
+              ],
+              [
+                0.0,
+                -10.02,
+                0.0
+              ],
+              [
+                7.063996744,
+                -7.063996744,
+                0.0
+              ],
+              [
+                10.02,
+                0.0,
+                15.0
+              ],
+              [
+                7.063996744,
+                7.063996744,
+                15.0
+              ],
+              [
+                0.0,
+                10.02,
+                15.0
+              ],
+              [
+                -7.063996744,
+                7.063996744,
+                15.0
+              ],
+              [
+                -10.02,
+                0.0,
+                15.0
+              ],
+              [
+                -7.063996744,
+                -7.063996744,
+                15.0
+              ],
+              [
+                0.0,
+                -10.02,
+                15.0
+              ],
+              [
+                7.063996744,
+                -7.063996744,
+                15.0
+              ],
+              [
+                10.02,
+                0.0,
+                30.0
+              ],
+              [
+                7.063996744,
+                7.063996744,
+                30.0
+              ],
+              [
+                0.0,
+                10.02,
+                30.0
+              ],
+              [
+                -7.063996744,
+                7.063996744,
+                30.0
+              ],
+              [
+                -10.02,
+                0.0,
+                30.0
+              ],
+              [
+                -7.063996744,
+                -7.063996744,
+                30.0
+              ],
+              [
+                0.0,
+                -10.02,
+                30.0
+              ],
+              [
+                7.063996744,
+                -7.063996744,
+                30.0
+              ]
+            ]
+          }
+        },
+        "expected_digest": "sha256:c2874643bb518ee75664c7ea0c19104719da217c52730389d8bca54a034b8904",
+        "expected_result": {
+          "diameter_envelope_excess": 0.030000000075927624,
+          "interpretation_status": "provisional",
+          "least_squares": {
+            "algorithm_id": "fit.cylinder.ls@1.0.0",
+            "axis_dir": [
+              2.5202243845867708e-16,
+              -4.2616561589400145e-16,
+              1
+            ],
+            "axis_point": [
+              -9.577422652000573e-16,
+              6.928421630910397e-16,
+              15
+            ],
+            "diameter": 20.00999999992407,
+            "rms": 0.01500000003790736
+          },
+          "minimum_circumscribed": {
+            "algorithm_id": "fit.cylinder.mc@1.0.0",
+            "axis_dir": [
+              1.9985877677228605e-17,
+              3.550706716680556e-17,
+              1
+            ],
+            "axis_point": [
+              7.623992025969165e-16,
+              6.695809147419408e-16,
+              15
+            ],
+            "contacts": [
+              0,
+              2,
+              4,
+              8,
+              10
+            ],
+            "diameter": 20.04,
+            "local_optimum_only": false
+          },
+          "unit": "mm"
+        }
+      }
+    ]
+  },
+  "cli_example": "echo '{\"op\":\"fit.circle2d\",\"params\":{\"unit\":\"mm\",\"points\":[[10,0],[0,10],[-10,0],[0,-10]]}}' | cargo run -q -p fid-guide-wasm"
+}

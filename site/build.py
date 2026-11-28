@@ -11,7 +11,10 @@ The output is plain static files with no third-party requests (REQ-OUTR.SITE-007
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import html
+import json
+import math
 import shutil
 import subprocess
 import sys
@@ -20,6 +23,8 @@ from pathlib import Path
 
 SITE = Path(__file__).resolve().parent
 ROOT = SITE.parent
+GUIDE_DIR = ROOT / "guide"
+WASM_SRC = ROOT / "target" / "wasm32-wasip1" / "release" / "fid-guide-wasm.wasm"
 sys.path.insert(0, str(ROOT / "tools"))
 import scope  # noqa: E402
 
@@ -30,12 +35,12 @@ CONTACT = "hello@metrologymaven.io"
 e = html.escape
 
 PHASES = [
-    ("P0", "Foundations", "Numerics, least-squares and minimum-zone fits, the command registry, CLI and MCP, the journal, a QIF subset and the free verifier."),
+    ("P0", "Foundations", "Numerics, least-squares and minimum-zone fits, the command registry, CLI and MCP, the journal, a QIF subset, the free verifier and the Executable Field Guide."),
     ("P1a", "First usable product", "Transcription reports, a prismatic GD&T subset (ASME), a minimal GUI and 3D viewer."),
     ("P1b", "Scan-to-CAD inspection", "Mesh and point-cloud inspection, ISO GPS dialect, CAD + PMI, SPC, Python scripting, report designer."),
     ("P2", "CMMs and live devices", "CMM programming and execution: I++ DME client, simulator, approval station, DMIS import."),
-    ("P3", "Large volume and form", "Laser-tracker networks, live portable arms, form and texture, automatic path planning and process-aware sampling."),
-    ("P4", "Ecosystem", "OPC UA, MTConnect, a plugin marketplace, and open-format workflow migration."),
+    ("P3", "Large volume, form & MSA", "Laser-tracker networks, live portable arms, surface texture and precision form (SURF), MSA and non-normal capability (RPT.STATS.MSA, D-054), automatic path planning."),
+    ("P4", "Calibration labs & ecosystem", "Calibration-lab verification (CAL: ISO 10360, ISO 230, ISO/IEC 17025, PTB DCC, D-054), OPC UA, MTConnect, plugin marketplace, open-format migration."),
 ]
 
 APPS = [
@@ -59,8 +64,8 @@ APPS = [
 
 SHARED_CORE_DOMAINS = ["CORE", "KRN", "GEO", "AUTO", "FLOW", "AGENT", "PLAT", "ECO", "UX", "OUTR"]
 
-NAV = [("/", "Home"), ("/apps/", "Apps"), ("/how-it-works/", "How it works"), ("/status/", "Status"),
-       ("/roadmap/", "Roadmap"), ("/contribute/", "Contribute"), ("/company/", "Company")]
+NAV = [("/", "Home"), ("/apps/", "Apps"), ("/guide/", "Field Guide"), ("/how-it-works/", "How it works"),
+       ("/status/", "Status"), ("/roadmap/", "Roadmap"), ("/contribute/", "Contribute"), ("/company/", "Company")]
 
 LOGO = ('<svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="4" fill="currentColor"/>'
         '<circle cx="16" cy="16" r="9" fill="none" stroke="var(--sheet)" stroke-width="2"/>'
@@ -111,9 +116,27 @@ def load():
         meta, _ = scope.parse_front(f.read_text(encoding="utf-8"))
         if meta:
             decisions.append(meta)
+    field_map = None
+    fm_path = GUIDE_DIR / "map" / "field-map.json"
+    if fm_path.exists():
+        field_map = json.loads(fm_path.read_text(encoding="utf-8"))
+    topics = []
+    topics_dir = GUIDE_DIR / "topics"
+    if topics_dir.exists():
+        for tf in sorted(topics_dir.glob("*.json")):
+            topics.append(json.loads(tf.read_text(encoding="utf-8")))
+        topics.sort(key=lambda t: (t.get("order", 999), t.get("slug", "")))
+    wasm_sha256 = None
+    wasm_size = 0
+    if WASM_SRC.exists():
+        raw = WASM_SRC.read_bytes()
+        wasm_sha256 = "sha256:" + hashlib.sha256(raw).hexdigest()
+        wasm_size = len(raw)
     return {"nodes": nodes, "by_id": by_id, "domains": domains, "per": per,
             "phase_leaves": phase_leaves, "phase_built": phase_built,
             "seeds": seeds, "seed_rows": seed_rows, "decisions": decisions,
+            "field_map": field_map, "topics": topics,
+            "wasm_sha256": wasm_sha256, "wasm_size": wasm_size,
             "leaves": sum(1 for n in nodes if n.status == "leaf"),
             "built": sum(1 for n in nodes if n.lst("built_in")),
             "open": sum(1 for n in nodes if n.status == "open"),
@@ -122,8 +145,11 @@ def load():
 
 # ---------------------------------------------------------------- layout
 
-def page(path: str, title: str, desc: str, body: str, d) -> tuple[str, str]:
-    nav = "".join(f'<a href="{h}"{" aria-current=page" if h == path else ""}>{t}</a>' for h, t in NAV)
+def page(path: str, title: str, desc: str, body: str, d, extra_head: str = "") -> tuple[str, str]:
+    nav = "".join(
+        f'<a href="{h}"{" aria-current=page" if (h == path or (h != "/" and path.startswith(h))) else ""}>{t}</a>'
+        for h, t in NAV
+    )
     full = f"{title} · Metrology Maven" if path != "/" else "Metrology Maven: open-source dimensional metrology"
     out = f"""<!doctype html>
 <html lang="en">
@@ -139,7 +165,7 @@ def page(path: str, title: str, desc: str, body: str, d) -> tuple[str, str]:
 <meta property="og:type" content="website">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
-</head>
+{extra_head}</head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 <header class="top"><div class="wrap">
@@ -197,7 +223,7 @@ def home(d):
 {fcf("⌖", "OPEN SOURCE", "DIMENSIONAL METROLOGY")}
 <h1>Open-source inspection software for scanners, CMMs and laser trackers</h1>
 <p class="lead">Metrology Maven is an open-source, QIF-native dimensional metrology platform for independent machine shops, quality labs and engineers. It is free to use, local-first, and every result can be re-checked by anyone. People and AI agents drive it through the same typed commands.</p>
-<div class="btns"><a class="btn primary" href="{REPO}">See it on GitHub</a><a class="btn" href="/status/">Live status</a><a class="btn" href="/how-it-works/">How it works</a></div>
+<div class="btns"><a class="btn primary" href="/guide/">Interactive Field Guide</a><a class="btn" href="{REPO}">See it on GitHub</a><a class="btn" href="/status/">Live status</a><a class="btn" href="/how-it-works/">How it works</a></div>
 {notice(d)}
 </section>
 <section class="sheet" aria-labelledby="apps-h">
@@ -416,9 +442,232 @@ def company(d):
     return page("/company/", "Company", "Metrology Maven stewards the open-source metrology platform and defines a clear open-core and commercial boundary (D-053).", body, d)
 
 
+def _subtree_counts(node_id: str, d) -> tuple[int, int, int]:
+    """Return (leaves, built, open) under a domain or subtree node ID."""
+    if "." not in node_id and node_id in d["per"]:
+        c = d["per"][node_id]
+        return c["leaf"], c["built"], c["open"]
+    prefix = node_id + "."
+    leaves = built = open_n = 0
+    for n in d["nodes"]:
+        if n.id == node_id or n.id.startswith(prefix):
+            if n.status == "leaf":
+                leaves += 1
+            elif n.status == "open":
+                open_n += 1
+            if n.lst("built_in"):
+                built += 1
+    return leaves, built, open_n
+
+
+def _scale_bar(lo_m: float, hi_m: float, tier: str) -> str:
+    """Logarithmic bar from 1e-10 m (0.1 nm) to 1e2 m (100 m) using CSP-safe SVG attributes."""
+    log_min, log_max = -10.0, 2.0
+    a = max(0.0, min(100.0, (math.log10(max(lo_m, 1e-10)) - log_min) / (log_max - log_min) * 100.0))
+    b = max(a + 3.0, min(100.0, (math.log10(min(hi_m, 1e2)) - log_min) / (log_max - log_min) * 100.0))
+    cls = "scale-span" + (" post" if tier == "core-post-1.0" else " plug" if tier == "plugin-companion" else "")
+    return (
+        f'<svg class="scale-svg" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">'
+        f'<rect class="scale-bg" x="0" y="0" width="100" height="10"/>'
+        f'<rect class="{cls}" x="{a:.1f}" y="0" width="{b - a:.1f}" height="10"/>'
+        f'</svg>'
+    )
+
+
+def render_field_map_section(fmap: dict, d) -> str:
+    tier_meta = {t["id"]: t for t in fmap["tiers"]}
+    topic_titles = {t["slug"]: t["title"] for t in d["topics"]}
+    tier_pills = {"core-1.0": ("ok", "Core 1.0"), "core-post-1.0": ("spec", "Post-1.0 Core (D-054)"),
+                  "plugin-companion": ("p", "ECO.SDK Plugin / Companion")}
+    buttons = [f'<button type="button" class="lab-btn" data-tier="all" aria-pressed="true">All {len(fmap["pillars"])} branches</button>']
+    for t in fmap["tiers"]:
+        buttons.append(f'<button type="button" class="lab-btn" data-tier="{e(t["id"])}" aria-pressed="false">{e(t["label"])}</button>')
+
+    cards = []
+    for p in fmap["pillars"]:
+        leaves = built = open_n = 0
+        for dom in p["spec_domains"]:
+            dl, db, do = _subtree_counts(dom, d)
+            leaves += dl
+            built += db
+            open_n += do
+        pcls, plabel = tier_pills.get(p["tier"], ("p", p["tier"]))
+        stds = ", ".join(p["standards"])
+        doms = ", ".join(p["spec_domains"])
+        # Only a core-1.0 branch has its own lab; a post-1.0 or plugin branch may point at a
+        # related chapter, but must not read as having a lab of its own.
+        link = ""
+        if p.get("guide_slug"):
+            slug = p["guide_slug"]
+            label = ("Open interactive lab" if p["tier"] == "core-1.0"
+                     else f"Related chapter: {topic_titles.get(slug, slug)} (no lab for this branch yet)")
+            link = f' · <a href="/guide/{e(slug)}/">{e(label)} →</a>'
+        cards.append(
+            f'<article class="card" data-pillar-tier="{e(p["tier"])}">'
+            f'<span class="tag">{p["order"]:02d} · {e(p["scale_label"])} · {e(p["phase"])}</span>'
+            f'<h3>{e(p["title"])}</h3>'
+            f'<p>{e(p["why"])}</p>'
+            f'<p><small><b>Instruments:</b> {e(", ".join(p["instruments"]))}</small></p>'
+            f'<p><small><b>Standards (designators only):</b> {e(stds)}</small></p>'
+            f'{_scale_bar(p["scale_min_m"], p["scale_max_m"], p["tier"])}'
+            f'<p><span class="pill {pcls}">{e(plabel)}</span> '
+            f'<span class="pill p">{built}/{leaves} leaves built ({open_n} open)</span></p>'
+            f'<p><small class="muted">Spec nodes: <code>{e(doms)}</code>{link}</small></p>'
+            f'</article>'
+        )
+    t_rows = "".join(f'<tr><td><b>{e(t["label"])}</b></td><td>{e(t["description"])}</td></tr>' for t in fmap["tiers"])
+    return (
+        f'<div class="tbl"><table><thead><tr><th>D-054 Scope Tier</th><th>Architectural boundary</th></tr></thead>'
+        f'<tbody>{t_rows}</tbody></table></div>'
+        f'<div class="tier-filter" data-field-map-filter role="group" aria-label="Filter metrology pillars by scope tier">{"".join(buttons)}</div>'
+        f'<div class="grid">{"".join(cards)}</div>'
+        f'<p class="muted"><small>Scale bar spans logarithmic length scale 0.1 nm (left) to 100 m (right). '
+        f'Counts reflect live repository revision <span class="mono">{d["rev"]}</span> under '
+        f'<a href="{REPO}/blob/main/decisions/D-054-dimensional-metrology-scope-and-field-guide.md">Decision D-054</a>.</small></p>'
+    )
+
+
+def _static_preset_rows(presets: list[dict]) -> str:
+    rows = []
+    for pr in presets:
+        res = pr.get("expected_result", {})
+        highlights = []
+        for k in ("outcome", "diameter", "usage_size", "lpu_check_passed", "mc_validation", "replay_verdict", "tilt_mrad",
+                  "diameter_envelope_excess"):
+            if k in res:
+                highlights.append(f"{k}={res[k]}")
+        summary = ", ".join(highlights) if highlights else "verified"
+        rows.append(
+            f'<tr><td><b>{e(pr["label"])}</b><br><small class="muted">{e(pr["description"])}</small></td>'
+            f'<td class="mono">{e(pr["op"])}</td>'
+            f'<td class="mono">{e(summary)}</td>'
+            f'<td class="mono"><small>{e(pr.get("expected_digest", "")[:24])}…</small></td></tr>'
+        )
+    return (
+        '<div class="tbl"><table><thead><tr><th>Verified preset</th><th>Op</th><th>Kernel output</th><th>RFC 8785 digest</th></tr></thead>'
+        f'<tbody>{"".join(rows)}</tbody></table></div>'
+    )
+
+
+def guide_index(d):
+    topics = d["topics"]
+    cards = []
+    for t in topics:
+        status_pill = ('<span class="pill ok">Live WASM kernel</span>' if t["status"] == "live-kernel"
+                       else '<span class="pill p">Interactive map</span>')
+        prov_pill = ' <span class="pill spec">D-045 provisional</span>' if t.get("provisional") else ""
+        crates = ", ".join(t.get("crates", [])) or "spec tree"
+        cards.append(
+            f'<a class="card" href="/guide/{e(t["slug"])}/">'
+            f'<span class="tag">Chapter {t["order"]:02d} · {e(t["phase"])}</span>'
+            f'<h3>{e(t["title"])}</h3>'
+            f'<p>{e(t["subtitle"])}</p>'
+            f'<p>{status_pill}{prov_pill}</p>'
+            f'<p><small class="muted">Backed by: <code>{e(crates)}</code></small></p></a>'
+        )
+    wasm_note = (f'<span class="pill ok">WASM kernel attached ({d["wasm_size"] // 1024} KB · {d["wasm_sha256"][:19]}…)</span>'
+                 if d["wasm_sha256"] else '<span class="pill spec">Static verified presets (compile fid-guide-wasm for live WASM)</span>')
+    fmap_html = render_field_map_section(d["field_map"], d) if d["field_map"] else ""
+    body = f"""
+<section class="hero">
+{fcf("G", "FIELD GUIDE", "EXECUTABLE METROLOGY", "D-054")}
+<h1>Executable Dimensional Metrology Field Guide</h1>
+<p class="lead">Piece-by-piece dimensional metrology labs backed directly by Metrology Maven's implemented pure-Rust kernel crates compiled to WebAssembly—never a detached prose wiki, never hand-invented numbers.</p>
+<p>{wasm_note} <span class="pill p">Zero third-party requests</span></p>
+{notice(d)}
+</section>
+<section class="sheet" aria-labelledby="chapters-h">
+{fcf("1", "LIVE KERNEL LABS", "P0–P1a")}
+<h2 id="chapters-h">Interactive chapters locked to implemented crates</h2>
+<p class="muted">Each chapter executes real functions from <code>fid-fit</code>, <code>fid-gps</code>, <code>fid-kunc</code>, <code>fid-kdec</code> and <code>fid-canon</code>. Every preset output and SHA-256 digest is checked against the Rust kernel in CI.</p>
+<div class="grid">{"".join(cards)}</div>
+</section>
+<section class="sheet" aria-labelledby="map-h">
+{fcf("2", "FIELD MAP", "0.1 NM TO 100 M")}
+<h2 id="map-h">How all of dimensional metrology fits together (D-054)</h2>
+<p class="muted">Rather than claiming every branch of metrology in 1.0, Metrology Maven publishes an honest three-tier map across twelve orders of magnitude, with live spec-tree counts generated at build time.</p>
+{fmap_html}
+</section>"""
+    return page("/guide/", "Field Guide", "Executable, WASM-interactive Dimensional Metrology Field Guide and complete 0.1 nm to 100 m scope map.", body, d,
+                extra_head='<script src="/guide-lab.js" defer></script>\n')
+
+
+def guide_topic_page(topic: dict, d):
+    slug = topic["slug"]
+    prov_banner = ""
+    if topic.get("provisional"):
+        prov_banner = (
+            '<p class="notice"><b>Provisional interpretation notice (D-045 / D-052):</b> '
+            'GD&amp;T and decision-rule defaults in this chapter are clean-room mathematical implementations '
+            'checked against independent oracles and stay visibly labelled <code>interpretation: provisional</code> '
+            'until independent credentialed sign-off.</p>'
+        )
+    sections_html = []
+    for sec in topic.get("sections", []):
+        ps = "".join(f"<p>{e(p)}</p>" for p in sec.get("paragraphs", []))
+        sections_html.append(f'<h3>{e(sec["heading"])}</h3>{ps}')
+
+    std_rows = "".join(
+        f'<tr><td class="mono">{e(s["designator"])}</td><td>{e(s["topic"])}</td></tr>'
+        for s in topic.get("standards", [])
+    )
+    lab = topic.get("lab", {})
+    presets = lab.get("presets", [])
+    wasm_attrs = (f' data-wasm-url="/guide/fid-guide-wasm.wasm" data-wasm-sha256="{e(d["wasm_sha256"])}"'
+                  if d["wasm_sha256"] else "")
+    topic_json = json.dumps(topic, separators=(",", ":")).replace("</", "<\\/")
+
+    if lab.get("widget_kind") == "field-map-explorer" and d["field_map"]:
+        lab_block = render_field_map_section(d["field_map"], d)
+    else:
+        lab_block = (
+            f'<p><span id="guide-wasm-status" class="pill p">Kernel-verified static presets ready</span></p>'
+            f'<p class="muted">{e(lab.get("instructions", ""))}</p>'
+            f'<div id="guide-lab-root" class="lab" data-widget-kind="{e(lab.get("widget_kind", ""))}"{wasm_attrs}>'
+            f'{_static_preset_rows(presets)}</div>'
+            f'<script type="application/json" id="guide-topic-data">{topic_json}</script>'
+        )
+
+    crates_str = ", ".join(topic.get("crates", [])) or "spec tree only"
+    nodes_str = ", ".join(topic.get("spec_nodes", []))
+    all_links = " · ".join(
+        f'<a href="/guide/{e(t["slug"])}/"{" aria-current=page" if t["slug"] == slug else ""}>{t["order"]:02d}. {e(t["slug"])}</a>'
+        for t in d["topics"]
+    )
+    body = f"""
+<section class="hero">
+{fcf(f"{topic['order']:02d}", "FIELD GUIDE", topic["phase"], "PROVISIONAL" if topic.get("provisional") else "KNP-1")}
+<h1>{e(topic["title"])}</h1>
+<p class="lead">{e(topic["subtitle"])}</p>
+<p class="muted"><a href="/guide/">← All Field Guide chapters</a> · {all_links}</p>
+{prov_banner}
+</section>
+<section class="sheet" aria-labelledby="lab-h">
+{fcf("LAB", "EXECUTABLE", "WASM KERNEL")}
+<h2 id="lab-h">Interactive kernel sandbox</h2>
+{lab_block}
+</section>
+<section class="sheet" aria-labelledby="concept-h">
+{fcf("NOTES", "CLEAN ROOM", "CONCEPTS")}
+<h2 id="concept-h">Core principles</h2>
+{"".join(sections_html)}
+<h3>Standards cited (designators &amp; clauses only)</h3>
+<p class="muted">Metrology Maven never embeds copyrighted standards text; every rule is stated as clean-room mathematics with designator citations.</p>
+<div class="tbl"><table><thead><tr><th>Designator</th><th>Topic</th></tr></thead><tbody>{std_rows}</tbody></table></div>
+</section>
+<section class="sheet" aria-labelledby="cli-h">
+{fcf("CLI", "REPRODUCE", "LOCAL")}
+<h2 id="cli-h">Run the exact same computation locally</h2>
+<pre><code>{e(topic.get("cli_example", ""))}</code></pre>
+<p class="muted">Backed by crates: <code>{e(crates_str)}</code> · Spec nodes: <code>{e(nodes_str)}</code></p>
+</section>"""
+    return page(f"/guide/{slug}/", topic["title"], topic["subtitle"], body, d,
+                extra_head='<script src="/guide-lab.js" defer></script>\n')
+
+
 def not_found(d):
     body = f"""<section class="hero">{fcf("404", "NOT FOUND")}<h1>That page isn't here</h1>
-<p class="lead">This site was rebuilt for the open-source project. Try the <a href="/">home page</a> or the <a href="/status/">status page</a>.</p></section>"""
+<p class="lead">This site was rebuilt for the open-source project. Try the <a href="/">home page</a>, the <a href="/guide/">Field Guide</a> or the <a href="/status/">status page</a>.</p></section>"""
     return page("/404", "Not found", "Page not found.", body, d)
 
 
@@ -426,13 +675,18 @@ def not_found(d):
 
 def main() -> int:
     d = load()
-    pages = [home(d), apps_index(d), how(d), status(d), roadmap(d), contribute(d), company(d), not_found(d)]
+    pages = [home(d), apps_index(d), guide_index(d), how(d), status(d), roadmap(d), contribute(d), company(d), not_found(d)]
     pages += [app_page(a, d) for a in APPS]
+    pages += [guide_topic_page(t, d) for t in d["topics"]]
     if DIST.exists():
         shutil.rmtree(DIST)
     DIST.mkdir(parents=True)
     for f in (SITE / "src").iterdir():
         shutil.copy2(f, DIST / f.name)
+    if WASM_SRC.exists():
+        wasm_out = DIST / "guide" / "fid-guide-wasm.wasm"
+        wasm_out.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(WASM_SRC, wasm_out)
     urls = []
     for path, text in pages:
         if path == "/404":
@@ -448,7 +702,8 @@ def main() -> int:
                                       + sm + "</urlset>\n", encoding="utf-8", newline="\n")
     budget = 500_000
     worst = max((p.stat().st_size, p) for p in DIST.rglob("*.html"))
-    print(f"built {len(pages)} pages into {DIST.relative_to(ROOT)} (largest {worst[1].relative_to(DIST)}: {worst[0]:,} bytes)")
+    wasm_msg = f", WASM kernel {d['wasm_size']:,} bytes" if d["wasm_sha256"] else ", no WASM binary staged"
+    print(f"built {len(pages)} pages into {DIST.relative_to(ROOT)} (largest {worst[1].relative_to(DIST)}: {worst[0]:,} bytes{wasm_msg})")
     if worst[0] > budget:
         print(f"ERROR page over the {budget:,}-byte budget (REQ-OUTR.SITE-010)")
         return 1

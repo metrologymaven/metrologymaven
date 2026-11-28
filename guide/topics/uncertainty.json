@@ -1,0 +1,570 @@
+{
+  "schema": "guide-topic/v1",
+  "slug": "uncertainty",
+  "order": 3,
+  "title": "Measurement Uncertainty: GUM LPU, Monte Carlo & UEC-0..3",
+  "subtitle": "How input distributions combine, when linear propagation (GUM LPU) breaks down on boxcar or nonlinear geometric measurands, and why UEC-0 never fabricates a number.",
+  "phase": "P1a",
+  "status": "live-kernel",
+  "provisional": false,
+  "crates": [
+    "fid-kunc",
+    "fid-num"
+  ],
+  "spec_nodes": [
+    "UNC.MODEL.DIST",
+    "UNC.PROP.MCM.INTVL",
+    "UNC.PROP.VALID",
+    "UNC.UEC.STMT"
+  ],
+  "standards": [
+    {
+      "designator": "JCGM 100:2008 (GUM)",
+      "topic": "Law of Propagation of Uncertainty (LPU), Type A/B contributors"
+    },
+    {
+      "designator": "JCGM 101:2008 (GUM S1)",
+      "topic": "Propagation of distributions using a Monte Carlo method and LPU validation"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Linear Propagation (LPU) vs. Monte Carlo (MCM)",
+      "paragraphs": [
+        "Under the GUM Law of Propagation of Uncertainty (JCGM 100:2008), standard uncertainties combine by root-sum-of-squares weighted by first-order sensitivity coefficients: u_c = sqrt(sum((c_i * u_i)^2)), and a 95% expanded uncertainty assumes a Gaussian output distribution (k ≈ 1.96). That approximation is fast and exact for linear models dominated by Gaussian contributors.",
+        "In dimensional metrology, two common situations break LPU: (1) a single rectangular (uniform) error source such as gauge resolution dominates the budget, producing flat-topped tails that Gaussian k = 1.96 over-covers; and (2) nonlinear measurands such as 2D radial true position r = sqrt(dx^2 + dy^2) near zero, where the first-order Jacobian vanishes and the output follows a skewed Rayleigh distribution. `fid-kunc` runs the JCGM 101:2008 clause 8 numerical tolerance check automatically so you see exactly when LPU agrees with Monte Carlo and when it fails."
+      ]
+    },
+    {
+      "heading": "Evidence Classes UEC-0 to UEC-3",
+      "paragraphs": [
+        "Not all uncertainty numbers carry the same evidence. Metrology Maven tags every ResultRecord with an Uncertainty Evidence Class: UEC-0 means uncertainty was not evaluated (and is never silently invented); UEC-1 marks declared or specification-derived budgets; UEC-2 requires characterized Type A / calibration-certificate sources; UEC-3 denotes ISO 15530-3 substitution or ISO/TS 15530-4 virtual-CMM evaluation."
+      ]
+    }
+  ],
+  "lab": {
+    "widget_kind": "unc-lab",
+    "op": "unc.propagate",
+    "secondary_ops": [],
+    "instructions": "Switch between Linear Gaussian, Dominant Rectangular, and Nonlinear 2D Radial Position models—or tune contributor widths and trial count—to watch fid-kunc run seeded Monte Carlo sampling and JCGM 101 LPU validation live in WebAssembly.",
+    "presets": [
+      {
+        "id": "unc-linear-gaussian",
+        "label": "Linear Gaussian Budget (LPU Passes)",
+        "op": "unc.propagate",
+        "description": "Two independent Normal contributors (repeatability 1.5 um, calibration 0.8 um) summed linearly over 16,000 seeded trials. LPU matches Monte Carlo within the JCGM 101 2-significant-digit tolerance.",
+        "request": {
+          "op": "unc.propagate",
+          "params": {
+            "model": "linear_sum",
+            "trials": 16000,
+            "seed": 42,
+            "inputs": [
+              {
+                "name": "cmm_repeatability",
+                "kind": "normal",
+                "mean": 0.025,
+                "sigma": 1.5e-06
+              },
+              {
+                "name": "calibration_cert",
+                "kind": "normal",
+                "mean": 0.0,
+                "sigma": 8e-07
+              }
+            ]
+          }
+        },
+        "expected_digest": "sha256:17072acc39e5e00259b5d915c1398cde73186f7d48ba66cc4688d42fe8ebd757",
+        "expected_result": {
+          "contributors": [
+            {
+              "name": "cmm_repeatability",
+              "u_contrib": 1.5e-06,
+              "u_std": 1.5e-06,
+              "variance_share_pct": 77.85467128027683
+            },
+            {
+              "name": "calibration_cert",
+              "u_contrib": 8e-07,
+              "u_std": 8e-07,
+              "variance_share_pct": 22.145328719723178
+            }
+          ],
+          "coverage_p": 0.95,
+          "evidence_class": "UEC-1",
+          "fx": 0.025,
+          "histogram": [
+            {
+              "count": 5,
+              "high": 0.024994392606174663,
+              "low": 0.0249937616594479
+            },
+            {
+              "count": 28,
+              "high": 0.024995023552901428,
+              "low": 0.024994392606174663
+            },
+            {
+              "count": 66,
+              "high": 0.024995654499628192,
+              "low": 0.024995023552901428
+            },
+            {
+              "count": 138,
+              "high": 0.024996285446354953,
+              "low": 0.024995654499628192
+            },
+            {
+              "count": 316,
+              "high": 0.024996916393081717,
+              "low": 0.024996285446354953
+            },
+            {
+              "count": 598,
+              "high": 0.024997547339808482,
+              "low": 0.024996916393081717
+            },
+            {
+              "count": 1093,
+              "high": 0.024998178286535246,
+              "low": 0.024997547339808482
+            },
+            {
+              "count": 1574,
+              "high": 0.02499880923326201,
+              "low": 0.024998178286535246
+            },
+            {
+              "count": 2069,
+              "high": 0.024999440179988775,
+              "low": 0.02499880923326201
+            },
+            {
+              "count": 2323,
+              "high": 0.02500007112671554,
+              "low": 0.024999440179988775
+            },
+            {
+              "count": 2323,
+              "high": 0.0250007020734423,
+              "low": 0.02500007112671554
+            },
+            {
+              "count": 1993,
+              "high": 0.025001333020169065,
+              "low": 0.0250007020734423
+            },
+            {
+              "count": 1426,
+              "high": 0.02500196396689583,
+              "low": 0.025001333020169065
+            },
+            {
+              "count": 1037,
+              "high": 0.025002594913622594,
+              "low": 0.02500196396689583
+            },
+            {
+              "count": 553,
+              "high": 0.025003225860349358,
+              "low": 0.025002594913622594
+            },
+            {
+              "count": 274,
+              "high": 0.025003856807076123,
+              "low": 0.025003225860349358
+            },
+            {
+              "count": 111,
+              "high": 0.025004487753802884,
+              "low": 0.025003856807076123
+            },
+            {
+              "count": 52,
+              "high": 0.025005118700529648,
+              "low": 0.025004487753802884
+            },
+            {
+              "count": 17,
+              "high": 0.025005749647256412,
+              "low": 0.025005118700529648
+            },
+            {
+              "count": 4,
+              "high": 0.025006380593983177,
+              "low": 0.025005749647256412
+            }
+          ],
+          "lpu_check_passed": true,
+          "lpu_expanded": 3.331938773718092e-06,
+          "lpu_high": 0.02500333193877372,
+          "lpu_low": 0.024996668061226284,
+          "lpu_u_std": 1.7e-06,
+          "mc_validation": "ran",
+          "mcm_bias": 1.4740113192523996e-08,
+          "mcm_mean": 0.025000014740113194,
+          "mcm_shortest_high": 0.025003212768303924,
+          "mcm_shortest_low": 0.024996565069334904,
+          "mcm_sym_high": 0.025003327306707176,
+          "mcm_sym_low": 0.024996667958223914,
+          "mcm_u_std": 1.7008442721041992e-06,
+          "model": "linear_sum",
+          "seed": 42,
+          "standards_ref": "JCGM 100:2008; JCGM 101:2008",
+          "statement_digest": "sha256:23b504a9c090ba757e0c600c9f98cee8ce3d1a2aa614cd3ed58fa8e723248dae",
+          "statement_method": "LPU",
+          "trials": 16000,
+          "validation_d_high": 4.632066542831215e-09,
+          "validation_d_low": 1.030023705217431e-10,
+          "validation_delta": 5e-08
+        }
+      },
+      {
+        "id": "unc-dominant-rect",
+        "label": "Dominant Rectangular Contributor (LPU Fails)",
+        "op": "unc.propagate",
+        "description": "A +/- 5 um rectangular scale-resolution contributor dominates a 0.4 um Gaussian sensor noise term. The output is boxcar-shaped, so Gaussian k=1.96 fails JCGM 101 validation.",
+        "request": {
+          "op": "unc.propagate",
+          "params": {
+            "model": "linear_sum",
+            "trials": 16000,
+            "seed": 42,
+            "inputs": [
+              {
+                "name": "scale_resolution",
+                "kind": "rect",
+                "mean": 0.025,
+                "half_width": 5e-06
+              },
+              {
+                "name": "cmm_repeatability",
+                "kind": "normal",
+                "mean": 0.0,
+                "sigma": 4e-07
+              }
+            ]
+          }
+        },
+        "expected_digest": "sha256:81e238719ac6b284f18ae9a4dcbcb280fc57f9dbecef5210684ba2291a5c1a5b",
+        "expected_result": {
+          "contributors": [
+            {
+              "name": "scale_resolution",
+              "u_contrib": 2.886751345949013e-06,
+              "u_std": 2.886751345949013e-06,
+              "variance_share_pct": 98.11616954474209
+            },
+            {
+              "name": "cmm_repeatability",
+              "u_contrib": 4e-07,
+              "u_std": 4e-07,
+              "variance_share_pct": 1.8838304552578942
+            }
+          ],
+          "coverage_p": 0.95,
+          "evidence_class": "UEC-1",
+          "fx": 0.025,
+          "histogram": [
+            {
+              "count": 59,
+              "high": 0.024994619810427936,
+              "low": 0.024993998416329197
+            },
+            {
+              "count": 436,
+              "high": 0.024995241204526675,
+              "low": 0.024994619810427936
+            },
+            {
+              "count": 866,
+              "high": 0.024995862598625414,
+              "low": 0.024995241204526675
+            },
+            {
+              "count": 987,
+              "high": 0.024996483992724153,
+              "low": 0.024995862598625414
+            },
+            {
+              "count": 978,
+              "high": 0.024997105386822892,
+              "low": 0.024996483992724153
+            },
+            {
+              "count": 953,
+              "high": 0.02499772678092163,
+              "low": 0.024997105386822892
+            },
+            {
+              "count": 996,
+              "high": 0.02499834817502037,
+              "low": 0.02499772678092163
+            },
+            {
+              "count": 1048,
+              "high": 0.02499896956911911,
+              "low": 0.02499834817502037
+            },
+            {
+              "count": 974,
+              "high": 0.024999590963217848,
+              "low": 0.02499896956911911
+            },
+            {
+              "count": 1007,
+              "high": 0.025000212357316587,
+              "low": 0.024999590963217848
+            },
+            {
+              "count": 958,
+              "high": 0.025000833751415326,
+              "low": 0.025000212357316587
+            },
+            {
+              "count": 1027,
+              "high": 0.025001455145514065,
+              "low": 0.025000833751415326
+            },
+            {
+              "count": 1053,
+              "high": 0.025002076539612804,
+              "low": 0.025001455145514065
+            },
+            {
+              "count": 988,
+              "high": 0.025002697933711543,
+              "low": 0.025002076539612804
+            },
+            {
+              "count": 953,
+              "high": 0.025003319327810282,
+              "low": 0.025002697933711543
+            },
+            {
+              "count": 1021,
+              "high": 0.02500394072190902,
+              "low": 0.025003319327810282
+            },
+            {
+              "count": 964,
+              "high": 0.02500456211600776,
+              "low": 0.02500394072190902
+            },
+            {
+              "count": 583,
+              "high": 0.0250051835101065,
+              "low": 0.02500456211600776
+            },
+            {
+              "count": 143,
+              "high": 0.025005804904205238,
+              "low": 0.0250051835101065
+            },
+            {
+              "count": 6,
+              "high": 0.025006426298303977,
+              "low": 0.025005804904205238
+            }
+          ],
+          "lpu_check_passed": false,
+          "lpu_expanded": 5.71198654151499e-06,
+          "lpu_high": 0.025005711986541515,
+          "lpu_low": 0.024994288013458488,
+          "lpu_u_std": 2.9143323992534616e-06,
+          "mc_validation": "ran",
+          "mcm_bias": 1.8448866379028317e-08,
+          "mcm_mean": 0.02500001844886638,
+          "mcm_shortest_high": 0.02500471560211641,
+          "mcm_shortest_low": 0.02499503014000997,
+          "mcm_sym_high": 0.025004839504619607,
+          "mcm_sym_low": 0.024995147593579996,
+          "mcm_u_std": 2.9089598891797295e-06,
+          "model": "linear_sum",
+          "seed": 42,
+          "standards_ref": "JCGM 100:2008; JCGM 101:2008",
+          "statement_digest": "sha256:b5d858113f6742bc4d20345db49ea1fc971d2dfbf2dc64a4245512a74e72fdf8",
+          "statement_method": "LPU",
+          "trials": 16000,
+          "validation_d_high": 8.724819219076141e-07,
+          "validation_d_low": 8.595801215087462e-07,
+          "validation_delta": 5e-08
+        }
+      },
+      {
+        "id": "unc-nonlinear-radial",
+        "label": "Nonlinear 2D Radial Position Near Origin (LPU Breaks Down)",
+        "op": "unc.propagate",
+        "description": "Radial offset r = hypot(dx, dy) around (0, 0) with 5 um Gaussian X/Y uncertainty. First-order LPU predicts zero uncertainty at the origin, so there is no LPU interval to check and the statement records the Monte Carlo result, which reveals the true non-negative Rayleigh distribution.",
+        "request": {
+          "op": "unc.propagate",
+          "params": {
+            "model": "radial_2d",
+            "trials": 8000,
+            "seed": 42,
+            "inputs": [
+              {
+                "name": "dx",
+                "kind": "normal",
+                "mean": 0.0,
+                "sigma": 5e-06
+              },
+              {
+                "name": "dy",
+                "kind": "normal",
+                "mean": 0.0,
+                "sigma": 5e-06
+              }
+            ]
+          }
+        },
+        "expected_digest": "sha256:a2cc8a1b5f67f376477558ad6a00f37ab0a4ae60909d0b0baf05cb40b2af7934",
+        "expected_result": {
+          "contributors": [
+            {
+              "name": "dx",
+              "u_contrib": 0,
+              "u_std": 5e-06,
+              "variance_share_pct": 0
+            },
+            {
+              "name": "dy",
+              "u_contrib": 0,
+              "u_std": 5e-06,
+              "variance_share_pct": 0
+            }
+          ],
+          "coverage_p": 0.95,
+          "evidence_class": "UEC-1",
+          "fx": 0,
+          "histogram": [
+            {
+              "count": 220,
+              "high": 1.1605917625876873e-06,
+              "low": 1.1581409559382942e-07
+            },
+            {
+              "count": 543,
+              "high": 2.2053694295815453e-06,
+              "low": 1.1605917625876873e-06
+            },
+            {
+              "count": 845,
+              "high": 3.2501470965754032e-06,
+              "low": 2.2053694295815453e-06
+            },
+            {
+              "count": 891,
+              "high": 4.294924763569261e-06,
+              "low": 3.2501470965754032e-06
+            },
+            {
+              "count": 1009,
+              "high": 5.339702430563118e-06,
+              "low": 4.294924763569261e-06
+            },
+            {
+              "count": 975,
+              "high": 6.384480097556976e-06,
+              "low": 5.339702430563118e-06
+            },
+            {
+              "count": 869,
+              "high": 7.429257764550835e-06,
+              "low": 6.384480097556976e-06
+            },
+            {
+              "count": 812,
+              "high": 8.474035431544692e-06,
+              "low": 7.429257764550835e-06
+            },
+            {
+              "count": 587,
+              "high": 9.51881309853855e-06,
+              "low": 8.474035431544692e-06
+            },
+            {
+              "count": 394,
+              "high": 1.0563590765532407e-05,
+              "low": 9.51881309853855e-06
+            },
+            {
+              "count": 339,
+              "high": 1.1608368432526266e-05,
+              "low": 1.0563590765532407e-05
+            },
+            {
+              "count": 213,
+              "high": 1.2653146099520124e-05,
+              "low": 1.1608368432526266e-05
+            },
+            {
+              "count": 117,
+              "high": 1.3697923766513981e-05,
+              "low": 1.2653146099520124e-05
+            },
+            {
+              "count": 81,
+              "high": 1.474270143350784e-05,
+              "low": 1.3697923766513981e-05
+            },
+            {
+              "count": 51,
+              "high": 1.5787479100501696e-05,
+              "low": 1.474270143350784e-05
+            },
+            {
+              "count": 31,
+              "high": 1.6832256767495555e-05,
+              "low": 1.5787479100501696e-05
+            },
+            {
+              "count": 11,
+              "high": 1.7877034434489414e-05,
+              "low": 1.6832256767495555e-05
+            },
+            {
+              "count": 6,
+              "high": 1.892181210148327e-05,
+              "low": 1.7877034434489414e-05
+            },
+            {
+              "count": 4,
+              "high": 1.996658976847713e-05,
+              "low": 1.892181210148327e-05
+            },
+            {
+              "count": 2,
+              "high": 2.1011367435470985e-05,
+              "low": 1.996658976847713e-05
+            }
+          ],
+          "lpu_check_passed": false,
+          "lpu_expanded": 0,
+          "lpu_high": 0,
+          "lpu_low": 0,
+          "lpu_u_std": 0,
+          "mc_validation": "not_run",
+          "mcm_bias": 6.2207354390975646e-06,
+          "mcm_mean": 6.2207354390975646e-06,
+          "mcm_shortest_high": 1.2430067256922943e-05,
+          "mcm_shortest_low": 6.273599491373032e-07,
+          "mcm_sym_high": 1.355691488368747e-05,
+          "mcm_sym_low": 1.1150835797460045e-06,
+          "mcm_u_std": 3.2612487215872727e-06,
+          "model": "radial_2d",
+          "seed": 42,
+          "standards_ref": "JCGM 100:2008; JCGM 101:2008",
+          "statement_digest": "sha256:94d51486b1a07f901109bc395e7162470a4a252dbca06eae9b9e26fefd45cbcd",
+          "statement_method": "MCM",
+          "trials": 8000,
+          "validation_d_high": 1.355691488368747e-05,
+          "validation_d_low": 1.1150835797460045e-06,
+          "validation_delta": 0
+        }
+      }
+    ]
+  },
+  "cli_example": "echo '{\"op\":\"unc.propagate\",\"params\":{\"model\":\"radial_2d\",\"trials\":8000,\"seed\":42,\"inputs\":[{\"name\":\"dx\",\"kind\":\"normal\",\"mean\":0,\"sigma\":0.000005},{\"name\":\"dy\",\"kind\":\"normal\",\"mean\":0,\"sigma\":0.000005}]}}' | cargo run -q -p fid-guide-wasm"
+}
