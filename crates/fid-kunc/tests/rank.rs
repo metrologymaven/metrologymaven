@@ -178,6 +178,10 @@ fn check_lpu_case(case: &J) -> Option<RankOutput> {
     if let Some(err) = case.opt("error") {
         let e = res.expect_err(&name);
         assert_eq!(e.code(), err.s(), "{name}");
+        if let Some(pair) = case.opt("pair") {
+            let p: Vec<usize> = pair.strs().iter().map(|x| x.parse().unwrap()).collect();
+            assert_eq!(e, RankError::NotPositiveSemidefinite { i: p[0], j: p[1] }, "{name}");
+        }
         return None;
     }
     let out = res.unwrap_or_else(|e| panic!("{name}: {e}"));
@@ -271,7 +275,13 @@ fn ac4_and_lpu_rules() {
             "rounding_resolution" => {
                 assert_eq!(out.unwrap().degenerate(), Some(Degenerate::VarianceAtRoundingResolution));
             }
-            "not_psd" => assert!(out.is_none()),
+            "not_psd" | "rho_1_5" | "indefinite_3x3" => assert!(out.is_none()),
+            "subnormal_variance" => {
+                // Review of #685: a subnormal c^T S c is never a confident pair of shares.
+                let out = out.unwrap();
+                assert_eq!(out.degenerate(), Some(Degenerate::VarianceAtRoundingResolution));
+                assert_eq!(out.shares(), Some(Shares::Degenerate));
+            }
             "share_sum_out_of_tolerance" => {
                 let out = out.unwrap();
                 assert_eq!(out.shares(), Some(Shares::SumOutOfTolerance));
@@ -287,6 +297,9 @@ fn ac4_and_lpu_rules() {
         "perfect_cancel",
         "rounding_resolution",
         "not_psd",
+        "rho_1_5",
+        "indefinite_3x3",
+        "subnormal_variance",
         "negative_share",
         "single_input",
         "share_sum_out_of_tolerance",
@@ -294,7 +307,7 @@ fn ac4_and_lpu_rules() {
         assert!(seen.iter().any(|s| s == want), "case {want} missing");
     }
     let not_psd = rules.get("cases").a().iter().find(|c| c.get("name").s() == "not_psd").unwrap();
-    assert_eq!(run_lpu(not_psd).unwrap_err(), RankError::NegativeVariance { index: None });
+    assert_eq!(run_lpu(not_psd).unwrap_err(), RankError::NotPositiveSemidefinite { i: 0, j: 1 });
 }
 
 // ------------------------------------------------------------------ samples
@@ -313,7 +326,7 @@ fn run_samples(case: &J) -> RankOutput {
 fn samples_rules() {
     let rules = parse_json(&read("rules.json"));
     let cases = rules.get("samples").a();
-    assert_eq!(cases.len(), 3);
+    assert_eq!(cases.len(), 5);
     for case in cases {
         let name = case.get("name").s();
         let out = run_samples(case);
@@ -492,6 +505,67 @@ fn r2_never_exceeds_one() {
     assert!(r2 <= 1.0 && r2 > 1.0 - 1e-12, "{r2}");
 }
 
+/// The covariance must be positive semi-definite (review of #685): rho = 1.5 fails the
+/// pairwise Cauchy-Schwarz test; a pairwise-valid but indefinite 3x3 fails the Cholesky
+/// remainder; singular positive semi-definite matrices pass; extreme scales never let an
+/// overflow or underflow decide.
+#[test]
+fn positive_semidefinite_rules() {
+    // u = (1, 2), rho = 1.5: S_12 = 3.
+    assert_eq!(
+        lpu(&[1.0, 1.0], &[1.0, 3.0, 3.0, 4.0], &["a", "b"]).unwrap_err(),
+        RankError::NotPositiveSemidefinite { i: 0, j: 1 }
+    );
+    // A zero variance with a non-zero covariance.
+    assert_eq!(
+        lpu(&[1.0, 1.0], &[0.0, 1e-300, 1e-300, 1.0], &["a", "b"]).unwrap_err(),
+        RankError::NotPositiveSemidefinite { i: 0, j: 1 }
+    );
+    // rho = 10 at scales where s * s underflows to zero: decided by the scaled form.
+    assert_eq!(
+        lpu(&[1.0, 1.0], &[1e-171, 1e-170, 1e-170, 1e-171], &["a", "b"]).unwrap_err(),
+        RankError::NotPositiveSemidefinite { i: 0, j: 1 }
+    );
+    // rho = 2 at scales where s * s overflows.
+    assert_eq!(
+        lpu(&[1.0, 1.0], &[1e200, 2e200, 2e200, 1e200], &["a", "b"]).unwrap_err(),
+        RankError::NotPositiveSemidefinite { i: 0, j: 1 }
+    );
+    // rho = 0.5 at those scales passes.
+    for (d, s) in [(1e-171, 5e-172), (1e200, 5e199)] {
+        assert!(lpu(&[1.0, 1.0], &[d, s, s, d], &["a", "b"]).is_ok(), "{d}");
+    }
+    // Exactly singular positive semi-definite matrices pass (rho = 1, rank 1 of 3).
+    let one = [1.0, 2.0, 3.0, 2.0, 4.0, 6.0, 3.0, 6.0, 9.0];
+    let out = lpu(&[1.0, -1.0, 0.5], &one, &["a", "b", "c"]).unwrap();
+    assert_eq!(out.contributors().len(), 3);
+    // Pairwise correlations 0.9, -0.9, 0.9: indefinite, found by the Cholesky remainder.
+    let ind = [1.0, 0.9, -0.9, 0.9, 1.0, 0.9, -0.9, 0.9, 1.0];
+    assert_eq!(lpu(&[1.0; 3], &ind, &["a", "b", "c"]).unwrap_err().code(), "not_positive_semidefinite");
+}
+
+/// Review of #685: c = (1e-155, 9.9999998e-156) with perfectly anti-correlated unit inputs
+/// gave a subnormal c^T S c and shares near (404805, -404804); it is degenerate.
+#[test]
+fn subnormal_variance_is_degenerate() {
+    let out = lpu(&[1e-155, 9.9999998e-156], &[1.0, -1.0, -1.0, 1.0], &["x1", "x2"]).unwrap();
+    assert_eq!(out.degenerate(), Some(Degenerate::VarianceAtRoundingResolution));
+    assert!(out.contributors().iter().all(|r| r.share().is_none()));
+}
+
+/// Sums of squares below 2^-1022 carry no r2 (review of #685).
+#[test]
+fn subnormal_sums_of_squares_carry_no_r2() {
+    let t = [0.0, 1e-160, 0.0, 1e-160];
+    let x = [1.0, 2.0, 3.0, 5.0];
+    let out = samples(&[&t, &x], &[1.0, 2.0, 4.0, 4.0], &["t", "x"]).unwrap();
+    assert_eq!(order(&out), ["x", "t"]);
+    assert_eq!(out.contributors()[1].r2_absent(), Some(ScoreAbsent::BelowRoundingResolution));
+    let out = samples(&[&x], &[0.0, 1e-160, 2e-160, 0.0], &["x"]).unwrap();
+    assert_eq!(out.contributors()[0].r2_absent(), Some(ScoreAbsent::BelowRoundingResolution));
+    assert_eq!(out.degenerate(), None);
+}
+
 // ------------------------------------------------------------------ statement conversion
 
 #[test]
@@ -522,7 +596,7 @@ fn statement_contributors() {
             "{name}"
         );
     }
-    let s = run_samples(&rules.get("samples").a()[2]);
+    let s = run_samples(rules.get("samples").a().iter().find(|c| c.get("name").s() == "partial").unwrap());
     assert_eq!(
         s.statement_contributors().unwrap_err(),
         RankError::NotConvertible { reason: "approximate_src2", input_id: None }
@@ -549,6 +623,7 @@ fn codes() {
     assert_eq!(ALGORITHM_ID, "unc.prop.rank@1.0.0");
     assert_eq!(SHARE_SUM_TOL, 1e-12);
     assert_eq!(RankMethod::ApproximateSrc2.code(), "approximate_src2");
+    assert_eq!(ScoreAbsent::BelowRoundingResolution.code(), "below_rounding_resolution");
     let errs = [
         (RankError::NoInputs, "no_inputs"),
         (RankError::DimensionMismatch { what: "ids", expected: 1, found: 0, index: None }, "dimension_mismatch"),
@@ -557,6 +632,7 @@ fn codes() {
         (RankError::TooFewSamples { found: 1 }, "too_few_samples"),
         (RankError::NotSymmetric { i: 0, j: 1 }, "not_symmetric"),
         (RankError::NegativeVariance { index: None }, "negative_variance"),
+        (RankError::NotPositiveSemidefinite { i: 0, j: 1 }, "not_positive_semidefinite"),
         (RankError::Numeric { input: None, error: NumError::EmptyInput { op: "x" } }, "numeric"),
         (RankError::NotConvertible { reason: "shares_absent", input_id: None }, "not_convertible"),
         (RankError::Encoding, "encoding"),

@@ -14,8 +14,19 @@ spec/unc/prop/rank/NODE.md and the pinned operation order in the module document
 - Square roots are correctly rounded. This script never trusts a library square root: it
   takes a candidate and corrects it with exact rational comparisons against the rounding
   midpoints (`crsqrt`), so no printed value depends on libm.
+- LPU positive semi-definiteness (review of #685): (4a) for each pair i < j with s = S_ij != 0,
+  refuse `not_positive_semidefinite{i, j}` if S_ii or S_jj is 0, or if
+  s * s > (S_ii * S_jj) * (1 + 4 * 2^-53) (both sides finite and >= 2^-1022; otherwise
+  q * q > 1 + 4 * 2^-53 with q = (|s| / sqrt(S_ii)) / sqrt(S_jj)); (4b) the pivoted
+  Cholesky of KRN.NUM.LA (rules pinned in fid-num's la::chol module docs, re-implemented here
+  from that text: lower triangle only, remaining diagonals d_j = a - sum_sq(L_j[0..k]), first
+  largest pivot, stop when d_p <= 0 since rel_tol = 0, row swaps, column by dot) stopping at
+  rank r < n leaves remainders s_ij = a(p_i, p_j) - dot(L_i[0..r], L_j[0..r]) that must obey
+  |s_ij| <= (4 (r + 1) 2^-53) (|a| + dot(|L_i|, |L_j|)) + (4 r + 4) 2^-1074. Every refusal
+  label is also confirmed by an exact rational test (exact LDL^T of the Fraction matrix).
 - LPU (REQ-UNC.PROP.RANK-001, -003, -004): u_i(y) = |c_i| * sqrt(S_ii); w_i = dot(S_i, c);
-  v = dot(c, w); a = dot(|c|, b) with b_i = dot(|S_i|, |c|); tol = (4 (n + 1) 2^-53) a.
+  v = dot(c, w); a = dot(|c|, b) with b_i = dot(|S_i|, |c|);
+  tol = (4 (n + 1) 2^-53) a + (4 n + 4) 2^-1074.
   v < -tol is refused (`negative_variance`); v <= tol is degenerate (shares absent;
   `zero_variance` when v == 0, else `variance_at_rounding_resolution`); otherwise
   share_i = (c_i * w_i) / v, share_sum = sum(shares), and |share_sum - 1| > 1e-12 drops the
@@ -23,7 +34,8 @@ spec/unc/prop/rank/NODE.md and the pinned operation order in the module document
 - Samples (REQ-UNC.PROP.RANK-002, -004): m_y = mean(y), d_y = y - m_y, s_yy = sum_sq(d_y);
   per input the same, s_xy = dot(d_x, d_y), r = (s_xy / sqrt(s_xx)) / sqrt(s_yy), r2 = r * r,
   a rounded r2 above 1 is reported as 1. A bitwise-constant column or a zero sum of squares
-  is `zero_input_variance` (input) or degenerate `zero_output_variance` (output).
+  is `zero_input_variance` (input) or degenerate `zero_output_variance` (output); a positive
+  sum of squares below 2^-1022 (s_yy for every input, or s_xx) is `below_rounding_resolution`.
 - Order (REQ-003): descending key (u_i(y) or r2; an absent r2 after every present one), ties
   by input ID bytes ascending; an entry whose key equals the previous entry's key carries
   tie_broken_by_id = true.
@@ -59,6 +71,8 @@ from fractions import Fraction as F
 HERE = pathlib.Path(__file__).resolve().parent
 ALGORITHM = "unc.prop.rank@1.0.0"
 U = 2.0 ** -53
+TINY = 2.0 ** -1074
+MIN_NORMAL = 2.0 ** -1022
 BLOCK = 256
 SHARE_SUM_TOL = 1e-12
 
@@ -175,15 +189,104 @@ def order(entries, key):
     return out
 
 
+def cauchy_schwarz(rows):
+    n = len(rows)
+    one_plus = 1.0 + 4.0 * U
+    for i in range(n):
+        for j in range(i + 1, n):
+            s, dii, djj = rows[i][j], rows[i][i], rows[j][j]
+            if s == 0.0:
+                continue
+            if dii == 0.0 or djj == 0.0:
+                return (i, j)
+            lhs, rhs = s * s, (dii * djj) * one_plus
+            normal = lambda x: math.isfinite(x) and x >= MIN_NORMAL
+            if normal(lhs) and normal(rhs):
+                bad = lhs > rhs
+            else:
+                q = (abs(s) / crsqrt(dii)) / crsqrt(djj)
+                bad = q * q > one_plus
+            if bad:
+                return (i, j)
+    return None
+
+
+def chol_pivoted(a):
+    """KRN.NUM.LA pivoted Cholesky with rel_tol = 0, from the pinned rules. Returns (L, perm, r)."""
+    n = len(a)
+    at = lambda i, j: a[max(i, j)][min(i, j)]
+    perm = list(range(n))
+    L = [[0.0] * n for _ in range(n)]
+    for k in range(n):
+        best, dbest = None, None
+        for j in range(k, n):
+            d = at(perm[j], perm[j]) - sum_sq(L[j][:k])
+            assert math.isfinite(d)
+            if best is None or d > dbest:
+                best, dbest = j, d
+        thr_ok = dbest <= 0.0
+        if k == 0:
+            thr = 0.0 * dbest
+        if thr_ok or dbest <= thr:
+            return L, perm, k
+        p = best
+        perm[k], perm[p] = perm[p], perm[k]
+        L[k][:k], L[p][:k] = L[p][:k], L[k][:k]
+        L[k][k] = crsqrt(dbest)
+        for i in range(k + 1, n):
+            L[i][k] = (at(perm[i], perm[k]) - dot(L[i][:k], L[k][:k])) / L[k][k]
+            assert math.isfinite(L[i][k])
+    return L, perm, n
+
+
+def cholesky_remainder(rows):
+    n = len(rows)
+    L, perm, r = chol_pivoted(rows)
+    if r >= n:
+        return None
+    factor = 4.0 * (float(r) + 1.0) * U
+    floor = (4.0 * float(r) + 4.0) * TINY
+    for i in range(r, n):
+        for j in range(i, n):
+            pi, pj = perm[i], perm[j]
+            av = rows[pi][pj]
+            rem = av - dot(L[i][:r], L[j][:r])
+            bound = factor * (abs(av) + dot([abs(x) for x in L[i][:r]], [abs(x) for x in L[j][:r]])) + floor
+            if abs(rem) > bound:
+                return (min(pi, pj), max(pi, pj))
+    return None
+
+
+def exact_psd(cov, n):
+    """Exact positive semi-definiteness of the rational matrix (symmetric elimination)."""
+    m = [[F(cov[i * n + j]) for j in range(n)] for i in range(n)]
+    for k in range(n):
+        if m[k][k] < 0:
+            return False
+        if m[k][k] == 0:
+            if any(m[k][j] != 0 for j in range(k, n)):
+                return False
+            continue
+        for i in range(k + 1, n):
+            f = m[i][k] / m[k][k]
+            for j in range(k, n):
+                m[i][j] -= f * m[k][j]
+    return True
+
+
 def rank_lpu(ids, c, cov):
     n = len(c)
     rows = [cov[i * n:(i + 1) * n] for i in range(n)]
+    for pair in (cauchy_schwarz(rows), cholesky_remainder(rows)):
+        if pair is not None:
+            assert not exact_psd(cov, n), ("refused a PSD matrix", cov)
+            return {"error": "not_positive_semidefinite", "pair": list(pair)}
     u = [norm0(abs(c[i]) * crsqrt(rows[i][i])) for i in range(n)]
     w = [dot(rows[i], c) for i in range(n)]
     v = dot(c, w)
     b = [dot([abs(x) for x in rows[i]], [abs(x) for x in c]) for i in range(n)]
     a = dot([abs(x) for x in c], b)
-    tol = (4.0 * (float(n) + 1.0) * U) * a
+    tol = (4.0 * (float(n) + 1.0) * U) * a + (4.0 * float(n) + 4.0) * TINY
     if v < -tol:
         return {"error": "negative_variance"}
     entries = [{"input_id": ids[i], "sensitivity": norm0(c[i]), "u_contrib": u[i], "share": None} for i in range(n)]
@@ -227,6 +330,8 @@ def rank_samples(ids, inputs, output):
         e = {"input_id": ids[i], "r2": None, "r2_absent": "none"}
         if degenerate != "none":
             e["r2_absent"] = "degenerate_output"
+        elif syy < MIN_NORMAL:
+            e["r2_absent"] = "below_rounding_resolution"
         elif constant(col):
             e["r2_absent"] = "zero_input_variance"
         else:
@@ -235,6 +340,8 @@ def rank_samples(ids, inputs, output):
             sxx = sum_sq(dx)
             if sxx == 0.0:
                 e["r2_absent"] = "zero_input_variance"
+            elif sxx < MIN_NORMAL:
+                e["r2_absent"] = "below_rounding_resolution"
             else:
                 sxy = dot(dx, dy)
                 r = (sxy / crsqrt(sxx)) / crsqrt(syy)
@@ -314,6 +421,8 @@ def lpu_case(name, ids, c, cov, note):
     case = {"name": name, "note": note, "ids": ids, "c": [hex64(x) for x in c], "cov": [hex64(x) for x in cov]}
     if "error" in res:
         case["error"] = res["error"]
+        if "pair" in res:
+            case["pair"] = [str(x) for x in res["pair"]]
         return case, None
     case.update({
         "order": [e["input_id"] for e in res["contributors"]],
@@ -379,7 +488,15 @@ def build_rules():
         "rho = -1 and c differ by one ulp: v is below the rounding tolerance, degenerate "
         "variance_at_rounding_resolution")
     add("not_psd", ["x1", "x2"], [1.0, 1.0], [1.0, -2.0, -2.0, 1.0],
-        "|S_12| > sqrt(S_11 S_22): v = -2 < -tol, refused negative_variance")
+        "|S_12| > sqrt(S_11 S_22): refused not_positive_semidefinite{0, 1} by Cauchy-Schwarz")
+    add("rho_1_5", ["x1", "x2"], [1.0, -1.0], [4.0, 3.0, 3.0, 1.0],
+        "u = (2, 1), rho = 1.5: refused not_positive_semidefinite{0, 1} by Cauchy-Schwarz")
+    add("indefinite_3x3", ["x1", "x2", "x3"], [1.0, 1.0, 1.0], [1.0, 0.9, -0.9, 0.9, 1.0, 0.9, -0.9, 0.9, 1.0],
+        "pairwise correlations 0.9, -0.9, 0.9 pass Cauchy-Schwarz, but the matrix is indefinite: "
+        "the pivoted Cholesky remainder refuses it")
+    add("subnormal_variance", ["x1", "x2"], [1e-155, 9.9999998e-156], [1.0, -1.0, -1.0, 1.0],
+        "review of #685: c^T S c is subnormal (exactly about 4e-326), so the products underflow; the "
+        "absolute tolerance term makes it variance_at_rounding_resolution instead of shares near +-4e5")
     add("negative_share", ["x1", "x2"], [1.0, 1.0], [1.0, -1.8, -1.8, 4.0],
         "u = (1, 2), rho = -0.9: the Euler share of x1 is negative (-0.8 / 1.4); shares present, "
         "statement conversion refused")
@@ -410,7 +527,13 @@ def build_rules():
         if cs["name"] == "rounding_resolution":
             assert cs["degenerate"] == "variance_at_rounding_resolution", cs
         if cs["name"] == "not_psd":
-            assert cs["error"] == "negative_variance"
+            assert cs["error"] == "not_positive_semidefinite" and cs["pair"] == ["0", "1"]
+        if cs["name"] == "rho_1_5":
+            assert cs["error"] == "not_positive_semidefinite" and cs["pair"] == ["0", "1"]
+        if cs["name"] == "indefinite_3x3":
+            assert cs["error"] == "not_positive_semidefinite", cs
+        if cs["name"] == "subnormal_variance":
+            assert cs["degenerate"] == "variance_at_rounding_resolution", cs
         if cs["name"] == "negative_share":
             assert cs["shares"] == "present"
             assert any(int(h, 16) >> 63 for h in cs["share"])  # a share with the sign bit set
@@ -446,6 +569,12 @@ def build_samples_rules():
     assert [e["input_id"] for e in r["contributors"]] == ["b", "c", "a"]
     assert [e["tie_broken_by_id"] for e in r["contributors"]] == [False, True, False]
     assert r["contributors"][0]["r2"] == 1.0 and r["contributors"][1]["r2"] == 1.0
+    r = add("tiny_input", ["t", "x"], [[0.0, 1e-160, 0.0, 1e-160], [1.0, 2.0, 3.0, 5.0]], [1.0, 2.0, 4.0, 4.0],
+            "input t has s_xx of about 1e-320 (subnormal): r2 absent below_rounding_resolution")
+    assert [e["r2_absent"] for e in r["contributors"]] == ["none", "below_rounding_resolution"], r
+    r = add("tiny_output", ["a", "b"], [[1.0, 2.0, 3.0], [3.0, 1.0, 2.0]], [0.0, 1e-160, 2e-160],
+            "output s_yy is about 2e-320 (subnormal): every r2 absent below_rounding_resolution")
+    assert all(e["r2_absent"] == "below_rounding_resolution" for e in r["contributors"]), r
     r = add("partial", ["p", "q"], [[1.0, 2.0, 3.0, 4.0, 5.0], [2.0, -1.0, 0.5, 3.0, -2.0]],
             [1.0, 3.0, 2.0, 5.0, 4.0], "a hand-built pair with distinct r2 below 1")
     exact = []

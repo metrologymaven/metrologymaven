@@ -21,13 +21,32 @@
 //! 4. `S` exactly symmetric (`S_ij == S_ji` as values), else `not_symmetric{i, j}` for the
 //!    first pair `i < j` in row-major order. Every `S_ii >= 0`, else
 //!    `negative_variance{index: i}`.
+//! 4a. Cauchy-Schwarz, for every pair `i < j` in row-major order, with `s = S_ij`: the pair is
+//!    refused as `not_positive_semidefinite{i, j}` when `s != 0` and `S_ii == 0` or
+//!    `S_jj == 0`, or when `s * s > (S_ii * S_jj) * (1 + 4 * 2^-53)`. That comparison is
+//!    evaluated as written when both sides are finite and at least `2^-1022`; otherwise as
+//!    `q * q > 1 + 4 * 2^-53` with `q = (|s| / sqrt(S_ii)) / sqrt(S_jj)`, so an overflow or an
+//!    underflow never decides the test.
+//! 4b. Pivoted Cholesky `fid_num::la::chol_pivoted(S, 0)` (`n` at most `la::MAX_DIM` = 4096,
+//!    else `numeric`). If it stops at rank `r < n`, every remaining Schur-complement entry
+//!    `s_ij = S[p_i][p_j] - red::dot(L_i[0..r], L_j[0..r])` (positions `r <= i <= j < n`,
+//!    `p` the pivot permutation) must satisfy
+//!    `|s_ij| <= (4 (r + 1) 2^-53) (|S[p_i][p_j]| + red::dot(|L_i[0..r]|, |L_j[0..r]|))
+//!    + (4 r + 4) 2^-1074`, else `not_positive_semidefinite{i, j}` with the original indices,
+//!    smaller first. A singular positive semi-definite matrix leaves only rounding there; an
+//!    indefinite one that the pairwise test misses (three inputs with pairwise correlations
+//!    0.9, 0.9 and -0.9) leaves an entry beyond the bound. The factorization is `O(n^3)` for
+//!    an input of `n^2` values.
 //! 5. `u_i(y) = |c_i| * sqrt(S_ii)` (correctly rounded `f::sqrt`, one rounded product).
 //! 6. `w_i = red::dot(S_i, c)` for ascending `i`, `v = red::dot(c, w)` (`v` is `c^T S c`).
-//!    The rounding tolerance of `v` is `tol = (4 (n + 1) 2^-53) a` with
-//!    `a = red::dot(|c|, b)`, `b_i = red::dot(|S_i|, |c|)`: a bound on the rounding error of
-//!    the two dot products, so the zero test of REQ-004 is never tighter than the arithmetic
-//!    can resolve.
-//! 7. `v < -tol` is `negative_variance{index: None}` (`S` is not positive semi-definite).
+//!    The rounding tolerance of `v` is `tol = (4 (n + 1) 2^-53) a + (4 n + 4) 2^-1074` with
+//!    `a = red::dot(|c|, b)`, `b_i = red::dot(|S_i|, |c|)`: the relative part bounds the
+//!    rounding error of the two dot products in the normal range, the absolute part the
+//!    error of products that underflow (each is off by up to `2^-1075`). So the zero test of
+//!    REQ-004 is never tighter than the arithmetic can resolve, and a subnormal `v` (for
+//!    `c = (1e-155, 9.9999998e-156)` with perfectly anti-correlated unit inputs) is degenerate,
+//!    not a confident pair of shares near `+-4e5`.
+//! 7. `v < -tol` is `negative_variance{index: None}` (a final guard behind rules 4a and 4b).
 //!    `v <= tol` is degenerate (REQ-004): [`Degenerate::ZeroVariance`] when `v == 0`, else
 //!    [`Degenerate::VarianceAtRoundingResolution`]; every share is absent, nothing is divided
 //!    by `v`, and [`Shares::Degenerate`] says why.
@@ -53,6 +72,9 @@
 //! 4. Otherwise, per column: `m = red::mean(x)`, deviations `d_r = x_r - m` in trial order (one
 //!    rounded subtraction each; an overflow is `numeric`), `s_xx = red::sum_sq(d)`. An input
 //!    column that is constant or has `s_xx == 0` gets no `r2` ([`ScoreAbsent::ZeroInputVariance`]).
+//!    A sum of squares below `2^-1022` (the output's `s_yy` for every input, or an input's
+//!    `s_xx`) holds subnormal squares whose relative error is unbounded, so that `r2` is absent
+//!    too ([`ScoreAbsent::BelowRoundingResolution`]).
 //! 5. `s_xy = red::dot(d_x, d_y)`, `r = (s_xy / sqrt(s_xx)) / sqrt(s_yy)` (this order cannot
 //!    overflow, since `|s_xy| <= sqrt(s_xx s_yy)`), `r2 = r * r`, and a rounded `r2` above 1
 //!    is reported as 1 (the exact value is at most 1).
@@ -96,6 +118,7 @@ use core::fmt;
 
 use fid_kci::kci::json::{to_canonical, Json};
 use fid_kci::kci::sha256_digest;
+use fid_num::la::{chol_pivoted, Mat};
 use fid_num::{check_finite_slice, f, red, NumError};
 use fid_types::Digest;
 
@@ -109,6 +132,9 @@ pub const SHARE_SUM_TOL: f64 = 1e-12;
 
 /// The unit roundoff `2^-53`.
 const U: f64 = 1.0 / 9_007_199_254_740_992.0;
+
+/// The smallest subnormal, `2^-1074`.
+const TINY: f64 = f64::from_bits(1);
 
 /// Bits of `1.0`.
 const ONE_BITS: u64 = 0x3ff0_0000_0000_0000;
@@ -195,6 +221,8 @@ pub enum ScoreAbsent {
     ZeroInputVariance,
     /// The output is degenerate ([`Degenerate::ZeroOutputVariance`]).
     DegenerateOutput,
+    /// The input's `s_xx` or the output's `s_yy` is positive but below `2^-1022`.
+    BelowRoundingResolution,
 }
 
 impl ScoreAbsent {
@@ -203,6 +231,7 @@ impl ScoreAbsent {
         match self {
             ScoreAbsent::ZeroInputVariance => "zero_input_variance",
             ScoreAbsent::DegenerateOutput => "degenerate_output",
+            ScoreAbsent::BelowRoundingResolution => "below_rounding_resolution",
         }
     }
 }
@@ -431,6 +460,9 @@ pub enum RankError {
     /// `negative_variance`: `S_ii < 0` at `index`, or (`index: None`) `c^T S c` below minus
     /// its rounding tolerance, so `S` is not positive semi-definite.
     NegativeVariance { index: Option<usize> },
+    /// `not_positive_semidefinite`: the pair `(i, j)` (`i <= j`, original indices) fails the
+    /// Cauchy-Schwarz test (rule 4a) or leaves a Cholesky remainder beyond rounding (rule 4b).
+    NotPositiveSemidefinite { i: usize, j: usize },
     /// `numeric`: a `fid-num` error; `input` names the input (index) it concerns, if one.
     Numeric { input: Option<usize>, error: NumError },
     /// `not_convertible`: the ranking cannot become statement contributors.
@@ -450,6 +482,7 @@ impl RankError {
             RankError::TooFewSamples { .. } => "too_few_samples",
             RankError::NotSymmetric { .. } => "not_symmetric",
             RankError::NegativeVariance { .. } => "negative_variance",
+            RankError::NotPositiveSemidefinite { .. } => "not_positive_semidefinite",
             RankError::Numeric { .. } => "numeric",
             RankError::NotConvertible { .. } => "not_convertible",
             RankError::Encoding => "encoding",
@@ -471,6 +504,7 @@ impl fmt::Display for RankError {
             RankError::NotSymmetric { i, j } => write!(f, "not_symmetric{{{i}, {j}}}"),
             RankError::NegativeVariance { index: Some(i) } => write!(f, "negative_variance{{{i}}}"),
             RankError::NegativeVariance { index: None } => write!(f, "negative_variance{{c^T S c}}"),
+            RankError::NotPositiveSemidefinite { i, j } => write!(f, "not_positive_semidefinite{{{i}, {j}}}"),
             RankError::Numeric { input: Some(i), error } => write!(f, "numeric{{input {i}: {error}}}"),
             RankError::Numeric { input: None, error } => write!(f, "numeric{{{error}}}"),
             RankError::NotConvertible { reason, input_id: Some(id) } => write!(f, "not_convertible{{{reason}: {id}}}"),
@@ -591,6 +625,8 @@ fn rank_lpu(c: &[f64], cov: &[f64], ids: &[&str]) -> Result<RankOutput, RankErro
             _ => return Err(RankError::NegativeVariance { index: Some(i) }),
         }
     }
+    check_cauchy_schwarz(&rows, &diag)?;
+    check_cholesky(cov, n)?;
 
     // Rule 5: u_i(y).
     let mut u = Vec::with_capacity(n);
@@ -619,7 +655,7 @@ fn rank_lpu(c: &[f64], cov: &[f64], ids: &[&str]) -> Result<RankOutput, RankErro
     }
     let a = red::dot(&abs_c, &b).map_err(num(None))?;
     // n < 2^53 (it indexes a slice of n * n doubles), so the conversion is exact.
-    let tol = (4.0 * (n as f64 + 1.0) * U) * a;
+    let tol = (4.0 * (n as f64 + 1.0) * U) * a + (4.0 * n as f64 + 4.0) * TINY;
 
     // Rules 7 and 8.
     if v < -tol {
@@ -662,6 +698,78 @@ fn rank_lpu(c: &[f64], cov: &[f64], ids: &[&str]) -> Result<RankOutput, RankErro
         share_sum,
         trials: None,
     })
+}
+
+/// Rule 4a: the pairwise Cauchy-Schwarz test, first failing pair `i < j` in row-major order.
+fn check_cauchy_schwarz(rows: &[&[f64]], diag: &[f64]) -> Result<(), RankError> {
+    let one_plus = 1.0 + 4.0 * U;
+    for (i, (row, &dii)) in rows.iter().zip(diag).enumerate() {
+        for (j, (&s, &djj)) in row.iter().zip(diag).enumerate().skip(i + 1) {
+            if s == 0.0 {
+                continue;
+            }
+            let violated = if dii == 0.0 || djj == 0.0 {
+                true
+            } else {
+                let lhs = s * s;
+                let rhs = (dii * djj) * one_plus;
+                let normal = |x: f64| x.is_finite() && x >= f64::MIN_POSITIVE;
+                if normal(lhs) && normal(rhs) {
+                    lhs > rhs
+                } else {
+                    let q = (s.abs() / f::sqrt(dii).map_err(num(Some(i)))?) / f::sqrt(djj).map_err(num(Some(j)))?;
+                    q * q > one_plus
+                }
+            };
+            if violated {
+                return Err(RankError::NotPositiveSemidefinite { i, j });
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Rule 4b: the remainder of a pivoted Cholesky that stopped early must be rounding only.
+fn check_cholesky(cov: &[f64], n: usize) -> Result<(), RankError> {
+    let mat = Mat::new(n, n, cov.to_vec()).map_err(num(None))?;
+    let ch = chol_pivoted(&mat, 0.0).map_err(num(None))?;
+    let r = ch.rank();
+    if r >= n {
+        return Ok(());
+    }
+    let (l, perm) = (ch.l(), ch.perm());
+    let factor = 4.0 * (r as f64 + 1.0) * U;
+    let floor = (4.0 * r as f64 + 4.0) * TINY;
+    let head = |i: usize| -> Result<&[f64], RankError> {
+        l.row(i).map_err(num(None))?.get(..r).ok_or(RankError::Numeric {
+            input: None,
+            error: NumError::Domain { op: "rank.cholesky", detail: "factor row shorter than its rank" },
+        })
+    };
+    let original = |i: usize| -> Result<usize, RankError> {
+        perm.get(i).copied().ok_or(RankError::Numeric {
+            input: None,
+            error: NumError::Domain { op: "rank.cholesky", detail: "permutation shorter than the matrix" },
+        })
+    };
+    for i in r..n {
+        let li = head(i)?;
+        let abs_li: Vec<f64> = li.iter().map(|x| x.abs()).collect();
+        let pi = original(i)?;
+        for j in i..n {
+            let lj = head(j)?;
+            let abs_lj: Vec<f64> = lj.iter().map(|x| x.abs()).collect();
+            let pj = original(j)?;
+            let a = mat.get(pi, pj).map_err(num(None))?;
+            let rem = a - red::dot(li, lj).map_err(num(None))?;
+            let bound = factor * (a.abs() + red::dot(&abs_li, &abs_lj).map_err(num(None))?) + floor;
+            if rem.abs() > bound {
+                let (lo, hi) = if pi <= pj { (pi, pj) } else { (pj, pi) };
+                return Err(RankError::NotPositiveSemidefinite { i: lo, j: hi });
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Rule 3/4 of the samples form: `None` for a constant column or a zero sum of squares, else
@@ -716,8 +824,14 @@ fn rank_samples(inputs: &[&[f64]], output: &[f64], ids: &[&str]) -> Result<RankO
     for (i, (&id, col)) in ids.iter().zip(inputs).enumerate() {
         let entry = match &out_dev {
             None => Ranked::samples(id, None, Some(ScoreAbsent::DegenerateOutput)),
+            Some((_, syy)) if *syy < f64::MIN_POSITIVE => {
+                Ranked::samples(id, None, Some(ScoreAbsent::BelowRoundingResolution))
+            }
             Some((dy, syy)) => match deviations(col, Some(i))? {
                 None => Ranked::samples(id, None, Some(ScoreAbsent::ZeroInputVariance)),
+                Some((_, sxx)) if sxx < f64::MIN_POSITIVE => {
+                    Ranked::samples(id, None, Some(ScoreAbsent::BelowRoundingResolution))
+                }
                 Some((dx, sxx)) => {
                     let sxy = red::dot(&dx, dy).map_err(num(Some(i)))?;
                     let r = (sxy / f::sqrt(sxx).map_err(num(Some(i)))?) / f::sqrt(*syy).map_err(num(None))?;
