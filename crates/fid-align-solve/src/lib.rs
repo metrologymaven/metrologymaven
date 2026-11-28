@@ -40,9 +40,14 @@
 //!   the correspondence distances, the rows, the reduced step by fixed-block Householder QR,
 //!   the certified pose update and the stop monitor, returning a [`BestfitOutput`] whose pose
 //!   is final only when the run converged.
+//! - `ALN.DATUM.DOF`: [`dof`], the degree-of-freedom accounting element-based and datum-system
+//!   alignment share: the invariance subspace of each nominal feature ([`constrained_basis`]),
+//!   the per-pair nominal and effective counts in priority order, the precedence projectors,
+//!   the named free subspace and the unconstrained-DoF policy ([`accumulate`], [`DofAccount`]).
 
 pub mod cond;
 pub mod constr;
+pub mod dof;
 pub mod hist;
 pub mod icp;
 pub mod matrix;
@@ -59,6 +64,11 @@ pub use constr::{
     combined_weights, linearise, pose_from_params, reduced_jacobian, validate, verify_locks, CertifiedPose,
     ConstrError, ConstraintSet, Dof, DofLocks, FrameContext, Jacobian, Linearisation, LockFrameRef, RegionWeight,
     WeightInput, WeightSpec, B_MAX, LOCK_TOL,
+};
+pub use dof::{
+    accumulate, constrained_basis, DofAccount, DofError, DofWarning, FeatureType, FreeDirective, FreeDof, Motion,
+    NominalFeature, PairAccount, RadiusBasis, RuleBasis, Through, Twist, TwistBasis, UnconstrainedPolicy, DOF_NAME_TOL,
+    DOF_NEAR_FACTOR, DOF_RANK_TOL, MAX_DOF_PAIRS,
 };
 pub use hist::{
     ConvergenceHistory, HistError, HistoryRecorder, IterationRow, Outcome, StoppedBy, MAX_CRITERION_BYTES,
