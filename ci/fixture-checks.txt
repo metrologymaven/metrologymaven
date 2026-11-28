@@ -360,6 +360,7 @@ python fixtures/unc/model/graph/make_fixtures.py --check
 python fixtures/unc/model/graph/store/make_store_fixtures.py --check
 python fixtures/unc/model/subst/make_fixtures.py --check
 python fixtures/unc/mvar/param/make_fixtures.py --check
+python fixtures/unc/mvar/vmcm/make_fixtures.py --check
 python fixtures/unc/qif/make_fixtures.py --check
 python fixtures/unc/stmt/make_fixtures.py --check
 python fixtures/unc/valid/make_fixtures.py --check

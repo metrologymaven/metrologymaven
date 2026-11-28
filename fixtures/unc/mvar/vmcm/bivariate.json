@@ -1,0 +1,74 @@
+{
+ "block_size": "100000",
+ "chi2_quantile": "4017f7427b73e38f",
+ "inputs": [
+  {
+   "id": "x1",
+   "mu": "4024000000000000",
+   "sigma": "3fe0000000000000",
+   "stream": "0"
+  },
+  {
+   "id": "x2",
+   "mu": "c008000000000000",
+   "sigma": "3ff0000000000000",
+   "stream": "1"
+  },
+  {
+   "id": "x3",
+   "mu": "3fe0000000000000",
+   "sigma": "3fd0000000000000",
+   "stream": "2"
+  }
+ ],
+ "known_cov": [
+  [
+   "3ff4000000000000",
+   "3ff0000000000000"
+  ],
+  [
+   "3ff0000000000000",
+   "3ff1000000000000"
+  ]
+ ],
+ "known_cov_decimal": [
+  [
+   "1.25",
+   "1"
+  ],
+  [
+   "1",
+   "1.0625"
+  ]
+ ],
+ "known_mean": [
+  "401c000000000000",
+  "c004000000000000"
+ ],
+ "mean_tol": [
+  "3f76e5b7d16657e1",
+  "3f751c3cac664e1d"
+ ],
+ "note": "AC-1: linear model y1 = x1 + x2, y2 = x2 + x3 (one binary64 addition each) with independent normal inputs drawn at the UNC.PROP.MCM.BLOCK address (seed, stream, t) for global trials t = 0 .. trials - 1. known_cov = A diag(sigma^2) A^T exactly; each sample covariance entry must be within rel_tol of it. mean_tol is 5 standard errors; chi2_quantile is -2 ln(1 - p), checked with quantile_rel_tol.",
+ "outputs": [
+  {
+   "id": "y1",
+   "terms": [
+    "x1",
+    "x2"
+   ]
+  },
+  {
+   "id": "y2",
+   "terms": [
+    "x2",
+    "x3"
+   ]
+  }
+ ],
+ "p": "3fee666666666666",
+ "quantile_rel_tol": "3f847ae147ae147b",
+ "rel_tol": "3f847ae147ae147b",
+ "seed": "11",
+ "trials": "1000000"
+}

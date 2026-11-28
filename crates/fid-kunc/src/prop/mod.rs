@@ -6,8 +6,9 @@
 //! Implemented leaves: `UNC.PROP.MCM.BLOCK` ([`mcm::block`]), `UNC.PROP.MCM.INTVL`
 //! ([`mcm::interval`]), `UNC.PROP.MCM.ADAPT` ([`mcm::adapt`]), `UNC.PROP.MCM.SAMP`
 //! ([`mcm::samples`]), `UNC.PROP.VALID` ([`valid`], [`validate_lpu`]), `UNC.PROP.LPU.TAN`
-//! (the operator tangent contract, [`lpu::tan`]) and `UNC.PROP.MVAR.PARAM` (feature
-//! covariances in `fcov-param@1`, [`mvar::param`]).
+//! (the operator tangent contract, [`lpu::tan`]), `UNC.PROP.MVAR.PARAM` (feature
+//! covariances in `fcov-param@1`, [`mvar::param`]) and `UNC.PROP.MVAR.VMCM` (joint Monte Carlo
+//! covariance and coverage region of a group, [`mvar::vmcm`]).
 
 pub mod lpu;
 pub mod mcm;
