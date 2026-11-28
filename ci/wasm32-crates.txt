@@ -26,6 +26,7 @@ fid-gps --test dim_section
 fid-gps --test dim_size_rank
 fid-gps --test prof_zdef
 fid-gps --test zone_shape
+fid-io-cad-export
 fid-kci
 fid-kdec
 fid-kunc

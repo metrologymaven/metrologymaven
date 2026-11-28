@@ -1,0 +1,37 @@
+[package]
+name = "fid-io-cad-export"
+description = "Metrology Maven CAD export of geometric elements: the export plan that moves selected elements into the target frame and bounds unbounded ones with a caller or fitted-point extent (spec node IO.CAD.EXPORT.BOUND)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Layer services (the STEP and IGES writers of IO.CAD.EXPORT will live here next to
+# fid-io-step and fid-io-iges). The plan itself is pure arithmetic (KNP-1 style: no FMA,
+# fixed-order dot products, total-order min/max, no HashMap/HashSet) and links only
+# workspace crates of lower layers, no third-party crate of its own:
+[dependencies]
+# Analytic curves and surfaces with their placements, NURBS curves and surfaces
+# (GEO.NURBS.ANALYTIC, GEO.NURBS.DATA). Kernel layer.
+fid-geo-nurbs = { path = "../fid-geo-nurbs" }
+# Frame tree, chain resolution and the pinned transform application (GEO.FRAME.TREE,
+# GEO.FRAME.XFORM; the plan maps placements the way GEO.FRAME.APPLY maps points and
+# normals). Kernel layer.
+fid-geo-frame = { path = "../fid-geo-frame" }
+# The correctly rounded square root of the axis renormalisation and the cone's tan
+# (KRN.NUM). Num layer.
+fid-num = { path = "../fid-num" }
+# The workspace table of code points forbidden in untrusted display text (element names).
+# Num layer.
+fid-types = { path = "../fid-types" }
+# Element IDs are project-tree UUIDs (`fid_dep::EntityId` is the same type). Model layer.
+fid-uuid = { path = "../fid-uuid" }
+
+[dev-dependencies]
+# The acceptance tests read the JSON fixtures written by the independent Python script
+# `fixtures/io/cad/export/bound/make_cases.py`. Model layer; already in the workspace.
+fid-canon = { path = "../fid-canon" }
+
+[lints]
+workspace = true

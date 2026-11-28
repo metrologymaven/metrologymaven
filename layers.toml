@@ -148,6 +148,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 "fid-io-step" = "services"
 # Bounded fixed-column IGES section parser and writer (IO.CAD.IGES.SECT): needs fid-io-reg (services).
 "fid-io-iges" = "services"
+# CAD export plan (IO.CAD.EXPORT.BOUND): elements moved into the target frame and bounded; the
+# STEP/IGES writers (IO.CAD.EXPORT.STEPW/IGESW) will join it next to fid-io-step and fid-io-iges.
+"fid-io-cad-export" = "services"
 # AP242 PMI entity graph extraction and classification (IO.CAD.PMI.READ): needs fid-io-step (services).
 "fid-io-pmi" = "services"
 "fid-cad-proto" = "services"

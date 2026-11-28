@@ -1,0 +1,98 @@
+{
+ "format": "fid.test.io.cad.export.bound/1",
+ "generator": "make_cases.py (independent stdlib Python); synthetic data, CC-BY-4.0",
+ "frames": [],
+ "cases": [
+  {
+   "name": "ac1_plane_points",
+   "ac": "AC-1",
+   "target": "00000000000000000000000000000000",
+   "margin": 0.0,
+   "elements": [
+    {
+     "id": "00000000-0000-7000-8000-000000000001",
+     "name": "PLN-1",
+     "frame": "00000000000000000000000000000000",
+     "geom": {
+      "kind": "plane",
+      "origin": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "axis": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "ref_dir": [
+       1.0,
+       0.0,
+       0.0
+      ]
+     },
+     "points": [
+      [
+       0.0,
+       0.0,
+       0.0
+      ],
+      [
+       0.01,
+       0.0,
+       0.0
+      ],
+      [
+       0.0,
+       0.02,
+       0.0
+      ],
+      [
+       0.01,
+       0.02,
+       0.0
+      ]
+     ],
+     "extent": null
+    }
+   ],
+   "expect": {
+    "items": [
+     {
+      "id": "00000000-0000-7000-8000-000000000001",
+      "geom": {
+       "kind": "plane",
+       "origin": [
+        0.0,
+        0.0,
+        0.0
+       ],
+       "axis": [
+        0.0,
+        0.0,
+        1.0
+       ],
+       "ref_dir": [
+        1.0,
+        0.0,
+        0.0
+       ]
+      },
+      "bounds": {
+       "extent": "rect",
+       "values": [
+        0.0,
+        0.01,
+        0.0,
+        0.02
+       ],
+       "source": "fitted_points",
+       "points": 4,
+       "margin": 0.0
+      }
+     }
+    ]
+   }
+  }
+ ]
+}
