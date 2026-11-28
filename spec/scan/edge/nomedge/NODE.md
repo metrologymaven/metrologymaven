@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-scan-edge]
+built_pr: 691
 satisfies: [REQ-SCAN.EDGE-001, REQ-SCAN.EDGE-002]
 covers: []
 depends_on: [KRN.CONS, GEO.CAD, GEO.NURBS]
@@ -75,7 +76,7 @@ Turns a nominal edge (a chain of CAD boundary edges, or an edge or trim curve bu
 
 ## Open questions
 
-- Built in `fid-scan-edge::nominal` (PR to follow in `built_pr`). Choices made while building, open to review:
+- Built in `fid-scan-edge::nominal` (PR #691). Choices made while building, open to review:
   - **Fixtures.** `fixtures/scan/edge_plate/body.txt` and `fixtures/scan/edge_cylinder_trim/body.txt` (plus `fixtures/scan/edge/nomedge/{hole,band,notch}.txt`) are small text B-rep descriptions loaded through `fid_geo_cad::BodyBuilder`, not STEP models: the kernel crate cannot (dev-)depend on the services-layer STEP importer. The cylinder trim curve is the ellipse cut by the plane 3x = 4z. Expected stations come from `fixtures/scan/edge/nomedge/make_nomedge_fixtures.py` (60-digit decimal, Romberg and Newton for the ellipse), CC0-1.0 project data.
   - **API.** `stations` returns `NominalStations` (stations plus the chain pieces in order with their reversal and length, the total length, the closed flag and the spacing) rather than a bare `Vec<Station>`. `CadResolver` only hands out a GEO.CAD `Body` (no assembly instance frames yet). `NominalEdge::Constructed` takes a `CurveDef` over a range with its face and an explicit `MaterialSide`, because KRN.CONS edge and trim-curve constructions are not built and a free curve carries no loop to fix the material side.
   - **Orientation.** The chain runs in the direction of the edge's coedge on the face (GEO.CAD keeps the material on the left seen from the outward normal), so `b = t x n` points away from the material; an edge used by no coedge of the face or by two (a seam) is `scan.edge.multi_face`.
