@@ -1,5 +1,6 @@
-//! Alignment kernel of Metrology Maven. Pure Rust, `f64` metres, single-threaded, no I/O, no
-//! `unsafe`; floating-point primitives only through `fid-num` (KNP-1, CONSTITUTION §4).
+//! Alignment kernel of Metrology Maven. Pure Rust, `f64` metres, single-threaded (except the
+//! thread-count-independent correspondence search, `ALN.BFIT.ICP.CORR`), no I/O, no `unsafe`;
+//! floating-point primitives only through `fid-num` (KNP-1, CONSTITUTION §4).
 //!
 //! Modules land one spec leaf at a time; see `spec/aln/`. Implemented leaves:
 //!
@@ -28,6 +29,12 @@
 //! - `ALN.BFIT.ICP.METRIC`: [`icp`], [`build_rows`] of the point-to-point and point-to-plane
 //!   metrics: weighted residual rows, their twist Jacobian reduced to the free columns through
 //!   `ALN.BFIT.CONSTR`, and the metric's algorithm ID ([`Metric`]).
+//! - `ALN.BFIT.ICP.CORR`: [`correspond`] in [`icp::corr`], the correspondence of every moved
+//!   measured point on a mesh ([`fid_geo_dist::SignTarget`]) or CAD faces ([`CadReference`]):
+//!   foot, outward unit normal (face normal, GEO.DIST.SIGN pseudo-normal at edges and
+//!   vertices, CAD surface normal), entity and distance, or the reason there is none, filling
+//!   [`Correspondences`]; byte-identical for any thread count. This is the one module that
+//!   uses threads (scoped, through a block queue); everything else is single-threaded.
 
 pub mod cond;
 pub mod constr;
@@ -53,8 +60,9 @@ pub use hist::{
     MAX_ITERATIONS,
 };
 pub use icp::{
-    build_rows, CorrReason, Correspondences, InputField, Metric, MetricError, Rows, NORMAL_TOL,
-    POINT_TO_PLANE_ALGORITHM_ID, POINT_TO_POINT_ALGORITHM_ID,
+    build_rows, correspond, CadReference, CorrError, CorrNote, CorrOptions, CorrOutput, CorrReason, CorrSummary,
+    Correspondences, InputField, Metric, MetricError, NoteKind, PointError, Reference, Rows, MAX_DISTANCE_FLOOR_M,
+    NORMAL_TOL, POINT_TO_PLANE_ALGORITHM_ID, POINT_TO_POINT_ALGORITHM_ID,
 };
 pub use matrix::{
     solve_matrix, MatrixError, MatrixInput, MatrixOrder, MatrixSolution, RotationInput, TransformDirection, DET_TOL,

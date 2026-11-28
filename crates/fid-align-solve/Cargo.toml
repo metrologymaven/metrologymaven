@@ -1,6 +1,6 @@
 [package]
 name = "fid-align-solve"
-description = "Metrology Maven alignment kernel: the ResidualReport every alignment solver writes, its builder, fixed-order statistics and digest (ALN.QA.REPORT); degree-of-freedom locks, pose parameterisation, reduced Jacobian and weights for best-fit (ALN.BFIT.CONSTR); conditioning and weak-DoF diagnostics (ALN.QA.COND); best-fit stopping criteria and non-convergence handling (ALN.BFIT.STOP); point-to-point and point-to-plane ICP residual rows and Jacobians (ALN.BFIT.ICP.METRIC)"
+description = "Metrology Maven alignment kernel: the ResidualReport every alignment solver writes, its builder, fixed-order statistics and digest (ALN.QA.REPORT); degree-of-freedom locks, pose parameterisation, reduced Jacobian and weights for best-fit (ALN.BFIT.CONSTR); conditioning and weak-DoF diagnostics (ALN.QA.COND); best-fit stopping criteria and non-convergence handling (ALN.BFIT.STOP); point-to-point and point-to-plane ICP residual rows and Jacobians (ALN.BFIT.ICP.METRIC); ICP correspondence search on meshes and CAD faces (ALN.BFIT.ICP.CORR)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,9 +13,13 @@ repository.workspace = true
 # (the shared `sha256:` digest type, AGENTS.md rule 14), and the kernel-layer fid-geo-frame
 # (rigid transforms, their pinned composition and the frame tree that names the lock frame,
 # ALN.BFIT.CONSTR). ALN.QA.COND uses fid-num's Householder QR and one-sided Jacobi SVD
-# (KRN.NUM.LA.QR, KRN.NUM.LA.SVD).
+# (KRN.NUM.LA.QR, KRN.NUM.LA.SVD). ALN.BFIT.ICP.CORR adds the kernel-layer fid-geo-dist (the
+# GEO.DIST mesh and CAD closest-point queries, pseudo-normals and incident normals) and
+# fid-geo-types (the PointSet and FrameRef it reads), both with zero third-party dependencies.
 [dependencies]
+fid-geo-dist = { path = "../fid-geo-dist" }
 fid-geo-frame = { path = "../fid-geo-frame" }
+fid-geo-types = { path = "../fid-geo-types" }
 fid-num = { path = "../fid-num" }
 fid-kci = { path = "../fid-kci" }
 fid-types = { path = "../fid-types" }
@@ -23,6 +27,9 @@ fid-types = { path = "../fid-types" }
 [dev-dependencies]
 # Test-support only (never in the kernel graph): the workspace root for fixture paths.
 fid-testkit = { path = "../fid-testkit" }
+# ALN.BFIT.ICP.CORR tests: the B-rep builder for the CAD cube and the mesh hierarchy.
+fid-geo-cad = { path = "../fid-geo-cad" }
+fid-geo-index = { path = "../fid-geo-index" }
 
 [lints]
 workspace = true
