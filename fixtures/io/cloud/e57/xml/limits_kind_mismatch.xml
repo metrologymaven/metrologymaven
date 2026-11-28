@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<e57Root type="Structure" xmlns="http://www.astm.org/COMMIT/E57/2010-e57-v1.0">
+  <formatName type="String">ASTM E57 3D Imaging Data File</formatName>
+  <versionMajor type="Integer">1</versionMajor>
+  <data3D type="Vector">
+    <vectorChild type="Structure">
+      <guid type="String">g</guid>
+      <points type="CompressedVector" fileOffset="0" recordCount="1">
+        <prototype type="Structure"><x type="Float"/></prototype>
+      </points>
+      <intensityLimits type="Structure">
+        <intensityMinimum type="Integer">0</intensityMinimum>
+        <intensityMaximum type="Float">1</intensityMaximum>
+      </intensityLimits>
+    </vectorChild>
+  </data3D>
+</e57Root>

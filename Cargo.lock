@@ -1742,6 +1742,7 @@ name = "fid-io-e57"
 version = "0.0.1"
 dependencies = [
  "fid-io-reg",
+ "fid-xml",
 ]
 
 [[package]]

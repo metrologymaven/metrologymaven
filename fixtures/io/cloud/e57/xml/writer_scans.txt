@@ -1,0 +1,35 @@
+file_guid {F0000000-0000-4000-8000-0000000000aa}
+ns ext https://example.invalid/e57/ext-1
+scan
+guid {F0000000-0000-4000-8000-0000000000a1}
+name Scan one
+description f64 cartesian with intensity
+pose 3fe0000000000000 3fe0000000000000 3fe0000000000000 3fe0000000000000 40934a456d5cfaad bfb999999999999a 3e7ad7f29abcaf48
+points 48 1000000
+field cartesianX float double - -
+field cartesianY float double - -
+field cartesianZ float double c08f400000000000 408f400000000000
+field intensity float single 0000000000000000 3ff0000000000000
+field ext:normalX float - - -
+cbounds bff8000000000000 3ff8000000000000 8000000000000000 3fd3333333333334 44dfe185ca57c517 7fefffffffffffff
+ilimits float 0000000000000000 float 3ff0000000000000
+end
+scan
+guid {F0000000-0000-4000-8000-0000000000a2}
+points 1048576 7
+field sphericalRange scaled 0 4194303 3f1a36e2eb1c432d 0000000000000000
+field sphericalAzimuth scaled -31416 31416 3f1a36e2eb1c432d -
+field colorRed integer 0 255
+field rowIndex integer - -
+field label string
+sbounds 3fe0000000000000 407a36e28240b780 bff921ff2e48e8a7 3ff921ff2e48e8a7 4008000000000000 c008000000000000
+climits integer 0 integer 255 scaled 0 3f847ae147ae147b 3fe0000000000000 scaled 100 3f847ae147ae147b 3fe0000000000000 integer 1 integer 1
+end
+scan
+guid {F0000000-0000-4000-8000-0000000000a3}
+name a<b & c>d "q"
+description   leading spaces ]]> end
+pose 3fe6a09e667f3bcd 0000000000000000 0000000000000000 bfe6a09e667f3bcd 0000000000000001 bf647ae147ae147b 4059000000000000
+points 0 0
+field cartesianX float double - -
+end

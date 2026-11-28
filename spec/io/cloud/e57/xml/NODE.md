@@ -9,6 +9,8 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-io-e57]
+built_pr: 683
 satisfies: [REQ-IO.CLOUD.E57-001]
 covers: []
 depends_on: [IO.CLOUD.E57.PHYS, IO.REG.LIMITS]
@@ -74,7 +76,13 @@ Hand-written XML sections under `fixtures/io/cloud/e57/xml/` (CC-BY-4.0).
 
 ## Open questions
 
-- None.
+- Built in `fid-io-e57` (module `xml`) on the shared hardened reader `fid-xml`. Fail-closed choices made at build time, each a static `malformed` reason: namespace declarations only on the root (extension namespaces are root prefixes); attributes not in the type's list (or in any namespace) refused; `Vector` children must be named `vectorChild`; a present `pose` needs both `rotation` and `translation`; `cartesianBounds` and `sphericalBounds` need all six `Float` values, ordered (azimuth excepted); limit pairs must be of one kind; prototype fields must be `Integer`, `ScaledInteger`, `Float` or `String` (no nested prototypes); a BOM and U+007F to U+009F in strings and namespace names are refused. Real files may need some of these relaxed once a corpus file is available [unverified].
+- Absent attributes and empty values are kept as absent (`None`), not filled with the format defaults (scale 1, offset 0, full integer range, double precision); `IO.CLOUD.E57.CVEC` applies the defaults.
+- The writer's `scan_tree` writes no `coordinateMetadata` and no `creationDateTime` (a timestamp would break byte-identical output); whether ASTM E2807 requires them is for `IO.CLOUD.E57.WRITE` [unverified].
+- AC-5: the cargo-fuzz target `crates/fid-io-e57/fuzz` (`xml_section`) is not run by PR CI (the `io-fuzz` workflow runs the `fid-io-corp` targets); CI runs the in-tree deterministic mutation test (3,000 mutated sections: an accepted section round-trips unless the writer's size bound is exceeded, and the writer then refuses with a typed `WriteError::LimitExceeded`), as for `IO.CLOUD.LAS.HDR`.
+- The writer escapes minimally (text: `&`, `<`, CR and a `>` after `]]`; namespace names quoted with the quote they lack), so an accepted tree passes the size bound in all but extreme cases; when escaping does take a string or the root tag past the reader's 1 MiB bound, the writer refuses with `WriteError::LimitExceeded`.
+- The root must hold `formatName` `ASTM E57 3D Imaging Data File` and `versionMajor` 1 (`format_name_missing`, `format_name_wrong`, `version_major_missing`, `version_major_unsupported`) [unverified: exact name string]. Unprefixed elements whose name is not in the reader's E57 name list are kept and counted (`unknown_elements`) [unverified: list from public descriptions].
+- `fid-xml` accepts a QName whose local part is a Name but not an NCName (`a:1x`); this reader refuses it (`element_name`). Whether `IO.QIF.XML.PARSE` should refuse it too is for that node.
 
 ## Children
 

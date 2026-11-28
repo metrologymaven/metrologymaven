@@ -1,0 +1,30 @@
+# cargo-fuzz harness for the E57 XML section reader and writer (IO.CLOUD.E57.XML AC-5). Not a
+# workspace member: it needs nightly and libFuzzer. Run from crates/fid-io-e57/fuzz, with a
+# scratch corpus directory first (libFuzzer writes new inputs into the first directory only):
+#   mkdir -p corpus/xml_section
+#   cargo +nightly fuzz run xml_section corpus/xml_section ../../../fixtures/io/cloud/e57/xml -- -max_total_time=300
+[package]
+name = "fid-io-e57-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "MIT OR Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+fid-io-e57 = { path = ".." }
+fid-io-reg = { path = "../../fid-io-reg" }
+
+[[bin]]
+name = "xml_section"
+path = "fuzz_targets/xml_section.rs"
+test = false
+doc = false
+bench = false
+
+# Keep this crate out of the parent workspace.
+[workspace]
+members = ["."]
