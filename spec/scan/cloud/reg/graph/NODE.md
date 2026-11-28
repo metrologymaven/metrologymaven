@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-scan-cloud]
+built_pr: 679
 satisfies: [REQ-SCAN.CLOUD.REG-003, REQ-SCAN.CLOUD.REG-006, REQ-SCAN.CLOUD.REG-008]
 covers: []
 depends_on: [SCAN.CLOUD.REG.CTGT]
