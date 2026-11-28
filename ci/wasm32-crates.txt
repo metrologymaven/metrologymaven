@@ -41,6 +41,7 @@ fid-replay
 fid-report-pdf
 fid-scan-cloud
 fid-scan-cmp --lib
+fid-scan-edge
 fid-scan-mesh
 fid-scan-poly
 fid-scan-sect

@@ -40,6 +40,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # (the stop Verdict), fid-geo-dist (the ProjectionTarget trait), fid-geo-frame, fid-geo-index,
 # fid-geo-types, fid-kci (canonical JSON, SHA-256), fid-num and fid-types.
 "fid-scan-cloud" = "kernel"
+# Scan edge analysis (SCAN.EDGE.EST.EFIX first: the synthetic edge fixture generator behind the
+# `testkit` feature): KNP-1, only fid-geo-types and fid-num.
+"fid-scan-edge" = "kernel"
 # B-rep model (GEO.CAD.TOPO.MODEL, ADJ, PCURVE) and assembly instances (GEO.CAD.ASSY.MODEL): L0
 # library code, KNP-1; only fid-geo-frame, fid-geo-nurbs, fid-num, fid-kci, fid-types.
 "fid-geo-cad" = "kernel"

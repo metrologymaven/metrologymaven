@@ -1,0 +1,28 @@
+[package]
+name = "fid-scan-edge"
+description = "Metrology Maven scan edge analysis: synthetic rounded, chamfered and burred edge fixtures with analytic tangency and silhouette truths (SCAN.EDGE.EST.EFIX, test support behind the `testkit` feature)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Kernel crate (KNP-1): no third-party dependencies. Only kernel-layer workspace crates:
+# fid-geo-types (the GEO.TYPES PointCloud with normals, the Mesh and their content digests)
+# and fid-num (the KRN.NUM.RNG counter-based generator and the `sqrt`, `ln`, `sin` and `cos`
+# of the noise and the round's arc).
+[dependencies]
+fid-geo-types = { path = "../fid-geo-types" }
+fid-num = { path = "../fid-num" }
+
+[features]
+# SCAN.EDGE.EST.EFIX: the `testkit` module (fixture generator, named fixture set, manifests).
+# Test support for the edge-estimation leaves; enabled by their dev-dependencies, never by a
+# release build.
+testkit = []
+
+[dev-dependencies]
+fid-scan-edge = { path = ".", features = ["testkit"] }
+
+[lints]
+workspace = true

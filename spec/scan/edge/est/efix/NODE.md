@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-scan-edge]
 satisfies: [REQ-SCAN.EDGE.EST-004]
 covers: []
 depends_on: [GEO.TYPES.POINTS, GEO.TYPES.MESH, KRN.NUM.RNG]
@@ -67,7 +68,13 @@ Generated set `fixtures/scan/edge/est_{sharp,round1,chamfer05,burr02}_{onesided,
 
 ## Open questions
 
-- None.
+- **Build notes (fid-scan-edge `testkit`).** Choices made where the spec is silent, pinned in the module documentation and in `fixtures/scan/edge/make_efix_truths.py`; owners of TANG and SILH may want them reviewed:
+  - Burr `h x w` is a lip at the bottom of the edge face, `h` high along `n`, standing out by `w` along `b` and flush with the bottom face, so the silhouette is `e + w` (what SILH AC-2 expects). A downward-hanging shear burr (no outward extent) is not modelled.
+  - Chamfer `c` has both legs `c` (45 degrees); round `r` and chamfer `c` must not exceed `T`; at `r = T` the round meets the bottom face directly.
+  - One-sided coverage is the profile before its first vertical or downward-facing segment: the top face plus the round's arc or the chamfer. For sharp and burr profiles that is the top face only.
+  - Truths are properties of the part and do not depend on coverage. The tangency truth is the first profile point whose normal angle to `n` exceeds `theta` (on the arc the point at `theta`, otherwise the start of the first steeper segment); the silhouette is the first point of largest `u`.
+  - Samples at a crease carry the normalised bisector of the two face normals; noise moves points along those normals and leaves the normals analytic.
+  - The point data is not committed (several MB): each `est_*/manifest.json` pins the GEO.TYPES content digests of the clean and the noisy (`sigma = 10 um`) variant's cloud and mesh plus the station truths, and `named_fixture` regenerates the bytes. The manifests are regression pins written by the generator; their truths are checked against the independent Python reference.
 
 ## Children
 
