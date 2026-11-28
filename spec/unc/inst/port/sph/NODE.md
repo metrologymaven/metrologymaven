@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-kunc]
+built_pr: 687
 satisfies: [REQ-UNC.INST.PORT-001, REQ-UNC.INST.PORT-002]
 covers: [SA.UNC.01]
 depends_on: [KRN.NUM, UNC.MODEL.DIST]
