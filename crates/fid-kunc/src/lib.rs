@@ -23,13 +23,16 @@
 //! the `tangent-harness` feature) and `UNC.PROP.MVAR.PARAM` (the feature covariance type and
 //! the `fcov-param@1` parameterisations, see [`prop::mvar::param`]), `UNC.PROP.MVAR.VMCM`
 //! (joint Monte Carlo sample covariance and Mahalanobis coverage region of a characteristic
-//! group, see [`prop::mvar::vmcm`]) and `UNC.PROP.RANK` (contributor ranking,
-//! `unc.prop.rank@1.0.0`, see [`prop::rank`]).
+//! group, see [`prop::mvar::vmcm`]), `UNC.PROP.RANK` (contributor ranking,
+//! `unc.prop.rank@1.0.0`, see [`prop::rank`]) and `UNC.INST.PORT.SPH` (the Cartesian
+//! covariance of a spherical tracker or total-station observation, `unc.inst.sph_cov@1.0.0`,
+//! see [`inst::sph`]).
 //!
 //! The `statement` module never computes an uncertainty. It holds what other nodes computed
 //! or a person declared, and refuses any statement that breaks the invariants.
 
 pub mod dist;
+pub mod inst;
 pub mod model;
 pub mod prop;
 pub mod statement;
