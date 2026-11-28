@@ -7,8 +7,8 @@
 
 use fid_canon::{parse, CValue};
 use fid_gdt::dmt_lint::{
-    case_id_ok, is_clause_number, lint, lint_bytes, LintError, Mode, OrsIndex, Rule, SchemaCheck, FREE_TEXT_LIMIT,
-    L5_BASIS, REPORT_SCHEMA,
+    case_id_ok, is_clause_number, lint, lint_bytes, lint_table, LintError, Mode, NotRunReason, OrsIndex, Rule,
+    SchemaCheck, Severity, FREE_TEXT_FIELDS, FREE_TEXT_LIMIT, L5_BASIS, REPORT_SCHEMA,
 };
 use fid_gps::dmt::DmtTable;
 use std::collections::BTreeMap;
@@ -58,6 +58,17 @@ fn names(rules: &[Rule]) -> Vec<String> {
     rules.iter().map(|r| r.as_str().to_owned()).collect()
 }
 
+fn not_run(report: &fid_gdt::dmt_lint::LintReport) -> Vec<(String, String)> {
+    report.rules_not_run().iter().map(|(r, why)| (r.as_str().to_owned(), why.as_str().to_owned())).collect()
+}
+
+fn num(v: Option<&CValue>) -> usize {
+    match v {
+        Some(CValue::Num(n)) => format!("{n}").parse().unwrap(),
+        other => panic!("expected a count, got {other:?}"),
+    }
+}
+
 fn mode_of(m: &BTreeMap<String, CValue>) -> Mode {
     Mode::parse(s(m, "mode")).unwrap()
 }
@@ -97,7 +108,7 @@ fn ci_target_committed_synthetic_dmt_lints_clean_in_draft_mode() {
 #[test]
 fn every_case_matches_the_python_reference() {
     let all = cases();
-    assert_eq!(all.len(), 13);
+    assert_eq!(all.len(), 16);
     for c in &all {
         let name = s(c, "case");
         let report = run(c);
@@ -110,7 +121,24 @@ fn every_case_matches_the_python_reference() {
             .collect();
         assert_eq!(triples(&report), want, "{name}: findings");
         assert_eq!(names(report.rules_run()), strs(arr(c, "rules_run")), "{name}: rules_run");
-        assert_eq!(names(report.rules_not_run()), strs(arr(c, "rules_not_run")), "{name}: rules_not_run");
+        let want_not_run: Vec<(String, String)> = arr(c, "rules_not_run")
+            .iter()
+            .map(|x| (s(obj(x), "rule").to_owned(), s(obj(x), "reason").to_owned()))
+            .collect();
+        assert_eq!(not_run(&report), want_not_run, "{name}: rules_not_run");
+        let checks = obj(c.get("checks").unwrap());
+        for rule in Rule::ALL {
+            match (report.check(rule), checks.get(rule.as_str())) {
+                (Some(got), Some(want)) => {
+                    let want = obj(want);
+                    assert_eq!(got.checked(), num(want.get("checked")), "{name}: {rule} checked");
+                    assert_eq!(got.skipped(), num(want.get("skipped")), "{name}: {rule} skipped");
+                }
+                (None, None) => {}
+                (got, want) => panic!("{name}: {rule} counts {got:?} vs {want:?}"),
+            }
+        }
+        assert!(report.findings().iter().all(|f| f.severity() == Severity::Gate), "{name}: severity");
         let sc = obj(c.get("schema_check").unwrap());
         match (report.schema(), s(sc, "status")) {
             (SchemaCheck::Ok { .. }, "ok") => {}
@@ -120,11 +148,7 @@ fn every_case_matches_the_python_reference() {
             }
             (got, want) => panic!("{name}: schema check {got:?}, expected {want}"),
         }
-        let exit = match c.get("exit_code") {
-            Some(CValue::Num(n)) => *n,
-            other => panic!("{name}: exit_code {other:?}"),
-        };
-        assert_eq!(f64::from(report.exit_code()), exit, "{name}: exit code");
+        assert_eq!(usize::try_from(report.exit_code()).unwrap(), num(c.get("exit_code")), "{name}: exit code");
         assert_eq!(report.passed(), report.exit_code() == 0, "{name}: passed");
         assert_eq!(report.mode(), mode_of(c));
         assert_eq!(report.ors_index_digest(), index().digest());
@@ -140,6 +164,7 @@ fn typed_lint_agrees_with_lint_bytes_on_every_loadable_case() {
         let table = DmtTable::load(&read(s(&c, "table"))).unwrap();
         let report = run(&c);
         assert_eq!(lint(&table, &index(), mode_of(&c)), report.findings(), "{}", s(&c, "case"));
+        assert_eq!(lint_table(&table, &index(), mode_of(&c)), report, "{}", s(&c, "case"));
         match report.schema() {
             SchemaCheck::Ok { table_digest } => assert_eq!(*table_digest, table.digest()),
             other => panic!("{other:?}"),
@@ -160,7 +185,10 @@ fn ac2_long_text_fires_l1_naming_row_and_field_without_echoing_the_text() {
     assert!(!f.detail().contains("Lorem") && !f.detail().contains("ipsum"), "{}", f.detail());
     // The schema refuses the same row, so L3 to L5 never ran and the table cannot pass.
     assert_eq!(report.schema(), &SchemaCheck::Refused { code: "field_too_long", reason: Some("notes") });
-    assert_eq!(report.rules_not_run(), &[Rule::L3, Rule::L4]);
+    assert_eq!(
+        report.rules_not_run(),
+        &[(Rule::L3, NotRunReason::SchemaRefused), (Rule::L4, NotRunReason::SchemaRefused)]
+    );
     assert_eq!(report.exit_code(), 1);
 }
 
@@ -276,6 +304,7 @@ fn report_json_carries_every_required_field_and_the_bases() {
     assert_eq!(
         keys,
         [
+            "checks",
             "findings",
             "l1_threshold",
             "l5_basis",
@@ -333,11 +362,22 @@ fn unreadable_table_bytes_are_errors() {
     assert_eq!(e.reason(), "duplicate_key");
     let e = lint_bytes(&[0xff, 0xfe], &index(), Mode::Draft).unwrap_err();
     assert_eq!(e.reason(), "invalid_utf8");
-    // Valid JSON that is not a table: the schema refuses it and nothing passes.
+    // Valid JSON that is not a table: the schema refuses it, L1 and L2 could look at no row,
+    // and nothing passes.
     let report = lint_bytes(b"[]", &index(), Mode::Release).unwrap();
     assert!(report.findings().is_empty());
     assert!(matches!(report.schema(), SchemaCheck::Refused { .. }));
-    assert_eq!(report.rules_not_run(), &[Rule::L3, Rule::L4, Rule::L5]);
+    assert!(report.rules_run().is_empty());
+    assert_eq!(
+        report.rules_not_run(),
+        &[
+            (Rule::L1, NotRunReason::NotEvaluable),
+            (Rule::L2, NotRunReason::NotEvaluable),
+            (Rule::L3, NotRunReason::SchemaRefused),
+            (Rule::L4, NotRunReason::SchemaRefused),
+            (Rule::L5, NotRunReason::SchemaRefused),
+        ]
+    );
     assert!(!report.passed());
     assert_eq!(report.exit_code(), 1);
 }
@@ -395,4 +435,73 @@ fn case_id_grammar() {
     for bad in ["", "ors:", "ors:/a", "ors:a/", "ors:a", "ors:-a/b", "ors:a/.b", "ors:a.b/c", "ORS:a/b", "ors:a/b c"] {
         assert!(!case_id_ok(bad), "{bad:?}");
     }
+}
+
+// ---------------------------------------------------------------------------- counts and empty input
+
+#[test]
+fn an_empty_table_is_not_passed() {
+    let c = case("empty_rows");
+    let bytes = read(s(&c, "table"));
+    let table = DmtTable::load(&bytes).unwrap();
+    assert!(table.rows().is_empty());
+    assert!(lint(&table, &index(), Mode::Release).is_empty());
+    for mode in [Mode::Draft, Mode::Release] {
+        let report = lint_bytes(&bytes, &index(), mode).unwrap();
+        assert_eq!(report, lint_table(&table, &index(), mode));
+        assert!(matches!(report.schema(), SchemaCheck::Ok { .. }));
+        assert!(report.findings().is_empty() && report.rules_run().is_empty());
+        let want: Vec<(Rule, NotRunReason)> = mode.rules().iter().map(|&r| (r, NotRunReason::NoRows)).collect();
+        assert_eq!(report.rules_not_run(), want.as_slice());
+        assert!(!report.passed());
+        assert_eq!(report.exit_code(), 1);
+        let v = parse(&report.canonical_bytes().unwrap()).unwrap();
+        assert_eq!(obj(&v).get("passed"), Some(&CValue::Bool(false)));
+        for r in arr(obj(&v), "rules_not_run") {
+            assert_eq!(s(obj(r), "reason"), "no_rows");
+        }
+    }
+}
+
+#[test]
+fn a_clean_report_says_how_much_it_checked() {
+    let report = run(&case("synthetic_draft"));
+    assert!(report.passed());
+    let counts: Vec<(usize, usize)> =
+        Rule::ALL.iter().filter_map(|&r| report.check(r)).map(|c| (c.checked(), c.skipped())).collect();
+    assert_eq!(counts, [(20, 0), (20, 0), (12, 0), (14, 0)]);
+    assert_eq!(report.check(Rule::L5), None);
+    let v = parse(&report.canonical_bytes().unwrap()).unwrap();
+    let checks = obj(obj(&v).get("checks").unwrap());
+    assert_eq!(checks.keys().map(String::as_str).collect::<Vec<_>>(), ["L1", "L2", "L3", "L4"]);
+    assert_eq!(s(obj(checks.get("L3").unwrap()), "checked"), "12");
+}
+
+#[test]
+fn rows_l1_and_l2_cannot_read_are_counted_as_skipped() {
+    let report = run(&case("raw_skips"));
+    assert_eq!(report.schema(), &SchemaCheck::Refused { code: "malformed_table", reason: Some("wrong_type") });
+    let l1 = report.check(Rule::L1).unwrap();
+    let l2 = report.check(Rule::L2).unwrap();
+    assert_eq!((l1.checked(), l1.skipped(), l2.checked(), l2.skipped()), (19, 2, 19, 2));
+    // The long notes in a readable row are still found.
+    assert_eq!(triples(&report), vec![("L1".into(), "dmt:asme/straightness/none@1".into(), "notes".into())]);
+    assert!(!report.passed());
+    let report = run(&case("rows_not_array"));
+    assert!(report.rules_run().is_empty());
+    assert_eq!(report.rules_not_run()[0], (Rule::L1, NotRunReason::NotEvaluable));
+    assert_eq!(report.rules_not_run()[1], (Rule::L2, NotRunReason::NotEvaluable));
+}
+
+#[test]
+fn every_rule_is_a_gate_and_findings_carry_it() {
+    for r in Rule::ALL {
+        assert_eq!(r.severity(), Severity::Gate);
+    }
+    let report = run(&case("mixed"));
+    let v = parse(&report.canonical_bytes().unwrap()).unwrap();
+    for f in arr(obj(&v), "findings") {
+        assert_eq!(s(obj(f), "severity"), "gate");
+    }
+    assert_eq!(FREE_TEXT_FIELDS.join("+"), "notes");
 }

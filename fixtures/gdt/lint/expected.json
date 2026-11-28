@@ -14,6 +14,24 @@
         "L4"
       ],
       "rules_not_run": [],
+      "checks": {
+        "L1": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L2": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L3": {
+          "checked": 12,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 14,
+          "skipped": 0
+        }
+      },
       "findings": [],
       "exit_code": 0
     },
@@ -32,6 +50,28 @@
         "L5"
       ],
       "rules_not_run": [],
+      "checks": {
+        "L1": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L2": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L3": {
+          "checked": 12,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 14,
+          "skipped": 0
+        },
+        "L5": {
+          "checked": 20,
+          "skipped": 0
+        }
+      },
       "findings": [
         {
           "rule": "L5",
@@ -135,9 +175,33 @@
         "L2"
       ],
       "rules_not_run": [
-        "L3",
-        "L4"
+        {
+          "rule": "L3",
+          "reason": "schema_refused"
+        },
+        {
+          "rule": "L4",
+          "reason": "schema_refused"
+        }
       ],
+      "checks": {
+        "L1": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L2": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L3": {
+          "checked": 0,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 0,
+          "skipped": 0
+        }
+      },
       "findings": [
         {
           "rule": "L1",
@@ -161,6 +225,24 @@
         "L4"
       ],
       "rules_not_run": [],
+      "checks": {
+        "L1": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L2": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L3": {
+          "checked": 12,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 14,
+          "skipped": 0
+        }
+      },
       "findings": [],
       "exit_code": 0
     },
@@ -178,9 +260,33 @@
         "L2"
       ],
       "rules_not_run": [
-        "L3",
-        "L4"
+        {
+          "rule": "L3",
+          "reason": "schema_refused"
+        },
+        {
+          "rule": "L4",
+          "reason": "schema_refused"
+        }
       ],
+      "checks": {
+        "L1": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L2": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L3": {
+          "checked": 0,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 0,
+          "skipped": 0
+        }
+      },
       "findings": [
         {
           "rule": "L1",
@@ -204,6 +310,24 @@
         "L4"
       ],
       "rules_not_run": [],
+      "checks": {
+        "L1": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L2": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L3": {
+          "checked": 12,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 13,
+          "skipped": 0
+        }
+      },
       "findings": [
         {
           "rule": "L3",
@@ -227,6 +351,24 @@
         "L4"
       ],
       "rules_not_run": [],
+      "checks": {
+        "L1": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L2": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L3": {
+          "checked": 12,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 14,
+          "skipped": 0
+        }
+      },
       "findings": [
         {
           "rule": "L4",
@@ -250,9 +392,33 @@
         "L2"
       ],
       "rules_not_run": [
-        "L3",
-        "L4"
+        {
+          "rule": "L3",
+          "reason": "schema_refused"
+        },
+        {
+          "rule": "L4",
+          "reason": "schema_refused"
+        }
       ],
+      "checks": {
+        "L1": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L2": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L3": {
+          "checked": 0,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 0,
+          "skipped": 0
+        }
+      },
       "findings": [
         {
           "rule": "L2",
@@ -276,6 +442,24 @@
         "L4"
       ],
       "rules_not_run": [],
+      "checks": {
+        "L1": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L2": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L3": {
+          "checked": 12,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 14,
+          "skipped": 0
+        }
+      },
       "findings": [
         {
           "rule": "L2",
@@ -300,6 +484,28 @@
         "L5"
       ],
       "rules_not_run": [],
+      "checks": {
+        "L1": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L2": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L3": {
+          "checked": 12,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 14,
+          "skipped": 0
+        },
+        "L5": {
+          "checked": 20,
+          "skipped": 0
+        }
+      },
       "findings": [
         {
           "rule": "L5",
@@ -419,6 +625,28 @@
         "L5"
       ],
       "rules_not_run": [],
+      "checks": {
+        "L1": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L2": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L3": {
+          "checked": 12,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 14,
+          "skipped": 0
+        },
+        "L5": {
+          "checked": 20,
+          "skipped": 0
+        }
+      },
       "findings": [],
       "exit_code": 0
     },
@@ -437,6 +665,28 @@
         "L5"
       ],
       "rules_not_run": [],
+      "checks": {
+        "L1": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L2": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L3": {
+          "checked": 12,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 14,
+          "skipped": 0
+        },
+        "L5": {
+          "checked": 20,
+          "skipped": 0
+        }
+      },
       "findings": [
         {
           "rule": "L5",
@@ -461,6 +711,28 @@
         "L5"
       ],
       "rules_not_run": [],
+      "checks": {
+        "L1": {
+          "checked": 20,
+          "skipped": 0
+        },
+        "L2": {
+          "checked": 21,
+          "skipped": 0
+        },
+        "L3": {
+          "checked": 12,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 14,
+          "skipped": 0
+        },
+        "L5": {
+          "checked": 20,
+          "skipped": 0
+        }
+      },
       "findings": [
         {
           "rule": "L2",
@@ -566,6 +838,160 @@
           "rule": "L5",
           "key": "dmt:iso/roundness/none@1",
           "field": "review"
+        }
+      ],
+      "exit_code": 1
+    },
+    {
+      "case": "empty_rows",
+      "table": "empty_rows.json",
+      "mode": "release",
+      "schema_check": {
+        "status": "ok"
+      },
+      "rules_run": [],
+      "rules_not_run": [
+        {
+          "rule": "L1",
+          "reason": "no_rows"
+        },
+        {
+          "rule": "L2",
+          "reason": "no_rows"
+        },
+        {
+          "rule": "L3",
+          "reason": "no_rows"
+        },
+        {
+          "rule": "L4",
+          "reason": "no_rows"
+        },
+        {
+          "rule": "L5",
+          "reason": "no_rows"
+        }
+      ],
+      "checks": {
+        "L1": {
+          "checked": 0,
+          "skipped": 0
+        },
+        "L2": {
+          "checked": 0,
+          "skipped": 0
+        },
+        "L3": {
+          "checked": 0,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 0,
+          "skipped": 0
+        },
+        "L5": {
+          "checked": 0,
+          "skipped": 0
+        }
+      },
+      "findings": [],
+      "exit_code": 1
+    },
+    {
+      "case": "rows_not_array",
+      "table": "rows_not_array.json",
+      "mode": "draft",
+      "schema_check": {
+        "status": "refused",
+        "code": "malformed_table",
+        "reason": "wrong_type"
+      },
+      "rules_run": [],
+      "rules_not_run": [
+        {
+          "rule": "L1",
+          "reason": "not_evaluable"
+        },
+        {
+          "rule": "L2",
+          "reason": "not_evaluable"
+        },
+        {
+          "rule": "L3",
+          "reason": "schema_refused"
+        },
+        {
+          "rule": "L4",
+          "reason": "schema_refused"
+        }
+      ],
+      "checks": {
+        "L1": {
+          "checked": 0,
+          "skipped": 0
+        },
+        "L2": {
+          "checked": 0,
+          "skipped": 0
+        },
+        "L3": {
+          "checked": 0,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 0,
+          "skipped": 0
+        }
+      },
+      "findings": [],
+      "exit_code": 1
+    },
+    {
+      "case": "raw_skips",
+      "table": "raw_skips.json",
+      "mode": "draft",
+      "schema_check": {
+        "status": "refused",
+        "code": "malformed_table",
+        "reason": "wrong_type"
+      },
+      "rules_run": [
+        "L1",
+        "L2"
+      ],
+      "rules_not_run": [
+        {
+          "rule": "L3",
+          "reason": "schema_refused"
+        },
+        {
+          "rule": "L4",
+          "reason": "schema_refused"
+        }
+      ],
+      "checks": {
+        "L1": {
+          "checked": 19,
+          "skipped": 2
+        },
+        "L2": {
+          "checked": 19,
+          "skipped": 2
+        },
+        "L3": {
+          "checked": 0,
+          "skipped": 0
+        },
+        "L4": {
+          "checked": 0,
+          "skipped": 0
+        }
+      },
+      "findings": [
+        {
+          "rule": "L1",
+          "key": "dmt:asme/straightness/none@1",
+          "field": "notes"
         }
       ],
       "exit_code": 1

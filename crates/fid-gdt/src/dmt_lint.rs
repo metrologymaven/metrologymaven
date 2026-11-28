@@ -10,15 +10,22 @@
 //! | L4 | an ORS link names a case absent from the supplied [`OrsIndex`] | `ors_cases[<i>]` |
 //! | L5 | (release mode) the review state is not `signed_off` by two distinct reviewers | `review` |
 //!
-//! Two entry points:
+//! Every finding has the fixed severity `gate` ([`Severity`]): any finding fails the lint.
+//! Every report counts, per rule, the items checked and skipped ([`RuleCheck`]), so a clean
+//! report shows what was looked at. A table with no rows is never passed: its rules are
+//! reported as not run with reason `no_rows`.
 //!
-//! - [`lint`] runs L1 to L5 over a loaded [`DmtTable`], as the leaf's design names it;
+//! Three entry points:
+//!
+//! - [`lint`] runs L1 to L5 over a loaded [`DmtTable`], as the leaf's design names it, and
+//!   returns the findings; [`lint_table`] returns the full [`LintReport`] for it;
 //! - [`lint_bytes`] runs over table file bytes. The DMT schema (`GDT.RES.SCHEMA`) already
 //!   refuses some rows L1 and L2 exist to catch (a `notes` field over 280 characters, a
 //!   clause with a space in it), so a schema refusal would otherwise hide the lint's own
 //!   finding. When the schema refuses the table, `lint_bytes` runs L1 and L2 over the parsed
 //!   JSON instead, reports the refusal (code and reason) in the [`LintReport`] and lists L3,
-//!   L4 and L5 as not run, with the reason. A refused table never passes.
+//!   L4 and L5 as not run, with the reason (`schema_refused`). If the file has no `rows`
+//!   array, L1 and L2 are not run either (`not_evaluable`). A refused table never passes.
 //!
 //! Findings are sorted by (key, rule, field, detail), so two runs give byte-identical
 //! finding lists (AC-6). No finding or error holds text taken from the input except row keys
@@ -147,6 +154,33 @@ impl Mode {
     }
 }
 
+/// How a finding affects a run. Every rule is a gate (REQ-GDT.RES.LINT-006: the lint exits
+/// non-zero if any finding exists), so there is no warning level; the value is fixed per
+/// rule by [`Rule::severity`] and written into every finding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Severity {
+    /// The finding fails the lint (`gate`).
+    Gate,
+}
+
+impl Severity {
+    /// Wire form, `gate`.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Severity::Gate => "gate",
+        }
+    }
+}
+
+impl Rule {
+    /// The fixed severity of the rule's findings: [`Severity::Gate`] for L1 to L5.
+    pub const fn severity(self) -> Severity {
+        match self {
+            Rule::L1 | Rule::L2 | Rule::L3 | Rule::L4 | Rule::L5 => Severity::Gate,
+        }
+    }
+}
+
 /// One lint finding: rule, row key, field and a detail written by the lint (never input text).
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Finding {
@@ -162,13 +196,19 @@ impl Finding {
         self.rule
     }
 
+    /// The severity, fixed per rule ([`Rule::severity`]).
+    pub fn severity(&self) -> Severity {
+        self.rule.severity()
+    }
+
     /// The row key, or `rows[<i>]` (the row's index in the file) for a row whose key is not a
     /// valid DMT key; such a row is always refused by the schema too.
     pub fn key(&self) -> &str {
         &self.key
     }
 
-    /// The field, for example `notes`, `clauses[0].clause` or `ors_cases[1]`.
+    /// The field, for example `notes`, `clauses[0].clause` or `ors_cases[1]`. For L1 it is
+    /// the [`FREE_TEXT_FIELDS`] joined by `+` (today `notes`).
     pub fn field(&self) -> &str {
         &self.field
     }
@@ -178,13 +218,14 @@ impl Finding {
         &self.detail
     }
 
-    /// The finding as JSON: `{detail, field, key, rule}`.
+    /// The finding as JSON: `{detail, field, key, rule, severity}`.
     pub fn to_cvalue(&self) -> CValue {
         let mut m = BTreeMap::new();
         m.insert("detail".to_owned(), CValue::Str(self.detail.clone()));
         m.insert("field".to_owned(), CValue::Str(self.field.clone()));
         m.insert("key".to_owned(), CValue::Str(self.key.clone()));
         m.insert("rule".to_owned(), CValue::Str(self.rule.as_str().to_owned()));
+        m.insert("severity".to_owned(), CValue::Str(self.severity().as_str().to_owned()));
         CValue::Obj(m)
     }
 }
@@ -212,6 +253,83 @@ pub enum SchemaCheck {
     },
 }
 
+/// Why a rule of the mode did not run.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum NotRunReason {
+    /// `schema_refused`: the rule needs a loaded table and the schema refused it (L3 to L5).
+    SchemaRefused,
+    /// `no_rows`: the table has no rows, so there was nothing to check. An empty table never
+    /// passes.
+    NoRows,
+    /// `not_evaluable`: the table is not an object with a `rows` array, so L1 and L2 could not
+    /// look at any row.
+    NotEvaluable,
+}
+
+impl NotRunReason {
+    /// Wire form.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            NotRunReason::SchemaRefused => "schema_refused",
+            NotRunReason::NoRows => "no_rows",
+            NotRunReason::NotEvaluable => "not_evaluable",
+        }
+    }
+}
+
+/// How many items one rule checked and how many it had to skip. The items are, per rule:
+/// L1 rows, L2 clause values, L3 `supported` rows, L4 ORS links, L5 rows. A skipped item is
+/// one the rule could not evaluate in a table the schema refused: for L1, a row that is not
+/// an object or whose free-text fields are not all strings; for L2, a row that is not an
+/// object or whose `clauses` is not an array (one each), or a clause entry that is not an
+/// object with a string `clause`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct RuleCheck {
+    checked: usize,
+    skipped: usize,
+}
+
+impl RuleCheck {
+    /// Items evaluated.
+    pub fn checked(&self) -> usize {
+        self.checked
+    }
+
+    /// Items the rule could not evaluate.
+    pub fn skipped(&self) -> usize {
+        self.skipped
+    }
+
+    fn to_cvalue(self) -> CValue {
+        let mut m = BTreeMap::new();
+        m.insert("checked".to_owned(), CValue::U64(self.checked as u64));
+        m.insert("skipped".to_owned(), CValue::U64(self.skipped as u64));
+        CValue::Obj(m)
+    }
+}
+
+/// Per-rule counts for the rules of a mode.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Tally(BTreeMap<Rule, RuleCheck>);
+
+impl Tally {
+    fn new(mode: Mode) -> Tally {
+        Tally(mode.rules().iter().map(|&r| (r, RuleCheck::default())).collect())
+    }
+
+    fn checked(&mut self, rule: Rule, n: usize) {
+        if let Some(c) = self.0.get_mut(&rule) {
+            c.checked += n;
+        }
+    }
+
+    fn skipped(&mut self, rule: Rule) {
+        if let Some(c) = self.0.get_mut(&rule) {
+            c.skipped += 1;
+        }
+    }
+}
+
 /// The result of a lint run.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LintReport {
@@ -219,7 +337,8 @@ pub struct LintReport {
     ors_index_digest: Digest,
     schema: SchemaCheck,
     rules_run: Vec<Rule>,
-    rules_not_run: Vec<Rule>,
+    rules_not_run: Vec<(Rule, NotRunReason)>,
+    checks: Tally,
     findings: Vec<Finding>,
 }
 
@@ -244,10 +363,15 @@ impl LintReport {
         &self.rules_run
     }
 
-    /// The rules of the mode that did not run because the schema refused the table (empty
-    /// when it loaded). Their reason is `schema_refused`.
-    pub fn rules_not_run(&self) -> &[Rule] {
+    /// The rules of the mode that did not run, in order, each with its reason.
+    pub fn rules_not_run(&self) -> &[(Rule, NotRunReason)] {
         &self.rules_not_run
+    }
+
+    /// The counts of a rule of the mode (`None` for a rule outside the mode, such as L5 in
+    /// draft mode). A rule that did not run has zero counts.
+    pub fn check(&self, rule: Rule) -> Option<RuleCheck> {
+        self.checks.0.get(&rule).copied()
     }
 
     /// The findings, sorted by (key, rule, field, detail).
@@ -255,9 +379,14 @@ impl LintReport {
         &self.findings
     }
 
-    /// True only if the table loaded, every rule of the mode ran and nothing was found.
+    /// True only if the table loaded with at least one row, every rule of the mode ran without
+    /// skipping anything, and nothing was found.
     pub fn passed(&self) -> bool {
-        self.findings.is_empty() && self.rules_not_run.is_empty() && matches!(self.schema, SchemaCheck::Ok { .. })
+        self.findings.is_empty()
+            && self.rules_not_run.is_empty()
+            && self.rules_run.as_slice() == self.mode.rules()
+            && self.checks.0.values().all(|c| c.skipped == 0)
+            && matches!(self.schema, SchemaCheck::Ok { .. })
     }
 
     /// The exit code of a CI run: 0 if [`LintReport::passed`], else 1 (REQ-GDT.RES.LINT-006).
@@ -269,12 +398,16 @@ impl LintReport {
         }
     }
 
-    /// The report as JSON (`fid.dmt-lint-report/1`). Every field is required: `findings`,
-    /// `l1_threshold {chars, basis}`, `l5_basis`, `mode`, `ors_index_digest`,
-    /// `passed`, `rules_not_run [{reason, rule}]`, `rules_run`, `schema`,
-    /// `schema_check {status: ok, table_digest} | {status: refused, code, reason | null}`.
+    /// The report as JSON (`fid.dmt-lint-report/1`). Every field is required:
+    /// `checks {<rule>: {checked, skipped}}` for every rule of the mode, `findings`
+    /// (`{detail, field, key, rule, severity}`), `l1_threshold {chars, basis}`, `l5_basis`,
+    /// `mode`, `ors_index_digest`, `passed`, `rules_not_run [{reason, rule}]`, `rules_run`,
+    /// `schema`, `schema_check {status: ok, table_digest} | {status: refused, code,
+    /// reason | null}`. Counts are canonical integers (decimal strings).
     pub fn to_cvalue(&self) -> CValue {
         let mut root = BTreeMap::new();
+        let checks = self.checks.0.iter().map(|(r, c)| (r.as_str().to_owned(), c.to_cvalue())).collect();
+        root.insert("checks".to_owned(), CValue::Obj(checks));
         root.insert("findings".to_owned(), CValue::Arr(self.findings.iter().map(Finding::to_cvalue).collect()));
         let mut l1 = BTreeMap::new();
         l1.insert("basis".to_owned(), CValue::Str(L1_THRESHOLD_BASIS.to_owned()));
@@ -287,9 +420,9 @@ impl LintReport {
         let not_run = self
             .rules_not_run
             .iter()
-            .map(|r| {
+            .map(|(r, why)| {
                 let mut m = BTreeMap::new();
-                m.insert("reason".to_owned(), CValue::Str("schema_refused".to_owned()));
+                m.insert("reason".to_owned(), CValue::Str(why.as_str().to_owned()));
                 m.insert("rule".to_owned(), CValue::Str(r.as_str().to_owned()));
                 CValue::Obj(m)
             })
@@ -530,27 +663,77 @@ pub fn is_clause_number(s: &str) -> bool {
 }
 
 /// Lints a loaded table: L1 to L4, and L5 in release mode. Findings sorted by (key, rule,
-/// field, detail).
+/// field, detail). An empty list alone is not a pass: a table with no rows gives one too.
+/// Use [`lint_table`] (or [`lint_bytes`]) for a gate; its report refuses an empty table.
 pub fn lint(table: &DmtTable, ors_index: &OrsIndex, mode: Mode) -> Vec<Finding> {
+    lint_counted(table, ors_index, mode).0
+}
+
+/// Lints a loaded table and reports it with per-rule counts. A table with no rows is not
+/// passed: every rule of the mode is reported as not run with reason `no_rows`.
+pub fn lint_table(table: &DmtTable, ors_index: &OrsIndex, mode: Mode) -> LintReport {
+    let (findings, checks) = lint_counted(table, ors_index, mode);
+    let (rules_run, rules_not_run) = if table.rows().is_empty() {
+        (Vec::new(), mode.rules().iter().map(|&r| (r, NotRunReason::NoRows)).collect())
+    } else {
+        (mode.rules().to_vec(), Vec::new())
+    };
+    LintReport {
+        mode,
+        ors_index_digest: ors_index.digest(),
+        schema: SchemaCheck::Ok { table_digest: table.digest() },
+        rules_run,
+        rules_not_run,
+        checks,
+        findings,
+    }
+}
+
+fn lint_counted(table: &DmtTable, ors_index: &OrsIndex, mode: Mode) -> (Vec<Finding>, Tally) {
     let mut findings = Vec::new();
+    let mut tally = Tally::new(mode);
     for (key, row) in table.rows() {
         let k = key.as_str();
-        free_text_rule(k, &[("notes", row.notes())], &mut findings);
+        let texts: Option<Vec<(&str, &str)>> =
+            FREE_TEXT_FIELDS.iter().map(|&f| row_free_text(row, f).map(|t| (f, t))).collect();
+        match texts {
+            Some(texts) => {
+                tally.checked(Rule::L1, 1);
+                free_text_rule(k, &texts, &mut findings);
+            }
+            None => tally.skipped(Rule::L1),
+        }
+        tally.checked(Rule::L2, row.clauses().len());
         for (i, c) in row.clauses().iter().enumerate() {
             clause_rule(k, i, c.clause(), &mut findings);
         }
+        if row.status() == RowStatus::Supported {
+            tally.checked(Rule::L3, 1);
+        }
+        tally.checked(Rule::L4, row.ors_cases().len());
         link_rules(k, row, ors_index, &mut findings);
         if mode == Mode::Release {
+            tally.checked(Rule::L5, 1);
             review_rule(k, row.review(), &mut findings);
         }
     }
     findings.sort();
-    findings
+    (findings, tally)
 }
 
-/// Lints table file bytes and reports the schema check with the findings (see the module
-/// documentation). Fails only on bytes it cannot read as JSON at all: over the table size
-/// limit, a byte order mark, or a `fid-canon` parse error (`dmt_lint_input_invalid`).
+/// The value of a [`FREE_TEXT_FIELDS`] entry in a loaded row; `None` for a name the row type
+/// does not have (L1 then counts the row as skipped rather than reading less text).
+fn row_free_text<'a>(row: &'a DmtRow, field: &str) -> Option<&'a str> {
+    match field {
+        "notes" => Some(row.notes()),
+        _ => None,
+    }
+}
+
+/// Lints table file bytes and reports the schema check with the findings and per-rule
+/// counts (see the module documentation). Fails only on bytes it cannot read as JSON at
+/// all: over the table size limit, a byte order mark, or a `fid-canon` parse error
+/// (`dmt_lint_input_invalid`).
 pub fn lint_bytes(bytes: &[u8], ors_index: &OrsIndex, mode: Mode) -> Result<LintReport, LintError> {
     if bytes.len() > MAX_TABLE_BYTES {
         return Err(LintError::input("table", "too_large"));
@@ -561,78 +744,104 @@ pub fn lint_bytes(bytes: &[u8], ors_index: &OrsIndex, mode: Mode) -> Result<Lint
     let v =
         parse_with_limits(bytes, MAX_TABLE_BYTES, MAX_TABLE_DEPTH).map_err(|e| LintError::input("table", e.code()))?;
     let report = match DmtTable::from_value(&v) {
-        Ok(table) => LintReport {
-            mode,
-            ors_index_digest: ors_index.digest(),
-            schema: SchemaCheck::Ok { table_digest: table.digest() },
-            rules_run: mode.rules().to_vec(),
-            rules_not_run: Vec::new(),
-            findings: lint(&table, ors_index, mode),
-        },
+        Ok(table) => lint_table(&table, ors_index, mode),
         Err(e) => refused_report(&v, &e, ors_index, mode),
     };
     Ok(report)
 }
 
-/// The report of a table the schema refused: L1 and L2 over the parsed JSON, the rest not run.
+/// The report of a table the schema refused: L1 and L2 over the parsed JSON (not run when
+/// there is no `rows` array, or no row), the rest not run.
 fn refused_report(v: &CValue, e: &DmtError, ors_index: &OrsIndex, mode: Mode) -> LintReport {
+    const RAW_RULES: [Rule; 2] = [Rule::L1, Rule::L2];
     let mut findings = Vec::new();
-    if let CValue::Obj(o) = v {
-        if let Some(CValue::Arr(rows)) = o.get("rows") {
+    let mut tally = Tally::new(mode);
+    let rows = match v {
+        CValue::Obj(o) => match o.get("rows") {
+            Some(CValue::Arr(a)) => Some(a),
+            _ => None,
+        },
+        _ => None,
+    };
+    let mut rules_run = Vec::new();
+    let mut rules_not_run = Vec::new();
+    match rows {
+        None => rules_not_run.extend(RAW_RULES.iter().map(|&r| (r, NotRunReason::NotEvaluable))),
+        Some(rows) if rows.is_empty() => rules_not_run.extend(RAW_RULES.iter().map(|&r| (r, NotRunReason::NoRows))),
+        Some(rows) => {
             for (i, rv) in rows.iter().enumerate() {
-                raw_row_rules(i, rv, &mut findings);
+                raw_row_rules(i, rv, &mut findings, &mut tally);
             }
+            rules_run.extend_from_slice(&RAW_RULES);
         }
     }
+    rules_not_run
+        .extend(mode.rules().iter().filter(|r| !RAW_RULES.contains(r)).map(|&r| (r, NotRunReason::SchemaRefused)));
     findings.sort();
-    let raw_rules = [Rule::L1, Rule::L2];
     LintReport {
         mode,
         ors_index_digest: ors_index.digest(),
         schema: SchemaCheck::Refused { code: e.code(), reason: e.reason() },
-        rules_run: raw_rules.to_vec(),
-        rules_not_run: mode.rules().iter().copied().filter(|r| !raw_rules.contains(r)).collect(),
+        rules_run,
+        rules_not_run,
+        checks: tally,
         findings,
     }
 }
 
-/// L1 and L2 over one row of unvalidated JSON. A row that is not an object, or whose fields
-/// have the wrong type, gives no finding here; the schema refusal in the same report covers it.
-fn raw_row_rules(index: usize, rv: &CValue, findings: &mut Vec<Finding>) {
-    let CValue::Obj(o) = rv else { return };
+/// L1 and L2 over one row of unvalidated JSON. What cannot be evaluated is counted as
+/// skipped (see [`RuleCheck`]); the schema refusal in the same report says why.
+fn raw_row_rules(index: usize, rv: &CValue, findings: &mut Vec<Finding>, tally: &mut Tally) {
+    let CValue::Obj(o) = rv else {
+        tally.skipped(Rule::L1);
+        tally.skipped(Rule::L2);
+        return;
+    };
     let key = match o.get("key") {
         Some(CValue::Str(s)) if DmtKey::parse(s).is_ok() => s.clone(),
         _ => format!("rows[{index}]"),
     };
-    let texts: Vec<(&str, &str)> = FREE_TEXT_FIELDS
+    let texts: Option<Vec<(&str, &str)>> = FREE_TEXT_FIELDS
         .iter()
-        .filter_map(|&f| match o.get(f) {
+        .map(|&f| match o.get(f) {
             Some(CValue::Str(s)) => Some((f, s.as_str())),
             _ => None,
         })
         .collect();
-    free_text_rule(&key, &texts, findings);
-    if let Some(CValue::Arr(clauses)) = o.get("clauses") {
-        for (i, c) in clauses.iter().enumerate() {
-            if let CValue::Obj(co) = c {
-                if let Some(CValue::Str(s)) = co.get("clause") {
+    match texts {
+        Some(texts) => {
+            tally.checked(Rule::L1, 1);
+            free_text_rule(&key, &texts, findings);
+        }
+        None => tally.skipped(Rule::L1),
+    }
+    let Some(CValue::Arr(clauses)) = o.get("clauses") else {
+        tally.skipped(Rule::L2);
+        return;
+    };
+    for (i, c) in clauses.iter().enumerate() {
+        match c {
+            CValue::Obj(co) => match co.get("clause") {
+                Some(CValue::Str(s)) => {
+                    tally.checked(Rule::L2, 1);
                     clause_rule(&key, i, s, findings);
                 }
-            }
+                _ => tally.skipped(Rule::L2),
+            },
+            _ => tally.skipped(Rule::L2),
         }
     }
 }
 
-/// L1: the free-text fields together over [`FREE_TEXT_LIMIT`] characters. The finding names
-/// the first free-text field (today the only one, `notes`) and never echoes the text.
+/// L1: the free-text fields together over [`FREE_TEXT_LIMIT`] characters. The finding's
+/// field is the [`FREE_TEXT_FIELDS`] joined by `+`; it never echoes the text.
 fn free_text_rule(key: &str, texts: &[(&str, &str)], findings: &mut Vec<Finding>) {
     let total: usize = texts.iter().map(|(_, t)| t.chars().count()).sum();
     if total > FREE_TEXT_LIMIT {
-        let field = texts.first().map_or("notes", |(f, _)| *f);
         findings.push(Finding {
             key: key.to_owned(),
             rule: Rule::L1,
-            field: field.to_owned(),
+            field: FREE_TEXT_FIELDS.join("+"),
             detail: format!("free text has {total} characters; the limit is {FREE_TEXT_LIMIT} (unverified)"),
         });
     }

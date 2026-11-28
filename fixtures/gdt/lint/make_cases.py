@@ -12,7 +12,8 @@ Filler text is lorem ipsum only.
 Outputs (this directory):
   ors_index.json            fid.ors-index/1: every ORS case the synthetic table links
   <case>.json               one edited table per case
-  expected.json             per case: table file, mode, schema check, rules run and not run,
+  expected.json             per case: table file, mode, schema check, rules run, rules not
+                            run [{rule, reason}], per-rule counts {checked, skipped},
                             findings [{rule, key, field}] sorted by (key, rule, field),
                             exit code
 
@@ -27,7 +28,12 @@ Rules (spec REQ-GDT.RES.LINT-001 to -006):
 Schema checks are hand-labelled from GDT.RES.SCHEMA's rules (spec/gdt/res/schema/NODE.md
 and the loader's pinned check order), not computed: a case that breaks the schema names the
 one rule it breaks. When the schema refuses a table, only L1 and L2 run (over the raw JSON),
-and the other rules of the mode are listed as not run.
+and the other rules of the mode are listed as not run (schema_refused); L1 and L2 do not run
+either when there is no rows array (not_evaluable). A table with no rows runs no rule
+(no_rows) and never passes. Counts: L1 rows, L2 clause values, L3 supported rows, L4 ORS
+links, L5 rows; in a refused table, a row that is not an object (L1, L2), a row whose
+free-text fields are not all strings (L1), a clauses value that is not an array (L2) and a
+clause entry without a string clause (L2) are counted as skipped.
 
 Usage: python make_cases.py           write the files
        python make_cases.py --check   fail if any file differs from what would be written
@@ -71,40 +77,81 @@ def row(table, key):
 
 def key_of(index, r):
     # The Rust lint names a row by its key when the key is a valid DMT key; every key used
-    # here is one (they come from the synthetic table unchanged).
+    # here is one (they come from the synthetic table unchanged), or the row has none.
     return r.get("key") if isinstance(r.get("key"), str) else "rows[%d]" % index
 
 
-def l1_l2(index, r, out):
+def l1_l2(index, r, out, checks):
+    """L1 and L2 over one row as raw JSON; counts what was checked and what was skipped."""
+    if not isinstance(r, dict):
+        checks["L1"]["skipped"] += 1
+        checks["L2"]["skipped"] += 1
+        return
     k = key_of(index, r)
-    total = sum(len(r[f]) for f in FREE_TEXT_FIELDS if isinstance(r.get(f), str))
-    if total > LIMIT:
-        out.append(("L1", k, FREE_TEXT_FIELDS[0]))
-    for i, c in enumerate(r.get("clauses", [])):
-        v = c.get("clause")
-        if isinstance(v, str) and not CLAUSE.fullmatch(v):
+    texts = [r.get(f) for f in FREE_TEXT_FIELDS]
+    if all(isinstance(t, str) for t in texts):
+        checks["L1"]["checked"] += 1
+        if sum(len(t) for t in texts) > LIMIT:
+            out.append(("L1", k, "+".join(FREE_TEXT_FIELDS)))
+    else:
+        checks["L1"]["skipped"] += 1
+    clauses = r.get("clauses")
+    if not isinstance(clauses, list):
+        checks["L2"]["skipped"] += 1
+        return
+    for i, c in enumerate(clauses):
+        v = c.get("clause") if isinstance(c, dict) else None
+        if not isinstance(v, str):
+            checks["L2"]["skipped"] += 1
+            continue
+        checks["L2"]["checked"] += 1
+        if not CLAUSE.fullmatch(v):
             out.append(("L2", k, "clauses[%d].clause" % i))
 
 
 def lint(table, index_cases, mode, schema_ok):
+    """Returns (findings, checks, rules_run, rules_not_run) per the spec rules."""
+    rules = RULES_RELEASE if mode == "release" else RULES_DRAFT
+    checks = {r: {"checked": 0, "skipped": 0} for r in rules}
     out = []
-    for i, r in enumerate(table["rows"]):
-        l1_l2(i, r, out)
+    rows = table.get("rows") if isinstance(table, dict) else None
+    if schema_ok:
+        if not rows:
+            return [], checks, [], [{"rule": r, "reason": "no_rows"} for r in rules]
+        run, not_run = list(rules), []
+    else:
+        raw = ["L1", "L2"]
+        if not isinstance(rows, list):
+            run, not_run = [], [{"rule": r, "reason": "not_evaluable"} for r in raw]
+        elif not rows:
+            run, not_run = [], [{"rule": r, "reason": "no_rows"} for r in raw]
+        else:
+            run, not_run = raw, []
+        not_run += [{"rule": r, "reason": "schema_refused"} for r in rules if r not in raw]
+        if not isinstance(rows, list):
+            rows = []
+    for i, r in enumerate(rows):
+        l1_l2(i, r, out, checks)
         if not schema_ok:
             continue
         k = r["key"]
-        if r["status"] == "supported" and not r["ors_cases"]:
-            out.append(("L3", k, "ors_cases"))
+        if r["status"] == "supported":
+            checks["L3"]["checked"] += 1
+            if not r["ors_cases"]:
+                out.append(("L3", k, "ors_cases"))
         for j, case in enumerate(r["ors_cases"]):
+            checks["L4"]["checked"] += 1
             if case not in index_cases:
                 out.append(("L4", k, "ors_cases[%d]" % j))
         if mode == "release":
+            checks["L5"]["checked"] += 1
             rv = r["review"]
             distinct = {x.lower() for x in rv.get("reviewers", [])}
             if rv["state"] != "signed_off" or len(distinct) < 2:
                 out.append(("L5", k, "review"))
     out.sort(key=lambda f: (f[1], f[0], f[2]))
-    return [{"rule": a, "key": b, "field": c} for (a, b, c) in out]
+    findings = [{"rule": a, "key": b, "field": c} for (a, b, c) in out]
+    return findings, checks, run, not_run
 
 
 def dump(obj):
@@ -193,15 +240,35 @@ def main():
 
     case("mixed", mixed, "release")
 
+    def empty_rows(t):
+        t["rows"] = []
+
+    # The schema accepts a table with no rows; the lint never passes one.
+    case("empty_rows", empty_rows, "release")
+
+    def rows_not_array(t):
+        t["rows"] = {}
+
+    wrong_type = {"status": "refused", "code": "malformed_table", "reason": "wrong_type"}
+    case("rows_not_array", rows_not_array, "draft", wrong_type)
+
+    def raw_skips(t):
+        # rows[0] is not an object (the schema refuses it first, as wrong_type); one row's
+        # notes and one clause value are not strings; one row's notes are over the limit.
+        row(t, "dmt:asme/flatness/none@1")["notes"] = 7
+        row(t, "dmt:asme/angularity/none@1")["clauses"][0]["clause"] = 3
+        row(t, "dmt:asme/straightness/none@1")["notes"] = lorem(300)
+        t["rows"].insert(0, 5)
+
+    case("raw_skips", raw_skips, "draft", wrong_type)
+
     expected = []
     for name, t, mode, schema in cases:
         table_file = "../dmt/synthetic_table_v1.json" if t is base else name + ".json"
         if t is not base:
             files[name + ".json"] = dump(t)
         schema_ok = schema["status"] == "ok"
-        rules = RULES_RELEASE if mode == "release" else RULES_DRAFT
-        run = rules if schema_ok else ["L1", "L2"]
-        findings = lint(t, set(index_cases), mode, schema_ok)
+        findings, checks, run, not_run = lint(t, set(index_cases), mode, schema_ok)
         expected.append(
             {
                 "case": name,
@@ -209,9 +276,10 @@ def main():
                 "mode": mode,
                 "schema_check": schema,
                 "rules_run": run,
-                "rules_not_run": [r for r in rules if r not in run],
+                "rules_not_run": not_run,
+                "checks": checks,
                 "findings": findings,
-                "exit_code": 0 if (schema_ok and not findings) else 1,
+                "exit_code": 0 if (schema_ok and not findings and not not_run) else 1,
             }
         )
     files["expected.json"] = dump({"cases": expected})

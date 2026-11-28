@@ -76,6 +76,8 @@ Small synthetic tables (lorem-ipsum filler only, never standards text) and a syn
 - The ORS index format is new here: `fid.ors-index/1` `{schema, cases}`, case IDs in the `UNC.ORS.TRACE` grammar, strictly ascending. `UNC.ORS` may later derive it from a suite.
 - L5 reads the review state the table claims, not the verified sign-off of `GDT.RES.ROWFLOW` / `GDT.RES.STATUS`; the report says so (`l5_basis: claimed_by_table`, D-045). The L1 threshold stays unverified and the report says so too (`l1_threshold.basis: unverified`).
 - AC-5 reads "(rows in draft)" as the condition: `fixtures/gdt/lint/release_draft.json` is the synthetic table with every row in draft, and L5 fires for all 20 rows. On the synthetic table as committed, 3 rows are signed off by two reviewers, so L5 fires for the other 17.
+- Every report counts, per rule, the items checked and skipped (`checks`), and every finding carries the fixed severity `gate` (REQ-006: any finding fails). A table with no rows is never passed: every rule of the mode is reported as not run with reason `no_rows`. When a refused file has no `rows` array, L1 and L2 are not run either (`not_evaluable`).
+- Bidirectional-control characters (for example U+202E) in `notes` pass both the schema and this lint: the schema's free-text check refuses control characters only. Refusing them is for the owner of the field grammar, `GDT.RES.SCHEMA`; this lint adds no rule of its own for it.
 - No production DMT is committed yet; the CI target loads the committed synthetic DMT and `fixtures/gdt/lint/ors_index.json`. Point it at the real table and suite index once they exist.
 
 ## Children
