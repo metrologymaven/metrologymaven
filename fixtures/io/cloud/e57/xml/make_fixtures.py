@@ -115,6 +115,8 @@ TWO_SCANS = (
     + "      </points>\n"
     + "      <!-- an extension element: kept as counted, untrusted metadata -->\n"
     + '      <ext:vendorNote type="String">untrusted &#x202E;text</ext:vendorNote>\n'
+    + "      <!-- unprefixed but not an E57 name: kept, and counted as unknown -->\n"
+    + '      <vendorTag type="Integer">3</vendorTag>\n'
     + "    </vectorChild>\n"
     + '    <vectorChild type="Structure">\n'
     + '      <guid type="String">{F0000000-0000-4000-8000-000000000003}</guid>\n'
@@ -195,6 +197,7 @@ def two_scans_expected():
         "climits 1 integer:0 integer:255 integer:0 integer:255 integer:0 integer:255",
         "images2d 1",
         "extensions 2",
+        "unknown 1",  # vendorTag: the only unprefixed name in this file that is not an E57 name
     ]
     for i, q in enumerate([SCAN0_Q, SCAN1_Q]):
         n = norm(q)
@@ -206,8 +209,20 @@ def two_scans_expected():
 # ---------------------------------------------------------------- error paths and bounds
 
 
-def doc(body: str, ns_extra: str = "", decl: str = DECL) -> str:
-    return decl + f'<e57Root type="Structure" xmlns="{NS}"{ns_extra}>\n' + body + "</e57Root>\n"
+HEADER = f'  <formatName type="String">{FORMAT_NAME}</formatName>\n  <versionMajor type="Integer">1</versionMajor>\n'
+
+
+def doc(body: str, ns_extra: str = "", decl: str = DECL, header: str = HEADER) -> str:
+    return decl + f'<e57Root type="Structure" xmlns="{NS}"{ns_extra}>\n' + header + body + "</e57Root>\n"
+
+
+def f32_finite(x: float) -> bool:
+    """Whether x rounds to a finite binary32 (struct refuses an overflowing value)."""
+    try:
+        struct.pack("<f", x)
+        return True
+    except OverflowError:
+        return False
 
 
 DATA3D = '  <data3D type="Vector"/>\n'
@@ -276,6 +291,24 @@ CASES = [
     ("float_inf.xml", doc(DATA3D + '  <x type="Float">INF</x>\n'), "malformed float_syntax"),
     ("float_nan.xml", doc(DATA3D + '  <x type="Float">NaN</x>\n'), "malformed float_syntax"),
     ("float_overflow.xml", doc(DATA3D + '  <x type="Float">1e400</x>\n'), "malformed float_not_finite"),
+    # 3.4028235e38 is above f32::MAX but rounds to it; 3.4028236e38 rounds to infinity.
+    ("float_single_max.xml", doc(DATA3D + '  <x type="Float" precision="single">3.4028235e38</x>\n'),
+     "ok scans=0 warning=no_scans" if f32_finite(3.4028235e38) else "malformed float_out_of_range"),
+    ("float_single_over.xml", doc(DATA3D + '  <x type="Float" precision="single">3.4028236e38</x>\n'),
+     "ok scans=0 warning=no_scans" if f32_finite(3.4028236e38) else "malformed float_out_of_range"),
+    ("format_name_missing.xml", doc(DATA3D, header='  <versionMajor type="Integer">1</versionMajor>\n'),
+     "malformed format_name_missing"),
+    ("format_name_wrong.xml",
+     doc(DATA3D, header='  <formatName type="String">E57</formatName>\n  <versionMajor type="Integer">1</versionMajor>\n'),
+     "malformed format_name_wrong"),
+    ("format_name_type.xml",
+     doc(DATA3D, header='  <formatName type="Integer">1</formatName>\n  <versionMajor type="Integer">1</versionMajor>\n'),
+     "malformed format_name_wrong"),
+    ("version_major_missing.xml", doc(DATA3D, header=f'  <formatName type="String">{FORMAT_NAME}</formatName>\n'),
+     "malformed version_major_missing"),
+    ("version_major_2.xml",
+     doc(DATA3D, header=f'  <formatName type="String">{FORMAT_NAME}</formatName>\n  <versionMajor type="Integer">2</versionMajor>\n'),
+     "malformed version_major_unsupported"),
     ("float_single_range.xml", doc(DATA3D + '  <x type="Float" precision="single">1e39</x>\n'),
      "malformed float_out_of_range"),
     ("precision_unknown.xml", doc(DATA3D + '  <x type="Float" precision="half">1</x>\n'),
@@ -386,7 +419,7 @@ WRITER_SCANS = [
     {
         "guid": "{F0000000-0000-4000-8000-0000000000a3}",
         "name": 'a<b & c>d "q"',
-        "description": "  leading spaces",
+        "description": "  leading spaces ]]> end",
         "pose": ([0.7071067811865476, 0.0, 0.0, -0.7071067811865476], [5e-324, -2.5e-3, 100.0]),
         "points": (0, 0),
         "fields": [("cartesianX", ("float", "double", None, None))],
@@ -445,7 +478,20 @@ def writer_params():
 
 
 def esc_text(s):
-    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\r", "&#xD;")
+    """Minimal: & < CR, and > only where it follows ]]."""
+    out = []
+    for i, c in enumerate(s):
+        if c == "&":
+            out.append("&amp;")
+        elif c == "<":
+            out.append("&lt;")
+        elif c == "\r":
+            out.append("&#xD;")
+        elif c == ">" and s[max(0, i - 2):i] == "]]":
+            out.append("&gt;")
+        else:
+            out.append(c)
+    return "".join(out)
 
 
 def leaf(ind, name, ty, attrs, value):

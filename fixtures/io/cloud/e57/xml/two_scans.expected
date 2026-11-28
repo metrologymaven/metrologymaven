@@ -18,4 +18,5 @@ sbounds 1 3fe0000000000000,407a36e28240b780,bff921ff2e48e8a7,3ff921ff2e48e8a7,40
 climits 1 integer:0 integer:255 integer:0 integer:255 integer:0 integer:255
 images2d 1
 extensions 2
+unknown 1
 warning pose_quaternion_not_unit scan=1 norm=3ff0000218ded0e7

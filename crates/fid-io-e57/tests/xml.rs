@@ -7,8 +7,8 @@
 use fid_io_e57::xml::{
     parse_slice, parse_slice_with, read_section, scan_tree, write_tree, Bound, CartesianBounds, ColorLimits, E57Node,
     E57Tree, E57Xml, FieldDesc, FieldKind, Key, Namespace, Pose, Precision, Scalar, ScalarRange, ScanDesc, SectionRef,
-    SphericalBounds, WriteError, XmlLimits, XmlSectionError, XmlText, XmlWarning, E57_NAMESPACE, MAX_DEPTH,
-    MAX_ELEMENTS, MAX_TEXT_LEN, RETAINED_NODE_COST,
+    SphericalBounds, WriteError, XmlLimits, XmlSectionError, XmlText, XmlWarning, E57_NAMES, E57_NAMESPACE,
+    FORMAT_NAME, MAX_DEPTH, MAX_ELEMENTS, MAX_TEXT_LEN, RETAINED_NODE_COST,
 };
 use fid_io_e57::{LogicalReader, LogicalWriter, PhysError};
 use fid_io_reg::{Budget, LimitRequest, Principal};
@@ -113,6 +113,7 @@ fn summary(x: &E57Xml) -> String {
     }
     out.push(format!("images2d {}", x.images2d().map_or("none".to_string(), |n| n.to_string())));
     out.push(format!("extensions {}", x.extension_elements()));
+    out.push(format!("unknown {}", x.unknown_elements()));
     for w in x.warnings() {
         match w {
             XmlWarning::QuaternionNotUnit { scan, norm } => {
@@ -188,6 +189,10 @@ fn ac2_doctype_is_forbidden() {
     assert!(matches!(e, XmlSectionError::Malformed { reason: "xml_forbidden_construct", .. }));
 }
 
+/// The root header every section needs: `formatName` and `versionMajor` 1.
+const HEAD: &str =
+    "<formatName type=\"String\">ASTM E57 3D Imaging Data File</formatName><versionMajor type=\"Integer\">1</versionMajor>";
+
 fn nested(levels: u32) -> Vec<u8> {
     // root (depth 1) + `levels - 1` nested structures
     let mut inner = String::new();
@@ -195,7 +200,7 @@ fn nested(levels: u32) -> Vec<u8> {
         inner = format!("<s type=\"Structure\">{inner}</s>");
     }
     format!(
-        "<?xml version=\"1.0\"?><e57Root type=\"Structure\" xmlns=\"{E57_NAMESPACE}\"><data3D type=\"Vector\"/>{inner}</e57Root>"
+        "<?xml version=\"1.0\"?><e57Root type=\"Structure\" xmlns=\"{E57_NAMESPACE}\">{HEAD}<data3D type=\"Vector\"/>{inner}</e57Root>"
     )
     .into_bytes()
 }
@@ -215,9 +220,9 @@ fn ac3_depth_65_is_refused_and_64_passes() {
 }
 
 fn flat(elements: u64) -> Vec<u8> {
-    // root + data3D + `elements - 2` integers
-    let mut s = format!("<e57Root type=\"Structure\" xmlns=\"{E57_NAMESPACE}\"><data3D type=\"Vector\">");
-    for _ in 2..elements {
+    // root + the two header elements + data3D + `elements - 4` integers
+    let mut s = format!("<e57Root type=\"Structure\" xmlns=\"{E57_NAMESPACE}\">{HEAD}<data3D type=\"Vector\">");
+    for _ in 4..elements {
         s.push_str("<vectorChild type=\"Integer\"/>");
     }
     s.push_str("</data3D></e57Root>");
@@ -237,8 +242,9 @@ fn req003_element_count_bound() {
 }
 
 fn string_doc(len: usize) -> Vec<u8> {
-    let mut s =
-        format!("<e57Root type=\"Structure\" xmlns=\"{E57_NAMESPACE}\"><data3D type=\"Vector\"/><t type=\"String\">");
+    let mut s = format!(
+        "<e57Root type=\"Structure\" xmlns=\"{E57_NAMESPACE}\">{HEAD}<data3D type=\"Vector\"/><t type=\"String\">"
+    );
     s.push_str(&"a".repeat(len));
     s.push_str("</t></e57Root>");
     s.into_bytes()
@@ -251,12 +257,14 @@ fn req003_text_length_bound() {
     let e = parse(&string_doc(MAX_TEXT_LEN + 1)).unwrap_err();
     assert!(matches!(e, XmlSectionError::LimitExceeded { bound: Bound::TextLength, .. }), "{e:?}");
     // A value split by a comment counts as one string.
-    let low = XmlLimits::default().with_max_text_len(8);
+    let low = XmlLimits::default().with_max_text_len(32);
     let doc = format!(
-        "<e57Root type=\"Structure\" xmlns=\"{E57_NAMESPACE}\"><data3D type=\"Vector\"/><t type=\"String\">abcde<!-- -->fghi</t></e57Root>"
+        "<e57Root type=\"Structure\" xmlns=\"{E57_NAMESPACE}\">{HEAD}<data3D type=\"Vector\"/><t type=\"String\">{}<!-- -->{}</t></e57Root>",
+        "a".repeat(20),
+        "b".repeat(20)
     );
     let e = parse_slice_with(doc.as_bytes(), budget(), low).unwrap_err();
-    assert!(matches!(e, XmlSectionError::LimitExceeded { bound: Bound::TextLength, value: 8, .. }), "{e:?}");
+    assert!(matches!(e, XmlSectionError::LimitExceeded { bound: Bound::TextLength, value: 32, .. }), "{e:?}");
 }
 
 #[test]
@@ -488,6 +496,8 @@ fn tree_with(node: E57Node) -> E57Tree {
     E57Tree {
         namespaces: Vec::new(),
         root: vec![
+            (Key::new("formatName"), E57Node::String(XmlText::new(FORMAT_NAME))),
+            (Key::new("versionMajor"), E57Node::Integer { value: Some(1), minimum: None, maximum: None }),
             (Key::new("data3D"), E57Node::Vector { allow_heterogeneous: None, children: Vec::new() }),
             (Key::new("x"), node),
         ],
@@ -656,7 +666,12 @@ fn ac5_mutated_sections_never_panic_and_accepted_ones_round_trip() {
         match parse(&input) {
             Ok(x) => {
                 ok += 1;
-                let bytes = write_tree(x.tree()).unwrap_or_else(|e| panic!("case {i}: {e}"));
+                let bytes = match write_tree(x.tree()) {
+                    Ok(b) => b,
+                    // Escaping may pass the size bound: a typed refusal, never bad bytes.
+                    Err(WriteError::LimitExceeded { .. }) => continue,
+                    Err(e) => panic!("case {i}: {e}"),
+                };
                 let back = parse(&bytes).unwrap_or_else(|e| panic!("case {i}: {e}"));
                 assert_eq!(back.tree(), x.tree(), "case {i}");
                 assert_eq!(back.scans(), x.scans(), "case {i}");
@@ -669,4 +684,79 @@ fn ac5_mutated_sections_never_panic_and_accepted_ones_round_trip() {
         }
     }
     assert!(ok > 0 && err > 0, "ok {ok} err {err}");
+}
+
+// ---- review follow-ups: minimal escaping, f32 rounding, root header, unknown names -----------
+
+#[test]
+fn minimal_escaping_keeps_large_strings_writable() {
+    // About 300 KB of `>`: written as is (only `]]>` needs `&gt;`), so it stays under the bound.
+    let gt = ">".repeat(300_000);
+    let t = tree_with(E57Node::String(XmlText::new(&gt)));
+    let bytes = write_tree(&t).unwrap();
+    assert!(bytes.len() < 310_000, "{}", bytes.len());
+    assert_eq!(parse(&bytes).unwrap().tree(), &t);
+    // `]]>` is escaped, `]>` and `>]]` are not.
+    let s = tree_with(E57Node::String(XmlText::new("a]]>b ]> >]] ]]]>")));
+    let text = String::from_utf8(write_tree(&s).unwrap()).unwrap();
+    assert!(text.contains(">a]]&gt;b ]> >]] ]]]&gt;</x>"), "{text}");
+    assert_eq!(parse(text.as_bytes()).unwrap().tree(), &s);
+}
+
+#[test]
+fn accepted_tree_past_the_size_bound_is_a_typed_refusal() {
+    // 300,000 `&` in CDATA are 300 KB to read but 1.5 MB escaped: the writer refuses.
+    let doc = format!(
+        "<e57Root type=\"Structure\" xmlns=\"{E57_NAMESPACE}\">{HEAD}<data3D type=\"Vector\"/><t type=\"String\"><![CDATA[{}]]></t></e57Root>",
+        "&".repeat(300_000)
+    );
+    let x = parse(doc.as_bytes()).unwrap();
+    assert_eq!(
+        write_tree(x.tree()).unwrap_err(),
+        WriteError::LimitExceeded { bound: Bound::TextLength, value: MAX_TEXT_LEN as u64 }
+    );
+}
+
+#[test]
+fn namespace_names_pick_the_quote_they_do_not_contain() {
+    let mut t = tree_with(E57Node::Integer { value: Some(1), minimum: None, maximum: None });
+    t.namespaces.push(Namespace { prefix: "a".to_string(), uri: XmlText::new("urn:a\"b") });
+    t.namespaces.push(Namespace { prefix: "b".to_string(), uri: XmlText::new("urn:c'd") });
+    t.namespaces.push(Namespace { prefix: "c".to_string(), uri: XmlText::new("urn:e\"f'g&h") });
+    let text = String::from_utf8(write_tree(&t).unwrap()).unwrap();
+    assert!(text.contains(" xmlns:a='urn:a\"b'"), "{text}");
+    assert!(text.contains(" xmlns:b=\"urn:c'd\""), "{text}");
+    assert!(text.contains(" xmlns:c=\"urn:e&quot;f'g&amp;h\""), "{text}");
+    assert_eq!(parse(text.as_bytes()).unwrap().tree(), &t);
+}
+
+#[test]
+fn single_precision_is_rounds_to_a_finite_f32() {
+    let single =
+        |v| E57Node::Float { value: Some(v), precision: Some(Precision::Single), minimum: None, maximum: None };
+    // 3.4028235e38 is above f32::MAX but rounds to it.
+    let t = tree_with(single(3.4028235e38));
+    assert_eq!(parse(&write_tree(&t).unwrap()).unwrap().tree(), &t);
+    assert_eq!(invalid(&tree_with(single(3.4028236e38))), "float_out_of_range");
+    assert_eq!(invalid(&tree_with(single(-3.4028236e38))), "float_out_of_range");
+}
+
+#[test]
+fn root_header_is_required_by_reader_and_writer() {
+    let mut t = tree_with(E57Node::Integer { value: Some(1), minimum: None, maximum: None });
+    t.root.remove(0);
+    assert_eq!(write_tree(&t).unwrap_err(), WriteError::Content { reason: "format_name_missing", scan: None });
+    let mut t = tree_with(E57Node::Integer { value: Some(1), minimum: None, maximum: None });
+    t.root[1].1 = E57Node::Integer { value: Some(2), minimum: None, maximum: None };
+    assert_eq!(write_tree(&t).unwrap_err(), WriteError::Content { reason: "version_major_unsupported", scan: None });
+    assert_eq!(write_tree(&t).unwrap_err().code(), "invalid_tree");
+}
+
+#[test]
+fn unknown_e57_names_are_counted() {
+    assert!(E57_NAMES.windows(2).all(|w| w[0] < w[1]), "sorted and unique");
+    let x = parse(&read("two_scans.xml")).unwrap();
+    assert_eq!(x.unknown_elements(), 1);
+    // writer_three_scans.xml has one non-E57 prototype field name (`label`).
+    assert_eq!(parse(&read("writer_three_scans.xml")).unwrap().unknown_elements(), 1);
 }

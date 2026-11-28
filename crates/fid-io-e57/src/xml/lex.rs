@@ -137,9 +137,10 @@ fn in_range<T: PartialOrd + Copy>(v: Option<T>, min: Option<T>, max: Option<T>) 
     Ok(())
 }
 
-/// Within the finite `f32` range (for `precision="single"`).
+/// Rounds (to nearest, ties to even) to a finite `f32` (for `precision="single"`): every
+/// value up to just below `f32::MAX` plus half an ulp, so `3.4028235e38` passes.
 fn single_ok(v: Option<f64>) -> bool {
-    v.is_none_or(|x| x.abs() <= f64::from(f32::MAX))
+    v.is_none_or(|x| (x as f32).is_finite())
 }
 
 fn finite(v: Option<f64>) -> bool {
@@ -182,4 +183,128 @@ pub(crate) fn check_leaf(node: &E57Node) -> Result<(), &'static str> {
             Ok(())
         }
     }
+}
+
+/// The element names of the E57 namespace this reader knows (root, `data3D`, `images2D`,
+/// point fields and their parts), sorted for binary search \[unverified against ASTM
+/// E2807: taken from public descriptions and libE57Format output\]. An unprefixed element
+/// with any other name is kept and counted ([`super::E57Xml::unknown_elements`]).
+pub const E57_NAMES: &[&str] = &[
+    "acquisitionEnd",
+    "acquisitionStart",
+    "associatedData3DGuid",
+    "atmosphericPressure",
+    "azimuthEnd",
+    "azimuthStart",
+    "cartesianBounds",
+    "cartesianInvalidState",
+    "cartesianX",
+    "cartesianY",
+    "cartesianZ",
+    "codecs",
+    "colorBlue",
+    "colorBlueMaximum",
+    "colorBlueMinimum",
+    "colorGreen",
+    "colorGreenMaximum",
+    "colorGreenMinimum",
+    "colorLimits",
+    "colorRed",
+    "colorRedMaximum",
+    "colorRedMinimum",
+    "columnIndex",
+    "columnMaximum",
+    "columnMinimum",
+    "coordinateMetadata",
+    "creationDateTime",
+    "cylindricalRepresentation",
+    "data3D",
+    "dateTimeValue",
+    "description",
+    "e57LibraryVersion",
+    "elevationMaximum",
+    "elevationMinimum",
+    "focalLength",
+    "formatName",
+    "groupingByLine",
+    "groups",
+    "guid",
+    "idElementName",
+    "idElementValue",
+    "imageHeight",
+    "imageMask",
+    "imageWidth",
+    "images2D",
+    "indexBounds",
+    "intensity",
+    "intensityLimits",
+    "intensityMaximum",
+    "intensityMinimum",
+    "isAtomicClockReferenced",
+    "isColorInvalid",
+    "isIntensityInvalid",
+    "isTimeStampInvalid",
+    "jpegImage",
+    "name",
+    "originalGuids",
+    "pinholeRepresentation",
+    "pixelHeight",
+    "pixelWidth",
+    "pngImage",
+    "point",
+    "pointCount",
+    "pointCountPrototype",
+    "pointGroupingSchemes",
+    "points",
+    "pose",
+    "principalPointX",
+    "principalPointY",
+    "prototype",
+    "radius",
+    "rangeMaximum",
+    "rangeMinimum",
+    "relativeHumidity",
+    "returnCount",
+    "returnIndex",
+    "returnMaximum",
+    "returnMinimum",
+    "rotation",
+    "rowIndex",
+    "rowMaximum",
+    "rowMinimum",
+    "sensorFirmwareVersion",
+    "sensorHardwareVersion",
+    "sensorModel",
+    "sensorSerialNumber",
+    "sensorSoftwareVersion",
+    "sensorVendor",
+    "sphericalAzimuth",
+    "sphericalBounds",
+    "sphericalElevation",
+    "sphericalInvalidState",
+    "sphericalRange",
+    "sphericalRepresentation",
+    "startPointIndex",
+    "temperature",
+    "timeStamp",
+    "translation",
+    "vectorChild",
+    "versionMajor",
+    "versionMinor",
+    "visualReferenceRepresentation",
+    "w",
+    "x",
+    "xMaximum",
+    "xMinimum",
+    "y",
+    "yMaximum",
+    "yMinimum",
+    "z",
+    "zMaximum",
+    "zMinimum",
+];
+
+/// True for a name in [`E57_NAMES`].
+pub(crate) fn is_e57_name(s: &str) -> bool {
+    E57_NAMES.binary_search(&s).is_ok()
 }

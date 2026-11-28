@@ -28,7 +28,7 @@ end
 scan
 guid {F0000000-0000-4000-8000-0000000000a3}
 name a<b & c>d "q"
-description   leading spaces
+description   leading spaces ]]> end
 pose 3fe6a09e667f3bcd 0000000000000000 0000000000000000 bfe6a09e667f3bcd 0000000000000001 bf647ae147ae147b 4059000000000000
 points 0 0
 field cartesianX float double - -

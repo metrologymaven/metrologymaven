@@ -76,8 +76,8 @@
     </vectorChild>
     <vectorChild type="Structure">
       <guid type="String">{F0000000-0000-4000-8000-0000000000a3}</guid>
-      <name type="String">a&lt;b &amp; c&gt;d "q"</name>
-      <description type="String">  leading spaces</description>
+      <name type="String">a&lt;b &amp; c>d "q"</name>
+      <description type="String">  leading spaces ]]&gt; end</description>
       <pose type="Structure">
         <rotation type="Structure">
           <w type="Float" precision="double">7.071067811865476e-1</w>

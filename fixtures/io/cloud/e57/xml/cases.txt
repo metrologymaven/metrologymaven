@@ -26,6 +26,13 @@ minimum_above_maximum.xml malformed minimum_above_maximum
 float_inf.xml malformed float_syntax
 float_nan.xml malformed float_syntax
 float_overflow.xml malformed float_not_finite
+float_single_max.xml ok scans=0 warning=no_scans
+float_single_over.xml malformed float_out_of_range
+format_name_missing.xml malformed format_name_missing
+format_name_wrong.xml malformed format_name_wrong
+format_name_type.xml malformed format_name_wrong
+version_major_missing.xml malformed version_major_missing
+version_major_2.xml malformed version_major_unsupported
 float_single_range.xml malformed float_out_of_range
 precision_unknown.xml malformed precision_unknown
 scale_zero.xml malformed scale_zero

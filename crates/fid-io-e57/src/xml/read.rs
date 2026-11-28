@@ -7,8 +7,8 @@ use fid_io_reg::{BoundedSource, Budget, Position};
 use fid_xml::{Attr, Element, EventKind, XmlOptions, XmlReader, XmlText};
 
 use super::lex::{
-    check_leaf, is_ncname, is_string_char, is_ws, parse_bool01, parse_f64, parse_i64, parse_precision, parse_u64,
-    trim_ws,
+    check_leaf, is_e57_name, is_ncname, is_string_char, is_ws, parse_bool01, parse_f64, parse_i64, parse_precision,
+    parse_u64, trim_ws,
 };
 use super::scan::{describe, ScanDesc};
 use super::tree::{Bound, E57Node, E57Tree, Key, Namespace, NodeType, XmlSectionError, XmlWarning};
@@ -74,6 +74,7 @@ pub struct E57Xml {
     images2d: Option<u64>,
     elements: u64,
     extension_elements: u64,
+    unknown_elements: u64,
     warnings: Vec<XmlWarning>,
 }
 
@@ -98,6 +99,12 @@ impl E57Xml {
     /// Elements in an extension namespace (kept in the tree as untrusted metadata).
     pub fn extension_elements(&self) -> u64 {
         self.extension_elements
+    }
+    /// Unprefixed elements (in the E57 namespace) whose name is not in
+    /// [`super::E57_NAMES`]: kept in the tree as untrusted metadata, and counted here so a
+    /// report can show them.
+    pub fn unknown_elements(&self) -> u64 {
+        self.unknown_elements
     }
     /// What the caller must decide on (REQ-004).
     pub fn warnings(&self) -> &[XmlWarning] {
@@ -196,7 +203,15 @@ fn parse_source<R: Read>(src: BoundedSource<R>, limits: XmlLimits) -> Result<E57
         return Err(XmlSectionError::malformed("no_root", Position::byte(0)));
     };
     let (scans, images2d, warnings) = describe(&tree)?;
-    Ok(E57Xml { tree, scans, images2d, elements: st.elements, extension_elements: st.extension_elements, warnings })
+    Ok(E57Xml {
+        tree,
+        scans,
+        images2d,
+        elements: st.elements,
+        extension_elements: st.extension_elements,
+        unknown_elements: st.unknown_elements,
+        warnings,
+    })
 }
 
 /// Attributes of one element, parsed.
@@ -235,6 +250,7 @@ struct Builder {
     prefixes: BTreeSet<String>,
     elements: u64,
     extension_elements: u64,
+    unknown_elements: u64,
     retained: u64,
     done: Option<E57Tree>,
 }
@@ -252,6 +268,7 @@ impl Builder {
             prefixes: BTreeSet::new(),
             elements: 0,
             extension_elements: 0,
+            unknown_elements: 0,
             retained: 0,
             done: None,
         }
@@ -286,7 +303,12 @@ impl Builder {
             return Err(bad("element_name", pos));
         }
         let key = match &el.name.prefix {
-            None if el.name.ns.as_deref() == Some(E57_NAMESPACE) => Key::new(&el.name.local),
+            None if el.name.ns.as_deref() == Some(E57_NAMESPACE) => {
+                if !is_e57_name(&el.name.local) {
+                    self.unknown_elements += 1;
+                }
+                Key::new(&el.name.local)
+            }
             Some(p) if self.prefixes.contains(p) => {
                 self.extension_elements += 1;
                 Key::prefixed(p, &el.name.local)

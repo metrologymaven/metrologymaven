@@ -12,14 +12,20 @@
 //! `prototype` then `codecs`. A leaf with a value is `<n ...>value</n>`. A container without
 //! children, a number without a value, an empty string and a blob are `<n .../>`. Integers
 //! are written in decimal (`{}`), reals in Rust's shortest round-trip exponent form (`{:e}`,
-//! for example `1e0`, `-2.5e-3`, `-0e0`), booleans as `0`/`1`. Text escapes `&` `<` `>` and
-//! CR (`&#xD;`); attribute values escape `&` `<` `"` and tab, LF, CR (`&#x9;` `&#xA;`
-//! `&#xD;`).
+//! for example `1e0`, `-2.5e-3`, `-0e0`), booleans as `0`/`1`. Escaping is minimal. Text
+//! escapes `&`, `<`, CR (`&#xD;`) and a `>` that follows `]]`. A namespace name is quoted
+//! with `"`, or with `'` when it contains `"` but not `'`; only a value holding both quote
+//! characters has its `"` escaped (`&quot;`); `&`, `<`, tab, LF and CR are escaped
+//! (`&#x9;` `&#xA;` `&#xD;`).
 //!
 //! # Checks
 //!
-//! Before writing, the tree is checked against the reader's rules, so the output always
-//! parses back to an equal tree: every element's own rules (ranges, finite reals, scale not
+//! Before writing, the tree is checked against the reader's rules, so whatever the writer
+//! writes parses back to an equal tree. A tree the reader accepted always passes these checks,
+//! except the size bounds: escaping can make a string or the root tag longer than the reader's
+//! text or token bound, and then the writer refuses with [`WriteError::LimitExceeded`] instead
+//! of writing bytes the reader would refuse. The checks: the root rules of the scan layer
+//! (`formatName`, `versionMajor`, `data3D`, the scans; [`WriteError::Content`]); every element's own rules (ranges, finite reals, scale not
 //! zero, single precision within `f32`, no control character in strings); unique keys that
 //! are NCNames, with a prefix declared in [`E57Tree::namespaces`]; homogeneous vectors unless
 //! heterogeneous children are allowed; a `codecs` child that is a `Vector`; namespaces with an
@@ -34,8 +40,8 @@ use std::fmt::{self, Write as _};
 use fid_xml::{XmlText, MAX_ATTRIBUTES, MAX_NAMESPACES, MAX_NAME_LEN, MAX_URI_LEN, XMLNS_NS, XML_NS};
 
 use super::lex::{check_leaf, is_ncname, is_string_char};
-use super::scan::{scan_desc, ScanDesc};
-use super::tree::{Bound, E57Node, E57Tree, Key, Namespace, NodeType};
+use super::scan::{describe, scan_desc, ScanDesc};
+use super::tree::{Bound, E57Node, E57Tree, Key, Namespace, NodeType, XmlSectionError};
 use super::{E57_NAMESPACE, MAX_DEPTH, MAX_ELEMENTS, MAX_TEXT_LEN};
 
 /// The `formatName` the builder writes \[unverified against ASTM E2807\].
@@ -59,6 +65,14 @@ pub enum WriteError {
         /// Its value.
         value: u64,
     },
+    /// The tree's root or scan content breaks a rule of the scan layer (`invalid_tree`), with
+    /// the reader's reason and the `data3D` child if the rule is about one.
+    Content {
+        /// Static reason.
+        reason: &'static str,
+        /// The `data3D` child.
+        scan: Option<usize>,
+    },
     /// Scan `index` cannot be written as given (`invalid_scan`): `codecs_not_writable` for a
     /// non-zero codec count, `scan_not_representable` if reading its element back would not
     /// give the same description, or the reader's reason for the element.
@@ -74,7 +88,7 @@ impl WriteError {
     /// The stable snake_case code.
     pub fn code(&self) -> &'static str {
         match self {
-            WriteError::Invalid { .. } => "invalid_tree",
+            WriteError::Invalid { .. } | WriteError::Content { .. } => "invalid_tree",
             WriteError::LimitExceeded { .. } => "limit_exceeded",
             WriteError::Scan { .. } => "invalid_scan",
         }
@@ -85,6 +99,8 @@ impl fmt::Display for WriteError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             WriteError::Invalid { reason, element } => write!(f, "invalid_tree: {reason} at element {element}"),
+            WriteError::Content { reason, scan: Some(i) } => write!(f, "invalid_tree: {reason} in data3D child {i}"),
+            WriteError::Content { reason, scan: None } => write!(f, "invalid_tree: {reason}"),
             WriteError::LimitExceeded { bound, value } => write!(f, "limit_exceeded: bound {bound} = {value}"),
             WriteError::Scan { index, reason } => write!(f, "invalid_scan: {reason} in scan {index}"),
         }
@@ -140,30 +156,43 @@ fn limit(bound: Bound, value: u64) -> WriteError {
     WriteError::LimitExceeded { bound, value }
 }
 
+/// Minimal text escaping: `&`, `<`, CR, and `>` only where it follows `]]` (so `]]>` never
+/// appears in character data).
 fn escape_text(out: &mut String, s: &str) {
+    let (mut p1, mut p2) = ('\0', '\0');
     for c in s.chars() {
         match c {
             '&' => out.push_str("&amp;"),
             '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
+            '>' if p1 == ']' && p2 == ']' => out.push_str("&gt;"),
             '\r' => out.push_str("&#xD;"),
             _ => out.push(c),
         }
+        (p2, p1) = (p1, c);
     }
 }
 
-fn escape_attr(out: &mut String, s: &str) {
+/// Writes ` name=` and the quoted value: quoted with `"` unless the value contains `"` and
+/// not `'`, then with `'`; only a value holding both has its quote character escaped
+/// (`&quot;`). `&`, `<`, tab, LF and CR are always escaped.
+fn write_attr(out: &mut String, name: &str, s: &str) {
+    let q = if s.contains('"') && !s.contains('\'') { '\'' } else { '"' };
+    out.push(' ');
+    out.push_str(name);
+    out.push('=');
+    out.push(q);
     for c in s.chars() {
         match c {
             '&' => out.push_str("&amp;"),
             '<' => out.push_str("&lt;"),
-            '"' => out.push_str("&quot;"),
+            '"' if q == '"' => out.push_str("&quot;"),
             '\t' => out.push_str("&#x9;"),
             '\n' => out.push_str("&#xA;"),
             '\r' => out.push_str("&#xD;"),
             _ => out.push(c),
         }
     }
+    out.push(q);
 }
 
 /// Serialises `tree` in the fixed byte form after checking it (see the module
@@ -206,9 +235,7 @@ pub fn write_tree(tree: &E57Tree) -> Result<Vec<u8>, WriteError> {
         if !uris.insert(u) {
             return Err(invalid("namespace_uri_duplicate", 0));
         }
-        let _ = write!(w.out, " xmlns:{p}=\"");
-        escape_attr(&mut w.out, u);
-        w.out.push('"');
+        write_attr(&mut w.out, &format!("xmlns:{p}"), u);
     }
     w.out.push_str(">\n");
     if w.out.len() - tag_start - 1 > MAX_TEXT_LEN {
@@ -216,6 +243,11 @@ pub fn write_tree(tree: &E57Tree) -> Result<Vec<u8>, WriteError> {
     }
     w.structure(&tree.root, 1, 0)?;
     w.out.push_str("</e57Root>\n");
+    match describe(tree) {
+        Ok(_) => {}
+        Err(XmlSectionError::Content { reason, scan }) => return Err(WriteError::Content { reason, scan }),
+        Err(_) => return Err(WriteError::Content { reason: "scan_layer", scan: None }),
+    }
     Ok(w.out.into_bytes())
 }
 

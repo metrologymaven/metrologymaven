@@ -4,6 +4,7 @@
 use fid_xml::XmlText;
 
 use super::tree::{find, E57Node, E57Tree, Key, Precision, XmlSectionError, XmlWarning};
+use super::write::FORMAT_NAME;
 use super::QUATERNION_TOL;
 
 /// A scan's pose: rotation quaternion `q = [w, x, y, z]` and translation `t = [x, y, z]`
@@ -173,6 +174,16 @@ type Described = (Vec<ScanDesc>, Option<u64>, Vec<XmlWarning>);
 /// The scans, the `images2D` count and the warnings of a tree.
 pub(crate) fn describe(tree: &E57Tree) -> Result<Described, XmlSectionError> {
     let content = |reason, scan| XmlSectionError::Content { reason, scan };
+    match find(&tree.root, "formatName") {
+        Some(E57Node::String(t)) if t.raw() == FORMAT_NAME => {}
+        Some(_) => return Err(content("format_name_wrong", None)),
+        None => return Err(content("format_name_missing", None)),
+    }
+    match find(&tree.root, "versionMajor") {
+        Some(E57Node::Integer { value: Some(1), .. }) => {}
+        Some(_) => return Err(content("version_major_unsupported", None)),
+        None => return Err(content("version_major_missing", None)),
+    }
     let images2d = match find(&tree.root, "images2D") {
         None => None,
         Some(E57Node::Vector { children, .. }) => Some(children.len() as u64),

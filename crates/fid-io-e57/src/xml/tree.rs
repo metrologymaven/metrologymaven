@@ -338,6 +338,8 @@ pub enum XmlSectionError {
         at: Position,
     },
     /// The tree is well formed but its content breaks a scan or root rule (`malformed`):
+    /// `format_name_missing`, `format_name_wrong` (not the `String` [`super::FORMAT_NAME`]),
+    /// `version_major_missing`, `version_major_unsupported` (not the `Integer` 1),
     /// `data3d_missing`, `data3d_not_vector`, `images2d_not_vector`, or a `data3D` child
     /// (`scan`, 0-based) with a missing or mistyped `guid`, `points`, pose, bounds or limits
     /// element, an empty or non-`Structure` prototype, or inverted bounds or limits.

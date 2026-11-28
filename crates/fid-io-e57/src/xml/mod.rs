@@ -31,7 +31,9 @@
 //!
 //! [`E57Xml::scans`] gives one [`ScanDesc`] per `data3D` child in document order (REQ-001),
 //! [`E57Xml::images2d`] the `images2D` count, and [`E57Xml::extension_elements`] the number
-//! of elements in an extension namespace (kept in the tree as untrusted metadata). A pose
+//! of elements in an extension namespace and [`E57Xml::unknown_elements`] the number of
+//! unprefixed elements whose name is not in [`E57_NAMES`] (both kept in the tree as
+//! untrusted metadata). The root must hold `formatName` [`FORMAT_NAME`] and `versionMajor` 1. A pose
 //! quaternion whose norm differs from 1 by more than [`QUATERNION_TOL`] is passed on
 //! unnormalised with a [`XmlWarning::QuaternionNotUnit`] carrying the computed norm (REQ-004);
 //! an empty `data3D` gives [`XmlWarning::NoScans`].
@@ -42,7 +44,9 @@
 //! serialises any tree to one fixed byte form (UTF-8, LF line ends, two-space indentation,
 //! attributes in a fixed order, reals in Rust's shortest round-trip `{:e}` form). The writer
 //! checks the tree against the same rules as the reader first, so whatever it writes parses
-//! back to an equal tree, and the same tree always gives the same bytes (REQ-005).
+//! back to an equal tree, and the same tree always gives the same bytes (REQ-005). A tree the
+//! reader accepted round-trips unless escaping takes a string or the root tag past the
+//! reader's size bound; the writer then refuses with [`WriteError::LimitExceeded`].
 //!
 //! Element names, attribute names, the namespace name and the `type` values follow the
 //! public descriptions of ASTM E2807 (cited by designator only) and libE57Format's output and
@@ -54,6 +58,7 @@ mod scan;
 mod tree;
 mod write;
 
+pub use lex::E57_NAMES;
 pub use read::{parse_slice, parse_slice_with, read_section, E57Xml, XmlLimits, RETAINED_NODE_COST};
 pub use scan::{
     CartesianBounds, ColorLimits, FieldDesc, FieldKind, Pose, Scalar, ScalarRange, ScanDesc, SectionRef,

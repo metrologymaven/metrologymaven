@@ -47,6 +47,8 @@
       </points>
       <!-- an extension element: kept as counted, untrusted metadata -->
       <ext:vendorNote type="String">untrusted &#x202E;text</ext:vendorNote>
+      <!-- unprefixed but not an E57 name: kept, and counted as unknown -->
+      <vendorTag type="Integer">3</vendorTag>
     </vectorChild>
     <vectorChild type="Structure">
       <guid type="String">{F0000000-0000-4000-8000-000000000003}</guid>
