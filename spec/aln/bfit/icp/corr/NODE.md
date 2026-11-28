@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-align-solve]
 satisfies: [REQ-ALN.BFIT.ICP-001, REQ-ALN.BFIT.ICP-003, REQ-ALN.BFIT.ICP-005, REQ-ALN.BFIT.ICP-006]
 covers: []
 depends_on: [GEO.DIST, GEO.NURBS.EVAL, GEO.TYPES.MESH]
@@ -70,6 +71,14 @@ For each measured point (already moved by the current pose), finds its closest p
 ## Open questions
 
 - GEO.DIST.MESH, GEO.DIST.BATCH and GEO.DIST.FACE are tagged P1b while this leaf is P1a. Either surface best-fit moves to P1b by decision or GEO.DIST's mesh path moves to P1a; raised for the GEO and ALN reviewers.
+- **Build notes (fid-align-solve `icp::corr`, choices made while building):**
+  - The reference is `Reference::Mesh(&SignTarget)` or `Reference::Cad(&CadReference)` (a GEO.DIST.FACE.BODY `FaceSetTarget` plus the GEO.DIST.FACE.INCID index of its body), not `&dyn ProjectionTarget`: that trait returns neither the foot's feature nor a normal, so the search calls `MeshTarget::closest` and `FaceSetTarget::closest` directly (the same GEO.DIST arithmetic and tie rules, without the sign, which ICP does not need). Placed instances (`InstanceTarget`) are not accepted yet.
+  - Signature: `correspond(points: &PointSet, reference, opts: &CorrOptions, cancel: &AtomicBool) -> Result<CorrOutput, CorrError>`. The `PointSet` carries the frame for the `frame_mismatch` check; the kernel cancellation flag is an `AtomicBool`, as in GEO.DIST.BATCH; `CorrOptions` also holds `threads` (1..=256, never changes the output). `CorrOutput` holds the `Correspondences` (the METRIC-defined structure of arrays) plus per-outcome counts and notes (`normal_fallback`, `seam_combined`), so no outcome is dropped silently.
+  - New outcome `normal_undefined` (an additive variant of METRIC's `CorrReason`, carrying the GEO.DIST.SIGN reason): where GEO.DIST gives no outward normal (a free or non-manifold edge, a vertex touching one, a misoriented component, a degenerate triangle, a cone apex), the point is not valid, but its foot, entity and distance are kept. On AC-2's fixture (open fans) the tied feet at boundary vertices are therefore reported with their lowest triangle index and `normal_undefined`.
+  - CAD normal: the outward surface normal of the hit face at the foot parameters, also for feet on the face's boundary edge or corner (REQ-005 asks for the surface normal, not a pseudo-normal). On a NURBS seam, where INCID routes the foot to its edge rule, the normal is the angle-weighted sum of both sides, normalised and noted. Patch IDs for CAD are face indexes of the body (`FaceIx::index`).
+  - Extra refusals, all fail closed: `invalid_threads`, `invalid_max_distance`, `empty_patches`, `invalid_patches` (position), `empty_reference`, `no_points`, `query_out_of_range`, `allocation_failed`, `worker_failed`, `cad_reference`; a search or normal failure fails the whole call with the lowest index.
+  - Ties: GEO.DIST returns only the winner, so this leaf cannot report that a tie happened. A per-hit tie count from GEO.DIST.MESH and GEO.DIST.FACE.BODY would close that (cross-node follow-up).
+  - REQ-007 (200 ms for 1e6 points on a 1e6-triangle mesh) is not measured.
 
 ## Children
 

@@ -3,13 +3,21 @@
 //! - `ALN.BFIT.ICP.METRIC`: [`metric`], the point-to-point and point-to-plane residual rows,
 //!   their twist Jacobian, the square-root weighting and the column reduction through
 //!   `ALN.BFIT.CONSTR`, and the metric's algorithm ID.
+//! - `ALN.BFIT.ICP.CORR`: [`corr`], the correspondence search against a mesh or CAD faces
+//!   (foot, outward unit normal, entity, distance, or why there is none), deterministic for
+//!   any thread count.
 //!
-//! The correspondence search (`ALN.BFIT.ICP.CORR`) and the loop (`ALN.BFIT.ICP.LOOP`) are not
-//! built yet. [`Correspondences`] is the structure-of-arrays shape `ALN.BFIT.ICP.CORR`'s Design
-//! names as its output; it is defined here because [`metric::build_rows`] reads it, and the
-//! correspondence search will fill it.
+//! The loop (`ALN.BFIT.ICP.LOOP`) is not built yet. [`Correspondences`] is the
+//! structure-of-arrays shape `ALN.BFIT.ICP.CORR`'s Design names as its output; it is defined
+//! here because [`metric::build_rows`] reads it, and [`corr::correspond`] fills it.
 
+pub mod corr;
 pub mod metric;
+
+pub use corr::{
+    correspond, CadReference, CorrError, CorrNote, CorrOptions, CorrOutput, CorrSummary, NoteKind, PointError,
+    Reference,
+};
 
 pub use metric::{
     build_rows, InputField, Metric, MetricError, Rows, NORMAL_TOL, POINT_TO_PLANE_ALGORITHM_ID,
@@ -25,23 +33,39 @@ pub enum CorrReason {
     NoHit,
     /// The foot is farther than the maximum distance (`beyond_max_distance`).
     BeyondMaxDistance,
+    /// A foot was found, but GEO.DIST defines no outward normal there (`normal_undefined`):
+    /// a boundary, non-manifold or degenerate feature, a misoriented component, or a
+    /// degenerate surface point (`ALN.BFIT.ICP.CORR`). The foot, entity and distance are the
+    /// real projection; the normal is a placeholder; the point is not valid.
+    NormalUndefined(fid_geo_dist::SignUndefined),
 }
 
 impl CorrReason {
-    /// Stable code: `hit`, `no_hit`, `beyond_max_distance`.
+    /// Stable code: `hit`, `no_hit`, `beyond_max_distance`, `normal_undefined`.
     pub const fn code(self) -> &'static str {
         match self {
             CorrReason::Hit => "hit",
             CorrReason::NoHit => "no_hit",
             CorrReason::BeyondMaxDistance => "beyond_max_distance",
+            CorrReason::NormalUndefined(_) => "normal_undefined",
+        }
+    }
+
+    /// Why the normal is undefined (the GEO.DIST.SIGN reason), for
+    /// [`CorrReason::NormalUndefined`] only.
+    pub const fn undefined_reason(self) -> Option<fid_geo_dist::SignUndefined> {
+        match self {
+            CorrReason::NormalUndefined(r) => Some(r),
+            _ => None,
         }
     }
 }
 
 /// One correspondence per measured point, in measured-index order, as structure of arrays.
 /// Every vector holds one entry per measured point. For a point whose `valid` entry is false,
-/// `foot`, `normal`, `entity` and `dist` are placeholders that are never read, and `reason`
-/// says why; for a valid point `reason` is [`CorrReason::Hit`].
+/// `foot`, `normal`, `entity` and `dist` are placeholders that are never read (for
+/// [`CorrReason::NormalUndefined`] only the normal is a placeholder), and `reason` says why;
+/// for a valid point `reason` is [`CorrReason::Hit`].
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Correspondences {
     /// The foot point `q` on the reference, metres.
