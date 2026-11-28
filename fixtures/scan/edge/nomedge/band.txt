@@ -1,0 +1,13 @@
+fid-scan-edge-nomedge-body 1
+vertex s0 0.04 0.0 0.0
+vertex s1 0.04 0.0 0.02
+circle cb s0 s0 0.0 6.283185307179586 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 0.04
+circle ct s1 s1 0.0 6.283185307179586 0.0 0.0 0.02 0.0 0.0 1.0 1.0 0.0 0.0 0.04
+line seam s0 s1 0.0 0.02 0.04 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0
+coedge k1 cb same
+coedge k2 seam same
+coedge k3 ct reversed
+coedge k4 seam reversed
+loop l1 outer k1 k2 k3 k4
+cylinder side same 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 0.04 l1
+shell open side

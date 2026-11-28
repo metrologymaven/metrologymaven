@@ -2392,6 +2392,8 @@ dependencies = [
 name = "fid-scan-edge"
 version = "0.0.1"
 dependencies = [
+ "fid-geo-cad",
+ "fid-geo-nurbs",
  "fid-geo-types",
  "fid-num",
  "fid-scan-edge",

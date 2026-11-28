@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-scan-edge]
 satisfies: [REQ-SCAN.EDGE-001, REQ-SCAN.EDGE-002]
 covers: []
 depends_on: [KRN.CONS, GEO.CAD, GEO.NURBS]
@@ -74,7 +75,14 @@ Turns a nominal edge (a chain of CAD boundary edges, or an edge or trim curve bu
 
 ## Open questions
 
-- None.
+- Built in `fid-scan-edge::nominal` (PR to follow in `built_pr`). Choices made while building, open to review:
+  - **Fixtures.** `fixtures/scan/edge_plate/body.txt` and `fixtures/scan/edge_cylinder_trim/body.txt` (plus `fixtures/scan/edge/nomedge/{hole,band,notch}.txt`) are small text B-rep descriptions loaded through `fid_geo_cad::BodyBuilder`, not STEP models: the kernel crate cannot (dev-)depend on the services-layer STEP importer. The cylinder trim curve is the ellipse cut by the plane 3x = 4z. Expected stations come from `fixtures/scan/edge/nomedge/make_nomedge_fixtures.py` (60-digit decimal, Romberg and Newton for the ellipse), CC0-1.0 project data.
+  - **API.** `stations` returns `NominalStations` (stations plus the chain pieces in order with their reversal and length, the total length, the closed flag and the spacing) rather than a bare `Vec<Station>`. `CadResolver` only hands out a GEO.CAD `Body` (no assembly instance frames yet). `NominalEdge::Constructed` takes a `CurveDef` over a range with its face and an explicit `MaterialSide`, because KRN.CONS edge and trim-curve constructions are not built and a free curve carries no loop to fix the material side.
+  - **Orientation.** The chain runs in the direction of the edge's coedge on the face (GEO.CAD keeps the material on the left seen from the outward normal), so `b = t x n` points away from the material; an edge used by no coedge of the face or by two (a seam) is `scan.edge.multi_face`.
+  - **Corners and ends.** A station within `1e-12 m + 1e-12 L` of a junction takes the later piece's frame, at its start; on an open chain a station that far past the end sits at the end; on a closed chain no station lies within that distance of the full length.
+  - **Frames.** The tangent is made exactly perpendicular to the face normal (one Gram-Schmidt step) after checking `|cos(t, n)| <= 1e-6`, and the cosine is reported per station; a station further than 1e-7 m (the GEO.CAD validation default) from the face surface is refused. Both limits are [unverified] and need evidence from imported CAD.
+  - **Quadrature.** Five-point Gauss-Legendre nodes are constants in the crate (fid-num has no quadrature), adaptive from eight starting panels per piece, with typed errors when it does not converge.
+  - Extra error codes beyond the three named in Design: `scan.edge.empty_chain`, `too_many_edges`, `unknown_entity`, `duplicate_edge`, `no_curve`, `bad_range`, `zero_length`, `chain_branch`, `arc_length_not_converged`, `eval`, `degenerate_tangent`, `foot`, `off_face`, `degenerate_normal`, `not_tangent`, `non_finite`. A spacing giving more than 1 000 000 stations is `scan.edge.bad_spacing`.
 
 ## Children
 

@@ -1,0 +1,16 @@
+fid-scan-edge-nomedge-body 1
+vertex v1 -0.1 -0.05 0.0
+vertex v2 0.1 -0.05 0.0
+vertex v3 0.1 0.05 0.0
+vertex v4 -0.1 0.05 0.0
+line e1 v1 v2 0.0 0.2 -0.1 -0.05 0.0 0.0 0.0 1.0 1.0 0.0 0.0
+coedge c1 e1 same
+line e2 v2 v3 0.0 0.1 0.1 -0.05 0.0 0.0 0.0 1.0 0.0 1.0 0.0
+coedge c2 e2 same
+line e3 v3 v4 0.0 0.2 0.1 0.05 0.0 0.0 0.0 1.0 -1.0 0.0 0.0
+coedge c3 e3 same
+line e4 v4 v1 0.0 0.1 -0.1 0.05 0.0 0.0 0.0 1.0 0.0 -1.0 0.0
+coedge c4 e4 same
+loop l1 outer c1 c2 c3 c4
+plane top same 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 l1
+shell open top
