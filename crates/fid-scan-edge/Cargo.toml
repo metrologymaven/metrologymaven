@@ -1,6 +1,6 @@
 [package]
 name = "fid-scan-edge"
-description = "Metrology Maven scan edge analysis: synthetic rounded, chamfered and burred edge fixtures with analytic tangency and silhouette truths (SCAN.EDGE.EST.EFIX, test support behind the `testkit` feature)"
+description = "Metrology Maven scan edge analysis: synthetic rounded, chamfered and burred edge fixtures with analytic tangency and silhouette truths (SCAN.EDGE.EST.EFIX, test support behind the `testkit` feature); nominal edge chains and station frames on exact CAD (SCAN.EDGE.NOMEDGE)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,10 +8,14 @@ license.workspace = true
 repository.workspace = true
 
 # Kernel crate (KNP-1): no third-party dependencies. Only kernel-layer workspace crates:
-# fid-geo-types (the GEO.TYPES PointCloud with normals, the Mesh and their content digests)
-# and fid-num (the KRN.NUM.RNG counter-based generator and the `sqrt`, `ln`, `sin` and `cos`
-# of the noise and the round's arc).
+# fid-geo-types (the GEO.TYPES PointCloud with normals, the Mesh and their content digests),
+# fid-num (the KRN.NUM.RNG counter-based generator and the `sqrt`, `ln`, `sin` and `cos`
+# of the noise and the round's arc; `hypot` and total order for the nominal stations),
+# fid-geo-cad (SCAN.EDGE.NOMEDGE: the B-rep faces, coedges and edges a nominal edge names)
+# and fid-geo-nurbs (SCAN.EDGE.NOMEDGE: exact curve and surface evaluation and inversion).
 [dependencies]
+fid-geo-cad = { path = "../fid-geo-cad" }
+fid-geo-nurbs = { path = "../fid-geo-nurbs" }
 fid-geo-types = { path = "../fid-geo-types" }
 fid-num = { path = "../fid-num" }
 

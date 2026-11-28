@@ -1,0 +1,16 @@
+fid-scan-edge-nomedge-body 1
+vertex p0 0.04 0.0 -0.01
+vertex p1 0.0 0.04 -0.01
+vertex p2 0.0 0.04 0.0
+vertex p3 0.04 0.0 0.03
+circle bot p0 p1 0.0 1.5707963267948966 0.0 0.0 -0.01 0.0 0.0 1.0 1.0 0.0 0.0 0.04
+line right p1 p2 0.0 0.01 0.0 0.04 -0.01 1.0 0.0 0.0 0.0 0.0 1.0
+ellipse ell p3 p2 0.0 1.5707963267948966 0.0 0.0 0.0 -0.6 0.0 0.8 0.8 0.0 0.6 0.05 0.04
+line left p3 p0 0.0 0.04 0.04 0.0 0.03 1.0 0.0 0.0 0.0 0.0 -1.0
+coedge cleft left reversed
+coedge cell ell same
+coedge cright right reversed
+coedge cbot bot reversed
+loop l1 outer cleft cell cright cbot
+cylinder side reversed 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 0.04 l1
+shell open side
