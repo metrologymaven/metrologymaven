@@ -69,7 +69,7 @@ jobs:
           set -e
           echo "$out"
           test "$code" -eq 1
-          echo "$out" | grep -Eq '^FAIL blob_(missing|corrupt): .*\(seed 1, instant [0-9]+:[0-9]+\)$'
+          grep -Eq '^FAIL blob_(missing|corrupt): .*\(seed 1, instant [0-9]+:[0-9]+\)$' <<<"$out"
       - name: Tear down the flakey device
         if: always()
         shell: bash

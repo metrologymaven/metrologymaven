@@ -188,24 +188,24 @@ jobs:
         shell: bash
         run: |
           release=$(cargo tree --workspace --target all -e normal,build -i fid-bus -f '{p} {f}')
-          echo "$release" | head -n 1
-          echo "$release" | grep -q '^fid-bus ' || { echo "fid-bus is missing from the tree"; exit 1; }
-          if echo "$release" | grep -q 'permit-test-hooks'; then
-            echo "permit-test-hooks is enabled in a release build:"; echo "$release" | grep 'permit-test-hooks'; exit 1
+          head -n 1 <<<"$release"
+          grep -q '^fid-bus ' <<<"$release" || { echo "fid-bus is missing from the tree"; exit 1; }
+          if grep -q 'permit-test-hooks' <<<"$release"; then
+            echo "permit-test-hooks is enabled in a release build:"; grep 'permit-test-hooks' <<<"$release"; exit 1
           fi
           control=$(cargo tree --workspace --target all -e normal,build,dev -i fid-bus -f '{p} {f}')
-          echo "$control" | grep -q 'permit-test-hooks' || { echo "control run does not see the feature"; exit 1; }
+          grep -q 'permit-test-hooks' <<<"$control" || { echo "control run does not see the feature"; exit 1; }
       - name: Release builds never enable the store's commit probe (CORE.STO.SQL.CRASH)
         shell: bash
         run: |
           release=$(cargo tree --workspace --target all -e normal,build -i fid-store -f '{p} {f}')
-          echo "$release" | head -n 1
-          echo "$release" | grep -q '^fid-store ' || { echo "fid-store is missing from the tree"; exit 1; }
-          if echo "$release" | grep -q 'test-probe'; then
-            echo "test-probe is enabled in a release build:"; echo "$release" | grep 'test-probe'; exit 1
+          head -n 1 <<<"$release"
+          grep -q '^fid-store ' <<<"$release" || { echo "fid-store is missing from the tree"; exit 1; }
+          if grep -q 'test-probe' <<<"$release"; then
+            echo "test-probe is enabled in a release build:"; grep 'test-probe' <<<"$release"; exit 1
           fi
           control=$(cargo tree --workspace --target all -e normal,build,dev -i fid-store -f '{p} {f}')
-          echo "$control" | grep -q 'test-probe' || { echo "control run does not see the feature"; exit 1; }
+          grep -q 'test-probe' <<<"$control" || { echo "control run does not see the feature"; exit 1; }
       - name: Workspace xtask invariants
         if: needs.changes.outputs.mode == 'full' || contains(needs.changes.outputs.crates, 'fid-xtask') || contains(needs.changes.outputs.crates, 'fid-platform') || contains(needs.changes.outputs.crates, 'fid-data')
         shell: bash
@@ -569,7 +569,7 @@ jobs:
           run=true
           if [ "${{ github.event_name }}" = pull_request ]; then
             base="${{ github.event.pull_request.base.sha }}"
-            if ! git diff --name-only "$base"...HEAD | grep -qE '^(crates/fid-pkg/|fixtures/pkg/)'; then run=false; fi
+            if ! grep -qE '^(crates/fid-pkg/|fixtures/pkg/)' <<<"$(git diff --name-only "$base"...HEAD)"; then run=false; fi
           fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
