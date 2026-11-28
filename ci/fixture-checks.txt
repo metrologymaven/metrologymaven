@@ -133,6 +133,7 @@ python fixtures/gdt/prof/zdef/make_zdef_fixtures.py --check
 python fixtures/gdt/record/make_cases.py --check
 python fixtures/gdt/resolve/make_cases.py --check
 python fixtures/gdt/rowflow/make_state_cases.py --check
+python fixtures/gdt/sect/make_span_fixtures.py --check
 python fixtures/gdt/size/make_rank_fixtures.py --check
 python fixtures/gdt/spec/make_fixtures.py --check
 python fixtures/gdt/status/make_cases.py --check

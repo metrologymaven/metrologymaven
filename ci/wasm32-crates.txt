@@ -22,6 +22,7 @@ fid-geo-nurbs --test invert -- ac5
 fid-geo-ooc --no-default-features --test layout --test format
 fid-geo-sel --test model
 fid-geo-types --test digest
+fid-gps --test dim_section
 fid-gps --test dim_size_rank
 fid-gps --test prof_zdef
 fid-gps --test zone_shape

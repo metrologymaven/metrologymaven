@@ -9,6 +9,7 @@ phase: P1b
 size: M
 owners: []
 claimed_by:
+built_in: [fid-gps]
 satisfies: [REQ-GDT.DIM.SECT-001, REQ-GDT.DIM.SECT-002]
 covers: [GOM.DIM.07]
 depends_on: [KRN.LSQ, GEO.FRAME]
@@ -68,7 +69,8 @@ Analytic 2D polylines generated in-repo (CC0): rectangle with fillets, slot, cir
 
 ## Open questions
 
-- The section-curve format and its schema version must be named in `SCAN.SECT`'s Interfaces (D-034 publisher duty).
+- The section-curve format and its schema version must be named in `SCAN.SECT`'s Interfaces (D-034 publisher duty). **Until then this leaf defines the format it reads, provisionally:** `fid.scan.sect.curve/1` in `fid-gps` `dim::section::curve` (section ID, a required `fid-geo-frame` frame ID, the plane as origin and two orthonormal in-plane axes, ordered `[u, v]` vertices as IEEE-754 bit texts, the closed flag, and a digest over the canonical JSON of every other field, recomputed on load). SCAN does not publish it yet; `SCAN.SECT` should adopt it or name its own, and this reader follows.
+- **Choices made at build time (confirm in review).** The span carries the section ID and an explicit `wrap` flag (Design); a span naming another section is `section_mismatch`. Only the least-squares fits of `fid-fit` on main are run (`fit.line2.ls`, `fit.circle2.ls`, `fit.point.ls`); a chain naming another method or version is `fit_unavailable`, a chain without exactly one association step is `chain_without_association` / `ambiguous_association`, and a fit of the wrong primitive is `fit_kind_mismatch`. `Point2d` is the centroid of the selection (one vertex gives that vertex). Span bounds are compared exactly (no tolerance); a vertex's arc-length parameter is in `[0, length)`, so on a closed curve vertex 0 is selected by `start = 0` only. Zero-length segments and segments below the rounding resolution of the running arc length are refused when the curve is built. AC-5 is a regression pin of the output bits (Linux, Windows, macOS, and wasm32 through `ci/wasm32-crates.txt`), not an oracle.
 
 ## Children
 
