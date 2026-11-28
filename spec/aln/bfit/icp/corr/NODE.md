@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-align-solve]
+built_pr: 684
 satisfies: [REQ-ALN.BFIT.ICP-001, REQ-ALN.BFIT.ICP-003, REQ-ALN.BFIT.ICP-005, REQ-ALN.BFIT.ICP-006]
 covers: []
 depends_on: [GEO.DIST, GEO.NURBS.EVAL, GEO.TYPES.MESH]
