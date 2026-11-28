@@ -1,0 +1,49 @@
+# file outcome (hand-labelled from the rules of spec/io/cloud/e57/xml/NODE.md)
+doctype.xml malformed xml_forbidden_construct
+entity_ref.xml malformed xml_forbidden_construct
+encoding.xml malformed xml_encoding_unsupported
+bom.xml malformed xml_bom
+truncated.xml truncated_file
+depth65.xml limit_exceeded depth
+depth64.xml ok scans=0 warning=no_scans
+not_e57_root.xml malformed not_e57_root
+wrong_namespace.xml malformed not_e57_root
+e57_prefixed.xml malformed e57_namespace_prefixed
+ns_not_on_root.xml malformed namespace_declaration_not_on_root
+ns_xml_prefix.xml malformed namespace_reserved
+ns_uri_duplicate.xml malformed namespace_uri_duplicate
+element_name.xml malformed element_name
+namespace_prefix.xml malformed namespace_prefix
+type_missing.xml malformed type_missing
+type_unknown.xml malformed type_unknown
+attr_not_applicable.xml malformed attribute_not_applicable
+attr_namespaced.xml malformed attribute_not_applicable
+duplicate_key.xml malformed duplicate_key
+integer_syntax.xml malformed integer_syntax
+integer_overflow.xml malformed integer_out_of_range
+value_out_of_range.xml malformed value_out_of_range
+minimum_above_maximum.xml malformed minimum_above_maximum
+float_inf.xml malformed float_syntax
+float_nan.xml malformed float_syntax
+float_overflow.xml malformed float_not_finite
+float_single_range.xml malformed float_out_of_range
+precision_unknown.xml malformed precision_unknown
+scale_zero.xml malformed scale_zero
+vector_child_name.xml malformed vector_child_name
+vector_heterogeneous.xml malformed vector_heterogeneous
+vector_heterogeneous_allowed.xml ok scans=0 warning=no_scans
+text_in_structure.xml malformed unexpected_text
+child_in_leaf.xml malformed unexpected_child
+control_character.xml malformed control_character
+cv_attribute_missing.xml malformed attribute_missing
+cv_prototype_missing.xml malformed prototype_missing
+cv_child.xml malformed compressed_vector_child
+codecs_not_vector.xml malformed codecs_not_vector
+data3d_missing.xml malformed data3d_missing
+guid_missing.xml malformed scan_guid_missing scan=0
+points_missing.xml malformed scan_points_missing scan=0
+prototype_empty.xml malformed prototype_empty scan=0
+pose_incomplete.xml malformed pose_incomplete scan=0
+bounds_inverted.xml malformed bounds_inverted scan=0
+limits_kind_mismatch.xml malformed limits_kind_mismatch scan=0
+quaternion_unnormalised.xml ok scans=1 warning=pose_quaternion_not_unit:0:4000000000000000

@@ -7,6 +7,10 @@
 //! [`LogicalWriter`] appends logical bytes, emits full pages with checksums and patches the
 //! header at finish. Everything above (XML, binary sections) works on logical bytes.
 //!
+//! The [`xml`] module holds IO.CLOUD.E57.XML: the hardened reader of the XML section into a
+//! typed element tree with one [`xml::ScanDesc`] per `data3D` scan, and its deterministic
+//! writer.
+//!
 //! The format follows ASTM E2807, cited by designator only. The header field list and the
 //! byte order of the stored checksum are implemented from the leaf's description and are
 //! \[unverified\] against the standard and a real corpus file (the leaf's AC-4).
@@ -21,6 +25,7 @@ mod error;
 mod header;
 mod reader;
 mod writer;
+pub mod xml;
 
 pub use cache::{PageCache, DEFAULT_CACHE_BUDGET};
 pub use crc::{crc32c, crc32c_update};

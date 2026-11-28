@@ -180,6 +180,7 @@ python fixtures/io/cad/pmi/read/make_cases.py --check
 python fixtures/io/cad/step/geom/make_cases.py --check
 python fixtures/io/cad/step/hdr/make_cases.py --check
 python fixtures/io/cad/worker/proto/make_digests.py --check
+python fixtures/io/cloud/e57/xml/make_fixtures.py --check
 python fixtures/io/cloud/las/hdr/make_fixtures.py --check
 python fixtures/io/cloud/las/quant/make_cases.py --check
 python fixtures/io/dmis/conf/make_expected.py --check

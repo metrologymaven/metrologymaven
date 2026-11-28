@@ -1,6 +1,6 @@
 [package]
 name = "fid-io-e57"
-description = "Metrology Maven E57 reader and writer, pure Rust: file header and paged physical layer with CRC-32C page checksums (spec node IO.CLOUD.E57.PHYS)"
+description = "Metrology Maven E57 reader and writer, pure Rust: file header and paged physical layer with CRC-32C page checksums, and the hardened XML section reader and writer (spec nodes IO.CLOUD.E57.PHYS, IO.CLOUD.E57.XML)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,6 +11,9 @@ publish = false
 [dependencies]
 # Reader harness (IO.REG.LIMITS): limit kinds and the default input byte limit.
 fid-io-reg = { path = "../fid-io-reg" }
+# Hardened streaming XML pull reader (no DTDs, no entities, bounded) for the XML section
+# (IO.CLOUD.E57.XML). First-party, same layer.
+fid-xml = { path = "../fid-xml" }
 
 [lints]
 workspace = true

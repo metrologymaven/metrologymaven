@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<e57Root type="Structure" xmlns="http://www.astm.org/COMMIT/E57/2010-e57-v1.0" xmlns:ext="https://example.invalid/e57/ext-1">
+  <formatName type="String">ASTM E57 3D Imaging Data File</formatName>
+  <guid type="String">{F0000000-0000-4000-8000-0000000000aa}</guid>
+  <versionMajor type="Integer">1</versionMajor>
+  <versionMinor type="Integer">0</versionMinor>
+  <data3D type="Vector">
+    <vectorChild type="Structure">
+      <guid type="String">{F0000000-0000-4000-8000-0000000000a1}</guid>
+      <name type="String">Scan one</name>
+      <description type="String">f64 cartesian with intensity</description>
+      <pose type="Structure">
+        <rotation type="Structure">
+          <w type="Float" precision="double">5e-1</w>
+          <x type="Float" precision="double">5e-1</x>
+          <y type="Float" precision="double">5e-1</y>
+          <z type="Float" precision="double">5e-1</z>
+        </rotation>
+        <translation type="Structure">
+          <x type="Float" precision="double">1.2345678e3</x>
+          <y type="Float" precision="double">-1e-1</y>
+          <z type="Float" precision="double">1e-7</z>
+        </translation>
+      </pose>
+      <points type="CompressedVector" fileOffset="48" recordCount="1000000">
+        <prototype type="Structure">
+          <cartesianX type="Float" precision="double"/>
+          <cartesianY type="Float" precision="double"/>
+          <cartesianZ type="Float" precision="double" minimum="-1e3" maximum="1e3"/>
+          <intensity type="Float" precision="single" minimum="0e0" maximum="1e0"/>
+          <ext:normalX type="Float"/>
+        </prototype>
+        <codecs type="Vector"/>
+      </points>
+      <cartesianBounds type="Structure">
+        <xMinimum type="Float" precision="double">-1.5e0</xMinimum>
+        <xMaximum type="Float" precision="double">1.5e0</xMaximum>
+        <yMinimum type="Float" precision="double">-0e0</yMinimum>
+        <yMaximum type="Float" precision="double">3.0000000000000004e-1</yMaximum>
+        <zMinimum type="Float" precision="double">6.02214076e23</zMinimum>
+        <zMaximum type="Float" precision="double">1.7976931348623157e308</zMaximum>
+      </cartesianBounds>
+      <intensityLimits type="Structure">
+        <intensityMinimum type="Float" precision="double">0e0</intensityMinimum>
+        <intensityMaximum type="Float" precision="double">1e0</intensityMaximum>
+      </intensityLimits>
+    </vectorChild>
+    <vectorChild type="Structure">
+      <guid type="String">{F0000000-0000-4000-8000-0000000000a2}</guid>
+      <points type="CompressedVector" fileOffset="1048576" recordCount="7">
+        <prototype type="Structure">
+          <sphericalRange type="ScaledInteger" minimum="0" maximum="4194303" scale="1e-4" offset="0e0"/>
+          <sphericalAzimuth type="ScaledInteger" minimum="-31416" maximum="31416" scale="1e-4"/>
+          <colorRed type="Integer" minimum="0" maximum="255"/>
+          <rowIndex type="Integer"/>
+          <label type="String"/>
+        </prototype>
+        <codecs type="Vector"/>
+      </points>
+      <sphericalBounds type="Structure">
+        <rangeMinimum type="Float" precision="double">5e-1</rangeMinimum>
+        <rangeMaximum type="Float" precision="double">4.194303e2</rangeMaximum>
+        <elevationMinimum type="Float" precision="double">-1.5708e0</elevationMinimum>
+        <elevationMaximum type="Float" precision="double">1.5708e0</elevationMaximum>
+        <azimuthStart type="Float" precision="double">3e0</azimuthStart>
+        <azimuthEnd type="Float" precision="double">-3e0</azimuthEnd>
+      </sphericalBounds>
+      <colorLimits type="Structure">
+        <colorRedMinimum type="Integer">0</colorRedMinimum>
+        <colorRedMaximum type="Integer">255</colorRedMaximum>
+        <colorGreenMinimum type="ScaledInteger" scale="1e-2" offset="5e-1">0</colorGreenMinimum>
+        <colorGreenMaximum type="ScaledInteger" scale="1e-2" offset="5e-1">100</colorGreenMaximum>
+        <colorBlueMinimum type="Integer">1</colorBlueMinimum>
+        <colorBlueMaximum type="Integer">1</colorBlueMaximum>
+      </colorLimits>
+    </vectorChild>
+    <vectorChild type="Structure">
+      <guid type="String">{F0000000-0000-4000-8000-0000000000a3}</guid>
+      <name type="String">a&lt;b &amp; c&gt;d "q"</name>
+      <description type="String">  leading spaces</description>
+      <pose type="Structure">
+        <rotation type="Structure">
+          <w type="Float" precision="double">7.071067811865476e-1</w>
+          <x type="Float" precision="double">0e0</x>
+          <y type="Float" precision="double">0e0</y>
+          <z type="Float" precision="double">-7.071067811865476e-1</z>
+        </rotation>
+        <translation type="Structure">
+          <x type="Float" precision="double">5e-324</x>
+          <y type="Float" precision="double">-2.5e-3</y>
+          <z type="Float" precision="double">1e2</z>
+        </translation>
+      </pose>
+      <points type="CompressedVector" fileOffset="0" recordCount="0">
+        <prototype type="Structure">
+          <cartesianX type="Float" precision="double"/>
+        </prototype>
+        <codecs type="Vector"/>
+      </points>
+    </vectorChild>
+  </data3D>
+  <images2D type="Vector"/>
+</e57Root>

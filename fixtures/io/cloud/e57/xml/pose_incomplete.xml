@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<e57Root type="Structure" xmlns="http://www.astm.org/COMMIT/E57/2010-e57-v1.0">
+  <data3D type="Vector">
+    <vectorChild type="Structure">
+      <guid type="String">g</guid>
+      <points type="CompressedVector" fileOffset="0" recordCount="1">
+        <prototype type="Structure"><x type="Float"/></prototype>
+      </points>
+      <pose type="Structure">
+        <rotation type="Structure">
+          <w type="Float">1</w>
+          <x type="Float">0</x>
+          <y type="Float">0</y>
+          <z type="Float">0</z>
+        </rotation>
+      </pose>
+    </vectorChild>
+  </data3D>
+</e57Root>
