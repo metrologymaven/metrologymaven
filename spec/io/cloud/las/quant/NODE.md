@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-io-las]
+built_pr: 675
 satisfies: [REQ-IO.CLOUD.LAS-001, REQ-IO.CLOUD.LAS-002, REQ-IO.CLOUD.LAS-003]
 covers: []
 depends_on: [IO.CLOUD.LAS.HDR]
@@ -75,6 +77,7 @@ Seeded generators; arbitrary-precision reference in tests only.
 ## Open questions
 
 - REQ-IO.CLOUD-009 caps the scale at 1e-7 m, which limits a LAS export to about ±214 m around the offset; larger sites must use E57. Flagged for the IO.CLOUD owner.
+- Build notes (`fid-io-las::quant`): "rounded once" is implemented as correct rounding of the three-term sum offset + product-high + product-low with a round-to-odd step (Boldo and Melquiond 2008); the fixture holds cases where the naive two-rounding formula is wrong. An exactness envelope bounds hostile headers and export input: scale in [2^-512, 2^512] and positive, |offset| and |coordinate| at most 2^480 (`scale_invalid`, `offset_invalid`, `coordinate_outside_envelope`); NaN or infinite export coordinates are `non_finite`, an empty export is `empty_point_set` (no midpoint). Export integers are the nearest to the exact (c - offset) / scale, ties to even and counted per axis in the report. The report's `max_err` is the exact quantisation residual `|c - offset - scale * X|` rounded once, so at most `scale / 2` (below 5e-8 m at the default scale); a separate `max_read_err`, `|c - decode(X)|`, adds the reader's rounding and can pass 5e-8 m near a half-way case (fixture `read_err_over_half`). `write_las` takes an `ExportTarget` and refuses a declared point count that differs from the points before writing anything; plan values are reachable only through validated constructors. AC-1's reference is exact (rationals in the Python oracle; an exact 128-bit integer reference over the seeded generator's range in the Rust test) rather than 256-bit floating point. Whether the import command (`IO.CLOUD.LAS.CMD`) refuses or reports a header outside the envelope is that leaf's call.
 
 ## Children
 

@@ -5,8 +5,13 @@
 //! writes the public header block ([`LasHeader`]), VLRs and EVLRs with bounded, untrusted
 //! payloads ([`Vlr`], [`BoundedBytes`]), and fixed-size point records in formats 0 to 10
 //! with extra bytes ([`RawPointBatch`]: integer coordinates plus typed attribute columns).
-//! Waveform data is counted, never imported ([`WaveformSummary`]). Scale and offset
-//! arithmetic is `IO.CLOUD.LAS.QUANT`; compression is `IO.CLOUD.LAS.LAZ`.
+//! Waveform data is counted, never imported ([`WaveformSummary`]). Compression is
+//! `IO.CLOUD.LAS.LAZ`.
+//!
+//! Module [`quant`] holds IO.CLOUD.LAS.QUANT: integer coordinates to metres rounded once,
+//! per-axis scale, offset and quantisation uncertainty `scale / sqrt(12)` as point-set
+//! metadata, and the export side (scale at most 1e-7 m, offset at the axis midpoint, every
+//! coordinate range-checked before a byte is written, and a report of the error incurred).
 //!
 //! All input is hostile. [`LasReader::open`] checks every declared size, offset and count
 //! against the real file length before trusting it (`malformed{field}`), requires the
@@ -22,6 +27,7 @@ mod error;
 mod format;
 mod header;
 mod points;
+pub mod quant;
 mod reader;
 mod vlr;
 mod writer;

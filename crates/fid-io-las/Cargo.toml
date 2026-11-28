@@ -1,6 +1,6 @@
 [package]
 name = "fid-io-las"
-description = "Metrology Maven LAS reader and writer, pure Rust: public header, VLRs and EVLRs, point data record formats 0 to 10 with extra bytes (spec node IO.CLOUD.LAS.HDR)"
+description = "Metrology Maven LAS reader and writer, pure Rust: public header, VLRs and EVLRs, point data record formats 0 to 10 with extra bytes, and scaled-integer coordinate quantisation (spec nodes IO.CLOUD.LAS.HDR, IO.CLOUD.LAS.QUANT)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,6 +11,9 @@ publish = false
 [dependencies]
 # Reader harness (IO.REG.LIMITS): limits and their raise rule, limit kinds, untrusted text.
 fid-io-reg = { path = "../fid-io-reg" }
+# KNP-1 numerics (KRN.NUM): the correctly rounded sqrt behind u_quant = scale / sqrt(12)
+# (IO.CLOUD.LAS.QUANT); its seeded RNG drives the tests. Layer num, below services; zero dependencies of its own.
+fid-num = { path = "../fid-num" }
 
 [lints]
 workspace = true
