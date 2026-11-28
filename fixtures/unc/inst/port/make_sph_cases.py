@@ -31,10 +31,14 @@ within 2 ulp of the exact diag(sigma_r^2, (r sigma_az)^2, (r sigma_el)^2) and ev
 off-diagonal entry is exactly +0.
 
 Rules the expected labels follow (module doc of `fid_kunc::inst::sph`):
-  - det = (((1 - a*a) - b*b) - c*c) + 2*((a*b)*c) with a = rho_r_az, b = rho_r_el,
-    c = rho_az_el; det > 2^-47 is positive_definite, |det| <= 2^-47 is
-    singular_within_rounding, det < -2^-47 is refused (not in this file);
-  - domain notes: range_outside unless 0.1 <= r <= 100; elevation_outside when |el| > 1.5;
+  - det = 1 - a^2 - b^2 - c^2 + 2abc with a = rho_r_az, b = rho_r_el, c = rho_az_el,
+    evaluated exactly with fractions.Fraction (every double is an exact rational): det > 0 is
+    positive_definite, det == 0 is singular, det < 0 is refused (hand-labelled refusal cases
+    live in the Rust test, not in this file);
+  - det_cases: 200 correlation triples (seed 0x535048 ^ 0xde7 and the review cases), each
+    labelled positive_definite, singular or refused by the exact Fraction sign;
+  - domain notes: range_outside unless 0.1 <= r <= 100; elevation_outside when |el| > 1.5
+    (so also at the poles el = +-pi/2);
     azimuth_outside when |az| > 6.283185307179586; zero_covariance when every entry is 0,
     else scale_below_validated when the largest |entry| is below 2^-962.
 
@@ -45,9 +49,11 @@ Usage: make_sph_cases.py [--check]   (--check compares with the file on disk, wr
 
 import importlib.util
 import json
+import math
 import struct
 import sys
 from decimal import Decimal, localcontext
+from fractions import Fraction
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -67,13 +73,13 @@ FN = _load("make_fn_fixtures", "fixtures/num/make_fn_fixtures.py")
 ALGORITHM = "unc.inst.sph_cov@1.0.0"
 SEED = 0x535048
 N_SEEDED = 200
-DET_TOL = 2.0 ** -47
 SCALE_MIN = 2.0 ** -962
 R_MIN = 0.1
 R_MAX = 100.0
 EL_MAX = 1.5
 AZ_MAX = 6.283185307179586
 PI = 3.141592653589793
+FRAC_PI_2 = 1.5707963267948966
 REL_FROB = Decimal("1e-14")
 MASK64 = (1 << 64) - 1
 PARAM_NAMES = ["sigma_r0", "sigma_r1", "sigma_az", "sigma_el", "rho_r_az", "rho_r_el", "rho_az_el"]
@@ -120,7 +126,9 @@ class SplitMix64:
 
 
 def correlation_det(a, b, c):
-    return (((1.0 - a * a) - b * b) - c * c) + 2.0 * ((a * b) * c)
+    """The exact determinant of [[1, a, b], [a, 1, c], [b, c, 1]] as a Fraction."""
+    a, b, c = Fraction(a), Fraction(b), Fraction(c)
+    return 1 - a * a - b * b - c * c + 2 * a * b * c
 
 
 def model(p, r, az, el):
@@ -213,8 +221,8 @@ def notes(r, az, el, s):
 
 def case(name, p, r, az, el, check_accuracy=True):
     det = correlation_det(p["rho_r_az"], p["rho_r_el"], p["rho_az_el"])
-    assert det >= -DET_TOL, name
-    corr = "positive_definite" if det > DET_TOL else "singular_within_rounding"
+    assert det >= 0, name
+    corr = "positive_definite" if det > 0 else "singular"
     sr, s = model(p, r, az, el)
     ref = reference(p, r, az, el)
     nts = notes(r, az, el, s)
@@ -252,8 +260,8 @@ def seeded():
             a = g.uniform(-0.95, 0.95)
             b = g.uniform(-0.95, 0.95)
             c = g.uniform(-0.95, 0.95)
-            if correlation_det(a, b, c) <= DET_TOL:
-                continue  # an indefinite or nearly singular draw is redrawn (deterministic)
+            if correlation_det(a, b, c) <= 0:
+                continue  # an indefinite or singular draw is redrawn (deterministic)
         r = g.uniform(R_MIN, R_MAX)
         az = g.uniform(-PI, PI)
         el = g.uniform(-EL_MAX, EL_MAX)
@@ -278,6 +286,8 @@ def edges():
         case("out-r-zero", p, 0.0, 0.3, 0.1, check_accuracy=False),
         case("out-r-150", p, 150.0, 0.3, 0.1, check_accuracy=False),
         case("out-el-1.57", p, 20.0, 0.3, 1.57, check_accuracy=False),
+        case("out-el-pole-north", p, 20.0, 0.3, FRAC_PI_2, check_accuracy=False),
+        case("out-el-pole-south", p, 20.0, -1.2, -FRAC_PI_2, check_accuracy=False),
         case("out-az-7", p, 20.0, 7.0, 0.1, check_accuracy=False),
         case("out-tiny-scale", params(1e-160, 0.0, 1e-161, 1e-161), 1.0, 0.3, 0.1, check_accuracy=False),
         case("out-all-zero", params(0.0, 0.0, 0.0, 0.0), 5.0, 0.3, 0.1, check_accuracy=False),
@@ -310,11 +320,62 @@ def axis_aligned():
     return c
 
 
+def next_toward(x, up):
+    """The neighbouring double of x (x finite, non-zero or zero)."""
+    if x == 0.0:
+        return 5e-324 if up else -5e-324
+    b = bits(x)
+    step = 1 if (x > 0) == up else -1
+    return struct.unpack("<d", struct.pack("<Q", b + step))[0]
+
+
+def det_cases():
+    """Correlation triples around the boundary det = 0, labelled by the exact Fraction sign.
+
+    c is placed on a root of det(c) = 0 (c = ab +- sqrt((1 - a^2)(1 - b^2)), rounded) and
+    moved by up to 3 doubles either way, so the exact sign varies case by case. Plus the
+    hand-picked triples of the review of #687.
+    """
+    g = SplitMix64(SEED ^ 0xDE7)
+    trip = [
+        (0.9, 0.9, -0.9),
+        (-0.5, -0.5, -0.5),
+        (-0.5 - 2.0 ** -52, -0.5 - 2.0 ** -52, -0.5 - 2.0 ** -52),
+        (-0.5 + 2.0 ** -54, -0.5 + 2.0 ** -54, -0.5 + 2.0 ** -54),
+        (1.0, 1e-300, 2e-300),
+        (1.0, 1e-300, 1e-300),
+        (1.0, 5e-324, 1e-323),
+        (-1.0, 1e-300, -1e-300),
+        (1.0, 1.0, 1.0),
+        (0.0, 0.0, 0.0),
+    ]
+    while len(trip) < 200:
+        a = g.uniform(-1.0, 1.0)
+        b = g.uniform(-1.0, 1.0)
+        root = math.sqrt((1.0 - a * a) * (1.0 - b * b))  # correctly rounded (IEEE 754)
+        c = a * b + (root if g.next() & 1 else -root)
+        if abs(c) > 1.0:
+            continue
+        k = (g.next() % 7) - 3
+        for _ in range(abs(k)):
+            c = next_toward(c, k > 0)
+        if abs(c) > 1.0:
+            continue
+        trip.append((a, b, c))
+    out = []
+    for a, b, c in trip:
+        d = correlation_det(a, b, c)
+        label = "positive_definite" if d > 0 else ("singular" if d == 0 else "refused")
+        out.append({"rho": [hx(a), hx(b), hx(c)], "expect": label})
+    return out
+
+
 def build():
     doc = {
         "algorithm": ALGORITHM,
         "axis_aligned": axis_aligned(),
         "cases": seeded(),
+        "det_cases": det_cases(),
         "edges": edges(),
         "generator": "fixtures/unc/inst/port/make_sph_cases.py",
         "licence": "CC-BY-4.0; invented test data (D-038, D-045): no parameter set describes a real instrument",

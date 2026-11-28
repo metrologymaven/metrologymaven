@@ -10,7 +10,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use fid_kunc::inst::sph::{
-    sph_cov, CorrelationCheck, SphCov, SphParams, ALGORITHM_ID, AZ_MAX, DET_TOL, EL_MAX, R_MAX, R_MIN, SCALE_MIN,
+    sph_cov, CorrelationCheck, SphCov, SphParams, ALGORITHM_ID, AZ_MAX, DET_ACC_BITS, EL_MAX, R_MAX, R_MIN, SCALE_MIN,
 };
 use fid_kunc::inst::{Cov3, InstError, ValueReason};
 use fid_num::NumError;
@@ -212,7 +212,7 @@ fn ac1_ac4_seeded_cases() {
 fn edges_and_outside_domain() {
     let doc = fixture();
     let edges = doc.get("edges").a();
-    assert_eq!(edges.len(), 16);
+    assert_eq!(edges.len(), 18);
     let mut inside = 0;
     for case in edges {
         if check_case(case) {
@@ -309,33 +309,77 @@ fn parameter_refusals() {
     let p = SphParams { sigma_r0: -0.0, sigma_r1: -0.0, rho_r_az: -1.0, rho_r_el: 0.0, rho_az_el: 0.0, ..base() };
     let out = sph_cov(&p, 5.0, 0.3, 0.1).unwrap();
     assert_eq!(out.sigma_r().to_bits(), 0);
-    assert_eq!(out.correlation(), CorrelationCheck::SingularWithinRounding);
+    assert_eq!(out.correlation(), CorrelationCheck::Singular);
 }
 
-/// Module rule 2 (hand-labelled): correlations that are pairwise valid but cannot hold at
-/// once are refused; the determinant's rounding resolution decides singular versus
-/// definite, and both are reported.
+/// Module rule 2 (hand-labelled from the exact determinant
+/// `1 - a² - b² - c² + 2abc = (1 - rho)² (1 + 2 rho)` for three equal correlations, and
+/// `-(b - c)²` for `a = 1`): correlations that cannot hold at once are refused, an exactly
+/// zero determinant is singular, anything above zero is positive definite. No tolerance.
 #[test]
 fn joint_correlation_check() {
-    // det = 1 - 3 * 0.81 + 2 * (0.9 * 0.9 * -0.9) = -2.888 + 1 = -1.888.
-    let p = SphParams { rho_r_az: 0.9, rho_r_el: 0.9, rho_az_el: -0.9, ..base() };
-    assert_eq!(refusal(p, 5.0, 0.3, 0.1), bad_param("correlation", ValueReason::NotPositiveSemidefinite));
-    // Equicorrelation -0.5: det = 1 - 0.75 - 0.25 = 0 exactly, singular but valid.
-    let p = SphParams { rho_r_az: -0.5, rho_r_el: -0.5, rho_az_el: -0.5, ..base() };
-    let out = sph_cov(&p, 5.0, 0.3, 0.1).unwrap();
-    assert_eq!(out.correlation(), CorrelationCheck::SingularWithinRounding);
-    assert_eq!(out.correlation_det().to_bits(), 0);
-    // Slightly beyond: rho = -0.5 - 2^-20 gives det about -4.3e-6 < -DET_TOL.
-    let q = -0.5 - 2.0_f64.powi(-20);
-    let p = SphParams { rho_r_az: q, rho_r_el: q, rho_az_el: q, ..base() };
-    assert_eq!(refusal(p, 5.0, 0.3, 0.1), bad_param("correlation", ValueReason::NotPositiveSemidefinite));
-    // Uncorrelated: det = 1, positive definite.
-    let p = SphParams::uncorrelated(1e-5, 1e-6, 2e-5, 2e-5);
-    let out = sph_cov(&p, 5.0, 0.3, 0.1).unwrap();
-    assert_eq!(out.correlation(), CorrelationCheck::PositiveDefinite);
-    assert_eq!(out.correlation_det(), 1.0);
-    assert_eq!(out.correlation().code(), "positive_definite");
-    assert_eq!(CorrelationCheck::SingularWithinRounding.code(), "singular_within_rounding");
+    use CorrelationCheck::{PositiveDefinite, Singular};
+    let refused = bad_param("correlation", ValueReason::NotPositiveSemidefinite);
+    let check = |a: f64, b: f64, c: f64| {
+        let p = SphParams { rho_r_az: a, rho_r_el: b, rho_az_el: c, ..base() };
+        sph_cov(&p, 5.0, 0.3, 0.1).map(|out| out.correlation())
+    };
+    let tiny = 2.0_f64.powi(-52);
+    // det = 1 - 3 * 0.81 + 2 * (0.9 * 0.9 * -0.9) = -1.888.
+    assert_eq!(check(0.9, 0.9, -0.9), Err(refused));
+    // Equicorrelation -0.5: det = 0 exactly, singular but valid.
+    assert_eq!(check(-0.5, -0.5, -0.5), Ok(Singular));
+    // -0.5 - 2^-52 three times: det = -(1.5 + 2^-52)² 2^-51 (about -9.99e-16), refused. A
+    // rounding tolerance near 1e-14 used to accept it as singular (review of #687).
+    let q = -0.5 - tiny;
+    assert_eq!(check(q, q, q), Err(refused));
+    // Just positive semi-definite: -0.5 + 2^-54 (the next double above -0.5) gives
+    // det = (1.5 - 2^-54)² 2^-53 > 0.
+    let q = -0.5 + tiny / 4.0;
+    assert_eq!(check(q, q, q), Ok(PositiveDefinite));
+    // |rho| = 1 with the other two zero: det = 0.
+    assert_eq!(check(1.0, 0.0, 0.0), Ok(Singular));
+    assert_eq!(check(0.0, -1.0, 0.0), Ok(Singular));
+    // a = 1: det = -(b - c)². Exact even where every float product of b and c underflows.
+    assert_eq!(check(1.0, 1e-300, 2e-300), Err(refused));
+    assert_eq!(check(1.0, 1e-300, 1e-300), Ok(Singular));
+    assert_eq!(check(1.0, 5e-324, 1e-323), Err(refused));
+    assert_eq!(check(1.0, 5e-324, 5e-324), Ok(Singular));
+    // a = -1: det = -(b + c)².
+    assert_eq!(check(-1.0, 1e-300, -1e-300), Ok(Singular));
+    assert_eq!(check(-1.0, 1e-300, 1e-300), Err(refused));
+    // a = b = 1: det = -(1 - c)², zero only at c = 1.
+    assert_eq!(check(1.0, 1.0, 1.0), Ok(Singular));
+    assert_eq!(check(1.0, 1.0, 1.0 - tiny / 2.0), Err(refused));
+    // Uncorrelated: det = 1.
+    assert_eq!(check(0.0, -0.0, 0.0), Ok(PositiveDefinite));
+    assert_eq!(PositiveDefinite.code(), "positive_definite");
+    assert_eq!(Singular.code(), "singular");
+}
+
+/// Module rule 2 against the oracle: 200 correlation triples on and around the boundary
+/// det = 0, each labelled by the exact rational sign in `make_sph_cases.py`.
+#[test]
+fn joint_correlation_oracle() {
+    let doc = fixture();
+    let cases = doc.get("det_cases").a();
+    assert_eq!(cases.len(), 200);
+    let mut seen = [0_usize; 3];
+    for case in cases {
+        let rho: Vec<f64> = case.get("rho").a().iter().map(J::f).collect();
+        let p = SphParams { rho_r_az: rho[0], rho_r_el: rho[1], rho_az_el: rho[2], ..base() };
+        let got = match sph_cov(&p, 5.0, 0.3, 0.1) {
+            Ok(out) => out.correlation().code(),
+            Err(e) => {
+                assert_eq!(e, bad_param("correlation", ValueReason::NotPositiveSemidefinite), "{rho:?}");
+                "refused"
+            }
+        };
+        let want = case.get("expect").s();
+        assert_eq!(got, want, "{rho:?}");
+        seen[["positive_definite", "singular", "refused"].iter().position(|w| *w == want).unwrap()] += 1;
+    }
+    assert!(seen.iter().all(|n| *n > 0), "{seen:?}");
 }
 
 /// Module rule 3 (hand-labelled): the observation is checked after the parameters.
@@ -379,6 +423,12 @@ fn domain_notes() {
     assert!(n.notes().range_outside() && n.notes().azimuth_outside() && n.notes().elevation_outside());
     assert_eq!(n.notes().codes(), ["range_outside", "elevation_outside", "azimuth_outside"]);
     assert!(at(0.099_999_999, 0.0, 0.0).notes().range_outside());
+    // The poles are outside the validated elevation range.
+    for el in [core::f64::consts::FRAC_PI_2, -core::f64::consts::FRAC_PI_2] {
+        let pole = at(20.0, 0.3, el);
+        assert!(pole.notes().elevation_outside() && !pole.notes().is_validated());
+        assert_eq!(pole.notes().codes(), ["elevation_outside"]);
+    }
     let z = sph_cov(&SphParams::uncorrelated(0.0, 0.0, 0.0, 0.0), 5.0, 0.3, 0.1).unwrap();
     assert!(z.notes().zero_covariance() && !z.notes().scale_below_validated());
     assert_eq!(z.cov().to_bits(), [0; 9]);
@@ -389,7 +439,7 @@ fn domain_notes() {
 #[test]
 fn accessors_and_codes() {
     assert_eq!(ALGORITHM_ID, "unc.inst.sph_cov@1.0.0");
-    assert_eq!(DET_TOL, 2.0_f64.powi(-47));
+    assert_eq!(DET_ACC_BITS, 3584);
     assert_eq!(SCALE_MIN, 2.0_f64.powi(-962));
     assert_eq!((R_MIN, R_MAX, EL_MAX), (0.1, 100.0, 1.5));
     assert_eq!(AZ_MAX.to_bits(), 0x4019_21fb_5444_2d18);

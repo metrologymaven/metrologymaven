@@ -18,16 +18,21 @@
 //! 2. The three correlations must hold at once. With `a = rho_r_az`, `b = rho_r_el`,
 //!    `c = rho_az_el`, the correlation matrix `[[1, a, b], [a, 1, c], [b, c, 1]]` is positive
 //!    semi-definite exactly when its determinant `1 - a² - b² - c² + 2abc` is at least zero
-//!    (its 1x1 and 2x2 principal minors are `1` and `1 - rho²`, already non-negative). It is
-//!    evaluated as `det = (((1 - a*a) - b*b) - c*c) + 2*((a*b)*c)`. Every term is at most 2
-//!    in magnitude and their absolute sum at most 6, so the rounding error of `det` is below
-//!    `31 * 2^-53` (five rounded products, four rounded sums), and an underflowing product
-//!    adds at most `2^-1075` each; [`DET_TOL`] `= 2^-47` (`64 * 2^-53`) bounds both.
-//!    `det < -DET_TOL` is `invalid_parameter{correlation, not_positive_semidefinite}` (three
-//!    pairwise-valid correlations 0.9, 0.9 and -0.9 have `det = -1.888`). `|det| <= DET_TOL`
-//!    is accepted as [`CorrelationCheck::SingularWithinRounding`] (`|rho| = 1`, or a
-//!    determinant the arithmetic cannot tell from zero), anything larger is
-//!    [`CorrelationCheck::PositiveDefinite`]. The value of `det` is reported.
+//!    (its 1x1 and 2x2 principal minors are `1` and `1 - rho²`, already non-negative). Its
+//!    sign is decided exactly, with no rounding: each correlation is split into its integer
+//!    significand and binary exponent (`x = ±m 2^e`, `e >= -1074`), the five terms `1`,
+//!    `a²`, `b²`, `c²` and `2abc` are formed as exact integer products (at most 159 bits) and
+//!    added at their exponents into two fixed-width integer accumulators (positive and
+//!    negative terms, [`DET_ACC_BITS`] bits, bit 0 weighing `2^-3222`), which are then
+//!    compared. No floating-point operation is involved, so a subnormal or underflowing
+//!    product is exact too (a Dekker split product is not error-free there: with `a = 1`,
+//!    `b = 1e-300`, `c = 2e-300` the exact determinant is `-(b - c)²`, below zero, while every
+//!    rounded or split product of `b` and `c` underflows to zero).
+//!    `det < 0` is `invalid_parameter{correlation, not_positive_semidefinite}` (three
+//!    pairwise-valid correlations 0.9, 0.9 and -0.9 have `det = -1.888`; `-0.5 - 2^-52` three
+//!    times has `det = -(1.5 + 2^-52)² 2^-51`). `det == 0` exactly is accepted as
+//!    [`CorrelationCheck::Singular`] (`|rho| = 1`, or the equicorrelation `-0.5`), `det > 0`
+//!    is [`CorrelationCheck::PositiveDefinite`].
 //!    The final eigenvalue check of the covariance is `UNC.INST.PORT.EVAL`'s.
 //! 3. The observation in the order `r`, `az`, `el`: `invalid_observation{name, not_finite}`,
 //!    and `invalid_observation{r, negative}` for `r < 0`.
@@ -63,13 +68,24 @@
 //! `fid_num::f`, a NaN is always an error, no hash containers, no panics. The parameters are
 //! declared (claimed) model values, so the covariance is derived, never measured (D-045).
 
+use core::cmp::Ordering;
+
+use fid_num::NumError;
+
 use super::{Cov3, InstError, ValueReason};
 
 /// Algorithm ID of [`sph_cov`].
 pub const ALGORITHM_ID: &str = "unc.inst.sph_cov@1.0.0";
 
-/// Rounding resolution of the correlation determinant (module rule 2): `2^-47`.
-pub const DET_TOL: f64 = 7.105_427_357_601_002e-15;
+/// Width in bits of each exact determinant accumulator (module rule 2): 56 limbs of 64 bits.
+/// The largest term, `1`, sits at bit 3222 and the sum of the positive terms is below 3, so
+/// 3225 bits would do.
+pub const DET_ACC_BITS: usize = DET_LIMBS * 64;
+
+const DET_LIMBS: usize = 56;
+
+/// Binary exponent of bit 0 of the determinant accumulators: `3 * (-1074)`.
+const DET_BASE_EXP: i32 = -3222;
 
 /// Smallest largest-entry magnitude inside the validated domain: `2^-962`.
 pub const SCALE_MIN: f64 = 2.565_335_500_811_485_2e-290;
@@ -117,10 +133,10 @@ impl SphParams {
 /// Outcome of the joint correlation test (module rule 2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CorrelationCheck {
-    /// `positive_definite`: `det > DET_TOL`.
+    /// `positive_definite`: the exact determinant is above zero.
     PositiveDefinite,
-    /// `singular_within_rounding`: `|det| <= DET_TOL`, accepted as singular.
-    SingularWithinRounding,
+    /// `singular`: the exact determinant is zero; accepted (positive semi-definite).
+    Singular,
 }
 
 impl CorrelationCheck {
@@ -128,7 +144,7 @@ impl CorrelationCheck {
     pub const fn code(self) -> &'static str {
         match self {
             CorrelationCheck::PositiveDefinite => "positive_definite",
-            CorrelationCheck::SingularWithinRounding => "singular_within_rounding",
+            CorrelationCheck::Singular => "singular",
         }
     }
 }
@@ -200,7 +216,6 @@ pub struct SphCov {
     cov: Cov3,
     sigma_r: f64,
     correlation: CorrelationCheck,
-    correlation_det: f64,
     notes: DomainNotes,
 }
 
@@ -218,11 +233,6 @@ impl SphCov {
     /// The outcome of the joint correlation test.
     pub fn correlation(&self) -> CorrelationCheck {
         self.correlation
-    }
-
-    /// The computed correlation determinant `det` of module rule 2.
-    pub fn correlation_det(&self) -> f64 {
-        self.correlation_det
     }
 
     /// The validated-domain notes.
@@ -258,6 +268,92 @@ fn observation(name: &'static str, v: f64) -> Result<(), InstError> {
     Ok(())
 }
 
+/// `x = (-1)^neg * m * 2^e` exactly, for a finite double (`e >= -1074`).
+fn split(x: f64) -> (bool, u64, i32) {
+    let bits = x.to_bits();
+    let neg = bits >> 63 == 1;
+    let field = (bits >> 52) & 0x7ff;
+    let frac = bits & ((1_u64 << 52) - 1);
+    // `field` is at most 0x7ff, so the cast is exact.
+    let biased = field as i32;
+    if field == 0 {
+        (neg, frac, -1074)
+    } else {
+        (neg, frac | (1_u64 << 52), biased - 1075)
+    }
+}
+
+/// The exact product `a * b * c` of three 53-bit integers as three little-endian limbs.
+fn mul3(a: u64, b: u64, c: u64) -> [u64; 3] {
+    let ab = u128::from(a) * u128::from(b);
+    let ab_lo = u128::from(ab as u64);
+    let ab_hi = ab >> 64;
+    let c = u128::from(c);
+    // `ab_hi < 2^42` and `c < 2^53`, so neither product overflows.
+    let lo = ab_lo * c;
+    let hi = ab_hi * c;
+    let mid = (lo >> 64) + u128::from(hi as u64);
+    [lo as u64, mid as u64, ((hi >> 64) + (mid >> 64)) as u64]
+}
+
+const DET_RANGE: NumError = NumError::Domain { op: OP, detail: "determinant term outside the exact accumulator" };
+
+/// Adds the integer `mag * 2^exp` to the accumulator `acc` (bit 0 weighing `2^DET_BASE_EXP`).
+/// A term the accumulator cannot hold, or a carry out of it, is an error, never dropped
+/// (neither can happen for correlations in `[-1, 1]`).
+fn add_term(acc: &mut [u64; DET_LIMBS], mag: [u64; 3], exp: i32) -> Result<(), InstError> {
+    let shift = usize::try_from(exp - DET_BASE_EXP).map_err(|_| InstError::Numeric(DET_RANGE))?;
+    let (word, bit) = (shift / 64, shift % 64);
+    let [m0, m1, m2] = mag;
+    let words = if bit == 0 {
+        [m0, m1, m2, 0]
+    } else {
+        let back = 64 - bit;
+        [m0 << bit, (m1 << bit) | (m0 >> back), (m2 << bit) | (m1 >> back), m2 >> back]
+    };
+    if word + words.len() > DET_LIMBS {
+        return Err(InstError::Numeric(DET_RANGE));
+    }
+    let mut carry = 0_u64;
+    for (k, slot) in acc.iter_mut().skip(word).enumerate() {
+        let add = words.get(k).copied().unwrap_or(0);
+        if k >= words.len() && carry == 0 {
+            return Ok(());
+        }
+        let (s1, c1) = slot.overflowing_add(add);
+        let (s2, c2) = s1.overflowing_add(carry);
+        *slot = s2;
+        carry = u64::from(c1) + u64::from(c2);
+    }
+    if carry == 0 {
+        Ok(())
+    } else {
+        Err(InstError::Numeric(DET_RANGE))
+    }
+}
+
+/// The exact sign of `1 - a² - b² - c² + 2abc` for finite `a`, `b`, `c` (module rule 2).
+fn det_sign(a: f64, b: f64, c: f64) -> Result<Ordering, InstError> {
+    let (sa, ma, ea) = split(a);
+    let (sb, mb, eb) = split(b);
+    let (sc, mc, ec) = split(c);
+    let mut pos = [0_u64; DET_LIMBS];
+    let mut neg = [0_u64; DET_LIMBS];
+    add_term(&mut pos, [1, 0, 0], 0)?;
+    add_term(&mut neg, mul3(ma, ma, 1), 2 * ea)?;
+    add_term(&mut neg, mul3(mb, mb, 1), 2 * eb)?;
+    add_term(&mut neg, mul3(mc, mc, 1), 2 * ec)?;
+    let abc = mul3(ma, mb, mc);
+    let abc_exp = ea + eb + ec + 1;
+    if sa ^ sb ^ sc {
+        add_term(&mut neg, abc, abc_exp)?;
+    } else {
+        add_term(&mut pos, abc, abc_exp)?;
+    }
+    // Most significant limb first: lexicographic order is numeric order.
+    Ok(pos.iter().rev().cmp(neg.iter().rev()))
+}
+
 /// `(a0*b0 + a1*b1) + a2*b2`, each product and sum rounded once (no FMA).
 fn dot3(a: [f64; 3], b: [f64; 3]) -> f64 {
     let [a0, a1, a2] = a;
@@ -285,13 +381,16 @@ pub fn sph_cov(params: &SphParams, r: f64, az: f64, el: f64) -> Result<SphCov, I
     correlation("rho_r_az", p.rho_r_az)?;
     correlation("rho_r_el", p.rho_r_el)?;
     correlation("rho_az_el", p.rho_az_el)?;
-    let (a, b, c) = (p.rho_r_az, p.rho_r_el, p.rho_az_el);
-    let det = (((1.0 - a * a) - b * b) - c * c) + 2.0 * ((a * b) * c);
-    if det < -DET_TOL {
-        return Err(InstError::InvalidParameter { name: "correlation", reason: ValueReason::NotPositiveSemidefinite });
-    }
-    let correlation_check =
-        if det <= DET_TOL { CorrelationCheck::SingularWithinRounding } else { CorrelationCheck::PositiveDefinite };
+    let correlation_check = match det_sign(p.rho_r_az, p.rho_r_el, p.rho_az_el)? {
+        Ordering::Less => {
+            return Err(InstError::InvalidParameter {
+                name: "correlation",
+                reason: ValueReason::NotPositiveSemidefinite,
+            })
+        }
+        Ordering::Equal => CorrelationCheck::Singular,
+        Ordering::Greater => CorrelationCheck::PositiveDefinite,
+    };
     observation("r", r)?;
     observation("az", az)?;
     observation("el", el)?;
@@ -336,5 +435,5 @@ pub fn sph_cov(params: &SphParams, r: f64, az: f64, el: f64) -> Result<SphCov, I
         zero_covariance: largest == 0.0,
         scale_below_validated: largest != 0.0 && largest < SCALE_MIN,
     };
-    Ok(SphCov { cov, sigma_r, correlation: correlation_check, correlation_det: det + 0.0, notes })
+    Ok(SphCov { cov, sigma_r, correlation: correlation_check, notes })
 }

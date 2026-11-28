@@ -33,7 +33,6 @@ disallowed-methods = [
     { path = "fid_kunc::dist::ppnd16", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_kunc::inst::Cov3::get", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_kunc::inst::Cov3::rows", reason = "returns floats (RPT.MODEL.FMT REQ-002)" },
-    { path = "fid_kunc::inst::sph::SphCov::correlation_det", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_kunc::inst::sph::SphCov::sigma_r", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_kunc::prop::mcm::adapt::AdaptProfile::p", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
     { path = "fid_kunc::prop::mcm::adapt::Tolerance::delta", reason = "returns a float (RPT.MODEL.FMT REQ-002)" },
