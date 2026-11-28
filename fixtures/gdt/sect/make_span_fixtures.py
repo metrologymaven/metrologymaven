@@ -61,7 +61,7 @@ def hexf(x):
 
 
 def dec_sin_cos(x):
-    """sin and cos of a Decimal by Taylor series (|x| < 1), 60 digits."""
+    """sin and cos of a Decimal by Taylor series (|x| <= pi/3), 60 digits."""
     s, c = Decimal(0), Decimal(0)
     term = Decimal(1)
     for k in range(60):

@@ -363,6 +363,18 @@ fn span_value_rules() {
     )
     .unwrap();
     assert_eq!((el.first_vertex(), el.vertex_count()), (0, view.vertices().len()));
+    // An association step with parameters (a constraint) is refused, never run unconstrained.
+    let mut params = BTreeMap::new();
+    params.insert("radius".to_owned(), fid_gps::dmt::Param::F64Bits(0.002f64.to_bits()));
+    let op = Operator::new(OperatorKind::Association, AlgId::parse("fit.circle2.ls@1.0.0").unwrap(), params).unwrap();
+    let constrained = OperatorChain::new("default", vec![op]).unwrap();
+    let (a, b) = (arc[160], arc[223]);
+    assert_eq!(
+        extract_section_element(&view, &span(a, b, false), ElementKind::Circle2d, &constrained)
+            .unwrap_err()
+            .to_string(),
+        "association_params_unsupported{fit.circle2.ls@1.0.0}"
+    );
     // A chain naming a non-fit algorithm for the kind.
     let bad = line_chain("syn.assoc.least_squares@0.1.0");
     assert_eq!(

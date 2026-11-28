@@ -15,7 +15,11 @@
 //! 1. **Section.** The span's `section_id` must equal the curve's (`section_mismatch`).
 //! 2. **Chain.** The chain's steps of kind `association` name the fit: none is
 //!    `chain_without_association`, more than one `ambiguous_association{count}`. The one
-//!    algorithm ID must be a `fid-fit` ID `fit.<primitive>.<method>@<x.y.z>` whose primitive is
+//!    association step must carry no parameters (`association_params_unsupported{alg}`: a
+//!    constrained step is refused, never run unconstrained). The chain's other steps
+//!    (partition, extraction, filtration, reduction and the rest) are **not applied here**:
+//!    the span selection below is the only extraction, and the caller owns any other step of
+//!    the chain. The association's algorithm ID must be a `fid-fit` ID `fit.<primitive>.<method>@<x.y.z>` whose primitive is
 //!    the kind's (`line2`, `circle2`, `point`), else `fit_kind_mismatch{kind, alg}`. Only the
 //!    least-squares fits of `fid-fit` are run (`fit.line2.ls`, `fit.point.ls` of
 //!    `KRN.LSQ.LIN` and `fit.circle2.ls` of `KRN.LSQ.RND`, at the versions on main); any other
@@ -271,6 +275,13 @@ pub enum SpanError {
         /// How many.
         count: usize,
     },
+    /// `association_params_unsupported{alg}`: the association step carries parameters (for
+    /// example a constraint), which the fits run here do not take; it is refused rather than
+    /// run unconstrained.
+    AssociationParamsUnsupported {
+        /// The association step's algorithm ID.
+        alg: String,
+    },
     /// `fit_kind_mismatch{kind, alg}`: the chain's fit does not produce the element kind.
     FitKindMismatch {
         /// The element kind asked for.
@@ -310,6 +321,7 @@ impl SpanError {
             SpanError::SpanTooShort { .. } => "span_too_short",
             SpanError::ChainWithoutAssociation => "chain_without_association",
             SpanError::AmbiguousAssociation { .. } => "ambiguous_association",
+            SpanError::AssociationParamsUnsupported { .. } => "association_params_unsupported",
             SpanError::FitKindMismatch { .. } => "fit_kind_mismatch",
             SpanError::FitUnavailable { .. } => "fit_unavailable",
             SpanError::FitRefused { .. } => "fit_refused",
@@ -349,7 +361,9 @@ impl fmt::Display for SpanError {
             SpanError::FitKindMismatch { kind, alg } => {
                 write!(f, "{c}{{kind: {}, alg: {}}}", kind.as_str(), alg.escape_debug())
             }
-            SpanError::FitUnavailable { alg } => write!(f, "{c}{{{}}}", alg.escape_debug()),
+            SpanError::FitUnavailable { alg } | SpanError::AssociationParamsUnsupported { alg } => {
+                write!(f, "{c}{{{}}}", alg.escape_debug())
+            }
             SpanError::FitRefused { code, local_optimum_only, suspect_axis } => {
                 write!(f, "{c}{{{code}}}")?;
                 if *local_optimum_only {
@@ -375,7 +389,10 @@ fn chain_fit(chain: &OperatorChain, kind: ElementKind) -> Result<String, SpanErr
     let mut assoc = chain.steps().iter().filter(|s| s.kind() == OperatorKind::Association);
     let alg = match (assoc.next(), assoc.next()) {
         (None, _) => return Err(SpanError::ChainWithoutAssociation),
-        (Some(one), None) => one.alg().as_str().to_owned(),
+        (Some(one), None) if one.params().is_empty() => one.alg().as_str().to_owned(),
+        (Some(one), None) => {
+            return Err(SpanError::AssociationParamsUnsupported { alg: one.alg().as_str().to_owned() });
+        }
         (Some(_), Some(_)) => {
             return Err(SpanError::AmbiguousAssociation { count: 2 + assoc.count() });
         }
