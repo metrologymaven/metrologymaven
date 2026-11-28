@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-scan-edge]
+built_pr: 688
 satisfies: [REQ-SCAN.EDGE.EST-004]
 covers: []
 depends_on: [GEO.TYPES.POINTS, GEO.TYPES.MESH, KRN.NUM.RNG]
