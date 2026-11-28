@@ -222,7 +222,7 @@ fn edge_of(c: &Case, loaded: &Loaded) -> NominalEdge {
         }
         (None, Some((e, material))) => {
             let (curve, range) = loaded.curves[e].clone();
-            NominalEdge::Constructed { curve, range, face: id(&c.face), material: *material }
+            NominalEdge::Constructed { curve: Box::new(curve), range, face: id(&c.face), material: *material }
         }
         _ => panic!("case {} has no edge selection", c.name),
     }
@@ -489,7 +489,7 @@ fn constructed_curve_errors() {
     let p = plate();
     let z = [0.0, 0.0, 1.0];
     let on = |curve: CurveDef, range: [f64; 2]| NominalEdge::Constructed {
-        curve,
+        curve: Box::new(curve),
         range,
         face: id("top"),
         material: MaterialSide::Left,
@@ -516,8 +516,12 @@ fn constructed_curve_errors() {
     // Along the cylinder's axis: the closest surface point is not unique.
     let trim = load("fixtures/scan/edge_cylinder_trim/body.txt");
     let axis = line([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]);
-    let e =
-        NominalEdge::Constructed { curve: axis, range: [0.0, 0.01], face: id("side"), material: MaterialSide::Left };
+    let e = NominalEdge::Constructed {
+        curve: Box::new(axis),
+        range: [0.0, 0.01],
+        face: id("side"),
+        material: MaterialSide::Left,
+    };
     assert_eq!(
         stations(&e, 0.001, &trim.body).unwrap_err(),
         EdgeError::Foot { station: 0, fault: FootFault::NonUnique }
@@ -529,8 +533,12 @@ fn constructed_curve_errors() {
         assert!(dist(st.b(), [0.0, -1.0, 0.0]) <= 1e-15);
         assert_eq!(st.edge(), None);
     }
-    let right =
-        NominalEdge::Constructed { curve: x, range: [-0.05, 0.05], face: id("top"), material: MaterialSide::Right };
+    let right = NominalEdge::Constructed {
+        curve: Box::new(x),
+        range: [-0.05, 0.05],
+        face: id("top"),
+        material: MaterialSide::Right,
+    };
     let ok = stations(&right, 0.025, &p.body).unwrap();
     assert_eq!(ok.stations()[0].point(), [0.05, 0.0, 0.0], "runs against the parameter");
     assert!(dist(ok.stations()[0].b(), [0.0, 1.0, 0.0]) <= 1e-15);
@@ -559,14 +567,9 @@ fn nurbs_face() {
     let dirs = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, -1.0, 0.0]];
     let lens = [0.2, 0.1, 0.2, 0.1];
     let mut cs = Vec::new();
-    for k in 0..4 {
-        let e = b.add_edge(
-            Some(line(v[k], dirs[k], [0.0, 0.0, 1.0])),
-            vi[k],
-            vi[(k + 1) % 4],
-            [0.0, lens[k]],
-            Some(["e1", "e2", "e3", "e4"][k]),
-        );
+    let labels = ["e1", "e2", "e3", "e4"];
+    for (k, ((p, dir), (len, label))) in v.iter().zip(dirs).zip(lens.iter().zip(labels)).enumerate() {
+        let e = b.add_edge(Some(line(*p, dir, [0.0, 0.0, 1.0])), vi[k], vi[(k + 1) % 4], [0.0, *len], Some(label));
         cs.push(b.add_coedge(e, Sense::Same, None, None));
     }
     let l = b.add_loop(cs, true, None);

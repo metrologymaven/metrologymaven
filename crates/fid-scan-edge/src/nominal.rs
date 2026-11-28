@@ -84,7 +84,7 @@ use fid_geo_cad::{Body, CurveDef, EntityIx, EntityKind, Sense, SurfaceDef, Topol
 use fid_geo_nurbs::{
     invert_surface, AnalyticError, Curve, CurveDerivs, EvalError, Reason, Regularity, Status, Surface, Uniqueness,
 };
-use fid_num::f::{hypot, total_cmp, total_max};
+use fid_num::f::{hypot, total_clamp, total_cmp, total_max};
 
 /// REQ-001: pieces whose ends are further apart than this (metres) are not connected.
 pub const CHAIN_GAP_TOL_M: f64 = 1e-9;
@@ -162,7 +162,7 @@ pub enum NominalEdge {
     /// Boundary edges of one face, by stable ID; their order in the list does not matter.
     CadEdges { face: TopologyId, edges: Vec<TopologyId> },
     /// One curve over `range` (`t0 < t1`) lying on `face` (a KRN.CONS edge or trim curve).
-    Constructed { curve: CurveDef, range: [f64; 2], face: TopologyId, material: MaterialSide },
+    Constructed { curve: Box<CurveDef>, range: [f64; 2], face: TopologyId, material: MaterialSide },
 }
 
 /// One station along the chain.
@@ -1001,13 +1001,7 @@ pub fn stations(edge: &NominalEdge, spacing: f64, resolver: &dyn CadResolver) ->
             _ => return Err(EdgeError::NonFinite),
         };
         let local = s - start;
-        let local = if local < 0.0 {
-            0.0
-        } else if local > *len {
-            *len
-        } else {
-            local
-        };
+        let local = total_clamp(local, 0.0, *len).map_err(|_| EdgeError::NonFinite)?;
         let sigma = if piece.reversed { *len - local } else { local };
         let param = piece.param_at(panels, *len, sigma)?;
         out.push(frame(face, piece, param, s, i)?);
