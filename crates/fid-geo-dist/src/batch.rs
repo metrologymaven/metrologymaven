@@ -86,6 +86,8 @@ pub const MAX_THREADS: usize = 256;
 pub const RECORD_BYTES: usize = 67;
 /// The sign code [`Projection::write_bytes`] writes for [`HitSign::Along`].
 pub const ALONG_SIGN_CODE: u8 = 254;
+/// The sign code [`Projection::write_bytes`] writes for [`HitSign::PointNormal`].
+pub const POINT_NORMAL_SIGN_CODE: u8 = 253;
 
 type V3 = [f64; 3];
 
@@ -101,6 +103,10 @@ pub enum HitSign {
     Cad(SignStatus),
     /// A projection along a direction: the sign is the side of `p` along `v`.
     Along,
+    /// A projection onto the tangent plane of an oriented point (an oriented point-cloud
+    /// target, SCAN.CLOUD.REG.CTGT): the sign is the side of `p` along that point's stored
+    /// normal. It is always defined; it is not a GEO.DIST.SIGN status.
+    PointNormal,
 }
 
 /// One projected point.
@@ -127,7 +133,7 @@ impl ProjectionHit {
             HitSign::Mesh(s) | HitSign::Cad(s) => {
                 matches!(s, SignStatus::Outside | SignStatus::Inside | SignStatus::OnSurface)
             }
-            HitSign::Along => true,
+            HitSign::Along | HitSign::PointNormal => true,
         }
     }
 }
@@ -144,8 +150,8 @@ pub enum Projection {
 impl Projection {
     /// Appends the pinned [`RECORD_BYTES`]-byte record: tag `u8` (0 no hit, 1 hit), entity
     /// `u64` LE, foot x y z, distance and signed distance as `f64` LE bit patterns, sign
-    /// code `u8` (`SignStatus::code`, or [`ALONG_SIGN_CODE`]), params flag `u8` and two
-    /// `f64`. A no-hit record is the tag followed by zeros.
+    /// code `u8` (`SignStatus::code`, [`ALONG_SIGN_CODE`] or [`POINT_NORMAL_SIGN_CODE`]),
+    /// params flag `u8` and two `f64`. A no-hit record is the tag followed by zeros.
     pub fn write_bytes(&self, out: &mut Vec<u8>) {
         match self {
             Projection::NoHit => out.extend_from_slice(&[0u8; RECORD_BYTES]),
@@ -158,6 +164,7 @@ impl Projection {
                 out.push(match h.sign {
                     HitSign::Mesh(s) | HitSign::Cad(s) => s.code(),
                     HitSign::Along => ALONG_SIGN_CODE,
+                    HitSign::PointNormal => POINT_NORMAL_SIGN_CODE,
                 });
                 let (flag, (u, v)) = match h.params {
                     Some(uv) => (1u8, uv),

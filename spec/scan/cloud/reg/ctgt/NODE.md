@@ -9,6 +9,8 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-scan-cloud]
+built_pr: 677
 satisfies: [REQ-SCAN.CLOUD.REG-003, REQ-SCAN.CLOUD.REG-008]
 covers: []
 depends_on: [GEO.DIST.BATCH, GEO.INDEX.KDTREE, GEO.TYPES.POINTS, KRN.NUM]
@@ -76,7 +78,8 @@ Synthetic generators with fixed seeds: `plane_grid`, `two_patches_overlap50`; li
 
 ## Open questions
 
-- `ALN.BFIT.ICP.CORR` takes the normal at the foot from the target; the exact accessor on GEO's `ProjectionTarget` trait (here `normal_at`) must be confirmed with `GEO.DIST.BATCH` [unverified].
+- `ALN.BFIT.ICP.CORR` takes the normal at the foot from the target. As built, `normal_at` is an inherent method of `OrientedCloudTarget` (not a `ProjectionTarget` trait method) and returns `Option<[f64; 3]>`: `None` for an index that is not a valid point of the target. Whether GEO.DIST.BATCH should add a trait accessor is left to ALN.BFIT.ICP.CORR.
+- Built choices (fid-scan-cloud): `overlap_fraction` requires the moving cloud and the target to be in the same frame (`geo.frame.mismatch` otherwise) and treats the pose as a rigid motion within that frame; a scan in another frame is first transformed with GEO.FRAME.APPLY. The overlap counts distance to the target's valid-normal points only. A threaded `overlap_fraction_with(..., threads)` serves AC-6. `stride_sample` returns a `Result` so that M = 0 is refused. A `d` below a rounding floor of 64 · 2^-53 times the largest coordinate magnitude involved is refused. Point-to-plane hits carry a new additive GEO.DIST sign variant `HitSign::PointNormal` (record sign code 253); directional hits use `HitSign::Along`. Any `subset` option is refused with `subset_mismatch`, since a cloud has no triangles.
 
 ## Children
 
