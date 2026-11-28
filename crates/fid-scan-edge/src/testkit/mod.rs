@@ -26,19 +26,26 @@
 //!   edge face to `(e, -(T - h))`, the ledge out to `(e + w, -(T - h))` (facing `+n`), the
 //!   burr face down to `(e + w, -T)`, then the bottom face from `(e + w, -T)` inward.
 //!
-//! One-sided coverage is the profile before its first vertical or downward-facing segment
-//! (the top face, plus the round's arc or the chamfer); wrapped coverage is all of it.
+//! One-sided coverage is the upward-facing segments visible from `+n`: those whose `u`
+//! increases from a start at or beyond the `u` of every earlier profile point. That is the top
+//! face, plus the round's arc or the chamfer, plus the burr's ledge (which stands out past the
+//! edge face). Wrapped coverage is all of it. Covered segments that are not adjacent in the
+//! profile (the burr's top face and ledge) are separate pieces: each starts its own grid
+//! column, and no mesh cell joins two pieces, so the mesh never bridges unscanned surface.
 //!
 //! # Sampling
 //!
 //! Each covered segment of length `len` gets `m = max(1, ceil(len / spacing))` equal intervals
-//! (segment end points exact, junction points once), so the profile spacing never exceeds the
-//! stated one. The path of length `L` gets `ceil(L / spacing)` equal intervals; the points
-//! form a row-major grid, one row per path position (`grid = (rows, cols)` on the cloud).
+//! (segment end points exact, junction points once), so the spacing along the profile, in the
+//! station plane, never exceeds the stated one. The path of length `L` gets `ceil(L / spacing)`
+//! equal intervals, so the spacing along the nominal edge itself never exceeds it either; on an
+//! arc path the rows at profile offset `u` are `(R + u) / R` times as far apart, more than the
+//! stated spacing where `u > 0`. The points form a row-major grid, one row per path position
+//! (`grid = (rows, cols)` on the cloud).
 //! Interior samples carry the analytic normal of their segment; a junction sample carries the
 //! common normal of its two segments, or their normalised bisector at a crease. The mesh has
-//! the same vertices, and each grid cell is split into two triangles wound so that their
-//! normals point out of the material.
+//! the same vertices, and each grid cell within a piece is split into two triangles wound so
+//! that their normals point out of the material.
 //!
 //! The path is straight (`p(s) = (0, s, 0)`, `t = +y`, `n = +z`, `b = +x`) or a convex arc of
 //! radius `R` about the origin in the `z = 0` plane (`p(s) = R (cos a, sin a, 0)` with
@@ -110,7 +117,8 @@ pub enum EdgeProfile {
 /// Which part of the profile is scanned.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Coverage {
-    /// The top face, plus the round's arc or the chamfer (seen from `+n`).
+    /// The upward-facing segments visible from `+n`: the top face, plus the round's arc, the
+    /// chamfer or the burr's ledge.
     OneSided,
     /// The whole profile: top face, edge, part of the bottom face.
     Wrapped,
@@ -165,7 +173,8 @@ pub struct EdgeFixtureSpec {
     pub trim_offset_m: f64,
     pub coverage: Coverage,
     pub nominal_edge: NominalPath,
-    /// The largest sample spacing, along the path and along the profile.
+    /// The largest sample spacing along the profile (in the station plane) and along the
+    /// nominal edge; on an arc path, rows at `u > 0` are further apart (module docs).
     pub spacing_m: f64,
     /// Standard deviation of the noise along the profile normal (0 for none).
     pub sigma_m: f64,
@@ -433,8 +442,15 @@ pub fn edge_fixture(spec: &EdgeFixtureSpec, seed: u64) -> Result<EdgeFixture, Ef
     let covered = profile::covered(&segs, spec.coverage == Coverage::OneSided);
     // Sizes first, bounded before anything is allocated.
     let mut cols_f = 1.0;
-    for seg in segs.iter().take(covered) {
-        cols_f += profile::intervals(seg.length, spec.spacing_m);
+    let mut prev_covered = false;
+    for (seg, &c) in segs.iter().zip(&covered) {
+        if c {
+            if !prev_covered && cols_f > 1.0 {
+                cols_f += 1.0; // the start column of a new piece
+            }
+            cols_f += profile::intervals(seg.length, spec.spacing_m);
+        }
+        prev_covered = c;
     }
     let length = spec.nominal_edge.length_m();
     let along = profile::intervals(length, spec.spacing_m);
@@ -446,8 +462,9 @@ pub fn edge_fixture(spec: &EdgeFixtureSpec, seed: u64) -> Result<EdgeFixture, Ef
         return Err(EfixError::TooManyPoints { needed, limit: MAX_POINTS });
     }
     let (rows, cols) = (count(rows_f), count(cols_f));
-    let profile_pts = profile::samples(&segs, covered, spec.spacing_m)?;
-    if profile_pts.len() as u64 != cols {
+    let sampled = profile::samples(&segs, &covered, spec.spacing_m)?;
+    let profile_pts = sampled.points;
+    if profile_pts.len() as u64 != cols || sampled.joined.len() != profile_pts.len() {
         return Err(EfixError::OutOfRange {
             field: "profile",
             reason: "sample count differs from the bounded grid size",
@@ -487,7 +504,8 @@ pub fn edge_fixture(spec: &EdgeFixtureSpec, seed: u64) -> Result<EdgeFixture, Ef
     let (cells_r, cells_c) = (rows.saturating_sub(1), cols.saturating_sub(1));
     let mut tris = Vec::with_capacity(2 * (cells_r * cells_c) as usize);
     for r in 0..cells_r {
-        for c in 0..cells_c {
+        for (c, _) in sampled.joined.iter().skip(1).enumerate().filter(|(_, j)| **j) {
+            let c = c as u64;
             let a = r * cols + c;
             let (b, cc, d) = (a + 1, a + cols + 1, a + cols);
             tris.push([a, b, cc]);

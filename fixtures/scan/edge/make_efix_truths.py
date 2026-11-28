@@ -22,8 +22,10 @@ Geometry (pinned in the crate's `testkit` module documentation and in the leaf's
   (e, -T) if c < T, bottom.
 * burr (h, w): top to (e, 0), edge face to (e, -(T - h)), ledge out to (e + w, -(T - h))
   facing +n, burr face down to (e + w, -T), bottom from (e + w, -T) inward.
-* One-sided coverage is the profile up to (excluding) the first vertical or downward-facing
-  segment; wrapped coverage is all of it.
+* One-sided coverage is the upward-facing segments visible from +n: those whose u increases from
+  a start at or beyond the u of every earlier profile point (the top face, the round's arc or the
+  chamfer, and the burr's ledge); wrapped coverage is all of it. Kept segments that are not
+  adjacent in the profile are separate pieces with no mesh cells between them.
 * Tangency truth for threshold theta: the first profile point (in profile order) at which the
   normal's angle to n exceeds theta: on the round arc the point with angle theta, otherwise
   the start of the first segment whose angle exceeds theta. `none` if there is none.
@@ -39,7 +41,8 @@ radius R the station is at angle s_k / R about the arc centre (the origin), star
 The grid sizes follow the sampling rule in IEEE binary64 arithmetic with the crate's operation
 order (each line segment's length is sqrt(du*du + dv*dv) of its float vertex differences, the
 arc's is r * (pi/2) with pi/2 the double nearest; each segment gets max(1, ceil(len / spacing))
-intervals; rows = ceil(L / spacing) + 1). Python floats are IEEE binary64 and sqrt is correctly
+intervals and each piece one start column; rows = ceil(L / spacing) + 1; triangles =
+2 (rows - 1) (cols - pieces)). Python floats are IEEE binary64 and sqrt is correctly
 rounded, so the counts are platform independent too.
 
 File format (LF, one record per line, floats as 16 lowercase hex digits of the IEEE-754 bits):
@@ -238,25 +241,37 @@ def segments_f(c):
 
 
 def grid(c):
+    """(rows, cols, mesh cells per row). One-sided coverage keeps the upward-facing segments
+    visible from +n: u increasing from a start at or beyond every earlier profile point's u.
+    Index-adjacent kept segments form one piece; each piece has its own start column and no
+    mesh cell joins two pieces."""
     segs = segments_f(c)
     if c["coverage"] == "onesided":
-        kept = []
+        keep = []
+        reach = float("-inf")
         for s in segs:
-            if s[3] != "up":
-                break
-            kept.append(s)
-        segs = kept
+            keep.append(s[3] == "up" and s[1][0] >= reach and s[2][0] > s[1][0])
+            reach = max(reach, s[1][0], s[2][0])
+    else:
+        keep = [True] * len(segs)
     sp = c["spacing"]
-    cols = 1
-    for s in segs:
-        if s[0] == "arc":
-            length = s[4] * (FRAC_PI_2 - 0.0)
-        else:
-            length = line_len(s[1], s[2])
-        cols += max(1, math.ceil(length / sp))
+    cols = 0
+    pieces = 0
+    prev = False
+    for s, k in zip(segs, keep):
+        if k:
+            if not prev:
+                cols += 1
+                pieces += 1
+            if s[0] == "arc":
+                length = s[4] * (FRAC_PI_2 - 0.0)
+            else:
+                length = line_len(s[1], s[2])
+            cols += max(1, math.ceil(length / sp))
+        prev = k
     length = c["path"][-1]
     rows = math.ceil(length / sp) + 1
-    return rows, cols
+    return rows, cols, cols - pieces
 
 
 # ---- analytic truths (60-digit decimal on the exact input values) ----
@@ -371,9 +386,9 @@ def render():
             % (name, fmt_profile(c["profile"]), hx(c["thickness"]), hx(c["trim"]), c["coverage"],
                fmt_path(c["path"]), hx(c["spacing"]), hx(c["sigma"]), hx(c["top"]), hx(c["bottom"]),
                c["stations"], hx(c["theta"]), c["seed"], hx(c["noisy_sigma"])))
-        rows, cols = grid(c)
+        rows, cols, cells = grid(c)
         lines.append("grid %s rows=%d cols=%d points=%d triangles=%d"
-                     % (name, rows, cols, rows * cols, 2 * (rows - 1) * (cols - 1)))
+                     % (name, rows, cols, rows * cols, 2 * (rows - 1) * cells))
         tang, silh = truths_uv(c)
         check_ac1(c, tang, silh)
         for k, (p, t, n, b) in enumerate(stations(c)):

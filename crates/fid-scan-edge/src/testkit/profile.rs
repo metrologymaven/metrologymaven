@@ -151,14 +151,26 @@ pub(crate) fn segments(spec: &EdgeFixtureSpec) -> Result<Vec<Segment>, EfixError
     Ok(segs)
 }
 
-/// The number of covered segments: all of them for wrapped coverage, for one-sided coverage
-/// the prefix before the first vertical or downward-facing segment.
-pub(crate) fn covered(segs: &[Segment], one_sided: bool) -> usize {
-    if one_sided {
-        segs.iter().take_while(|s| s.facing == Facing::Up).count()
-    } else {
-        segs.len()
+/// Which segments are covered: all of them for wrapped coverage. For one-sided coverage, the
+/// upward-facing segments visible from `+n`: those whose `u` increases from a start at or beyond
+/// the largest `u` of every earlier profile point (the top face, the round's arc or the chamfer,
+/// and the burr's ledge, which stands out past the edge face).
+pub(crate) fn covered(segs: &[Segment], one_sided: bool) -> Vec<bool> {
+    if !one_sided {
+        return vec![true; segs.len()];
     }
+    let mut out = Vec::with_capacity(segs.len());
+    let mut reach = f64::NEG_INFINITY;
+    for seg in segs {
+        let visible = seg.facing == Facing::Up && seg.start[0] >= reach && seg.end[0] > seg.start[0];
+        out.push(visible);
+        for u in [seg.start[0], seg.end[0]] {
+            if u > reach {
+                reach = u;
+            }
+        }
+    }
+    out
 }
 
 /// The interval count of a segment (or of the path): `max(1, ceil(length / spacing))`, as a
@@ -186,30 +198,53 @@ fn junction_normal(a: [f64; 2], b: [f64; 2]) -> Result<[f64; 2], EfixError> {
     Ok([s[0] / len, s[1] / len])
 }
 
-/// The profile samples of the covered segments `segs[..covered]` with their unit normals, in
-/// profile order: every segment's end points exactly and `m - 1` evenly spaced interior points
-/// (`m` from [`intervals`]); shared junction points once. A junction point's normal is
-/// [`junction_normal`] of the two segments meeting there, also at the end of a one-sided
-/// prefix (a property of the part, not of the coverage).
-pub(crate) fn samples(segs: &[Segment], covered: usize, spacing: f64) -> Result<Vec<Sample>, EfixError> {
-    let mut out = Vec::new();
-    for (i, seg) in segs.iter().take(covered).enumerate() {
-        if i == 0 {
-            out.push((seg.start, seg.start_normal()));
+/// The profile samples of the covered segments with their unit normals, in profile order, and
+/// for each sample whether it joins the previous one (a mesh cell spans the two columns).
+pub(crate) struct ProfileSamples {
+    pub(crate) points: Vec<Sample>,
+    pub(crate) joined: Vec<bool>,
+}
+
+/// Samples the covered segments: every segment's end points exactly and `m - 1` evenly spaced
+/// interior points (`m` from [`intervals`]); a junction point shared by two covered segments
+/// once. A covered segment after an uncovered one starts a new piece (`joined` false), so no mesh
+/// cell bridges unscanned surface. A junction point's normal is [`junction_normal`] of the two
+/// segments meeting there, also where the neighbour is not covered (a property of the part, not
+/// of the coverage).
+pub(crate) fn samples(segs: &[Segment], covered: &[bool], spacing: f64) -> Result<ProfileSamples, EfixError> {
+    let mut points = Vec::new();
+    let mut joined = Vec::new();
+    let mut prev_covered = false;
+    for (i, seg) in segs.iter().enumerate() {
+        let is_covered = covered.get(i).copied().unwrap_or(false);
+        if !is_covered {
+            prev_covered = false;
+            continue;
+        }
+        if !prev_covered {
+            let n_start = match i.checked_sub(1).and_then(|k| segs.get(k)) {
+                Some(prev) => junction_normal(prev.end_normal(), seg.start_normal())?,
+                None => seg.start_normal(),
+            };
+            points.push((seg.start, n_start));
+            joined.push(false);
         }
         let m = intervals(seg.length, spacing);
         let mut j = 1.0;
         while j < m {
-            out.push(seg.interior(j / m)?);
+            points.push(seg.interior(j / m)?);
+            joined.push(true);
             j += 1.0;
         }
         let n_end = match segs.get(i + 1) {
             Some(next) => junction_normal(seg.end_normal(), next.start_normal())?,
             None => seg.end_normal(),
         };
-        out.push((seg.end, n_end));
+        points.push((seg.end, n_end));
+        joined.push(true);
+        prev_covered = true;
     }
-    Ok(out)
+    Ok(ProfileSamples { points, joined })
 }
 
 /// The tangency-break truth for threshold `theta` (radians, in `(0, pi)`): the first profile

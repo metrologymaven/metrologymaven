@@ -413,11 +413,20 @@ fn req1_clean_points_lie_on_the_profile() {
 }
 
 #[test]
-fn one_sided_coverage_is_the_top_face_and_the_round_or_chamfer() {
-    for name in ["est_sharp_onesided", "est_burr02_onesided"] {
-        let f = named_fixture(name, 0.0).unwrap();
-        assert!(points(&f).iter().all(|q| q[2] == 0.0), "{name}: top face only");
-    }
+fn one_sided_coverage_is_what_is_visible_from_above() {
+    let sharp = named_fixture("est_sharp_onesided", 0.0).unwrap();
+    assert!(points(&sharp).iter().all(|q| q[2] == 0.0), "sharp: top face only");
+    // Burr: the top face and the ledge, which stands out past the edge face and faces +n;
+    // nothing of the edge face, the burr face or the bottom face.
+    let burr = named_fixture("est_burr02_onesided", 0.0).unwrap();
+    let (e, w, ledge) = (0.5e-3, 0.2e-3, -(1.0e-3 - 0.2e-3));
+    let pts = points(&burr);
+    assert!(pts.iter().all(|q| q[2] == 0.0 || q[2] == ledge), "burr: top face and ledge only");
+    let on_ledge: Vec<_> = pts.iter().filter(|q| q[2] == ledge).collect();
+    assert!(on_ledge.iter().all(|q| (e..=e + w).contains(&q[0])), "burr ledge within [e, e + w]");
+    assert!(on_ledge.iter().any(|q| q[0] == e + w), "burr: the ledge's outer end is sampled");
+    assert_eq!(on_ledge.len() as u64, 5 * burr.grid().0, "burr: five ledge columns per row");
+    assert_eq!(burr.mesh().facts().components, 2, "burr: top face and ledge are separate pieces");
     for name in ["est_round1_onesided", "est_chamfer05_onesided"] {
         let f = named_fixture(name, 0.0).unwrap();
         let e = f.spec().trim_offset_m;
@@ -432,11 +441,21 @@ fn one_sided_coverage_is_the_top_face_and_the_round_or_chamfer() {
 }
 
 #[test]
-fn mesh_is_one_oriented_sheet_facing_out_of_the_material() {
+fn mesh_is_the_cloud_oriented_and_facing_out_of_the_material() {
     for r in reference() {
         let f = edge_fixture(&r.spec, r.seed).unwrap();
+        // The mesh has exactly the cloud's points as its vertices, in the same order.
+        assert_eq!(f.mesh().vertex_count(), f.cloud().len(), "{}", r.name);
+        for i in 0..f.cloud().len() {
+            assert_eq!(f.mesh().vertex(i), f.cloud().point(i), "{} vertex {i}", r.name);
+        }
         let facts = f.mesh().facts();
-        assert_eq!(facts.components, 1, "{}", r.name);
+        // One piece, except one-sided burr coverage (top face and ledge).
+        let pieces = match (r.spec.profile, r.spec.coverage) {
+            (EdgeProfile::Burr { .. }, Coverage::OneSided) => 2,
+            _ => 1,
+        };
+        assert_eq!(facts.components, pieces, "{}", r.name);
         assert!(facts.oriented, "{}", r.name);
         assert_eq!(facts.nonmanifold_edges, 0, "{}", r.name);
         assert_eq!(facts.degenerate, 0, "{}", r.name);

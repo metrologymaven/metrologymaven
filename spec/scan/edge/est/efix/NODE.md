@@ -19,7 +19,7 @@ determinism: D2
 cli: []
 mcp: []
 journal: []
-updated: 2026-11-17
+updated: 2026-11-28
 ---
 
 # SCAN.EDGE.EST.EFIX: Synthetic rounded, chamfered and burred edge fixtures
@@ -70,11 +70,12 @@ Generated set `fixtures/scan/edge/est_{sharp,round1,chamfer05,burr02}_{onesided,
 ## Open questions
 
 - **Build notes (fid-scan-edge `testkit`).** Choices made where the spec is silent, pinned in the module documentation and in `fixtures/scan/edge/make_efix_truths.py`; owners of TANG and SILH may want them reviewed:
-  - Burr `h x w` is a lip at the bottom of the edge face, `h` high along `n`, standing out by `w` along `b` and flush with the bottom face, so the silhouette is `e + w` (what SILH AC-2 expects). A downward-hanging shear burr (no outward extent) is not modelled.
+  - Burr shape, a question for the SILH and TANG owners [unverified]: the generator models the burr `h x w` as an outward lip within the sheet thickness. The lip sits at the bottom of the edge face, is `h` high along `n`, stands out by `w` along `b` and is flush with the bottom face, so the silhouette is `e + w` (what SILH AC-2 expects). Do you accept this shape? The alternative is a shear burr hanging below the bottom face, which adds no outward extent and so would not satisfy SILH AC-2 as written. The shear burr is not modelled.
   - Chamfer `c` has both legs `c` (45 degrees); round `r` and chamfer `c` must not exceed `T`; at `r = T` the round meets the bottom face directly.
-  - One-sided coverage is the profile before its first vertical or downward-facing segment: the top face plus the round's arc or the chamfer. For sharp and burr profiles that is the top face only.
+  - One-sided coverage is the upward-facing segments visible from `+n`: those whose `u` increases from a start at or beyond the `u` of every earlier profile point. That is the top face, plus the round's arc or the chamfer, plus the burr's ledge. For a sharp profile it is the top face only. The burr's top face and ledge are separate pieces: each starts its own grid column, and no mesh cell joins them.
   - Truths are properties of the part and do not depend on coverage. The tangency truth is the first profile point whose normal angle to `n` exceeds `theta` (on the arc the point at `theta`, otherwise the start of the first steeper segment); the silhouette is the first point of largest `u`.
   - Samples at a crease carry the normalised bisector of the two face normals; noise moves points along those normals and leaves the normals analytic.
+  - Sample spacing never exceeds `spacing_m` along the profile (in the station plane) or along the nominal edge. On an arc path, rows at profile offset `u` are `(R + u) / R` times as far apart, so more than `spacing_m` where `u > 0`.
   - The point data is not committed (several MB): each `est_*/manifest.json` pins the GEO.TYPES content digests of the clean and the noisy (`sigma = 10 um`) variant's cloud and mesh plus the station truths, and `named_fixture` regenerates the bytes. The manifests are regression pins written by the generator; their truths are checked against the independent Python reference.
 
 ## Children
