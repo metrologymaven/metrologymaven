@@ -2389,6 +2389,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-scan-edge"
+version = "0.0.1"
+dependencies = [
+ "fid-geo-types",
+ "fid-num",
+ "fid-scan-edge",
+]
+
+[[package]]
 name = "fid-scan-mesh"
 version = "0.0.1"
 dependencies = [

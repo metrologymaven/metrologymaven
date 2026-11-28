@@ -323,6 +323,7 @@ python fixtures/rpt/stats/make_hist_cases.py --check
 python fixtures/rpt/stats/make_rule_cases.py --check
 python fixtures/rpt/stats/make_spc_constants.py --check
 python fixtures/scan/cmp/make_field_golden.py --check
+python fixtures/scan/edge/make_efix_truths.py --check
 python fixtures/scan/make_mesh_quality.py --check
 python fixtures/scan/meshop/make_invert_cases.py --check
 python fixtures/scan/meshop/make_prov_cases.py --check
