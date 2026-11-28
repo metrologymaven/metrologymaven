@@ -10,6 +10,7 @@ size: S
 owners: []
 claimed_by:
 built_in: [fid-io-cad-export]
+built_pr: 681
 satisfies: [REQ-IO.CAD.EXPORT-002]
 covers: []
 depends_on: [GEO.TYPES.ENV, GEO.FRAME.APPLY, GEO.NURBS.ANALYTIC]
