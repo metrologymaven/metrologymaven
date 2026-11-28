@@ -1,0 +1,1341 @@
+{
+  "schema": "fid.dmt-table/1",
+  "version": "1.0.0",
+  "rows": [
+    {
+      "key": "dmt:asme/angularity/none@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "angularity",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.2"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "surface",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "4"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": true,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "construction",
+              "alg": "syn.construct.surface@0.1.0",
+              "params": {
+                "fraction": "0x3fe0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.max_deviation@0.1.0",
+              "params": {
+                "sign": "-1"
+              }
+            }
+          ]
+        }
+      ],
+      "default_variant": "surface",
+      "actual_value": "av.synthetic.angularity@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [
+        "ors:synthetic/angularity.001"
+      ],
+      "status": "supported",
+      "limitations": [],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "Synthetic placeholder row for schema tests; not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/circular_runout/none@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "circular_runout",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.7"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "default",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "3"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": false,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.peak_to_valley@0.1.0",
+              "params": {}
+            }
+          ]
+        }
+      ],
+      "default_variant": "default",
+      "actual_value": "av.synthetic.circular_runout@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [
+        "ors:synthetic/circular_runout.001"
+      ],
+      "status": "supported",
+      "limitations": [],
+      "review": {
+        "state": "under_review"
+      },
+      "notes": "Synthetic placeholder row for schema tests; not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/circularity/none@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "circularity",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.3"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "default",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "3"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": false,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.peak_to_valley@0.1.0",
+              "params": {}
+            }
+          ]
+        }
+      ],
+      "default_variant": "default",
+      "actual_value": "av.synthetic.circularity@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [
+        "ors:synthetic/circularity.001"
+      ],
+      "status": "supported",
+      "limitations": [],
+      "review": {
+        "state": "signed_off",
+        "reviewers": [
+          "rev-a",
+          "rev-b"
+        ]
+      },
+      "notes": "Synthetic placeholder row for schema tests; not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/concentricity/none@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "concentricity",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.5"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "placeholder",
+          "steps": []
+        }
+      ],
+      "default_variant": "placeholder",
+      "actual_value": "av.synthetic.concentricity@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [],
+      "status": "unsupported",
+      "limitations": [
+        "placeholder_no_interpretation"
+      ],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "Synthetic placeholder row for schema tests; not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/cylindricity/none@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "cylindricity",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.4"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "default",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "3"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": false,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.peak_to_valley@0.1.0",
+              "params": {}
+            }
+          ]
+        }
+      ],
+      "default_variant": "default",
+      "actual_value": "av.synthetic.cylindricity@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [
+        "ors:synthetic/cylindricity.001"
+      ],
+      "status": "supported",
+      "limitations": [],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "Synthetic placeholder row for schema tests; not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/flatness/none@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "flatness",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.9"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "default",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "3"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": false,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.peak_to_valley@0.1.0",
+              "params": {}
+            }
+          ]
+        }
+      ],
+      "default_variant": "default",
+      "actual_value": "av.synthetic.flatness@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [
+        "ors:synthetic/flatness.001"
+      ],
+      "status": "supported",
+      "limitations": [],
+      "review": {
+        "state": "signed_off",
+        "reviewers": [
+          "rev-a",
+          "rev-b"
+        ]
+      },
+      "notes": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in volupt",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/parallelism/none@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "parallelism",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.3"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "surface",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "4"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": true,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "construction",
+              "alg": "syn.construct.surface@0.1.0",
+              "params": {
+                "fraction": "0x3fe0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.max_deviation@0.1.0",
+              "params": {
+                "sign": "-1"
+              }
+            }
+          ]
+        }
+      ],
+      "default_variant": "surface",
+      "actual_value": "av.synthetic.parallelism@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [
+        "ors:synthetic/parallelism.001"
+      ],
+      "status": "supported",
+      "limitations": [],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "Synthetic placeholder row for schema tests; not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/perpendicularity/none@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "perpendicularity",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.8"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "axis",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "4"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": true,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "construction",
+              "alg": "syn.construct.axis@0.1.0",
+              "params": {
+                "fraction": "0x3fe0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.max_deviation@0.1.0",
+              "params": {
+                "sign": "-1"
+              }
+            }
+          ]
+        },
+        {
+          "variant": "surface",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "4"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": true,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "construction",
+              "alg": "syn.construct.surface@0.1.0",
+              "params": {
+                "fraction": "0x3fe0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.max_deviation@0.1.0",
+              "params": {
+                "sign": "-1"
+              }
+            }
+          ]
+        }
+      ],
+      "default_variant": "surface",
+      "actual_value": "av.synthetic.perpendicularity@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [
+        "ors:synthetic/perpendicularity.001"
+      ],
+      "status": "partial",
+      "limitations": [
+        "bestfit_disallowed:axis"
+      ],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "Synthetic placeholder row for schema tests; not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/position/cz+mmc@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "position",
+      "modifiers": [
+        "cz",
+        "mmc"
+      ],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.9"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "axis",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "4"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": true,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "construction",
+              "alg": "syn.construct.axis@0.1.0",
+              "params": {
+                "fraction": "0x3fe0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.max_deviation@0.1.0",
+              "params": {
+                "sign": "-1"
+              }
+            }
+          ]
+        },
+        {
+          "variant": "surface",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "4"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": true,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "construction",
+              "alg": "syn.construct.surface@0.1.0",
+              "params": {
+                "fraction": "0x3fe0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.max_deviation@0.1.0",
+              "params": {
+                "sign": "-1"
+              }
+            }
+          ]
+        }
+      ],
+      "default_variant": "axis",
+      "actual_value": "av.synthetic.position@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [
+        "ors:synthetic/position.001"
+      ],
+      "status": "partial",
+      "limitations": [
+        "pattern_size_limited",
+        "zone_def_unsupported:nonuniform"
+      ],
+      "review": {
+        "state": "under_review"
+      },
+      "notes": "Synthetic placeholder row for schema tests; not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/position/mmc@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "position",
+      "modifiers": [
+        "mmc"
+      ],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.9"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "axis",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "4"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": true,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "construction",
+              "alg": "syn.construct.axis@0.1.0",
+              "params": {
+                "fraction": "0x3fe0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.max_deviation@0.1.0",
+              "params": {
+                "sign": "-1"
+              }
+            }
+          ]
+        },
+        {
+          "variant": "surface",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "4"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": true,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "construction",
+              "alg": "syn.construct.surface@0.1.0",
+              "params": {
+                "fraction": "0x3fe0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.max_deviation@0.1.0",
+              "params": {
+                "sign": "-1"
+              }
+            }
+          ]
+        }
+      ],
+      "default_variant": "axis",
+      "actual_value": "av.synthetic.position@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [
+        "ors:synthetic/position.001"
+      ],
+      "status": "supported",
+      "limitations": [],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "Synthetic placeholder row for schema tests; not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/position/none@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "position",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.9"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "axis",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "4"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": true,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "construction",
+              "alg": "syn.construct.axis@0.1.0",
+              "params": {
+                "fraction": "0x3fe0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.max_deviation@0.1.0",
+              "params": {
+                "sign": "-1"
+              }
+            }
+          ]
+        },
+        {
+          "variant": "surface",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "4"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": true,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "construction",
+              "alg": "syn.construct.surface@0.1.0",
+              "params": {
+                "fraction": "0x3fe0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.max_deviation@0.1.0",
+              "params": {
+                "sign": "-1"
+              }
+            }
+          ]
+        }
+      ],
+      "default_variant": "surface",
+      "actual_value": "av.synthetic.position@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [
+        "ors:synthetic/position.001"
+      ],
+      "status": "supported",
+      "limitations": [],
+      "review": {
+        "state": "signed_off",
+        "reviewers": [
+          "rev-a",
+          "rev-b"
+        ]
+      },
+      "notes": "Synthetic placeholder row for schema tests; not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/profile_of_a_line/none@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "profile_of_a_line",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.9"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "placeholder",
+          "steps": []
+        }
+      ],
+      "default_variant": "placeholder",
+      "actual_value": "av.synthetic.profile_of_a_line@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [],
+      "status": "unsupported",
+      "limitations": [
+        "placeholder_no_interpretation"
+      ],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "Synthetic placeholder row for schema tests; not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/profile_of_a_surface/none@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "profile_of_a_surface",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.3"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "surface",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "4"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": true,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "construction",
+              "alg": "syn.construct.surface@0.1.0",
+              "params": {
+                "fraction": "0x3fe0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.max_deviation@0.1.0",
+              "params": {
+                "sign": "-1"
+              }
+            }
+          ]
+        }
+      ],
+      "default_variant": "surface",
+      "actual_value": "av.synthetic.profile_of_a_surface@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [
+        "ors:synthetic/profile_of_a_surface.001"
+      ],
+      "status": "supported",
+      "limitations": [],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "Synthetic placeholder row for schema tests; not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/size/none@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "size",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.5"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "global",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "3"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.least_squares@0.1.0",
+              "params": {
+                "constrained": false,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.peak_to_valley@0.1.0",
+              "params": {}
+            }
+          ]
+        },
+        {
+          "variant": "local",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "3"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.two_point@0.1.0",
+              "params": {
+                "constrained": false,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.peak_to_valley@0.1.0",
+              "params": {}
+            }
+          ]
+        }
+      ],
+      "default_variant": "local",
+      "actual_value": "av.synthetic.size@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [
+        "ors:synthetic/size.001"
+      ],
+      "status": "supported",
+      "limitations": [],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "Synthetic placeholder row for schema tests; not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/straightness/none@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "straightness",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.4"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "default",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "3"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": false,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.peak_to_valley@0.1.0",
+              "params": {}
+            }
+          ]
+        }
+      ],
+      "default_variant": "default",
+      "actual_value": "av.synthetic.straightness@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [
+        "ors:synthetic/straightness.001"
+      ],
+      "status": "supported",
+      "limitations": [],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "Synthetic placeholder row for schema tests; not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:asme/total_runout/none@1",
+      "dialect": "asme",
+      "editions": [
+        "y14.5-2018"
+      ],
+      "characteristic": "total_runout",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "asme-y14.5",
+          "edition": "2018",
+          "clause": "90.4"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "default",
+          "steps": [
+            {
+              "kind": "partition",
+              "alg": "syn.partition.whole_feature@0.1.0",
+              "params": {}
+            },
+            {
+              "kind": "extraction",
+              "alg": "syn.extract.all_points@0.1.0",
+              "params": {
+                "min_points": "3"
+              }
+            },
+            {
+              "kind": "association",
+              "alg": "syn.assoc.min_zone@0.1.0",
+              "params": {
+                "constrained": false,
+                "scale": "0x3ff0000000000000"
+              }
+            },
+            {
+              "kind": "evaluation",
+              "alg": "syn.eval.peak_to_valley@0.1.0",
+              "params": {}
+            }
+          ]
+        }
+      ],
+      "default_variant": "default",
+      "actual_value": "av.synthetic.total_runout@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [
+        "ors:synthetic/total_runout.001"
+      ],
+      "status": "supported",
+      "limitations": [],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "Synthetic placeholder row for schema tests; not an interpretation of any standard.",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:iso/cylindricity/none@1",
+      "dialect": "iso",
+      "editions": [
+        "1101-2017"
+      ],
+      "characteristic": "cylindricity",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "iso-1101",
+          "edition": "2017",
+          "clause": "1"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "placeholder",
+          "steps": []
+        }
+      ],
+      "default_variant": "placeholder",
+      "actual_value": "av.synthetic.placeholder@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [],
+      "status": "unsupported",
+      "limitations": [
+        "placeholder_no_interpretation"
+      ],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:iso/flatness/none@1",
+      "dialect": "iso",
+      "editions": [
+        "1101-2017"
+      ],
+      "characteristic": "flatness",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "iso-1101",
+          "edition": "2017",
+          "clause": "1"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "placeholder",
+          "steps": []
+        }
+      ],
+      "default_variant": "placeholder",
+      "actual_value": "av.synthetic.placeholder@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [],
+      "status": "unsupported",
+      "limitations": [
+        "placeholder_no_interpretation"
+      ],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:iso/position/none@1",
+      "dialect": "iso",
+      "editions": [
+        "1101-2017"
+      ],
+      "characteristic": "position",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "iso-1101",
+          "edition": "2017",
+          "clause": "1"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "placeholder",
+          "steps": []
+        }
+      ],
+      "default_variant": "placeholder",
+      "actual_value": "av.synthetic.placeholder@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [],
+      "status": "unsupported",
+      "limitations": [
+        "placeholder_no_interpretation"
+      ],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "",
+      "synthetic": true
+    },
+    {
+      "key": "dmt:iso/roundness/none@1",
+      "dialect": "iso",
+      "editions": [
+        "1101-2017"
+      ],
+      "characteristic": "roundness",
+      "modifiers": [],
+      "clauses": [
+        {
+          "designator": "iso-1101",
+          "edition": "2017",
+          "clause": "1"
+        }
+      ],
+      "variants": [
+        {
+          "variant": "placeholder",
+          "steps": []
+        }
+      ],
+      "default_variant": "placeholder",
+      "actual_value": "av.synthetic.placeholder@1",
+      "decision_rule_hint": "dr.synthetic.default@1",
+      "ors_cases": [],
+      "status": "unsupported",
+      "limitations": [
+        "placeholder_no_interpretation"
+      ],
+      "review": {
+        "state": "draft"
+      },
+      "notes": "",
+      "synthetic": true
+    }
+  ]
+}

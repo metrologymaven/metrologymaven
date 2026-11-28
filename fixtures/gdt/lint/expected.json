@@ -1,0 +1,574 @@
+{
+  "cases": [
+    {
+      "case": "synthetic_draft",
+      "table": "../dmt/synthetic_table_v1.json",
+      "mode": "draft",
+      "schema_check": {
+        "status": "ok"
+      },
+      "rules_run": [
+        "L1",
+        "L2",
+        "L3",
+        "L4"
+      ],
+      "rules_not_run": [],
+      "findings": [],
+      "exit_code": 0
+    },
+    {
+      "case": "synthetic_release",
+      "table": "../dmt/synthetic_table_v1.json",
+      "mode": "release",
+      "schema_check": {
+        "status": "ok"
+      },
+      "rules_run": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ],
+      "rules_not_run": [],
+      "findings": [
+        {
+          "rule": "L5",
+          "key": "dmt:asme/angularity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/circular_runout/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/concentricity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/cylindricity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/parallelism/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/perpendicularity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/position/cz+mmc@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/position/mmc@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/profile_of_a_line/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/profile_of_a_surface/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/size/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/straightness/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/total_runout/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:iso/cylindricity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:iso/flatness/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:iso/position/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:iso/roundness/none@1",
+          "field": "review"
+        }
+      ],
+      "exit_code": 1
+    },
+    {
+      "case": "long_text",
+      "table": "long_text.json",
+      "mode": "draft",
+      "schema_check": {
+        "status": "refused",
+        "code": "field_too_long",
+        "reason": "notes"
+      },
+      "rules_run": [
+        "L1",
+        "L2"
+      ],
+      "rules_not_run": [
+        "L3",
+        "L4"
+      ],
+      "findings": [
+        {
+          "rule": "L1",
+          "key": "dmt:asme/flatness/none@1",
+          "field": "notes"
+        }
+      ],
+      "exit_code": 1
+    },
+    {
+      "case": "notes_280",
+      "table": "notes_280.json",
+      "mode": "draft",
+      "schema_check": {
+        "status": "ok"
+      },
+      "rules_run": [
+        "L1",
+        "L2",
+        "L3",
+        "L4"
+      ],
+      "rules_not_run": [],
+      "findings": [],
+      "exit_code": 0
+    },
+    {
+      "case": "notes_281",
+      "table": "notes_281.json",
+      "mode": "draft",
+      "schema_check": {
+        "status": "refused",
+        "code": "field_too_long",
+        "reason": "notes"
+      },
+      "rules_run": [
+        "L1",
+        "L2"
+      ],
+      "rules_not_run": [
+        "L3",
+        "L4"
+      ],
+      "findings": [
+        {
+          "rule": "L1",
+          "key": "dmt:asme/flatness/none@1",
+          "field": "notes"
+        }
+      ],
+      "exit_code": 1
+    },
+    {
+      "case": "supported_no_ors",
+      "table": "supported_no_ors.json",
+      "mode": "draft",
+      "schema_check": {
+        "status": "ok"
+      },
+      "rules_run": [
+        "L1",
+        "L2",
+        "L3",
+        "L4"
+      ],
+      "rules_not_run": [],
+      "findings": [
+        {
+          "rule": "L3",
+          "key": "dmt:asme/straightness/none@1",
+          "field": "ors_cases"
+        }
+      ],
+      "exit_code": 1
+    },
+    {
+      "case": "dangling_ors",
+      "table": "dangling_ors.json",
+      "mode": "draft",
+      "schema_check": {
+        "status": "ok"
+      },
+      "rules_run": [
+        "L1",
+        "L2",
+        "L3",
+        "L4"
+      ],
+      "rules_not_run": [],
+      "findings": [
+        {
+          "rule": "L4",
+          "key": "dmt:asme/size/none@1",
+          "field": "ors_cases[0]"
+        }
+      ],
+      "exit_code": 1
+    },
+    {
+      "case": "bad_clause",
+      "table": "bad_clause.json",
+      "mode": "draft",
+      "schema_check": {
+        "status": "refused",
+        "code": "malformed_table",
+        "reason": "bad_clause"
+      },
+      "rules_run": [
+        "L1",
+        "L2"
+      ],
+      "rules_not_run": [
+        "L3",
+        "L4"
+      ],
+      "findings": [
+        {
+          "rule": "L2",
+          "key": "dmt:asme/angularity/none@1",
+          "field": "clauses[0].clause"
+        }
+      ],
+      "exit_code": 1
+    },
+    {
+      "case": "bad_clause_schema_ok",
+      "table": "bad_clause_schema_ok.json",
+      "mode": "draft",
+      "schema_check": {
+        "status": "ok"
+      },
+      "rules_run": [
+        "L1",
+        "L2",
+        "L3",
+        "L4"
+      ],
+      "rules_not_run": [],
+      "findings": [
+        {
+          "rule": "L2",
+          "key": "dmt:asme/angularity/none@1",
+          "field": "clauses[0].clause"
+        }
+      ],
+      "exit_code": 1
+    },
+    {
+      "case": "release_draft",
+      "table": "release_draft.json",
+      "mode": "release",
+      "schema_check": {
+        "status": "ok"
+      },
+      "rules_run": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ],
+      "rules_not_run": [],
+      "findings": [
+        {
+          "rule": "L5",
+          "key": "dmt:asme/angularity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/circular_runout/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/circularity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/concentricity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/cylindricity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/flatness/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/parallelism/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/perpendicularity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/position/cz+mmc@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/position/mmc@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/position/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/profile_of_a_line/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/profile_of_a_surface/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/size/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/straightness/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/total_runout/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:iso/cylindricity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:iso/flatness/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:iso/position/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:iso/roundness/none@1",
+          "field": "review"
+        }
+      ],
+      "exit_code": 1
+    },
+    {
+      "case": "release_clean",
+      "table": "release_clean.json",
+      "mode": "release",
+      "schema_check": {
+        "status": "ok"
+      },
+      "rules_run": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ],
+      "rules_not_run": [],
+      "findings": [],
+      "exit_code": 0
+    },
+    {
+      "case": "signed_one",
+      "table": "signed_one.json",
+      "mode": "release",
+      "schema_check": {
+        "status": "ok"
+      },
+      "rules_run": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ],
+      "rules_not_run": [],
+      "findings": [
+        {
+          "rule": "L5",
+          "key": "dmt:asme/flatness/none@1",
+          "field": "review"
+        }
+      ],
+      "exit_code": 1
+    },
+    {
+      "case": "mixed",
+      "table": "mixed.json",
+      "mode": "release",
+      "schema_check": {
+        "status": "ok"
+      },
+      "rules_run": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ],
+      "rules_not_run": [],
+      "findings": [
+        {
+          "rule": "L2",
+          "key": "dmt:asme/angularity/none@1",
+          "field": "clauses[0].clause"
+        },
+        {
+          "rule": "L2",
+          "key": "dmt:asme/angularity/none@1",
+          "field": "clauses[1].clause"
+        },
+        {
+          "rule": "L3",
+          "key": "dmt:asme/angularity/none@1",
+          "field": "ors_cases"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/angularity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/circular_runout/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/concentricity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/cylindricity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L4",
+          "key": "dmt:asme/flatness/none@1",
+          "field": "ors_cases[1]"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/parallelism/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/perpendicularity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/position/cz+mmc@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/position/mmc@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/profile_of_a_line/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/profile_of_a_surface/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/size/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/straightness/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:asme/total_runout/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:iso/cylindricity/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:iso/flatness/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:iso/position/none@1",
+          "field": "review"
+        },
+        {
+          "rule": "L5",
+          "key": "dmt:iso/roundness/none@1",
+          "field": "review"
+        }
+      ],
+      "exit_code": 1
+    }
+  ]
+}

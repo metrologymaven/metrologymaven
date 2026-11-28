@@ -9,6 +9,7 @@ phase: P1a
 size: S
 owners: []
 claimed_by:
+built_in: [fid-gdt]
 satisfies: [REQ-GDT.RES-005, REQ-GDT.RES-006]
 covers: []
 depends_on: [GDT.RES.SCHEMA]
@@ -70,6 +71,11 @@ Small synthetic tables (lorem-ipsum filler only, never standards text) and a syn
 ## Open questions
 
 - A length cap cannot prove absence of copied text; reviewer sign-off (L5) is the real control. Whether to add a similarity check against a private hash set of standards sentences is a steering-group question (it would require holding the texts).
+- Built in `fid-gdt` module `dmt_lint`. The schema (`GDT.RES.SCHEMA`) already refuses a `notes` field over 280 characters and a clause value with characters outside `[0-9a-z.]`, so `lint(table, ...)` over a loaded table can never see the AC-2 and AC-4 rows. The build therefore adds `lint_bytes(bytes, ...)`: when the schema refuses a table it runs L1 and L2 over the parsed JSON, reports the refusal (code and reason) and lists L3 to L5 as not run; a refused table never passes. `notes` is the only free-text field of a `fid.dmt-table/1` row, so L1 counts it alone; a new free-text field must be added to `FREE_TEXT_FIELDS`.
+- The ORS index format is new here: `fid.ors-index/1` `{schema, cases}`, case IDs in the `UNC.ORS.TRACE` grammar, strictly ascending. `UNC.ORS` may later derive it from a suite.
+- L5 reads the review state the table claims, not the verified sign-off of `GDT.RES.ROWFLOW` / `GDT.RES.STATUS`; the report says so (`l5_basis: claimed_by_table`, D-045). The L1 threshold stays unverified and the report says so too (`l1_threshold.basis: unverified`).
+- AC-5 reads "(rows in draft)" as the condition: `fixtures/gdt/lint/release_draft.json` is the synthetic table with every row in draft, and L5 fires for all 20 rows. On the synthetic table as committed, 3 rows are signed off by two reviewers, so L5 fires for the other 17.
+- No production DMT is committed yet; the CI target loads the committed synthetic DMT and `fixtures/gdt/lint/ors_index.json`. Point it at the real table and suite index once they exist.
 
 ## Children
 
