@@ -36,8 +36,9 @@ order = ["num", "kernel", "model", "engine", "services", "viewer", "app", "tool"
 # Cloud polygonization (SCAN.POLY.SURF.PREP, FAN): KNP-1, only fid-fit (exact predicates),
 # fid-geo-index, fid-geo-types and fid-num.
 "fid-scan-poly" = "kernel"
-# Scan registration building blocks (SCAN.CLOUD.REG.CTGT): KNP-1, only fid-geo-dist (the
-# ProjectionTarget trait), fid-geo-frame, fid-geo-index, fid-geo-types and fid-num.
+# Scan registration building blocks (SCAN.CLOUD.REG.CTGT, GRAPH, RREP): KNP-1, only fid-align-solve
+# (the stop Verdict), fid-geo-dist (the ProjectionTarget trait), fid-geo-frame, fid-geo-index,
+# fid-geo-types, fid-kci (canonical JSON, SHA-256), fid-num and fid-types.
 "fid-scan-cloud" = "kernel"
 # B-rep model (GEO.CAD.TOPO.MODEL, ADJ, PCURVE) and assembly instances (GEO.CAD.ASSY.MODEL): L0
 # library code, KNP-1; only fid-geo-frame, fid-geo-nurbs, fid-num, fid-kci, fid-types.
