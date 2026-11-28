@@ -10,6 +10,7 @@ size: M
 owners: []
 claimed_by:
 built_in: [fid-gps]
+built_pr: 678
 satisfies: [REQ-GDT.DIM.SECT-001, REQ-GDT.DIM.SECT-002]
 covers: [GOM.DIM.07]
 depends_on: [KRN.LSQ, GEO.FRAME]
