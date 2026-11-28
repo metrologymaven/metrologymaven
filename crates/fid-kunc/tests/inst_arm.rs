@@ -315,6 +315,12 @@ fn base() -> ArmParams {
     ArmParams { sigma_p: 1.5e-5, sigma_d1: 2.5e-6, axial_factor: Some(2.0) }
 }
 
+/// Parameters, point, direction and the expected refusal.
+type RefusalCase = (ArmParams, [f64; 3], Option<[f64; 3]>, InstError);
+
+/// The signature of `arm_cov`.
+type ArmFn = fn(&ArmParams, [f64; 3], Option<[f64; 3]>) -> Result<ArmCov, InstError>;
+
 const P: [f64; 3] = [0.4, 0.1, 0.7];
 const U: [f64; 3] = [0.2, -0.3, 0.9];
 
@@ -344,7 +350,7 @@ fn refusals_in_order() {
     use ValueReason::{BelowMinimumNorm, Missing, Negative, NotFinite};
     let nan = f64::NAN;
     let inf = f64::INFINITY;
-    let cases: [(ArmParams, [f64; 3], Option<[f64; 3]>, InstError); 16] = [
+    let cases: [RefusalCase; 16] = [
         (ArmParams { sigma_p: nan, ..base() }, P, Some(U), bad_param("sigma_p", NotFinite)),
         (ArmParams { sigma_p: -5e-324, ..base() }, P, Some(U), bad_param("sigma_p", Negative)),
         (ArmParams { sigma_d1: inf, ..base() }, P, Some(U), bad_param("sigma_d1", NotFinite)),
@@ -467,7 +473,7 @@ fn accessors_and_codes() {
     assert_eq!(NORM_ACC_BITS, 4352);
     assert_eq!(SIGMA_MIN, 2.0_f64.powi(-480));
     assert_eq!(REL_FROBENIUS_BOUND, 37.0 * 2.0_f64.powi(-53));
-    assert!(REL_FROBENIUS_BOUND < 1e-14);
+    const _: () = assert!(REL_FROBENIUS_BOUND < 1e-14);
     assert_eq!((MIN_DIRECTION_NORM, UNIT_TOLERANCE), (1e-12, 1e-9));
     for (e, code) in [(ValueReason::BelowMinimumNorm, "below_minimum_norm"), (ValueReason::Missing, "missing")] {
         assert_eq!(e.code(), code);
@@ -489,6 +495,6 @@ fn spec_card() {
     assert_eq!(card.determinism, "D0");
     // `arm_cov` takes three data inputs (parameters, point, direction); the binding stops
     // compiling if the signature changes.
-    let _: fn(&ArmParams, [f64; 3], Option<[f64; 3]>) -> Result<ArmCov, InstError> = arm_cov;
+    let _: ArmFn = arm_cov;
     assert_eq!(card.input_arity, fid_kci::InputArity::exactly(3));
 }
