@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-io-cad-export]
 satisfies: [REQ-IO.CAD.EXPORT-002]
 covers: []
 depends_on: [GEO.TYPES.ENV, GEO.FRAME.APPLY, GEO.NURBS.ANALYTIC]
@@ -72,7 +73,11 @@ JSON element fixtures under `fixtures/io/cad/export/bound/` (CC-BY-4.0).
 
 ## Open questions
 
-- None.
+- Build notes (fid-io-cad-export `bound`, value-affecting choices pinned in its module docs):
+  - Extents are computed in the element's own frame (projection by `Placement::to_local`, total-order min/max) and multiplied by the transform's scale, so a rigid move leaves them bit for bit unchanged. A moved placement's axis and reference direction are renormalised (and the reference re-orthogonalised) before `Placement::new`, as GEO.FRAME.APPLY does for normals.
+  - The Design's `extent: Option<Extent>` plus `extent_source` is one `Bounds::{Intrinsic, Extent{extent, source}}`; `ExtentSource::FittedPoints` also reports the point count and the margin. The Design's `BoundedGeom` is `Geometry` (point, line, plane, cylinder, cone, circle, ellipse, sphere, torus, NURBS curve and surface); element IDs are project-tree UUIDs; names are validated `UntrustedName`s.
+  - Fail-closed refusals beyond the Design: an extent on a bounded element or of the wrong kind, fitted points that would not be used (bounded element, or next to a caller extent), an empty point list, a zero-width fitted extent (`degenerate_extent`), a reversed or empty caller interval, a cone extent holding the apex strictly inside (`extent_crosses_apex`), a duplicate element, a bad name, a bad margin, an empty selection.
+- Arcs (scope "already bounded") have no GEO type yet; when one exists (a trimmed circle), it joins `Geometry` as a bounded kind. Owner: GEO.NURBS or IO.CAD.EXPORT.STEPW.
 
 ## Children
 

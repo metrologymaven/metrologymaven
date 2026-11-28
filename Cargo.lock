@@ -1690,6 +1690,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "fid-io-cad-export"
+version = "0.0.1"
+dependencies = [
+ "fid-canon",
+ "fid-geo-frame",
+ "fid-geo-nurbs",
+ "fid-num",
+ "fid-types",
+ "fid-uuid",
+]
+
+[[package]]
 name = "fid-io-corp"
 version = "0.0.1"
 dependencies = [
