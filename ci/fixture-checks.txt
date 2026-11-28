@@ -368,6 +368,7 @@ python fixtures/unc/model/subst/make_fixtures.py --check
 python fixtures/unc/mvar/param/make_fixtures.py --check
 python fixtures/unc/mvar/vmcm/make_fixtures.py --check
 python fixtures/unc/qif/make_fixtures.py --check
+python fixtures/unc/rank/make_fixtures.py --check
 python fixtures/unc/stmt/make_fixtures.py --check
 python fixtures/unc/valid/make_fixtures.py --check
 python fixtures/ux/comp/schema/make_fixtures.py --check

@@ -1,0 +1,19 @@
+# Spec card (UNC.PROP.RANK). Cite designators and clause numbers only; never paste standards text.
+id = "unc.prop.rank@1.0.0"
+title = "Contributor ranking"
+method = "LPU form: for sensitivities c and an exactly symmetric input covariance S, returns per input u_i(y) = |c_i| sqrt(S_ii) and the correlation-aware (Euler) variance share c_i (S c)_i / (c^T S c), with S c and c^T S c by fixed-order dot products (fid-num red::dot, no FMA). c^T S c within its rounding tolerance (4 (n + 1) 2^-53 |c|^T |S| |c|) of zero is degenerate: shares absent, nothing divided. Shares whose fixed-order sum is not within 1e-12 of 1 are dropped and the sum reported. Samples form: per input the squared Pearson correlation of its samples with the output samples (two-pass: fixed-order mean, deviations, sum of squares and dot product), labelled approximate_src2. Contributors are sorted by descending u_i(y) or squared correlation in IEEE-754 total order, ties by input ID bytes, and every tie is flagged."
+applicability = "An evaluated model with LPU sensitivities and a positive semi-definite input covariance, or Monte Carlo sample columns of every input and the output over the same trials. The squared correlation equals the variance share only for a linear model with independent inputs."
+references = [
+  "JCGM 100:2008, clause 5 (sensitivity coefficients and the combined standard uncertainty) [unverified: clause numbering]",
+  "JCGM 101:2008 (propagation of distributions using a Monte Carlo method) [unverified: no clause defines this ranking]",
+]
+determinism = "D0"
+input_arity = "1"
+failure_modes = [
+  "No inputs returns no_inputs; ids, cov or an input column of the wrong length returns dimension_mismatch.",
+  "An ID that is not a token returns invalid_id; a repeated ID returns duplicate_id.",
+  "A non-symmetric covariance returns not_symmetric; a negative variance or c^T S c below minus its rounding tolerance returns negative_variance.",
+  "A NaN or infinite input, or an overflow, returns numeric with the fid-num error.",
+  "Fewer than 2 samples returns too_few_samples; a constant output is degenerate and a constant input has no squared correlation, each with its reason.",
+]
+validation = "Reproduces the order, u_i(y) and shares of fixtures/unc/rank/lpu_3in.json within 1e-15 (with the x1/x2 tie broken by ID) and lpu_corr.json (rho = -0.9) against 50-digit references within 1e-14, ranks X2 first in mcm_samples.json (Y = X1 + 3 X2, 10^5 trials, seed 0x52414E4B) with method approximate_src2, flags the all-zero-sensitivity case degenerate, and produces canonical JSON byte-identical to the independent Python reference on x86-64, ARM64 and wasm32."

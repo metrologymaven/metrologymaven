@@ -1,0 +1,42 @@
+{
+ "c": [
+  "3ff0000000000000",
+  "4000000000000000"
+ ],
+ "cov": [
+  "3fb70a3d70a3d70a",
+  "bf9ba5e353f7ced9",
+  "bf9ba5e353f7ced9",
+  "3f847ae147ae147b"
+ ],
+ "degenerate": "none",
+ "ids": [
+  "xa",
+  "xb"
+ ],
+ "name": "lpu_corr",
+ "note": "AC-2: c = (1, 2), u = (0.3, 0.1), rho = -0.9 (S_12 = -0.027): shares 18/11 and -7/11",
+ "order": [
+  "xa",
+  "xb"
+ ],
+ "share": [
+  "3ffa2e8ba2e8ba2e",
+  "bfe45d1745d1745d"
+ ],
+ "share_ref50": [
+  "1.6363636363636363349632483309618645440407403186001E+0",
+  "-6.3636363636363633496324833096186454404074031860007E-1"
+ ],
+ "share_sum": "3fefffffffffffff",
+ "share_tol": "3d06849b86a12b9b",
+ "shares": "present",
+ "tie_broken_by_id": [
+  "false",
+  "false"
+ ],
+ "u_contrib": [
+  "3fd3333333333333",
+  "3fc999999999999a"
+ ]
+}

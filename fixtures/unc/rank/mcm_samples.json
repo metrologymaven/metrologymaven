@@ -1,0 +1,26 @@
+{
+ "a": "bff0000000000000",
+ "b": "3ff0000000000000",
+ "method": "approximate_src2",
+ "name": "mcm_samples",
+ "note": "AC-3: Y = X1 + 3 X2 (evaluated as x1 + 3.0 * x2), X1 on stream 0 and X2 on stream 1, rectangular [-1, 1] in si:m, seed 0x52414E4B, trials 0 .. 10^5",
+ "order": [
+  "X2",
+  "X1"
+ ],
+ "r2": [
+  "3fecd31672633152",
+  "3fb9df934f2abc8e"
+ ],
+ "r2_ref50": [
+  "9.0076753941824924297606834656131938722795624680786E-1",
+  "1.0106774027620899168749055961492107162050834425123E-1"
+ ],
+ "samples_sha256": "0c442daac12c808f7dcb55df076a9be64b2f9f05ee309f50ca95dd717dd5335c",
+ "seed": "52414e4b",
+ "streams": [
+  "0",
+  "1"
+ ],
+ "trials": "100000"
+}

@@ -7,12 +7,14 @@
 //! ([`mcm::interval`]), `UNC.PROP.MCM.ADAPT` ([`mcm::adapt`]), `UNC.PROP.MCM.SAMP`
 //! ([`mcm::samples`]), `UNC.PROP.VALID` ([`valid`], [`validate_lpu`]), `UNC.PROP.LPU.TAN`
 //! (the operator tangent contract, [`lpu::tan`]), `UNC.PROP.MVAR.PARAM` (feature
-//! covariances in `fcov-param@1`, [`mvar::param`]) and `UNC.PROP.MVAR.VMCM` (joint Monte Carlo
-//! covariance and coverage region of a group, [`mvar::vmcm`]).
+//! covariances in `fcov-param@1`, [`mvar::param`]), `UNC.PROP.MVAR.VMCM` (joint Monte Carlo
+//! covariance and coverage region of a group, [`mvar::vmcm`]) and `UNC.PROP.RANK` (contributor
+//! ranking, [`rank`]).
 
 pub mod lpu;
 pub mod mcm;
 pub mod mvar;
+pub mod rank;
 pub mod valid;
 
 pub use valid::{
