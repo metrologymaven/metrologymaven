@@ -90,7 +90,10 @@
 //! ratio with the rounding guard) with the used points in lock-frame coordinates. An
 //! `unobservable_dof` warning refuses the step with `unobservable_step`, naming the count and
 //! the weakest motion: a rank-deficient system never produces a pose. The final diagnostics
-//! are the same call on the returned state, with the convergence history attached.
+//! are the same call on the returned state, with the convergence history attached. That
+//! state's Jacobian was never stepped from, so it is not refused; if it is unobservable and
+//! the run converged, the result carries [`LoopWarning::FinalStateUnobservable`] as well, so
+//! that the condition is not visible in the diagnostics alone.
 //!
 //! # Increments
 //!
@@ -109,10 +112,16 @@
 //! a point at the origin, and RANSAC (whose consensus fits the target primitive) is refused
 //! with `outlier_policy_unsupported`. Policy errors (`too_few_remaining`,
 //! `excessive_exclusion`, ...) pass through. The output records the policy of the returned
-//! state as an [`ExclusionRecord`]: the algorithm ID, the canonical parameter encoding, the
+//! state as a [`LoopExclusion`]: the algorithm ID, the canonical parameter encoding, the
 //! excluded measured indices and the SHA-256 digest of that set as an
 //! [`ExclusionMask`] over all measured points (`point_count u32 | indices u32`, little-endian,
 //! `KRN.OUT.POL`), and the method's status (why an empty mask is empty).
+//!
+//! It is not a `KRN.OUT.DISC` `ExclusionRecord`: the impact disclosure (the result with and
+//! without the exclusion, and their differences) is **not provided**. DISC holds a fitted
+//! feature before and after, and a rigid pose is not a `FittedFeature`, so DISC cannot hold
+//! it; disclosing a pose's impact (a second run without the policy, the pose and statistics
+//! differences) is left to a follow-up leaf.
 //!
 //! # Resolution floor
 //!
@@ -148,7 +157,8 @@
 //! the verdict, objective, increments, parameters, the correspondence summary and the count
 //! of correspondence notes, the policy's exclusion count and method status, the used points
 //! and rows, and the conditioning warning of the step's Jacobian. A converged run whose last
-//! objective is above the lowest one seen carries [`LoopWarning::ConvergedAboveBest`].
+//! objective is strictly above the lowest one seen carries [`LoopWarning::ConvergedAboveBest`];
+//! one whose final Jacobian is unobservable carries [`LoopWarning::FinalStateUnobservable`].
 //! Objectives of different iterations may sum over different points (correspondences and
 //! exclusions change); each is the objective of its own pose's rows. The correspondence notes of the returned state are in
 //! [`BestfitOutput::notes`] (measured indices). [`BestfitOutput::provisional`] names the
@@ -200,7 +210,9 @@ use fid_types::{Determinism, SideEffect};
 use super::corr::{correspond, CorrError, CorrNote, CorrOptions, CorrOutput, CorrSummary, Reference};
 use super::metric::{build_rows, Metric, MetricError};
 use super::{Correspondences, MAX_DISTANCE_FLOOR_M};
-use crate::cond::{diagnose_reduced, AlignmentDiagnostics, CondError, CondWarning, Threshold, ThresholdBasis};
+use crate::cond::{
+    diagnose_reduced, AlignmentDiagnostics, CondError, CondWarning, MotionKind, Threshold, ThresholdBasis,
+};
 use crate::constr::{
     linearise, reduced_jacobian, validate, CertifiedPose, ConstrError, ConstraintSet, DofLocks, FrameContext, Jacobian,
     Linearisation, LockFrameRef, WeightSpec,
@@ -312,8 +324,9 @@ pub enum BestfitError {
     Constraint { iteration: u64, error: ConstrError },
     /// The outlier policy refused (`iteration` is `None` for the check before the run).
     Policy { iteration: Option<u64>, error: PolicyError },
-    /// The stop monitor refused (`nan_in_iteration`, `invalid_stop_criteria`, ...).
-    Stop { iteration: u64, error: StopError },
+    /// The stop monitor refused (`nan_in_iteration`, `invalid_stop_criteria`, ...); `iteration`
+    /// is `None` for the check before the run.
+    Stop { iteration: Option<u64>, error: StopError },
     /// The convergence history refused.
     History(HistError),
     /// The diagnostics refused.
@@ -359,7 +372,8 @@ impl BestfitError {
         match self {
             BestfitError::InvalidMaxDistance { iteration, .. }
             | BestfitError::InvalidOutlierGate { iteration, .. }
-            | BestfitError::Policy { iteration, .. } => *iteration,
+            | BestfitError::Policy { iteration, .. }
+            | BestfitError::Stop { iteration, .. } => *iteration,
             BestfitError::InsufficientCorrespondences { iteration, .. }
             | BestfitError::UnobservableStep { iteration, .. }
             | BestfitError::SingularStep { iteration }
@@ -368,7 +382,6 @@ impl BestfitError {
             | BestfitError::Corr { iteration, .. }
             | BestfitError::Metric { iteration, .. }
             | BestfitError::Constraint { iteration, .. }
-            | BestfitError::Stop { iteration, .. }
             | BestfitError::Cond { iteration, .. }
             | BestfitError::Numeric { iteration, .. } => Some(*iteration),
             _ => None,
@@ -420,9 +433,10 @@ impl std::error::Error for BestfitError {}
 
 // ------------------------------------------------------------------ output
 
-/// What the outlier policy of the returned state excluded (REQ-ALN.BFIT.ICP.LOOP-003).
+/// What the outlier policy of the returned state excluded (REQ-ALN.BFIT.ICP.LOOP-003). Not a
+/// `KRN.OUT.DISC` record: it carries no impact disclosure (module docs).
 #[derive(Debug, Clone, PartialEq)]
-pub struct ExclusionRecord {
+pub struct LoopExclusion {
     algorithm: String,
     params: Vec<u8>,
     excluded: Vec<u64>,
@@ -431,7 +445,7 @@ pub struct ExclusionRecord {
     status: MethodStatus,
 }
 
-impl ExclusionRecord {
+impl LoopExclusion {
     /// The policy's algorithm ID, `filter.outlier.<method>@<semver>`.
     pub fn algorithm(&self) -> &str {
         &self.algorithm
@@ -530,17 +544,24 @@ impl ProvisionalRule {
 /// A warning on a finished run.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum LoopWarning {
-    /// The run converged, but an earlier iteration had a lower objective (for example after
-    /// a rise shorter than `divergence_window`); `ALN.BFIT.STOP` keeps the converged pose, and
-    /// the lower one is named here (`ALN.BFIT.STOP` Open questions).
+    /// The run converged, but an earlier iteration had a strictly lower objective (for
+    /// example after a rise shorter than `divergence_window`); `ALN.BFIT.STOP` keeps the
+    /// converged pose, and the lower one is named here (`ALN.BFIT.STOP` Open questions). An
+    /// equal objective is a tie, flagged in [`IterationStatus::best_tie`], not this warning.
     ConvergedAboveBest { best_iteration: u64, best_objective: f64 },
+    /// The run converged, but the Jacobian of the returned (final) state has `count`
+    /// unobservable directions (`ALN.QA.COND` `unobservable_dof`); `weakest` is the weakest
+    /// motion. That state was never stepped from, so the step check did not refuse it; the
+    /// pose is not determined in those directions by the final correspondences.
+    FinalStateUnobservable { count: usize, weakest: MotionKind },
 }
 
 impl LoopWarning {
-    /// Stable code: `converged_above_best`.
+    /// Stable code: `converged_above_best`, `final_state_unobservable`.
     pub const fn code(&self) -> &'static str {
         match self {
             LoopWarning::ConvergedAboveBest { .. } => "converged_above_best",
+            LoopWarning::FinalStateUnobservable { .. } => "final_state_unobservable",
         }
     }
 }
@@ -557,7 +578,7 @@ pub struct BestfitOutput {
     report: ResidualReport,
     history: ConvergenceHistory,
     diagnostics: AlignmentDiagnostics,
-    exclusion: Option<ExclusionRecord>,
+    exclusion: Option<LoopExclusion>,
     iterations: Vec<IterationStatus>,
     notes: Vec<CorrNote>,
     provisional: Vec<ProvisionalRule>,
@@ -628,7 +649,7 @@ impl BestfitOutput {
     }
 
     /// The exclusion record of the returned state, when a policy is set.
-    pub fn exclusion(&self) -> Option<&ExclusionRecord> {
+    pub fn exclusion(&self) -> Option<&LoopExclusion> {
         self.exclusion.as_ref()
     }
 
@@ -817,7 +838,7 @@ struct State {
     corr: CorrOutput,
     /// In-scope positions the policy excluded, ascending.
     excluded: Vec<usize>,
-    exclusion: Option<ExclusionRecord>,
+    exclusion: Option<LoopExclusion>,
     r: Vec<f64>,
     jp: Jacobian,
     used_l: Vec<V3>,
@@ -945,7 +966,7 @@ fn evaluate(
         }
         let excluded_measured: Vec<u64> = measured_ix.iter().map(|&i| u64::from(i)).collect();
         let mask = ExclusionMask::new(ctx.n_measured, measured_ix).map_err(polerr)?;
-        exclusion = Some(ExclusionRecord {
+        exclusion = Some(LoopExclusion {
             algorithm: ex.algorithm().to_string(),
             params: ex.params().to_vec(),
             excluded: excluded_measured,
@@ -1242,7 +1263,7 @@ pub fn bestfit(
         Some(spec) => Some(Policy::new(spec, measured.len())?),
     };
     // 6. Stop criteria.
-    params.stop.validate().map_err(|error| BestfitError::Stop { iteration: 0, error })?;
+    params.stop.validate().map_err(|error| BestfitError::Stop { iteration: None, error })?;
 
     let mut xs = reserve(scope.len())?;
     let mut weights = reserve(scope.len())?;
@@ -1267,8 +1288,8 @@ pub fn bestfit(
     let mut cur = evaluate(&ctx, lin0, 0, cancel)?;
     let mut statuses = reserve(1)?;
     statuses.push(cur.status(None, None, false, None));
-    let mut monitor =
-        StopMonitor::new(params.stop, cur.objective).map_err(|error| BestfitError::Stop { iteration: 0, error })?;
+    let mut monitor = StopMonitor::new(params.stop, cur.objective)
+        .map_err(|error| BestfitError::Stop { iteration: Some(0), error })?;
     let mut recorder = HistoryRecorder::new();
     // The best state when it is not `cur`.
     let mut best: Option<State> = None;
@@ -1296,8 +1317,9 @@ pub fn bestfit(
             })
             .map_err(BestfitError::History)?;
         let (prev_best, _) = monitor.best();
-        verdict =
-            monitor.update(k, dt, dr, st.objective).map_err(|error| BestfitError::Stop { iteration: k, error })?;
+        verdict = monitor
+            .update(k, dt, dr, st.objective)
+            .map_err(|error| BestfitError::Stop { iteration: Some(k), error })?;
         let (best_k, best_f) = monitor.best();
         let tie = best_k != k && st.objective == best_f;
         let prev = core::mem::replace(&mut cur, st);
@@ -1337,8 +1359,16 @@ pub fn bestfit(
     }
     let mut warnings = Vec::new();
     let (best_iteration, best_objective) = monitor.best();
-    if outcome.status() == FitStatus::Ok && best_iteration != pose_iteration {
+    if outcome.status() == FitStatus::Ok && best_iteration != pose_iteration && best_objective < fin.objective {
         warnings.push(LoopWarning::ConvergedAboveBest { best_iteration, best_objective });
+    }
+    if outcome.status() == FitStatus::Ok {
+        for w in diagnostics.warnings() {
+            if let CondWarning::UnobservableDof { count } = w {
+                let weakest = diagnostics.weakest_dof().kind();
+                warnings.push(LoopWarning::FinalStateUnobservable { count: *count, weakest });
+            }
+        }
     }
     let mut provisional = vec![ProvisionalRule::UnobservableGuard];
     if params.cond_threshold.basis() == ThresholdBasis::DefaultUnverified {

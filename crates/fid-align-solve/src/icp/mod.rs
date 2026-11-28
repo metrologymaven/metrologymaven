@@ -20,8 +20,8 @@ pub mod corr;
 pub mod metric;
 
 pub use bestfit::{
-    bestfit, BestfitError, BestfitOutput, BestfitParams, ExclusionRecord, IterationStatus, LoopWarning,
-    ProvisionalRule, Scope, BESTFIT_DETERMINISM, BESTFIT_SIDE_EFFECT, MAX_DISTANCE_REL, MIN_ROWS,
+    bestfit, BestfitError, BestfitOutput, BestfitParams, IterationStatus, LoopExclusion, LoopWarning, ProvisionalRule,
+    Scope, BESTFIT_DETERMINISM, BESTFIT_SIDE_EFFECT, MAX_DISTANCE_REL, MIN_ROWS,
 };
 
 pub use corr::{

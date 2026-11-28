@@ -19,8 +19,8 @@ use core::sync::atomic::AtomicBool;
 
 use fid_align_solve::{
     bestfit, validate, BestfitError, BestfitOutput, BestfitParams, Dof, DofLocks, FitStatus, FrameContext,
-    LockFrameRef, LoopWarning, Metric, ProvisionalRule, Reference, Scope, StopCriteria, Threshold, Verdict, WeightSpec,
-    BESTFIT_DETERMINISM, BESTFIT_SIDE_EFFECT, MAX_DISTANCE_FLOOR_M,
+    LockFrameRef, LoopWarning, Metric, MotionKind, ProvisionalRule, Reference, Scope, StopCriteria, Threshold, Verdict,
+    WeightSpec, BESTFIT_DETERMINISM, BESTFIT_SIDE_EFFECT, MAX_DISTANCE_FLOOR_M,
 };
 use fid_align_solve::{ConstraintSet, Stopped};
 use fid_filter::policy::{MethodStatus, OutlierPolicy, PolicySpec, Side};
@@ -334,11 +334,15 @@ fn check_bookkeeping(out: &BestfitOutput) {
     assert!(out.diagnostics().history().is_some());
     assert!(it[0].step_conditioning.is_none());
     for w in out.warnings() {
-        let LoopWarning::ConvergedAboveBest { best_iteration, best_objective } = *w;
-        assert_eq!(w.code(), "converged_above_best");
         assert_eq!(out.status(), FitStatus::Ok);
-        assert_ne!(best_iteration, out.pose_iteration());
-        assert!(best_objective < it[out.pose_iteration() as usize].objective);
+        match *w {
+            LoopWarning::ConvergedAboveBest { best_iteration, best_objective } => {
+                assert_eq!(w.code(), "converged_above_best");
+                assert_ne!(best_iteration, out.pose_iteration());
+                assert!(best_objective < it[out.pose_iteration() as usize].objective);
+            }
+            LoopWarning::FinalStateUnobservable { .. } => assert_eq!(w.code(), "final_state_unobservable"),
+        }
     }
     assert_eq!(out.algorithm_id(), out.metric().algorithm_id());
 }
@@ -732,7 +736,7 @@ fn refusals_before_the_run() {
     assert_eq!(code_of(run(&scene, &c.measured, &p)).0, "invalid_parameter");
     let mut p = base;
     p.stop.translation_tol = f64::NAN;
-    assert_eq!(code_of(run(&scene, &c.measured, &p)).0, "invalid_stop_criteria");
+    assert_eq!(code_of(run(&scene, &c.measured, &p)), ("invalid_stop_criteria".to_string(), None));
 }
 
 #[test]
@@ -840,4 +844,146 @@ fn nsigma_policy_on_noise_free_data_reports_its_status() {
 fn constants() {
     assert_eq!(fid_align_solve::MAX_DISTANCE_REL, f64::from_bits((1023 - 44) << 52));
     assert_eq!(fid_align_solve::MIN_ROWS, 6);
+}
+
+// ------------------------------------------------------------------ best-earlier pose, ties, final state
+
+/// A flat sheet `z = 0`, `[-1, 1]^2`, normal `+z`.
+fn sheet_scene() -> Scene {
+    let verts: Vec<V3> = vec![[-1.0, -1.0, 0.0], [1.0, -1.0, 0.0], [1.0, 1.0, 0.0], [-1.0, 1.0, 0.0]];
+    let tris: Vec<[u64; 3]> = vec![[0, 1, 2], [0, 2, 3]];
+    let mesh = Mesh::from_points(frame(), &verts, &tris).unwrap();
+    let bvh = PrimitiveBvh::build(&mesh, &[0, 1], 1).unwrap();
+    Scene { mesh, bvh }
+}
+
+fn sheet_points(z: f64) -> Vec<V3> {
+    (0..25).map(|i| [(i % 5) as f64 * 0.25 - 0.5, (i / 5) as f64 * 0.25 - 0.5, z]).collect()
+}
+
+fn plane_locks() -> DofLocks {
+    DofLocks::NONE.with(Dof::Tx).with(Dof::Ty).with(Dof::Rz)
+}
+
+/// 25 sheet points 10 mm above the sheet and 10 points 55 mm above it. With a 50 mm maximum
+/// distance the high points have no correspondence at the start; the first step (tz = -10 mm,
+/// from the sheet points) brings them to 45 mm, inside the limit, so the objective rises from
+/// 25 * 0.01^2 to about 10 * 0.045^2.
+fn rising_points() -> Vec<V3> {
+    let mut pts = sheet_points(0.01);
+    pts.extend((0..10).map(|i| [i as f64 * 0.1 - 0.45, 0.3, 0.055]));
+    pts
+}
+
+fn assert_best_earlier(out: &BestfitOutput) {
+    check_bookkeeping(out);
+    let it = out.iterations();
+    assert!(it[1].objective > it[0].objective, "the objective rose: {} -> {}", it[0].objective, it[1].objective);
+    assert_eq!(out.status(), FitStatus::NotConverged);
+    assert_eq!(out.pose_iteration(), 0);
+    assert!(out.pose_iteration() < out.last_iteration());
+    assert!(out.final_pose().is_none());
+    let pose = out.not_converged_pose().unwrap();
+    // The start pose: every component zero (signs of zero aside).
+    assert_eq!(pose.relative(), it[0].params);
+    assert_eq!(out.history().final_pose(), pose);
+    // The report is the start pose's: the high points are beyond the maximum distance there.
+    let beyond = out.report().entries(0, 35).filter(|e| e.reason == Some("beyond_max_distance")).count();
+    assert_eq!(beyond, 10);
+    assert!(out.warnings().is_empty());
+}
+
+#[test]
+fn a_rising_objective_returns_the_earlier_best_pose_as_not_converged() {
+    let scene = sheet_scene();
+    let pts = rising_points();
+    let cs = constraints(plane_locks(), &Rigid::IDENTITY, &WeightSpec::default(), pts.len());
+    let mut p = params(&cs, Metric::PointToPlane, StopCriteria { divergence_window: 1, ..StopCriteria::default() });
+    p.max_corr_distance = Some(0.05);
+    let out = run(&scene, &pts, &p).unwrap();
+    assert_eq!(out.verdict(), Verdict::Stopped(Stopped::Diverged));
+    assert_eq!(out.last_iteration(), 1);
+    assert_eq!(out.history().stopped_by().to_string(), "diverged(divergence_window)");
+    assert_best_earlier(&out);
+    // The same rise stopped by the iteration limit.
+    let mut p = params(&cs, Metric::PointToPlane, StopCriteria { max_iterations: 1, ..StopCriteria::default() });
+    p.max_corr_distance = Some(0.05);
+    let out = run(&scene, &pts, &p).unwrap();
+    assert_eq!(out.verdict(), Verdict::Stopped(Stopped::MaxIterations));
+    assert_best_earlier(&out);
+}
+
+#[test]
+fn an_equal_objective_is_a_reported_tie() {
+    // Points exactly on the sheet: f_0 = 0, the step is zero, f_1 = 0 ties with the start,
+    // which the monitor keeps as the best; the converged pose is the last one.
+    let scene = sheet_scene();
+    let pts = sheet_points(0.0);
+    let cs = constraints(plane_locks(), &Rigid::IDENTITY, &WeightSpec::default(), pts.len());
+    let out = run(&scene, &pts, &params(&cs, Metric::PointToPlane, tight_stop(10))).unwrap();
+    check_bookkeeping(&out);
+    assert_eq!(out.status(), FitStatus::Ok);
+    let it = out.iterations();
+    assert_eq!(it[0].objective, 0.0);
+    assert_eq!(it[1].objective, 0.0);
+    assert!(!it[0].best_tie);
+    assert!(it[1].best_tie);
+    assert_eq!(out.pose_iteration(), out.last_iteration());
+    assert!(out.warnings().is_empty(), "a tie is not converged_above_best: {:?}", out.warnings());
+}
+
+#[test]
+fn an_unobservable_final_state_is_a_warning() {
+    // A sheet (z = 0), a wall x = 1.2 (z in [0.5, 1]) and a narrow strip y = 1.2 (z in
+    // [0.1, 0.2]). Points on the sheet sit 10 mm high; the strip points 5 mm above the strip's
+    // lower edge. At the start every DoF is observable; the step (tz = -10 mm) moves the strip
+    // points below the strip, where their feet are on its free edge (no normal), so the final
+    // state has no information along y. Loose increment tolerances make the run converge there.
+    let verts: Vec<V3> = vec![
+        [-1.0, -1.0, 0.0],
+        [1.0, -1.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [-1.0, 1.0, 0.0],
+        [1.2, -1.0, 0.5],
+        [1.2, 1.0, 0.5],
+        [1.2, 1.0, 1.0],
+        [1.2, -1.0, 1.0],
+        [-1.0, 1.2, 0.1],
+        [1.0, 1.2, 0.1],
+        [1.0, 1.2, 0.2],
+        [-1.0, 1.2, 0.2],
+    ];
+    let tris: Vec<[u64; 3]> = vec![[0, 1, 2], [0, 2, 3], [4, 5, 6], [4, 6, 7], [8, 9, 10], [8, 10, 11]];
+    let mesh = Mesh::from_points(frame(), &verts, &tris).unwrap();
+    let bvh = PrimitiveBvh::build(&mesh, &[0, 1, 2, 3, 4, 5], 1).unwrap();
+    let scene = Scene { mesh, bvh };
+    let mut pts = sheet_points(0.01);
+    for y in [-0.6, -0.2, 0.2, 0.6] {
+        for z in [0.6, 0.8] {
+            pts.push([1.2, y, z]);
+        }
+    }
+    for x in [-0.6, -0.2, 0.2, 0.6] {
+        pts.push([x, 1.2, 0.105]);
+    }
+    let cs = constraints(DofLocks::NONE, &Rigid::IDENTITY, &WeightSpec::default(), pts.len());
+    let stop = StopCriteria { translation_tol: 1.0, rotation_tol: 1.0, ..StopCriteria::default() };
+    let out = run(&scene, &pts, &params(&cs, Metric::PointToPlane, stop)).unwrap();
+    check_bookkeeping(&out);
+    assert_eq!(out.status(), FitStatus::Ok);
+    assert_eq!(out.last_iteration(), 1);
+    assert_eq!(out.iterations()[0].correspondence.hits, 37);
+    assert_eq!(out.iterations()[1].correspondence.normal_undefined, 4);
+    assert_eq!(out.diagnostics().n_unobservable(), 1);
+    let w: Vec<_> = out
+        .warnings()
+        .iter()
+        .filter_map(|w| match *w {
+            LoopWarning::FinalStateUnobservable { count, weakest } => Some((count, weakest)),
+            LoopWarning::ConvergedAboveBest { .. } => None,
+        })
+        .collect();
+    assert_eq!(w.len(), 1, "{:?}", out.warnings());
+    assert_eq!(w[0].0, 1);
+    assert!(matches!(w[0].1, MotionKind::Translation(_)), "{:?}", w[0].1);
 }

@@ -66,7 +66,7 @@ pub use hist::{
 };
 pub use icp::{
     bestfit, build_rows, correspond, BestfitError, BestfitOutput, BestfitParams, CadReference, CorrError, CorrNote,
-    CorrOptions, CorrOutput, CorrReason, CorrSummary, Correspondences, ExclusionRecord, InputField, IterationStatus,
+    CorrOptions, CorrOutput, CorrReason, CorrSummary, Correspondences, InputField, IterationStatus, LoopExclusion,
     LoopWarning, Metric, MetricError, NoteKind, PointError, ProvisionalRule, Reference, Rows, Scope,
     BESTFIT_DETERMINISM, BESTFIT_SIDE_EFFECT, MAX_DISTANCE_FLOOR_M, MAX_DISTANCE_REL, MIN_ROWS, NORMAL_TOL,
     POINT_TO_PLANE_ALGORITHM_ID, POINT_TO_POINT_ALGORITHM_ID,
