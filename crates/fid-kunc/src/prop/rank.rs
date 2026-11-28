@@ -21,22 +21,23 @@
 //! 4. `S` exactly symmetric (`S_ij == S_ji` as values), else `not_symmetric{i, j}` for the
 //!    first pair `i < j` in row-major order. Every `S_ii >= 0`, else
 //!    `negative_variance{index: i}`.
-//! 4a. Cauchy-Schwarz, for every pair `i < j` in row-major order, with `s = S_ij`: the pair is
-//!    refused as `not_positive_semidefinite{i, j}` when `s != 0` and `S_ii == 0` or
-//!    `S_jj == 0`, or when `s * s > (S_ii * S_jj) * (1 + 4 * 2^-53)`. That comparison is
-//!    evaluated as written when both sides are finite and at least `2^-1022`; otherwise as
-//!    `q * q > 1 + 4 * 2^-53` with `q = (|s| / sqrt(S_ii)) / sqrt(S_jj)`, so an overflow or an
-//!    underflow never decides the test.
-//! 4b. Pivoted Cholesky `fid_num::la::chol_pivoted(S, 0)` (`n` at most `la::MAX_DIM` = 4096,
-//!    else `numeric`). If it stops at rank `r < n`, every remaining Schur-complement entry
-//!    `s_ij = S[p_i][p_j] - red::dot(L_i[0..r], L_j[0..r])` (positions `r <= i <= j < n`,
-//!    `p` the pivot permutation) must satisfy
-//!    `|s_ij| <= (4 (r + 1) 2^-53) (|S[p_i][p_j]| + red::dot(|L_i[0..r]|, |L_j[0..r]|))
-//!    + (4 r + 4) 2^-1074`, else `not_positive_semidefinite{i, j}` with the original indices,
-//!    smaller first. A singular positive semi-definite matrix leaves only rounding there; an
-//!    indefinite one that the pairwise test misses (three inputs with pairwise correlations
-//!    0.9, 0.9 and -0.9) leaves an entry beyond the bound. The factorization is `O(n^3)` for
-//!    an input of `n^2` values.
+//!    Then `S` must be positive semi-definite, else `not_positive_semidefinite{i, j}`:
+//!    - Cauchy-Schwarz, for every pair `i < j` in row-major order, with `s = S_ij`: refused
+//!      when `s != 0` and `S_ii == 0` or `S_jj == 0`, or when
+//!      `s * s > (S_ii * S_jj) * (1 + 4 * 2^-53)`. That comparison is evaluated as written
+//!      when both sides are finite and at least `2^-1022`; otherwise as
+//!      `q * q > 1 + 4 * 2^-53` with `q = (|s| / sqrt(S_ii)) / sqrt(S_jj)`, so an overflow or
+//!      an underflow never decides the test.
+//!    - Pivoted Cholesky `fid_num::la::chol_pivoted(S, 0)` (`n` at most `la::MAX_DIM` = 4096,
+//!      else `numeric`). If it stops at rank `r < n`, every remaining Schur-complement entry
+//!      `s_ij = S[p_i][p_j] - red::dot(L_i[0..r], L_j[0..r])` (positions `r <= i <= j < n`,
+//!      `p` the pivot permutation) must satisfy `|s_ij| <= e_ij`, where
+//!      `e_ij = (4 (r + 1) 2^-53) (|S[p_i][p_j]| + red::dot(|L_i[0..r]|, |L_j[0..r]|))`
+//!      plus `(4 r + 4) 2^-1074`; else the pair of original indices is named, smaller
+//!      first. A singular positive semi-definite matrix leaves only rounding there; an
+//!      indefinite one that the pairwise test misses (three inputs with pairwise
+//!      correlations 0.9, 0.9 and -0.9) leaves an entry beyond the bound. The factorization
+//!      is `O(n^3)` for an input of `n^2` values.
 //! 5. `u_i(y) = |c_i| * sqrt(S_ii)` (correctly rounded `f::sqrt`, one rounded product).
 //! 6. `w_i = red::dot(S_i, c)` for ascending `i`, `v = red::dot(c, w)` (`v` is `c^T S c`).
 //!    The rounding tolerance of `v` is `tol = (4 (n + 1) 2^-53) a + (4 n + 4) 2^-1074` with
@@ -46,7 +47,7 @@
 //!    REQ-004 is never tighter than the arithmetic can resolve, and a subnormal `v` (for
 //!    `c = (1e-155, 9.9999998e-156)` with perfectly anti-correlated unit inputs) is degenerate,
 //!    not a confident pair of shares near `+-4e5`.
-//! 7. `v < -tol` is `negative_variance{index: None}` (a final guard behind rules 4a and 4b).
+//! 7. `v < -tol` is `negative_variance{index: None}` (a final guard behind the tests of rule 4).
 //!    `v <= tol` is degenerate (REQ-004): [`Degenerate::ZeroVariance`] when `v == 0`, else
 //!    [`Degenerate::VarianceAtRoundingResolution`]; every share is absent, nothing is divided
 //!    by `v`, and [`Shares::Degenerate`] says why.
@@ -461,7 +462,7 @@ pub enum RankError {
     /// its rounding tolerance, so `S` is not positive semi-definite.
     NegativeVariance { index: Option<usize> },
     /// `not_positive_semidefinite`: the pair `(i, j)` (`i <= j`, original indices) fails the
-    /// Cauchy-Schwarz test (rule 4a) or leaves a Cholesky remainder beyond rounding (rule 4b).
+    /// Cauchy-Schwarz test or leaves a Cholesky remainder beyond rounding (module rule 4).
     NotPositiveSemidefinite { i: usize, j: usize },
     /// `numeric`: a `fid-num` error; `input` names the input (index) it concerns, if one.
     Numeric { input: Option<usize>, error: NumError },
@@ -700,7 +701,7 @@ fn rank_lpu(c: &[f64], cov: &[f64], ids: &[&str]) -> Result<RankOutput, RankErro
     })
 }
 
-/// Rule 4a: the pairwise Cauchy-Schwarz test, first failing pair `i < j` in row-major order.
+/// Rule 4, first test: the pairwise Cauchy-Schwarz test, first failing pair `i < j` in row-major order.
 fn check_cauchy_schwarz(rows: &[&[f64]], diag: &[f64]) -> Result<(), RankError> {
     let one_plus = 1.0 + 4.0 * U;
     for (i, (row, &dii)) in rows.iter().zip(diag).enumerate() {
@@ -729,7 +730,7 @@ fn check_cauchy_schwarz(rows: &[&[f64]], diag: &[f64]) -> Result<(), RankError> 
     Ok(())
 }
 
-/// Rule 4b: the remainder of a pivoted Cholesky that stopped early must be rounding only.
+/// Rule 4, second test: the remainder of a pivoted Cholesky that stopped early must be rounding only.
 fn check_cholesky(cov: &[f64], n: usize) -> Result<(), RankError> {
     let mat = Mat::new(n, n, cov.to_vec()).map_err(num(None))?;
     let ch = chol_pivoted(&mat, 0.0).map_err(num(None))?;
