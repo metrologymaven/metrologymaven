@@ -207,9 +207,14 @@ fn policy(case: &J) -> UnconstrainedPolicy {
 fn warning_strings(a: &DofAccount) -> Vec<String> {
     a.warnings()
         .iter()
-        .map(|w| match w {
-            DofWarning::RedundantPair { pair } => format!("redundant_pair:{pair}"),
-            other => panic!("unexpected warning {other:?}"),
+        .map(|w| {
+            let at = |p: &Option<usize>| p.map_or("-".to_string(), |p| p.to_string());
+            match w {
+                DofWarning::RedundantPair { pair } => format!("{}:{pair}", w.code()),
+                DofWarning::NearRankThreshold { pair, .. } | DofWarning::BelowRoundingResolution { pair, .. } => {
+                    format!("{}:{}", w.code(), at(pair))
+                }
+            }
         })
         .collect()
 }
@@ -225,7 +230,7 @@ fn parse_ratio(s: &str) -> f64 {
 fn ac1_fixture_counts_names_and_projectors() {
     let fx = fixture();
     let cases = fx.get("cases").arr();
-    assert_eq!(cases.len(), 22);
+    assert_eq!(cases.len(), 24);
     let mut checked = 0usize;
     for case in cases {
         let name = case.get("name").str();
@@ -266,12 +271,18 @@ fn ac1_fixture_counts_names_and_projectors() {
                 let x = g.projector_before()[k / 6][k % 6];
                 assert!((x - w.num()).abs() <= 1e-12, "{name} pair {i} projector[{k}] {x} vs {}", w.num());
             }
-            // The rank decisions are far from the threshold in every hand-built case.
-            if let Some(s) = g.kept_min() {
-                assert!(s > 1e-3, "{name} pair {i} kept {s}");
-            }
-            if let Some(s) = g.dropped_max() {
-                assert!(s < 1e-12, "{name} pair {i} dropped {s}");
+            // The singular values on either side of the threshold, against the 80-digit reference
+            // (the Rust values carry double rounding, about 1e-16 absolute).
+            for (what, got, want) in
+                [("kept_min", g.kept_min(), e.get("kept_min")), ("dropped_max", g.dropped_max(), e.get("dropped_max"))]
+            {
+                match (got, want) {
+                    (None, J::Null) => {}
+                    (Some(x), J::Num(w)) => {
+                        assert!((x - w).abs() <= 1e-14 + 1e-6 * w.abs(), "{name} pair {i} {what} {x} vs {w}")
+                    }
+                    (x, w) => panic!("{name} pair {i} {what}: {x:?} vs {w:?}"),
+                }
             }
         }
         assert_eq!(a.free_count(), ok.get("free_count").usize(), "{name}");
@@ -367,9 +378,9 @@ fn ac5_torus_unsupported() {
 
 // ------------------------------------------------------------------ REQ-001: the table
 
-#[test]
-fn constrained_counts_and_invariance() {
-    let cases = [
+/// One feature of every supported type with its constrained count.
+fn table_features() -> [(NominalFeature, usize); 7] {
+    [
         (plane([0.1, 0.2, 0.3], [0.0, 0.6, 0.8]), 3),
         (axial(FeatureType::Line, [0.1, 0.2, 0.3], [1.0, 2.0, 2.0]), 4),
         (axial(FeatureType::Cylinder, [0.1, 0.2, 0.3], [0.0, 0.0, -3.0]), 4),
@@ -377,8 +388,12 @@ fn constrained_counts_and_invariance() {
         (axial(FeatureType::Circle3d, [0.1, 0.2, 0.3], [1.0, 0.0, 0.0]), 5),
         (point(FeatureType::Sphere, [0.1, 0.2, 0.3]), 3),
         (point(FeatureType::Point, [0.1, 0.2, 0.3]), 3),
-    ];
-    for (f, n) in cases {
+    ]
+}
+
+#[test]
+fn constrained_counts_and_invariance() {
+    for (f, n) in table_features() {
         let b = constrained_basis(&f).unwrap();
         assert_eq!(b.constrained(), n, "{:?}", f.feature_type);
         assert_eq!(b.dim(), 6 - n);
@@ -482,12 +497,15 @@ fn free_basis_is_orthonormal_and_invariant() {
                 let want = if i == j { 1.0 } else { 0.0 };
                 assert!((g - want).abs() < 1e-12, "{name}: <{i},{j}> = {g}");
             }
-            // Every free motion leaves every nominal feature invariant.
+            // Every free motion leaves every nominal feature invariant (to the rank threshold
+            // when a pair's dropped singular values were near it, as for a plane tilted by 1e-10).
+            let near = a.warnings().iter().any(|w| matches!(w, DofWarning::NearRankThreshold { .. }));
+            let tol = if near { DOF_RANK_TOL } else { 1e-12 };
             for (k, f) in pairs.iter().enumerate() {
                 let b = constrained_basis(f).unwrap();
                 let t = x.twist();
                 let s = t.iter().map(|v| v * v).sum::<f64>().sqrt();
-                assert!(off_span(b.vectors(), &t) <= 1e-12 * s, "{name}: free {i} moves pair {k}");
+                assert!(off_span(b.vectors(), &t) <= tol * s, "{name}: free {i} moves pair {k}");
             }
             let d = x.direction();
             assert!((norm3(d) - 1.0).abs() < 1e-15);
@@ -561,6 +579,63 @@ fn off_axis_rotation_is_named_by_point() {
     assert!((a.radius() - 0.5).abs() < 1e-16);
 }
 
+// ------------------------------------------------------------------ near the rank threshold
+
+/// A plane through the origin with normal +z, then one tilted by `atan(t)` about y.
+fn tilted(t: f64) -> DofAccount {
+    let pairs = [plane([0.0; 3], [0.0, 0.0, 1.0]), plane([0.0; 3], [t, 0.0, 1.0])];
+    accumulate(&pairs, UnconstrainedPolicy::KeepParent).unwrap()
+}
+
+#[test]
+fn tilt_above_threshold_counts_with_near_warnings() {
+    let a = tilted(1e-8);
+    let p = &a.per_pair()[1];
+    assert_eq!(p.effective(), 2);
+    let kept = p.kept_min().unwrap();
+    assert!((kept - 1e-8).abs() < 1e-14, "{kept}");
+    assert!(p.dropped_max().unwrap() < 1e-15);
+    assert_eq!(a.warnings().len(), 2);
+    for w in a.warnings() {
+        let DofWarning::NearRankThreshold { pair, sigma } = *w else { panic!("{w:?}") };
+        assert_eq!(pair, Some(1));
+        assert!((sigma - 1e-8).abs() < 1e-14, "{sigma}");
+        assert_eq!(w.code(), "near_rank_threshold");
+    }
+    assert_eq!(a.free_names(), ["translation along +y"]);
+}
+
+#[test]
+fn tilt_below_threshold_is_redundant_with_near_warnings() {
+    let a = tilted(1e-10);
+    let p = &a.per_pair()[1];
+    assert_eq!(p.effective(), 0);
+    assert_eq!(p.kept_min(), None);
+    let dropped = p.dropped_max().unwrap();
+    assert!((dropped - 1e-10).abs() < 1e-14, "{dropped}");
+    let codes: Vec<&str> = a.warnings().iter().map(DofWarning::code).collect();
+    assert_eq!(codes, ["near_rank_threshold", "near_rank_threshold", "redundant_pair"]);
+    assert_eq!(a.warnings()[2], DofWarning::RedundantPair { pair: 1 });
+    assert_eq!(a.free_count(), 3);
+}
+
+#[test]
+fn subnormal_block_is_below_rounding_resolution() {
+    // Tilted by 1e-310 (subnormal): the residual block's largest entry is subnormal, which
+    // fid-num's SVD refuses; it is taken as zero and reported.
+    let a = tilted(1e-310);
+    let p = &a.per_pair()[1];
+    assert_eq!(p.effective(), 0);
+    let w: Vec<DofWarning> = a.warnings().to_vec();
+    assert_eq!(w.len(), 2, "{w:?}");
+    let DofWarning::BelowRoundingResolution { pair, max_entry } = w[0] else { panic!("{w:?}") };
+    assert_eq!(pair, Some(1));
+    assert!(max_entry > 0.0 && max_entry < f64::MIN_POSITIVE, "{max_entry}");
+    assert_eq!(w[0].code(), "below_rounding_resolution");
+    assert_eq!(w[1], DofWarning::RedundantPair { pair: 1 });
+    assert_eq!(a.naming_fallbacks(), 0);
+}
+
 // ------------------------------------------------------------------ error paths
 
 #[test]
@@ -614,16 +689,25 @@ fn ac6_repeatable() {
     }
 }
 
-/// Output-bit pin: a regression pin of this crate's own output over the fixture's accepted
-/// cases (radius, every projector, every free basis vector in both coordinates, its point and
-/// pitch, and the kept/dropped singular values), recorded from a local x86-64 run and checked by
+/// Output-bit pin: a regression pin of this crate's own output: the table basis of every
+/// supported type ([`constrained_basis`]) and, over the fixture's accepted cases, the radius,
+/// every projector, every free basis vector in both coordinates, its point and pitch, and the
+/// kept/dropped singular values, recorded from a local x86-64 run and checked by
 /// CI on every target (Linux, Windows, macOS, wasm32). The expected values above come from the
 /// independent reference; this pin only shows that every platform produces the same bits.
-const OUTPUT_PIN: &str = "9b159af4a263a5b3e23a81eff86aa60fb59ee3785c27492953e8e3a24305d255";
+const OUTPUT_PIN: &str = "5b2819c8f11ee433dc6a1bb21ba8bcd73b15b1523be2c74ffd00068382d77179";
 
 #[test]
 fn ac6_output_bits_pinned() {
     let mut h = Sha256::new();
+    for (f, _) in table_features() {
+        h.update(f.feature_type.as_str().as_bytes());
+        for t in constrained_basis(&f).unwrap().vectors() {
+            for x in t {
+                h.update(&x.to_le_bytes());
+            }
+        }
+    }
     for (name, pairs) in ok_cases() {
         let a = accumulate(&pairs, UnconstrainedPolicy::KeepParent).unwrap();
         h.update(name.as_bytes());

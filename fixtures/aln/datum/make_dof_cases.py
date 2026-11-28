@@ -21,6 +21,14 @@ its `float`, so the oracle sees the same numbers as `fid_align_solve::dof`.
   `P = S F (F^T S^2 F)^-1 F^T S`, exact except for the final `R` factor on mixed entries
   (`sqrt` of an exact square, correctly rounded).
 
+Rank rule (80-digit `decimal`, so far beyond double rounding): the singular values of the part of
+the free subspace outside each pair's invariance subspace, in the scaled metric (orthonormal bases
+by Gram-Schmidt, then the eigenvalues of the small Gram matrix by cyclic Jacobi). Those above the
+spec's threshold 1e-9 are the effective count; values in (1e-12, 1e-6] are `near_rank_threshold`
+warnings; the smallest kept and largest dropped values are recorded. Where the rule agrees with
+the exact rank the exact intersection is used; where every value is below the threshold (a plane
+tilted by 1e-10) the free subspace is unchanged; any other disagreement stops the script.
+
 Float part (only for the readable names of the final free subspace, REQ-003; Python floats and
 `math.sqrt`, both IEEE 754 correctly rounded, so platform-independent): the free subspace is
 split exactly into its translations `T` (the intersection with `w = 0`) and their complement
@@ -41,6 +49,7 @@ Run (stdlib only, Python 3.9+):
 import json
 import math
 import sys
+from decimal import Decimal as D, localcontext
 from fractions import Fraction as Fr
 from pathlib import Path
 
@@ -49,6 +58,9 @@ OUT = HERE / "dof-cases.json"
 FORMAT = "aln-dof-cases/1"
 
 NAME_TOL = 1e-9
+RANK_TOL = D("1e-9")
+NEAR_LO, NEAR_HI = D("1e-12"), D("1e-6")
+PREC = 80
 NOMINAL = {"plane": 3, "line": 4, "cylinder": 4, "cone": 5, "circle3d": 5, "sphere": 3, "point": 3}
 DIRECTIONAL = {"plane", "line", "cylinder", "cone", "circle3d"}
 AXIAL = {"line", "cylinder", "cone", "circle3d"}
@@ -115,6 +127,12 @@ CASES = [
     ("block_then_redundant_plane", "reject",
      [f(P, (0.0, 0.0, 0.0), (0.0, 0.0, 1.0)), f("line", (0.0, 0.0, 0.0), (1.0, 0.0, 0.0)),
       f("point", (0.0, 0.04, 0.02)), f(P, (0.1, 0.0, 0.0), (1.0, 0.0, 0.0))]),
+    # A second plane tilted by atan(1e-8) about y: two DoF just above the rank threshold.
+    ("tilted_planes_1e-8", "keep_parent",
+     [f(P, (0.0, 0.0, 0.0), (0.0, 0.0, 1.0)), f(P, (0.0, 0.0, 0.0), (1e-8, 0.0, 1.0))]),
+    # Tilted by atan(1e-10): both below the threshold, so the second plane counts as redundant.
+    ("tilted_planes_1e-10", "keep_parent",
+     [f(P, (0.0, 0.0, 0.0), (0.0, 0.0, 1.0)), f(P, (0.0, 0.0, 0.0), (1e-10, 0.0, 1.0))]),
     # AC-5 and other error paths.
     ("ac5_torus", "keep_parent", [f(P, (0.0, 0.0, 0.0), (0.0, 0.0, 1.0)), f("torus", (0.0, 0.0, 0.0), (0.0, 0.0, 1.0))]),
     ("err_missing_direction", "keep_parent", [f(P, (0.0, 0.0, 0.0))]),
@@ -131,8 +149,16 @@ def cross(a, b):
     return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
 
 
+def total(xs, zero):
+    """Left-to-right sum (never builtin `sum`, whose float result changed in Python 3.12)."""
+    acc = zero
+    for x in xs:
+        acc = acc + x
+    return acc
+
+
 def dot(a, b):
-    return sum((x * y for x, y in zip(a, b)), Fr(0))
+    return total((x * y for x, y in zip(a, b)), Fr(0))
 
 
 def nullspace(rows, ncols):
@@ -165,7 +191,7 @@ def nullspace(rows, ncols):
 
 
 def combine(cols, coeff):
-    return [sum((c[i] * k for c, k in zip(cols, coeff)), Fr(0)) for i in range(6)]
+    return [total((c[i] * k for c, k in zip(cols, coeff)), Fr(0)) for i in range(6)]
 
 
 def intersect(fb, bb):
@@ -218,12 +244,12 @@ def projector(fb, r2):
     if not fb:
         return [0.0] * 36
     g = metric(r2)
-    gram = [[sum((a[i] * g[i] * b[i] for i in range(6)), Fr(0)) for b in fb] for a in fb]
+    gram = [[total((a[i] * g[i] * b[i] for i in range(6)), Fr(0)) for b in fb] for a in fb]
     gi = inverse(gram)
     out = []
     for i in range(6):
         for j in range(6):
-            inner = sum((fb[a][i] * gi[a][b] * fb[b][j] for a in range(len(fb)) for b in range(len(fb))), Fr(0))
+            inner = total((fb[a][i] * gi[a][b] * fb[b][j] for a in range(len(fb)) for b in range(len(fb))), Fr(0))
             si, sj = i < 3, j < 3
             if si and sj:
                 out.append(float(inner * r2))
@@ -234,15 +260,87 @@ def projector(fb, r2):
     return out
 
 
+# ------------------------------------------------------------------ the rank rule (80 digits)
+
+
+def dec(x):
+    return D(x.numerator) / D(x.denominator)
+
+
+def d_orthonormal(vecs):
+    out = []
+    for v in vecs:
+        w = list(v)
+        for _ in range(2):
+            for q in out:
+                g = total((a * b for a, b in zip(q, w)), D(0))
+                w = [a - g * b for a, b in zip(w, q)]
+        n = total((a * a for a in w), D(0)).sqrt()
+        out.append([a / n for a in w])
+    return out
+
+
+def d_eigvals(m):
+    """Eigenvalues of a small symmetric Decimal matrix by cyclic Jacobi."""
+    a = [list(row) for row in m]
+    n = len(a)
+    for _ in range(200):
+        off = total((a[i][j] * a[i][j] for i in range(n) for j in range(n) if i != j), D(0))
+        if off < D("1e-140"):
+            break
+        for p in range(n):
+            for q in range(p + 1, n):
+                if a[p][q] == 0:
+                    continue
+                th = (a[q][q] - a[p][p]) / (2 * a[p][q])
+                sg = D(1) if th >= 0 else D(-1)
+                t = sg / (abs(th) + (th * th + 1).sqrt())
+                c = 1 / (t * t + 1).sqrt()
+                sn = t * c
+                for k in range(n):
+                    akp, akq = a[k][p], a[k][q]
+                    a[k][p], a[k][q] = c * akp - sn * akq, sn * akp + c * akq
+                for k in range(n):
+                    apk, aqk = a[p][k], a[q][k]
+                    a[p][k], a[q][k] = c * apk - sn * aqk, sn * apk + c * aqk
+    else:
+        raise SystemExit("Jacobi did not converge")
+    return [a[i][i] for i in range(n)]
+
+
+def sigmas(fb, bb, r2):
+    """Singular values (descending, 80 digits) of (I - P_B) restricted to span(fb), both in the
+    scaled metric: the quantities the Rust rank rule classifies."""
+    with localcontext() as ctx:
+        ctx.prec = PREC
+        r = dec(r2).sqrt()
+
+        def scaled(v):
+            return [dec(v[i]) * r for i in range(3)] + [dec(v[i]) for i in range(3, 6)]
+
+        fo = d_orthonormal([scaled(v) for v in fb])
+        bo = d_orthonormal([scaled(v) for v in bb])
+        ms = []
+        for col in fo:
+            m = list(col)
+            for b in bo:
+                g = total((x * y for x, y in zip(b, col)), D(0))
+                m = [x - g * y for x, y in zip(m, b)]
+            ms.append(m)
+        gram = [[total((x * y for x, y in zip(a, b)), D(0)) for b in ms] for a in ms]
+        lam = d_eigvals(gram)
+        return sorted(((x if x > 0 else D(0)).sqrt() for x in lam), reverse=True)
+
+
 # ------------------------------------------------------------------ float naming
 
 
 def fnorm(v):
-    return math.sqrt(sum(x * x for x in v))
+    return math.sqrt(total((x * x for x in v), 0.0))
 
 
 def fdot(a, b):
-    return sum(x * y for x, y in zip(a, b))
+    return total((x * y for x, y in zip(a, b)), 0.0)
 
 
 def orthonormal(vecs):
@@ -263,7 +361,7 @@ def sym_eig_min(m):
     a = [list(r) for r in m]
     n = len(a)
     for _ in range(100):
-        off = sum(a[i][j] ** 2 for i in range(n) for j in range(n) if i != j)
+        off = total((a[i][j] ** 2 for i in range(n) for j in range(n) if i != j), 0.0)
         if off < 1e-40:
             break
         for p in range(n):
@@ -288,7 +386,7 @@ def canonical(basis, cands, tau):
     out, used = [], set()
 
     def residual(c):
-        r = [sum(b[c] * b[i] for b in basis) for i in range(6)]
+        r = [total((b[c] * b[i] for b in basis), 0.0) for i in range(6)]
         for _ in range(2):
             for a in out:
                 g = fdot(a, r)
@@ -332,7 +430,7 @@ def names(fb, r2, pairs):
     tb = intersect(fb, [[Fr(0)] * 3 + [Fr(int(i == j)) for j in range(3)] for i in range(3)])
     # Complement of T in F under the scaled metric.
     if tb:
-        rows = [[sum((t[i] * g[i] * v[i] for i in range(6)), Fr(0)) for v in fb] for t in tb]
+        rows = [[total((t[i] * g[i] * v[i] for i in range(6)), Fr(0)) for v in fb] for t in tb]
         rb = [combine(fb, c) for c in nullspace(rows, len(fb))]
     else:
         rb = list(fb)
@@ -420,13 +518,31 @@ def account(policy, pairs):
     per_pair, warnings = [], []
     for i, (t, p, d) in enumerate(ex):
         proj = projector(fb, r2)
-        new = intersect(fb, invariance(t, p, d)) if fb else []
-        eff = len(fb) - len(new)
+        inv = invariance(t, p, d)
+        kept_min = dropped_max = None
+        if fb:
+            exact = intersect(fb, inv)
+            sig = sigmas(fb, inv, r2)
+            eff = total((1 for x in sig if x > RANK_TOL), 0)
+            # The rank rule against the exact rank: equal (use the exact intersection), or every
+            # value below the threshold (the free subspace is unchanged). Nothing else is needed
+            # for these hand-built cases.
+            if eff == len(fb) - len(exact):
+                new = exact
+            elif eff == 0:
+                new = fb
+            else:
+                raise SystemExit("partial rank-rule disagreement: not supported by this reference")
+            warnings.extend("near_rank_threshold:%d" % i for x in sig if NEAR_LO < x <= NEAR_HI)
+            kept_min = float(sig[eff - 1]) if eff > 0 else None
+            dropped_max = float(sig[eff]) if eff < len(sig) else None
+        else:
+            eff, new = 0, []
         assert 0 <= eff <= NOMINAL[t]
         if eff == 0:
             warnings.append("redundant_pair:%d" % i)
         per_pair.append({"nominal": NOMINAL[t], "effective": eff, "free_before": len(fb), "free_after": len(new),
-                         "projector_before": proj})
+                         "projector_before": proj, "kept_min": kept_min, "dropped_max": dropped_max})
         fb = new
     nm = names(fb, r2, ex)
     if nm and policy == "reject":
