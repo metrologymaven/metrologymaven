@@ -392,7 +392,7 @@ fn accessors_and_codes() {
     assert_eq!(DET_TOL, 2.0_f64.powi(-47));
     assert_eq!(SCALE_MIN, 2.0_f64.powi(-962));
     assert_eq!((R_MIN, R_MAX, EL_MAX), (0.1, 100.0, 1.5));
-    assert_eq!(AZ_MAX, 2.0 * core::f64::consts::PI);
+    assert_eq!(AZ_MAX.to_bits(), 0x4019_21fb_5444_2d18);
     let out = sph_cov(&base(), 5.0, 0.3, 0.1).unwrap();
     let c = out.cov();
     assert_eq!(c.get(0, 2), Some(c.rows()[0][2]));

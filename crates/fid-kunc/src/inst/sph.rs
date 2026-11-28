@@ -84,7 +84,7 @@ pub const R_MAX: f64 = 100.0;
 pub const EL_MAX: f64 = 1.5;
 
 /// Largest `|az|` of the validated domain (rad): the double nearest `2 pi`.
-pub const AZ_MAX: f64 = 6.283_185_307_179_586;
+pub const AZ_MAX: f64 = core::f64::consts::TAU;
 
 const OP: &str = "unc.inst.sph_cov";
 
