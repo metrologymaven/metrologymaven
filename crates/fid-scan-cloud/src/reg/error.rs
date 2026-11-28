@@ -1,5 +1,5 @@
-//! The errors of the oriented-cloud target, the overlap fraction, stride sampling and the
-//! pair graph.
+//! The errors of the oriented-cloud target, the overlap fraction, stride sampling, the pair
+//! graph, and the registration report and registered-version writer.
 
 use core::fmt;
 
@@ -38,7 +38,8 @@ pub enum RegError {
     /// A parameter or input is outside its domain.
     InvalidParameter {
         /// The parameter (`d`, `max_samples`, `m`, `threads`, `valid`, `cloud`, `moving`,
-        /// `pose`).
+        /// `pose`; for the registration report and writer also `inputs`, `command`, `pairs`,
+        /// `global_rms_m`, `verdict`, `reference` and `report`).
         name: &'static str,
         /// What is wrong with it, in words.
         reason: String,
@@ -82,6 +83,24 @@ pub enum RegError {
         /// What failed.
         error: Box<RegError>,
     },
+    /// A registration pose is not a rigid transform (`geo.frame.not_rigid`,
+    /// SCAN.CLOUD.REG.RREP AC-4): a similarity, or a 4 x 4 matrix that is not a proper rigid
+    /// motion with last row `0 0 0 1`. Nothing was created.
+    NotRigid {
+        /// The scan whose pose it is, when the pose belongs to one.
+        scan: Option<u32>,
+        /// Why it is not rigid, in words.
+        reason: String,
+    },
+    /// Mapping scan `index` into the reference frame failed (GEO.FRAME.APPLY
+    /// `transform_element`; an overflowing coordinate, say); the upstream error is kept as is.
+    /// Nothing was created.
+    Transform {
+        /// The scan index.
+        index: u32,
+        /// The GEO.FRAME.APPLY error.
+        error: GeoError,
+    },
 }
 
 impl RegError {
@@ -96,6 +115,8 @@ impl RegError {
             RegError::Inconsistent => "scan.cloud.inconsistent",
             RegError::Disconnected { .. } => "scan.cloud.reg_disconnected",
             RegError::Scan { error, .. } | RegError::Pair { error, .. } => error.code(),
+            RegError::NotRigid { .. } => "geo.frame.not_rigid",
+            RegError::Transform { .. } => "scan.cloud.transform_failed",
         }
     }
 
@@ -116,6 +137,11 @@ impl fmt::Display for RegError {
             RegError::Disconnected { components, .. } => write!(f, "{} (components {components:?})", self.code()),
             RegError::Scan { index, error } => write!(f, "scan {index}: {error}"),
             RegError::Pair { moving, target, error } => write!(f, "scan {moving} against scan {target}: {error}"),
+            RegError::NotRigid { scan: Some(i), reason } => write!(f, "{} (scan {i}: {reason})", self.code()),
+            RegError::NotRigid { scan: None, reason } => write!(f, "{} ({reason})", self.code()),
+            RegError::Transform { index, error } => {
+                write!(f, "{}: scan {index}: {} ({error})", self.code(), error.code())
+            }
         }
     }
 }

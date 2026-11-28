@@ -3,10 +3,13 @@
 //! sampling and the overlap fraction ([`overlap`]), the valid-normal mask ([`mask`]) and the
 //! errors ([`error`]), with [`target`] re-exporting all of them as the spec's module
 //! `reg::target`; and the overlap matrix and pair graph of `SCAN.CLOUD.REG.GRAPH`
-//! ([`graph`]).
+//! ([`graph`]); and the registration report and registered-version writer of
+//! `SCAN.CLOUD.REG.RREP` ([`report`]).
 
 pub mod error;
 pub mod graph;
 pub mod mask;
 pub mod overlap;
+pub mod report;
 pub mod target;
+mod uuid;

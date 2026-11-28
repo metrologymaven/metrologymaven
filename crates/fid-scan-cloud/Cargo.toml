@@ -1,6 +1,6 @@
 [package]
 name = "fid-scan-cloud"
-description = "Metrology Maven point-cloud operations: the oriented-cloud projection target (point-to-plane against the nearest point with a valid normal), the overlap fraction and deterministic stride sampling for scan registration (spec node SCAN.CLOUD.REG.CTGT), and the scan overlap matrix and pair graph (SCAN.CLOUD.REG.GRAPH)"
+description = "Metrology Maven point-cloud operations: the oriented-cloud projection target (point-to-plane against the nearest point with a valid normal), the overlap fraction and deterministic stride sampling for scan registration (spec node SCAN.CLOUD.REG.CTGT), the scan overlap matrix and pair graph (SCAN.CLOUD.REG.GRAPH), and the registration report and registered cloud versions (SCAN.CLOUD.REG.RREP)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,16 +8,22 @@ license.workspace = true
 repository.workspace = true
 
 # Kernel crate (KNP-1): no third-party dependencies. Only kernel- and num-layer workspace crates:
-# fid-geo-types (PointCloud, PointBuffer, FrameRef), fid-geo-index (the GEO.INDEX.KDTREE nearest
-# neighbour with its pinned (dist2, index) order), fid-geo-dist (the GEO.DIST.BATCH
-# ProjectionTarget trait this crate implements), fid-geo-frame (the Rigid pose and the
-# frame-mismatch guard) and fid-num (the correctly rounded square root).
+# fid-geo-types (PointCloud, PointBuffer, FrameRef, the content digest), fid-geo-index (the
+# GEO.INDEX.KDTREE nearest neighbour with its pinned (dist2, index) order), fid-geo-dist (the
+# GEO.DIST.BATCH ProjectionTarget trait this crate implements), fid-geo-frame (the Rigid pose,
+# transform_element and the frame-mismatch guard), fid-num (the correctly rounded square root,
+# acos and total-order clamp), fid-kci (kernel canonical JSON, SHA-256 and AlgorithmId for the
+# registration report), fid-types (the shared Digest and CommandId) and fid-align-solve (the
+# ALN.BFIT.STOP Verdict the report records).
 [dependencies]
+fid-align-solve = { path = "../fid-align-solve" }
 fid-geo-dist = { path = "../fid-geo-dist" }
 fid-geo-frame = { path = "../fid-geo-frame" }
 fid-geo-index = { path = "../fid-geo-index" }
 fid-geo-types = { path = "../fid-geo-types" }
+fid-kci = { path = "../fid-kci" }
 fid-num = { path = "../fid-num" }
+fid-types = { path = "../fid-types" }
 
 [dev-dependencies]
 # Test-support only (never in the kernel graph): the workspace root for fixture paths.

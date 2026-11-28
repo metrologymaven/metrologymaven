@@ -9,6 +9,7 @@ phase: P1b
 size: S
 owners: []
 claimed_by:
+built_in: [fid-scan-cloud]
 satisfies: [REQ-SCAN.CLOUD.REG-001, REQ-SCAN.CLOUD.REG-005]
 covers: []
 depends_on: [GEO.FRAME.APPLY, GEO.FRAME.XFORM, GEO.TYPES.POINTS, CORE.JRN.CANON]
@@ -73,7 +74,15 @@ The common output of every registration command: the `RegistrationReport` (per-s
 
 ## Open questions
 
-- None.
+- **Build notes (fid-scan-cloud `reg::report`, 2026-11-28).** API choices against the Design above, all additive:
+  - `RegistrationReport::new(command, inputs, poses, reference, SolverSummary { algorithm, verdict, pairs, global_rms_m })` builds the report from the inputs and poses, so the per-scan version digest (the GEO.TYPES.DIGEST content digest, computed, never taken from the caller), translation and rotation cannot disagree with them. `write_registered(inputs, poses, report, reference)` re-checks inputs, poses and reference against the report.
+  - Inputs are `GeometryElement`s (point clouds only, in one shared frame) instead of a `CloudVersionRef`, because CORE storage is out of scope here. Poses are `Transform`s, so that AC-4 is reachable: a similarity is `geo.frame.not_rigid`. `rigid_from_matrix4` refuses a 4 x 4 matrix that is not rigid with the same code.
+  - The report JSON (`fid.scan.registration-report/1`, kernel canonical JSON, numbers as hex-bit strings) adds three required members: `command` (the group ID hashes it), `reference_frame` (the transforms are meaningless without it) and `schema`.
+  - `translation_m` is read as the length of the translation vector (the vector is in the 4 x 4 transform). The status is `converged` or `not_converged`, derived from the ALN.BFIT.STOP verdict, whose text is the stop reason.
+  - The report refuses fewer than 2 scans, a pair with no residual samples, a repeated pair, and a scan that appears in no pair. RMS <= maximum is not enforced, because a correctly computed RMS can round a few ulps above the maximum.
+- **Conflict with SCAN.CLOUD.REG.PAIR-003.** PAIR says the command "shall not create a version for the fixed scan". This leaf's AC-3 ("so all members are marked") and SCAN.POLY.MULTI.CMD-002 (every input must carry a marker with one group ID) need the fixed scan marked too. Suggested resolution, for PAIR to adopt: pass both scans to `write_registered`; the fixed scan gets an identity-pose version.
+- The rotation angle uses `fid_num::f::acos`, a faithfully rounded libm port (bit-identical across platforms). The oracle therefore checks it within 1 ulp of the correctly rounded value and compares every other report byte exactly.
+- How CORE stores the `RegisteredMarker` as element metadata (its canonical form) is still to be defined by the consuming command leaves.
 
 ## Children
 
